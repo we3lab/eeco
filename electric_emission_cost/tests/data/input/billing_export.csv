@@ -1,0 +1,2 @@
+utility,type,name,basic_charge_limit,assessed,month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge,units
+electric,export,,0,,0,12,0,24,0,6,0.025,$/kWh

@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-with open("README.rst") as readme_file:
+with open("README.md") as readme_file:
     readme = readme_file.read()
 
 setup_requirements = []
@@ -23,15 +23,16 @@ dev_requirements = [
 ]
 
 requirements = [
-    "pandas>=2.2.1"
-    "numpy>=1.26.4"
-    "matplotlib>=3.8.4"
+    "pandas>=2.2.1",
+    "numpy>=1.26.4",
+    "matplotlib>=3.8.4",
     "requests>=2.31.0",
     "cvxpy>=1.3.0",
     "seaborn>=0.13.2",
     "scipy>=1.2.1",
-    "pyomo==6.7",
-    "gurobipy==11.0"
+    "pyomo>=6.7",
+    "gurobipy==11.0",
+    "pint>=0.19.2",
 ]
 
 extra_requirements = {

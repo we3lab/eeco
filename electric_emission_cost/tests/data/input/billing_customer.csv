@@ -1,0 +1,2 @@
+utility,type,name,basic_charge_limit,assessed,month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge,units
+electric,customer,,,,,,,,,,1000,$/month
