@@ -809,6 +809,7 @@ def calculate_itemized_cost(
     Result
     ------
     dict of the form
+    
         {
             "electric": {
                 "customer": `float`,
@@ -816,15 +817,20 @@ def calculate_itemized_cost(
                 "demand": `float`,
                 "export": `float`,
                 "total": `float`
+
             }
+
             "gas": {
                 "customer": `float`,
                 "energy": `float`,
                 "demand": `float`,
                 "export": `float`,
                 "total": `float`
+
             }
+
             "total": `float`
+
         }
 
     """

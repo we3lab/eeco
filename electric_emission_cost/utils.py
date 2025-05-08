@@ -295,6 +295,7 @@ def parse_freq(freq):
 
 def get_freq_binsize_minutes(freq):
     """Gets size of a given time frequency expressed in units of minutes
+    
     Parameters
     ----------
     freq: str

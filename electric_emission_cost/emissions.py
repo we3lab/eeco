@@ -76,6 +76,7 @@ def calculate_grid_emissions_cvx(
 ):
     """Calculates the emissions for the given consumption information as a cvxpy object
     carbon intensity of electricity generation structure as a DataFrame.
+    
     Parameters
     ----------
     carbon_intensity : array
