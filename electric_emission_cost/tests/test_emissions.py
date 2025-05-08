@@ -5,12 +5,33 @@ import pandas as pd
 from datetime import datetime as dt
 
 from electric_emission_cost import emissions
+from electric_emission_cost.units import u
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False
 
 input_dir = "tests/data/input/"
 output_dir = "tests/data/output/"
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize("emissions_path, consumption_path, net_demand_varname, resolution, expected",
+    [
+        (
+            "data/emissions.csv",
+            input_dir + "flat_load.csv",
+            "VirtualDemand_Electricity_InFlow",
+            "15m",
+            276375.87356000004 * u.kg
+        ),
+    ]
+)
+def test_calculate_grid_emissions(emissions_path, consumption_path, net_demand_varname, resolution, expected):
+    emissions_data = pd.read_csv(emissions_path)
+    consumption_df = pd.read_csv(consumption_path, parse_dates=[emissions.DT_VARNAME])
+    result = emissions.calculate_grid_emissions(emissions_data, consumption_df, net_demand_varname)
+    print(result.magnitude)
+    assert result == expected
+
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize("start_dt, end_dt, emissions_path, resolution, expected_path",
@@ -22,10 +43,18 @@ output_dir = "tests/data/output/"
             "1h",
             output_dir + "july_len1d_res1h.csv"           
         ),
+        (
+            np.datetime64("2024-07-31T00:00"), # Summer weekday
+            np.datetime64("2024-08-02T00:00"), # Summer weekday
+            "data/emissions.csv",
+            "1h",
+            output_dir + "july_aug_len2d_res1h.csv"           
+        ),
     ]
 )
 def test_get_carbon_intensity(start_dt, end_dt, emissions_path, resolution, expected_path):
     emissions_df = pd.read_csv(emissions_path)
     expected = pd.read_csv(expected_path)
     result = emissions.get_carbon_intensity(start_dt, end_dt, emissions_df, resolution=resolution)
+    print(result)
     assert np.allclose(result.magnitude, expected["co2_eq_kg_per_kWh"].values)

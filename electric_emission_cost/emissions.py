@@ -5,6 +5,7 @@ import calendar
 import numpy as np
 import pandas as pd
 import cvxpy as cp
+import pint
 
 from .units import u
 from . import utils as ut
@@ -56,14 +57,14 @@ def calculate_grid_emissions(
     df[HOUR_VARNAME] = df[DT_VARNAME].dt.hour
     # convert the resolution to hourly
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
-    if isinstance(emissions, pint.Quantity):
+    if isinstance(carbon_intensity, pint.Quantity):
         emission_units = carbon_intensity.units
         carbon_intensity = carbon_intensity.magnitude
     df = df.merge(carbon_intensity, on=[MONTH_VARNAME, HOUR_VARNAME])
     emissions = np.sum(
-        df[net_demand_varname] * consumption_units * df[ei_varname] * emission_units
-    ) / (n_per_hour * u.hour)
-    return emissions
+        df[net_demand_varname]  * df[ei_varname]
+    ) * consumption_units * emission_units * u.hour / n_per_hour
+    return emissions.to(u.kg)
 
 
 def calculate_grid_emissions_cvx(
@@ -224,9 +225,7 @@ def get_carbon_intensity(
     )  # should we extend this for multiple months/years?
     if rollover:
         old_end_day = end_day
-        # end_day = np.max(days)  #THIS DOESN'T WORK
-        end_day = calendar.monthrange(start_year, start_month)
-        # end_day = start_month #CHECK THIS
+        end_day = calendar.monthrange(start_year, start_month)[1]
         old_end_hour = end_hour
         end_hour = 24
 
