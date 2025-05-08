@@ -806,25 +806,35 @@ def calculate_itemized_cost(
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
 
-    Result
-    ------
-    dict of the form
-    
+    Returns
+    -------
+    dict
         {
+
             "electric": {
-                "customer": `float`,
-                "energy": `float`,
-                "demand": `float`,
-                "export": `float`,
+
+                "customer": `float`
+
+                "energy": `float`
+
+                "demand": `float`
+
+                "export": `float`
+
                 "total": `float`
 
             }
 
             "gas": {
+
                 "customer": `float`,
-                "energy": `float`,
-                "demand": `float`,
-                "export": `float`,
+                
+                "energy": `float`
+
+                "demand": `float`
+
+                "export": `float`
+
                 "total": `float`
 
             }
