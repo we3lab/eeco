@@ -1,7 +1,7 @@
 .. contents::
 
 Welcome to the Electric Emissions & Cost (EEC) documentation!
-===========================================================================
+=============================================================
 
 .. toctree::
    :maxdepth: 1
@@ -9,7 +9,7 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
 
    README <self>
    hello
-   data format
+   data_format
    advanced
    CONTRIBUTING
    LICENSE
