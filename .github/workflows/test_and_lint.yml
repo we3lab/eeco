@@ -18,7 +18,7 @@ jobs:
         pip install .[test]
     - name: Test with pytest
       run: |
-        pytest --cov-report xml --cov=pype_schema pype_schema/tests/ -vv
+        pytest --cov-report xml --cov=electric_emission_cost electric_emission_cost/tests/ -vv
         codecov -t ${{ secrets.CODECOV_TOKEN }}
   lint:
     runs-on: ubuntu-latest
@@ -35,7 +35,7 @@ jobs:
         pip install .[test]
     - name: Lint with flake8
       run: |
-        flake8 pype_schema --count --verbose --show-source --statistics
+        flake8 electric_emission_cost --count --verbose --show-source --statistics
     - name: Check with black
       run: |
-        black --check pype_schema
+        black --check electric_emission_cost
