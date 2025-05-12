@@ -541,31 +541,30 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             np.sum(np.arange(96)) * 0.05 / 4,
         ),
         # energy charge with charge limit
-        # TODO: fix this test
-        # (
-        #     {
-        #         "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate([
-        #             np.ones(64) * 0.05,
-        #             np.ones(20) * 0.1,
-        #             np.ones(12) * 0.05,
-        #         ]),
-        #         "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate([
-        #             np.ones(64) * 0.1,
-        #             np.ones(20) * 0.15,
-        #             np.ones(12) * 0.1,
-        #         ]),
-        #     },
-        #     {
-        #         "electric": np.ones(96) * 100,
-        #         "gas": np.ones(96)
-        #     },
-        #     "15m",
-        #     None,
-        #     2400,
-        #     None,
-        #     None,
-        #     260,
-        # )
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate([
+                    np.ones(64) * 0.05,
+                    np.ones(20) * 0.1,
+                    np.ones(12) * 0.05,
+                ]),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate([
+                    np.ones(64) * 0.1,
+                    np.ones(20) * 0.15,
+                    np.ones(12) * 0.1,
+                ]),
+            },
+            {
+                "electric": np.ones(96) * 100,
+                "gas": np.ones(96)
+            },
+            "15m",
+            None,
+            2400,
+            None,
+            None,
+            260,
+        )
     ],
 )
 def test_calculate_cost_np(
@@ -684,7 +683,7 @@ def test_calculate_cost_cvx(
             2400,
             None,
             None,
-            260,
+            pytest.approx(260),
         ),
         # demand charges
         (
@@ -730,7 +729,7 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
-            140,
+            pytest.approx(140),
         ),
         (
             {
@@ -773,7 +772,7 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
-            1191,
+            pytest.approx(1191),
         ),
     ],
 )
@@ -815,7 +814,7 @@ def test_calculate_cost_pyo(
         model=model,
     )
     model.obj = pyo.Objective(expr=result)
-    solver = pyo.SolverFactory("gurobi")
+    solver = pyo.SolverFactory("glpk")
     solver.solve(model)
     assert pyo.value(result) == expected_cost
     assert model == model
