@@ -815,7 +815,7 @@ def test_calculate_cost_pyo(
         model=model,
     )
     model.obj = pyo.Objective(expr=result)
-    solver = pyo.SolverFactory("glpk")
+    solver = pyo.SolverFactory("gurobi")
     solver.solve(model)
     assert pyo.value(result) == expected_cost
     assert model == model

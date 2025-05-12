@@ -21,7 +21,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install Dependencies
       run: |
-        sudo apt-get install -y -qq glpk-utils
+        sudo wget -N -q "https://matematica.unipv.it/gualandi/solvers/ipopt-linux64.zip"
+        sudo unzip -o -q ipopt-linux64
         python -m pip install --upgrade pip
         pip install .[test]
     - name: Test with pytest
