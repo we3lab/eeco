@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>costs &mdash; EEC 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="emissions" href="emissions.html" />
+    <link rel="prev" title="LICENSE" href="LICENSE.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            EEC
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">README</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contribution Agreement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">LICENSE</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">costs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.add_to_charge_array"><code class="docutils literal notranslate"><span class="pre">add_to_charge_array()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.calculate_cost"><code class="docutils literal notranslate"><span class="pre">calculate_cost()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.calculate_demand_cost"><code class="docutils literal notranslate"><span class="pre">calculate_demand_cost()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.calculate_energy_cost"><code class="docutils literal notranslate"><span class="pre">calculate_energy_cost()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.calculate_export_revenues"><code class="docutils literal notranslate"><span class="pre">calculate_export_revenues()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.calculate_itemized_cost"><code class="docutils literal notranslate"><span class="pre">calculate_itemized_cost()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.create_charge_array"><code class="docutils literal notranslate"><span class="pre">create_charge_array()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.get_charge_df"><code class="docutils literal notranslate"><span class="pre">get_charge_df()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.get_charge_dict"><code class="docutils literal notranslate"><span class="pre">get_charge_dict()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.get_next_limit"><code class="docutils literal notranslate"><span class="pre">get_next_limit()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">EEC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">costs</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/costs.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <nav class="contents" id="contents" role="doc-toc">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#costs" id="id2">costs</a></p></li>
+</ul>
+</nav>
+<section id="costs">
+<span id="id1"></span><h1><a class="toc-backref" href="#id2" role="doc-backlink">costs</a><a class="headerlink" href="#costs" title="Permalink to this heading"></a></h1>
+<p>This module consists of code that computes a user’s electricity bill given an electricity consumption profile.</p>
+<span class="target" id="module-electric_emission_cost.costs"></span><p>Functions to calculate costs from electricity consumption data.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.add_to_charge_array">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">add_to_charge_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charge_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#add_to_charge_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.add_to_charge_array" title="Permalink to this definition"></a></dt>
+<dd><p>Add to an existing charge array, or an arrya of all zeros if this charge
+array does not exist.</p>
+<p>This functionality is useful for noncontiguous charges that should be saved
+under the same key. For example, partial peak hours from 3-5 and 8-10 PM that
+are billing as a single demand period.</p>
+<p>Modifies <cite>charge_dict</cite> in-place, so nothing is returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>charge_dict</strong> (<em>dict of numpy.ndarray</em>) – Dictionary of arrays with keys of the form
+<cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite>
+and values being the $ per kW (electric demand), kWh (electric energy/export),
+cubic meter / day (gas demand), cubic meter (gas energy),
+or $ / month (customer)</p></li>
+<li><p><strong>key_str</strong> (<em>str</em>) – The key for the charge array we’d like to modify of the form
+<cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite></p></li>
+<li><p><strong>charge_array</strong> (<em>numpy.ndarray</em>) – Value of the charge to add in $ per kW (electric demand),
+kWh (electric energy/export), cubic meter / day (gas demand),
+cubic meter (gas energy), or $ / month (customer)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.calculate_cost">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#calculate_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.calculate_cost" title="Permalink to this definition"></a></dt>
+<dd><p>Calculates the cost of given charges (demand or energy) for the given
+billing rate structure, utility, and consumption information as a
+cvxpy expression or numpy array</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul>
+<li><p><strong>charge_dict</strong> (<em>dict</em>) – dictionary of arrays with keys of the form
+<cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite>
+and values being the $ per kW (electric demand), kWh (electric energy/export),
+cubic meter / day (gas demand), cubic meter (gas energy),
+or $ / month (customer)</p></li>
+<li><p><strong>consumption_data_dict</strong> (<em>dict of numpy.ndarray or cvxpy.Expression</em>) – Baseline electrical and gas usage data as an optimization variable object
+with keys “electric” and “gas”</p></li>
+<li><p><strong>resolution</strong> (<em>str</em>) – String of the form <cite>[int][str]</cite> giving the temporal resolution
+on which charges are assessed, the <cite>str</cite> portion corresponds to
+numpy.timedelta64 types for example ‘15m’ specifying demand charges
+that are applied to 15-minute intervals of electricity consumption</p></li>
+<li><p><strong>prev_demand_dict</strong> (<em>dict</em>) – Nested dictionary previous maximmum demand charges with an entry of the form
+{“cost” : float, “demand” : float} for each charge.
+Default is None, which results in an a prev_demand and prev_demand_cost
+of zero for all charges.</p></li>
+<li><p><strong>prev_consumption_dict</strong> (<em>dict</em>) – Dictionary of previous total energy consumption with a key for each charge
+to be used when starting the cost calculation partway into a billing period
+(e.g., while using a moving horizon that is shorter than a month).
+Default is None, resulting in an a prev_consumption of zero for all charges.</p></li>
+<li><p><strong>consumption_estimate</strong> (<em>float</em>) – Estimate of the total monthly demand or energy consumption from baseline data.
+Only used when <cite>consumption_data</cite> is cvxpy.Expression for convex relaxation</p>
+<blockquote>
+<div><p>of tiered charges, while numpy.ndarray <cite>consumption_data</cite> will use actual
+consumption and ignore the estimate.</p>
+</div></blockquote>
+</li>
+<li><p><strong>desired_charge_type</strong> (<em>str</em>) – Name of desired charge type for itemized costs.
+Either ‘customer’, ‘energy’, ‘demand’, or ‘export’.
+Default is None, meaning that all costs will be summed together.</p></li>
+<li><p><strong>desired_utility</strong> (<em>str</em>) – Name of desired utility for itemized costs. Either ‘electric’ or ‘gas’
+Default is None, meaning that all costs will be summed together.</p></li>
+<li><p><strong>demand_scale_factor</strong> (<em>float</em>) – Optional factor for scaling demand charges relative to energy charges
+when the optimization/simulation period is not a full billing cycle.
+Default is 1</p></li>
+<li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
+Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+    is provided in <cite>charge_arrays</cite></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy array, cvxpy Expression representing cost in USD for the given
+<cite>consumption_data</cite>, <cite>charge_type</cite>, and <cite>utility</cite></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>numpy.Array, cvxpy.Expression, or pyomo.Model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.calculate_demand_cost">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_demand_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#calculate_demand_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.calculate_demand_cost" title="Permalink to this definition"></a></dt>
+<dd><p>Calculates the cost of given demand charges for the given billing rate structure,
+utility, and consumption information</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>charge_array</strong> (<em>array</em>) – Array of charge cost (in $/kW)</p></li>
+<li><p><strong>consumption_data</strong> (<em>numpy.ndarray or cvxpy.Expression</em>) – Baseline electrical or gas usage data as an optimization variable object</p></li>
+<li><p><strong>limit</strong> (<em>float</em>) – The total consumption, or limit, that this charge came into effect.
+Default is 0</p></li>
+<li><p><strong>next_limit</strong> (<em>float</em>) – The total consumption, or limit, that the next charge comes into effect.
+Default is float(‘inf’) indicating that there is no higher tier</p></li>
+<li><p><strong>prev_demand</strong> (<em>float</em>) – The previous maximum demand for this charge during the same billing period.
+Only used for optimizing on a horizon shorter than the billing period,
+so the default is 0</p></li>
+<li><p><strong>prev_demand_cost</strong> (<em>float</em>) – The previous cost for this demand charge during the same billing period.
+Only used for optimizing on a horizon shorter than the billing period,
+so the default is 0</p></li>
+<li><p><strong>consumption_estimate</strong> (<em>float</em>) – Estimate of the total monthly demand or energy consumption from baseline data.
+Only used when <cite>consumption_data</cite> is cvxpy.Expression for convex relaxation
+of tiered charges, while numpy.ndarray <cite>consumption_data</cite> will use actual
+consumption and ignore the estimate.</p></li>
+<li><p><strong>scale_factor</strong> (<em>float</em>) – Optional factor for scaling demand charges relative to energy charges
+when the optimization/simulation period is not a full billing cycle.
+Default is 1</p></li>
+<li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
+Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name of the variable to be created if using a Pyomo <cite>model</cite></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>float or cvxpy Expression representing cost in USD for the given
+<cite>charge_array</cite> and <cite>consumption_data</cite></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>cvxpy.Expression or <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.calculate_energy_cost">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_energy_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divisor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#calculate_energy_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.calculate_energy_cost" title="Permalink to this definition"></a></dt>
+<dd><p>Calculates the cost of given energy charges for the given billing rate
+structure, utility, and consumption information.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>charge_array</strong> (<em>numpy.ndarray</em>) – Array of the charges in $/kWh for electric and $/cubic meter for gas</p></li>
+<li><p><strong>consumption_data</strong> (<em>numpy.ndarray or cvxpy.Expression</em>) – Baseline electrical or gas usage data as an optimization variable object</p></li>
+<li><p><strong>divisor</strong> (<em>int</em>) – Divisor for the energy charges</p></li>
+<li><p><strong>limit</strong> (<em>float</em>) – The total consumption, or limit, that this charge came into effect.
+Default is 0</p></li>
+<li><p><strong>next_limit</strong> (<em>float</em>) – The total consumption, or limit, that the next charge comes into effect.
+Default is float(‘inf’) indicating that there is no higher tier</p></li>
+<li><p><strong>consumption_estimate</strong> (<em>float</em>) – Estimate of the total monthly demand or energy consumption from baseline data.
+Only used when <cite>consumption_data</cite> is cvxpy.Expression for convex relaxation
+of tiered charges, while numpy.ndarray <cite>consumption_data</cite> will use actual
+consumption and ignore the estimate.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
+Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name of the variable to be created if using a Pyomo <cite>model</cite></p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+    is provided in <cite>charge_arrays</cite></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or cvxpy Expression representing cost in USD for the given
+<cite>charge_array</cite> and <cite>consumption_data</cite></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>cvxpy.Expression, pyomo.Model, or <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.calculate_export_revenues">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_export_revenues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">export_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divisor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#calculate_export_revenues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.calculate_export_revenues" title="Permalink to this definition"></a></dt>
+<dd><p>Calculates the export revenues for the given billing rate structure,
+utility, and consumption information.</p>
+<p>Only flat rates for exports are supported (in $ / kWh).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>charge_array</strong> (<em>numpy.ndarray</em>) – array with price per kWh sold back to the grid</p></li>
+<li><p><strong>consumption_data</strong> (<em>numpy.ndarray or cvxpy.Expression</em>) – Baseline electrical or gas usage data as an optimization variable object</p></li>
+<li><p><strong>divisor</strong> (<em>int</em>) – Divisor for the energy charges</p></li>
+<li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
+Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name of the variable to be created if using a Pyomo <cite>model</cite></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>float or cvxpy Expression representing revenue in USD for the given
+<cite>charge_array</cite> and <cite>export_data</cite></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>cvxpy.Expression or <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.calculate_itemized_cost">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_itemized_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#calculate_itemized_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.calculate_itemized_cost" title="Permalink to this definition"></a></dt>
+<dd><p>Calculates itemized costs as a nested dictionary</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul>
+<li><p><strong>charge_dict</strong> (<em>dict</em>) – dictionary of arrays with keys of the form
+<cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite>
+and values being the $ per kW (electric demand), kWh (electric energy/export),
+cubic meter / day (gas demand), cubic meter (gas energy),
+or $ / month (customer)</p></li>
+<li><p><strong>consumption_data</strong> (<em>numpy.ndarray or cvxpy.Expression</em>) – Baseline electrical or gas usage data as an optimization variable object</p></li>
+<li><p><strong>resolution</strong> (<em>str</em>) –    granularity of each timestep in string form with default value of “15m”</p>
+<dl class="simple">
+<dt>prev_demand_dict<span class="classifier">dict</span></dt><dd><p>Dictionary previous maximmum demand charges with a key for each charge.
+Default is None, which results in an a prev_demand of zero for all charges.</p>
+</dd>
+</dl>
+</li>
+<li><p><strong>consumption_estimate</strong> (<em>float</em>) – estimated total consumption up to this point in the bililng period to determine
+correct tier based on charge limits</p></li>
+<li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
+Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>{</p>
+<blockquote>
+<div><p>“electric”: {</p>
+<blockquote>
+<div><p>“customer”: <cite>float</cite></p>
+<p>”energy”: <cite>float</cite></p>
+<p>”demand”: <cite>float</cite></p>
+<p>”export”: <cite>float</cite></p>
+<p>”total”: <cite>float</cite></p>
+</div></blockquote>
+<p>}</p>
+<p>”gas”: {</p>
+<blockquote>
+<div><p>“customer”: <cite>float</cite>,</p>
+<p>”energy”: <cite>float</cite></p>
+<p>”demand”: <cite>float</cite></p>
+<p>”export”: <cite>float</cite></p>
+<p>”total”: <cite>float</cite></p>
+</div></blockquote>
+<p>}</p>
+<p>”total”: <cite>float</cite></p>
+</div></blockquote>
+<p>}</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.create_charge_array">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">create_charge_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">effective_start_date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">effective_end_date</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#create_charge_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.create_charge_array" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a single charge array based on the given parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>charge</strong> (<em>pandas.DataFrame</em>) – data for the charge including columns <cite>month_start</cite>, <cite>month_end</cite>,
+<cite>weekday_start</cite>, <cite>weekday_end</cite>, <cite>hour_start</cite>, <cite>hour_end</cite>, and <cite>charge</cite></p></li>
+<li><p><strong>datetime</strong> (<em>pandas.DataFrame, pandas.Series, or numpy.ndarray</em>) – If a pandas Series, it must be of type datetime
+If a DataFrame it must have a column “DateTime” and row for each timestep</p></li>
+<li><p><strong>effective_start_date</strong> (<em>datetime.datetime</em>) – date on which this charge becomes effective</p></li>
+<li><p><strong>effective_end_date</strong> (<em>datetime.datetime</em>) – date at which this charge is no longer in effect (i.e., this day is excluded)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.13)"><strong>TypeError</strong></a> – When <cite>datetime</cite> is not pandas.DataFrame, pandas.Series, or numpy.ndarray</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>timeseries of the cost of the charge with irrelevant timesteps zeroed out</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>panda.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.get_charge_df">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">get_charge_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'15m'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#get_charge_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.get_charge_df" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a dictionary where the values are charge arrays and keys are of the form
+<cite>{utility}_{type}_{name}_{start_date}_{end_date}_{limit}</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_dt</strong> (<em>datetime.datetime</em>) – first timestep to be included in the cost analysis</p></li>
+<li><p><strong>end_dt</strong> (<em>datetime.datetime</em>) – last timestep to be included in the cost analysis</p></li>
+<li><p><strong>rate_data</strong> (<em>pandas.DataFrame</em>) – tariff data with required columns <cite>utility</cite>, <cite>type</cite>, <cite>basic_charge_limit</cite>,
+<cite>name</cite>, <cite>month_start</cite>, <cite>month_end</cite>, <cite>weekday_start</cite>, <cite>weekday_end</cite>,
+<cite>hour_start</cite>, <cite>hour_end</cite>, and <cite>charge</cite> and optional columns <cite>assessed</cite>,
+<cite>effective_start_date</cite>, and <cite>effective_end_date</cite></p></li>
+<li><p><strong>resolution</strong> (<em>str</em>) – granularity of each timestep in string form with default value of “15m”</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame of charge arrays</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.3)">pandas.DataFrame</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.get_charge_dict">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">get_charge_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'15m'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#get_charge_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.get_charge_dict" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a dictionary where the values are charge arrays and keys are of the form
+<cite>{utility}_{type}_{name}_{start_date}_{end_date}_{limit}</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_dt</strong> (<em>datetime.datetime</em>) – first timestep to be included in the cost analysis</p></li>
+<li><p><strong>end_dt</strong> (<em>datetime.datetime</em>) – last timestep to be included in the cost analysis</p></li>
+<li><p><strong>rate_data</strong> (<em>pandas.DataFrame</em>) – tariff data with required columns <cite>utility</cite>, <cite>type</cite>, <cite>basic_charge_limit</cite>,
+<cite>name</cite>, <cite>month_start</cite>, <cite>month_end</cite>, <cite>weekday_start</cite>, <cite>weekday_end</cite>,
+<cite>hour_start</cite>, <cite>hour_end</cite>, and <cite>charge</cite> and optional columns <cite>assessed</cite>,
+<cite>effective_start_date</cite>, and <cite>effective_end_date</cite></p></li>
+<li><p><strong>resolution</strong> (<em>str</em>) – granularity of each timestep in string form with default value of “15m”</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dictionary of charge arrays</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.get_next_limit">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">get_next_limit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_substr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current_limit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keys</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#get_next_limit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.get_next_limit" title="Permalink to this definition"></a></dt>
+<dd><p>Finds the next charge limit for the charge represented by <cite>key</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key_substr</strong> (<em>str</em>) – The beginnging of the key for which we want to get the next limit
+(i.e., <cite>{utility}_{type}_{name}_{start_date}_{end_date}</cite>)</p></li>
+<li><p><strong>current_limit</strong> (<em>int</em>) – The limit for the current tier</p></li>
+<li><p><strong>keys</strong> (<em>list of str</em>) – List of all the keys in the charge dictionary</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>limit in the tier after <cite>key</cite>, which is <cite>inf</cite> if there is no higher tier</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="LICENSE.html" class="btn btn-neutral float-left" title="LICENSE" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="emissions.html" class="btn btn-neutral float-right" title="emissions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3 Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

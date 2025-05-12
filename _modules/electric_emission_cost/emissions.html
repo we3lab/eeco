@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>electric_emission_cost.emissions &mdash; EEC 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            EEC
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">README</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hello.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../advanced.html">Advanced Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING.html">Contribution Agreement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../LICENSE.html">LICENSE</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">EEC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../electric_emission_cost.html">electric_emission_cost</a></li>
+      <li class="breadcrumb-item active">electric_emission_cost.emissions</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for electric_emission_cost.emissions</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Functions to calculate emissions from electricity consumption data.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">calendar</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pint</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">ut</span>
+
+<span class="n">HOUR_VARNAME</span> <span class="o">=</span> <span class="s2">&quot;hour&quot;</span>
+<span class="n">DAY_VARNAME</span> <span class="o">=</span> <span class="s2">&quot;day&quot;</span>
+<span class="n">MONTH_VARNAME</span> <span class="o">=</span> <span class="s2">&quot;month&quot;</span>
+<span class="n">DT_VARNAME</span> <span class="o">=</span> <span class="s2">&quot;DateTime&quot;</span>
+<span class="n">DT_LOCAL_VARNAME</span> <span class="o">=</span> <span class="s2">&quot;datetime_local&quot;</span>
+<span class="n">EI_VARNAME</span> <span class="o">=</span> <span class="s2">&quot;co2_eq_kg_per_MWh&quot;</span>
+
+
+<div class="viewcode-block" id="calculate_grid_emissions"><a class="viewcode-back" href="../../emissions.html#electric_emission_cost.emissions.calculate_grid_emissions">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_grid_emissions</span><span class="p">(</span>
+    <span class="n">carbon_intensity</span><span class="p">,</span>
+    <span class="n">consumption_data</span><span class="p">,</span>
+    <span class="n">net_demand_varname</span><span class="p">,</span>
+    <span class="n">emission_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">MWh</span><span class="p">,</span>
+    <span class="n">consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">ei_varname</span><span class="o">=</span><span class="n">EI_VARNAME</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the emissions for the given consumption information and</span>
+<span class="sd">    carbon intensity of electricity generation structure as DataFrames.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    carbon_intensity : DataFrame</span>
+<span class="sd">        Pandas DataFrame with kg of CO2 per kWh by hour and month</span>
+
+<span class="sd">    consumption_data : DataFrame</span>
+<span class="sd">        Baseline electrical or gas usage data as a Pandas DataFrame</span>
+
+<span class="sd">    emissions_units : pint.Unit</span>
+<span class="sd">        Units for the emissions data. Default is kg / kWh</span>
+
+<span class="sd">    consumption_units : pint.Unit</span>
+<span class="sd">        Units for the electricity consumption data. Default is kW</span>
+
+<span class="sd">    resolution : str</span>
+<span class="sd">        granularity of each timestep in string form with default value of &quot;15m&quot;</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pint.Quantity</span>
+<span class="sd">        total emissions due to grid electricity generation in kilograms CO2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">consumption_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">df</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">DT_VARNAME</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span>
+    <span class="n">df</span><span class="p">[</span><span class="n">HOUR_VARNAME</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">DT_VARNAME</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span>
+    <span class="c1"># convert the resolution to hourly</span>
+    <span class="n">n_per_hour</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">60</span> <span class="o">/</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">carbon_intensity</span><span class="p">,</span> <span class="n">pint</span><span class="o">.</span><span class="n">Quantity</span><span class="p">):</span>
+        <span class="n">emission_units</span> <span class="o">=</span> <span class="n">carbon_intensity</span><span class="o">.</span><span class="n">units</span>
+        <span class="n">carbon_intensity</span> <span class="o">=</span> <span class="n">carbon_intensity</span><span class="o">.</span><span class="n">magnitude</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">carbon_intensity</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">,</span> <span class="n">HOUR_VARNAME</span><span class="p">])</span>
+    <span class="n">emissions</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">net_demand_varname</span><span class="p">]</span> <span class="o">*</span> <span class="n">df</span><span class="p">[</span><span class="n">ei_varname</span><span class="p">])</span>
+        <span class="o">*</span> <span class="n">consumption_units</span>
+        <span class="o">*</span> <span class="n">emission_units</span>
+        <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">hour</span>
+        <span class="o">/</span> <span class="n">n_per_hour</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">emissions</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="calculate_grid_emissions_cvx"><a class="viewcode-back" href="../../emissions.html#electric_emission_cost.emissions.calculate_grid_emissions_cvx">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_grid_emissions_cvx</span><span class="p">(</span>
+    <span class="n">carbon_intensity</span><span class="p">,</span>
+    <span class="n">consumption_data</span><span class="p">,</span>
+    <span class="n">emission_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">MWh</span><span class="p">,</span>
+    <span class="n">consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the emissions for the given consumption information as a cvxpy object</span>
+<span class="sd">    carbon intensity of electricity generation structure as a DataFrame.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    carbon_intensity : array</span>
+<span class="sd">        numpy array with kg of CO2 per kWh</span>
+
+<span class="sd">    consumption_data : Variable</span>
+<span class="sd">        Baseline electrical or gas usage data as a CVXPY Variable</span>
+
+<span class="sd">    emissions_units : pint.Unit</span>
+<span class="sd">        Units for the emissions data. Default is kg / kWh</span>
+
+<span class="sd">    consumption_units : pint.Unit</span>
+<span class="sd">        Units for the electricity consumption data. Default is kW</span>
+
+<span class="sd">    resolution : str</span>
+<span class="sd">        granularity of each timestep in string form with default value of &quot;15m&quot;</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Expression</span>
+<span class="sd">        cvxpy Expression representing emissions in kg of CO2 for the given</span>
+<span class="sd">        `consumption_data` and `carbon_intensity`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_per_hour</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">60</span> <span class="o">/</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">carbon_intensity</span><span class="p">,</span> <span class="n">pint</span><span class="o">.</span><span class="n">Quantity</span><span class="p">):</span>
+        <span class="n">emission_units</span> <span class="o">=</span> <span class="n">carbon_intensity</span><span class="o">.</span><span class="n">units</span>
+        <span class="n">carbon_intensity</span> <span class="o">=</span> <span class="n">carbon_intensity</span><span class="o">.</span><span class="n">magnitude</span>
+    <span class="n">conversion_factor</span> <span class="o">=</span> <span class="p">(</span><span class="n">consumption_units</span> <span class="o">*</span> <span class="n">emission_units</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">hour</span><span class="p">)</span><span class="o">.</span><span class="n">magnitude</span>
+    <span class="n">emissions</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">carbon_intensity</span><span class="p">))</span> <span class="o">/</span> <span class="n">n_per_hour</span>
+    <span class="k">return</span> <span class="n">emissions</span> <span class="o">*</span> <span class="n">conversion_factor</span></div>
+
+
+<div class="viewcode-block" id="get_carbon_intensity"><a class="viewcode-back" href="../../emissions.html#electric_emission_cost.emissions.get_carbon_intensity">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_carbon_intensity</span><span class="p">(</span>
+    <span class="n">start_dt</span><span class="p">,</span>
+    <span class="n">end_dt</span><span class="p">,</span>
+    <span class="n">emissions_data</span><span class="p">,</span>
+    <span class="n">emissions_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">MWh</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">ei_varname</span><span class="o">=</span><span class="n">EI_VARNAME</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes the emissions (as kilograms of CO2) of a horizon of data</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    start_dt : datetime.datetime or numpy.datetime64</span>
+<span class="sd">        Start datetime to gather rate information</span>
+
+<span class="sd">    end_dt : datetime.datetime or numpy.datetime64</span>
+<span class="sd">        End datetime to gather rate information</span>
+
+<span class="sd">    emissions_data : DataFrame</span>
+<span class="sd">        Electric grid emissions information.</span>
+<span class="sd">        Only one of `datetime_local` and `month`/`day`/`hour` are required.</span>
+
+<span class="sd">        ==================  =================================================</span>
+<span class="sd">        datetime_local      local datetime to estimate the marginal emissions</span>
+<span class="sd">        month               month for which the emissions data was averaged</span>
+<span class="sd">        day                 day for which the emissions data was averaged</span>
+<span class="sd">        hour                hour for which the emissions data was averaged</span>
+<span class="sd">        co2_eq_kg_per_MWh   emissions in kg of CO2 per MWh of grid electricity</span>
+<span class="sd">        ==================  ==================================================</span>
+
+<span class="sd">    emissions_units : pint.Unit</span>
+<span class="sd">        Units for the emissions data. Default is kg / MWh</span>
+
+<span class="sd">    resolution : str</span>
+<span class="sd">        a string of the form `[int][str]` giving the temporal resolution</span>
+<span class="sd">        on which charges are assessed. The `str` portion corresponds to numpy</span>
+<span class="sd">        timedelta64 types. For example &#39;15m&#39; specifying demand charges</span>
+<span class="sd">        that are applied to 15-minute intervals of electricity consumption</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pint.Quantity</span>
+<span class="sd">        emissions from `start_dt` to `end_dt` in kg CO2 / kWh</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get the number of timesteps in a day (according to charge resolution)</span>
+    <span class="n">res_binsize_minutes</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
+    <span class="n">n_per_hour</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">60</span> <span class="o">/</span> <span class="n">res_binsize_minutes</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">end_dt</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">):</span>
+        <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">res_binsize_minutes</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="c1"># make end_dt non-inclusive to align with Python syntax</span>
+        <span class="n">end_dt</span> <span class="o">=</span> <span class="n">end_dt</span> <span class="o">-</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">res_binsize_minutes</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="n">res_binsize_minutes</span><span class="p">,</span> <span class="s2">&quot;m&quot;</span><span class="p">))</span>
+        <span class="n">start_dt</span> <span class="o">=</span> <span class="n">start_dt</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+        <span class="c1"># make end_dt non-inclusive to align with Python syntax</span>
+        <span class="n">end_dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="n">res_binsize_minutes</span><span class="p">,</span> <span class="s2">&quot;m&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span>
+            <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span>
+        <span class="p">)</span>
+
+    <span class="n">start_day</span> <span class="o">=</span> <span class="n">start_dt</span><span class="o">.</span><span class="n">day</span>
+    <span class="n">start_month</span> <span class="o">=</span> <span class="n">start_dt</span><span class="o">.</span><span class="n">month</span>
+    <span class="n">start_year</span> <span class="o">=</span> <span class="n">start_dt</span><span class="o">.</span><span class="n">year</span>
+    <span class="n">start_hour</span> <span class="o">=</span> <span class="n">start_dt</span><span class="o">.</span><span class="n">hour</span>
+    <span class="n">start_minute</span> <span class="o">=</span> <span class="n">start_dt</span><span class="o">.</span><span class="n">minute</span>
+    <span class="n">end_day</span> <span class="o">=</span> <span class="n">end_dt</span><span class="o">.</span><span class="n">day</span>
+    <span class="n">end_month</span> <span class="o">=</span> <span class="n">end_dt</span><span class="o">.</span><span class="n">month</span>
+    <span class="n">end_hour</span> <span class="o">=</span> <span class="n">end_dt</span><span class="o">.</span><span class="n">hour</span>
+
+    <span class="c1"># add date variables to emissions data</span>
+    <span class="n">no_day_var</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">emissions_data</span><span class="p">[</span><span class="n">DT_LOCAL_VARNAME</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+            <span class="n">emissions_data</span><span class="p">[</span><span class="n">DT_LOCAL_VARNAME</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">emissions_data</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">]</span> <span class="o">=</span> <span class="n">emissions_data</span><span class="o">.</span><span class="n">datetime_local</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span>
+        <span class="n">emissions_data</span><span class="p">[</span><span class="n">DAY_VARNAME</span><span class="p">]</span> <span class="o">=</span> <span class="n">emissions_data</span><span class="o">.</span><span class="n">datetime_local</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">day</span>
+        <span class="n">emissions_data</span><span class="p">[</span><span class="n">HOUR_VARNAME</span><span class="p">]</span> <span class="o">=</span> <span class="n">emissions_data</span><span class="o">.</span><span class="n">datetime_local</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="c1"># if datetime_local is not found then assume month and hour</span>
+        <span class="c1"># are already accounted for but day is not for backwards compatability</span>
+        <span class="k">if</span> <span class="n">DAY_VARNAME</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">emissions_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">no_day_var</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="c1"># adjust carbon_intensity to match the index of net_demand_kW</span>
+    <span class="c1"># this gets the number of timesteps to include the first hour&#39;s carbon intensity</span>
+    <span class="c1"># since it is not necessarily a full hour (which corresponds to 4 timesteps)</span>
+    <span class="n">num_first_min</span> <span class="o">=</span> <span class="n">start_minute</span> <span class="o">%</span> <span class="n">res_binsize_minutes</span>
+    <span class="k">if</span> <span class="n">num_first_min</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">num_first_min</span> <span class="o">=</span> <span class="n">n_per_hour</span>
+    <span class="k">if</span> <span class="n">no_day_var</span><span class="p">:</span>
+        <span class="n">start_index</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">emissions_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">HOUR_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_hour</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_month</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="o">.</span><span class="n">idxmax</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">start_index</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">emissions_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">HOUR_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_hour</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">DAY_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_day</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_month</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="o">.</span><span class="n">idxmax</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="n">carbon_intensity_adj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">num_first_min</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">emissions_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">start_index</span><span class="p">][</span><span class="n">ei_varname</span><span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="n">rollover</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">end_month</span> <span class="o">!=</span> <span class="n">start_month</span>
+    <span class="p">)</span>  <span class="c1"># should we extend this for multiple months/years?</span>
+    <span class="k">if</span> <span class="n">rollover</span><span class="p">:</span>
+        <span class="n">old_end_day</span> <span class="o">=</span> <span class="n">end_day</span>
+        <span class="n">end_day</span> <span class="o">=</span> <span class="n">calendar</span><span class="o">.</span><span class="n">monthrange</span><span class="p">(</span><span class="n">start_year</span><span class="p">,</span> <span class="n">start_month</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">old_end_hour</span> <span class="o">=</span> <span class="n">end_hour</span>
+        <span class="n">end_hour</span> <span class="o">=</span> <span class="mi">24</span>
+
+    <span class="c1"># increment index since first hour was included</span>
+    <span class="n">start_index</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">start_hour</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">end_day</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">start_day</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">end_day</span> <span class="o">-</span> <span class="n">start_day</span><span class="p">):</span>
+            <span class="c1"># don&#39;t include last hour as it may not be a full hour</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">end_hour</span><span class="p">)</span> <span class="o">-</span> <span class="nb">int</span><span class="p">(</span><span class="n">start_hour</span><span class="p">)):</span>
+                <span class="n">carbon_intensity_adj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">carbon_intensity_adj</span><span class="p">,</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+                        <span class="p">(</span><span class="n">n_per_hour</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                        <span class="n">emissions_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">start_index</span> <span class="o">+</span> <span class="n">j</span><span class="p">][</span><span class="n">ei_varname</span><span class="p">],</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">24</span> <span class="o">-</span> <span class="nb">int</span><span class="p">(</span><span class="n">start_hour</span><span class="p">)):</span>
+                <span class="n">carbon_intensity_adj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">carbon_intensity_adj</span><span class="p">,</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+                        <span class="p">(</span><span class="n">n_per_hour</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                        <span class="n">emissions_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">start_index</span> <span class="o">+</span> <span class="n">j</span><span class="p">][</span><span class="n">ei_varname</span><span class="p">],</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>
+        <span class="c1"># reset start index to first hour of the month</span>
+        <span class="n">start_hour</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">no_day_var</span><span class="p">:</span>
+            <span class="n">start_index</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">emissions_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">HOUR_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_hour</span><span class="p">)</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_month</span><span class="p">)</span>
+                <span class="p">]</span>
+                <span class="o">.</span><span class="n">idxmax</span><span class="p">()</span>
+                <span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">start_index</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">emissions_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">HOUR_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_hour</span><span class="p">)</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">DAY_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_day</span><span class="p">)</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_month</span><span class="p">)</span>
+                <span class="p">]</span>
+                <span class="o">.</span><span class="n">idxmax</span><span class="p">()</span>
+                <span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">)</span>
+
+    <span class="c1"># if we went into a new month, process that second month</span>
+    <span class="k">if</span> <span class="n">rollover</span><span class="p">:</span>
+        <span class="n">end_hour</span> <span class="o">=</span> <span class="n">old_end_hour</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">old_end_day</span><span class="p">):</span>
+            <span class="c1"># reset start index to first hour of the month</span>
+            <span class="c1"># can assume start hour is zero since we are rolling over</span>
+            <span class="n">start_hour</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">no_day_var</span><span class="p">:</span>
+                <span class="n">start_index</span> <span class="o">=</span> <span class="n">emissions_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">HOUR_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_hour</span><span class="p">)</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">end_month</span><span class="p">)</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">idxmax</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">start_index</span> <span class="o">=</span> <span class="n">emissions_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">HOUR_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_hour</span><span class="p">)</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">DAY_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_day</span><span class="p">)</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">end_month</span><span class="p">)</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">idxmax</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">old_end_day</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="c1"># don&#39;t include last hour as it may not be a full hour</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">end_hour</span><span class="p">)):</span>
+                    <span class="n">carbon_intensity_adj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="n">carbon_intensity_adj</span><span class="p">,</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+                            <span class="p">(</span><span class="n">n_per_hour</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">emissions_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">start_index</span> <span class="o">+</span> <span class="n">j</span><span class="p">][</span><span class="n">ei_varname</span><span class="p">],</span>
+                        <span class="p">),</span>
+                    <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">24</span><span class="p">):</span>
+                    <span class="n">carbon_intensity_adj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="n">carbon_intensity_adj</span><span class="p">,</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+                            <span class="p">(</span><span class="n">n_per_hour</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">emissions_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">start_index</span> <span class="o">+</span> <span class="n">j</span><span class="p">][</span><span class="n">ei_varname</span><span class="p">],</span>
+                        <span class="p">),</span>
+                    <span class="p">)</span>
+
+    <span class="c1"># add in remainder of last hour</span>
+    <span class="n">leftover</span> <span class="o">=</span> <span class="p">(</span><span class="n">ntsteps</span> <span class="o">-</span> <span class="n">num_first_min</span><span class="p">)</span> <span class="o">%</span> <span class="n">n_per_hour</span>
+    <span class="k">if</span> <span class="n">leftover</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">leftover</span> <span class="o">=</span> <span class="n">n_per_hour</span>
+    <span class="k">if</span> <span class="n">no_day_var</span><span class="p">:</span>
+        <span class="n">end_index</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">emissions_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">HOUR_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">end_hour</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">end_month</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="o">.</span><span class="n">idxmax</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">end_index</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">emissions_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">HOUR_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">end_hour</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">DAY_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">end_day</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">emissions_data</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">]</span> <span class="o">==</span> <span class="n">end_month</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="o">.</span><span class="n">idxmax</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">)</span>
+
+    <span class="n">carbon_intensity_adj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="n">carbon_intensity_adj</span><span class="p">,</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">leftover</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">emissions_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">end_index</span><span class="p">][</span><span class="n">ei_varname</span><span class="p">]),</span>
+    <span class="p">)</span>
+
+    <span class="c1"># convert from kg/MWh to kg/kWh</span>
+    <span class="n">carbon_intensity_adj</span> <span class="o">=</span> <span class="p">(</span><span class="n">carbon_intensity_adj</span> <span class="o">*</span> <span class="n">emissions_units</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">kWh</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">carbon_intensity_adj</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3 Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

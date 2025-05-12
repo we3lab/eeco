@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>emissions &mdash; EEC 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="units" href="units.html" />
+    <link rel="prev" title="costs" href="costs.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            EEC
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">README</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contribution Agreement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">LICENSE</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">emissions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.emissions.calculate_grid_emissions"><code class="docutils literal notranslate"><span class="pre">calculate_grid_emissions()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.emissions.calculate_grid_emissions_cvx"><code class="docutils literal notranslate"><span class="pre">calculate_grid_emissions_cvx()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.emissions.get_carbon_intensity"><code class="docutils literal notranslate"><span class="pre">get_carbon_intensity()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">EEC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">emissions</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/emissions.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <nav class="contents" id="contents" role="doc-toc">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#emissions" id="id2">emissions</a></p></li>
+</ul>
+</nav>
+<section id="emissions">
+<span id="id1"></span><h1><a class="toc-backref" href="#id2" role="doc-backlink">emissions</a><a class="headerlink" href="#emissions" title="Permalink to this heading"></a></h1>
+<p>This module consists of code that computes Scope 2 emissions given an electricity consumption profile.</p>
+<span class="target" id="module-electric_emission_cost.emissions"></span><p>Functions to calculate emissions from electricity consumption data.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.emissions.calculate_grid_emissions">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.emissions.</span></span><span class="sig-name descname"><span class="pre">calculate_grid_emissions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">carbon_intensity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">net_demand_varname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emission_units=&lt;Unit('kilogram</span> <span class="pre">/</span> <span class="pre">megawatt_hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ei_varname='co2_eq_kg_per_MWh'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/emissions.html#calculate_grid_emissions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.emissions.calculate_grid_emissions" title="Permalink to this definition"></a></dt>
+<dd><p>Calculates the emissions for the given consumption information and
+carbon intensity of electricity generation structure as DataFrames.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>carbon_intensity</strong> (<em>DataFrame</em>) – Pandas DataFrame with kg of CO2 per kWh by hour and month</p></li>
+<li><p><strong>consumption_data</strong> (<em>DataFrame</em>) – Baseline electrical or gas usage data as a Pandas DataFrame</p></li>
+<li><p><strong>emissions_units</strong> (<em>pint.Unit</em>) – Units for the emissions data. Default is kg / kWh</p></li>
+<li><p><strong>consumption_units</strong> (<em>pint.Unit</em>) – Units for the electricity consumption data. Default is kW</p></li>
+<li><p><strong>resolution</strong> (<em>str</em>) – granularity of each timestep in string form with default value of “15m”</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>total emissions due to grid electricity generation in kilograms CO2</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pint.Quantity</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.emissions.calculate_grid_emissions_cvx">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.emissions.</span></span><span class="sig-name descname"><span class="pre">calculate_grid_emissions_cvx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">carbon_intensity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emission_units=&lt;Unit('kilogram</span> <span class="pre">/</span> <span class="pre">megawatt_hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/emissions.html#calculate_grid_emissions_cvx"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.emissions.calculate_grid_emissions_cvx" title="Permalink to this definition"></a></dt>
+<dd><p>Calculates the emissions for the given consumption information as a cvxpy object
+carbon intensity of electricity generation structure as a DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>carbon_intensity</strong> (<em>array</em>) – numpy array with kg of CO2 per kWh</p></li>
+<li><p><strong>consumption_data</strong> (<em>Variable</em>) – Baseline electrical or gas usage data as a CVXPY Variable</p></li>
+<li><p><strong>emissions_units</strong> (<em>pint.Unit</em>) – Units for the emissions data. Default is kg / kWh</p></li>
+<li><p><strong>consumption_units</strong> (<em>pint.Unit</em>) – Units for the electricity consumption data. Default is kW</p></li>
+<li><p><strong>resolution</strong> (<em>str</em>) – granularity of each timestep in string form with default value of “15m”</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>cvxpy Expression representing emissions in kg of CO2 for the given
+<cite>consumption_data</cite> and <cite>carbon_intensity</cite></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Expression</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.emissions.get_carbon_intensity">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.emissions.</span></span><span class="sig-name descname"><span class="pre">get_carbon_intensity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissions_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissions_units=&lt;Unit('kilogram</span> <span class="pre">/</span> <span class="pre">megawatt_hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ei_varname='co2_eq_kg_per_MWh'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/emissions.html#get_carbon_intensity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.emissions.get_carbon_intensity" title="Permalink to this definition"></a></dt>
+<dd><p>Computes the emissions (as kilograms of CO2) of a horizon of data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_dt</strong> (<em>datetime.datetime or numpy.datetime64</em>) – Start datetime to gather rate information</p></li>
+<li><p><strong>end_dt</strong> (<em>datetime.datetime or numpy.datetime64</em>) – End datetime to gather rate information</p></li>
+<li><p><strong>emissions_data</strong> (<em>DataFrame</em>) – Electric grid emissions information.
+Only one of <cite>datetime_local</cite> and <cite>month</cite>/<cite>day</cite>/<cite>hour</cite> are required.</p></li>
+<li><p><strong>emissions_units</strong> (<em>pint.Unit</em>) – Units for the emissions data. Default is kg / MWh</p></li>
+<li><p><strong>resolution</strong> (<em>str</em>) – a string of the form <cite>[int][str]</cite> giving the temporal resolution
+on which charges are assessed. The <cite>str</cite> portion corresponds to numpy
+timedelta64 types. For example ‘15m’ specifying demand charges
+that are applied to 15-minute intervals of electricity consumption</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>emissions from <cite>start_dt</cite> to <cite>end_dt</cite> in kg CO2 / kWh</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pint.Quantity</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="costs.html" class="btn btn-neutral float-left" title="costs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="units.html" class="btn btn-neutral float-right" title="units" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3 Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

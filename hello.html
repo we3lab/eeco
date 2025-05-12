@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Getting Started &mdash; EEC 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Data Formats" href="data_format.html" />
+    <link rel="prev" title="Welcome to the Electric Emissions &amp; Cost (EEC) documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            EEC
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">README</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installing-electric-emissions-costs-eec">Installing Electric Emissions &amp; Costs (EEC)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#core-functionality">Core Functionality</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sample-model-virtual-battery">Sample Model: Virtual Battery</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contribution Agreement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">LICENSE</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">EEC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Getting Started</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/hello.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <nav class="contents" id="contents" role="doc-toc">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#getting-started" id="id1">Getting Started</a></p>
+<ul>
+<li><p><a class="reference internal" href="#installing-electric-emissions-costs-eec" id="id2">Installing Electric Emissions &amp; Costs (EEC)</a></p></li>
+<li><p><a class="reference internal" href="#core-functionality" id="id3">Core Functionality</a></p></li>
+<li><p><a class="reference internal" href="#sample-model-virtual-battery" id="id4">Sample Model: Virtual Battery</a></p></li>
+</ul>
+</li>
+</ul>
+</nav>
+<section id="getting-started">
+<span id="helloworld"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">Getting Started</a><a class="headerlink" href="#getting-started" title="Permalink to this heading"></a></h1>
+<section id="installing-electric-emissions-costs-eec">
+<span id="installation"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">Installing Electric Emissions &amp; Costs (EEC)</a><a class="headerlink" href="#installing-electric-emissions-costs-eec" title="Permalink to this heading"></a></h2>
+<p>For most users, the first step to using EEC will be to pip install the Python package:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">electric</span><span class="o">-</span><span class="n">emission</span><span class="o">-</span><span class="n">cost</span>
+</pre></div>
+</div>
+</section>
+<section id="core-functionality">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink">Core Functionality</a><a class="headerlink" href="#core-functionality" title="Permalink to this heading"></a></h2>
+<p>The EEC package has two main functions:</p>
+<ol class="arabic simple">
+<li><p>calculate the electricity bill of a facility given a tariff and user consumption data.</p></li>
+<li><p>calculate the Scope 2 emissions implications given grid emissions and user consumption data.</p></li>
+</ol>
+<p>These functions can be performed in three different modes:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">numpy</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CVXPY</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Pyomo</span></code></p></li>
+</ol>
+<p>More information about how to correctly format data inputs can be found in <a class="reference internal" href="data_format.html#dataformat"><span class="std std-ref">Data Formats</span></a>.</p>
+</section>
+<section id="sample-model-virtual-battery">
+<span id="virtualbattery"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">Sample Model: Virtual Battery</a><a class="headerlink" href="#sample-model-virtual-battery" title="Permalink to this heading"></a></h2>
+<p>Besides the core functionality and utility functions, a simple virtual battery model is included as an example.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to the Electric Emissions &amp; Cost (EEC) documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="data_format.html" class="btn btn-neutral float-right" title="Data Formats" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3 Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

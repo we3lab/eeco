@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>electric_emission_cost.utils &mdash; EEC 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            EEC
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">README</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hello.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../advanced.html">Advanced Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING.html">Contribution Agreement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../LICENSE.html">LICENSE</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">EEC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../electric_emission_cost.html">electric_emission_cost</a></li>
+      <li class="breadcrumb-item active">electric_emission_cost.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for electric_emission_cost.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytz</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyomo.core.expr.numeric_expr</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">SumExpression</span><span class="p">,</span>
+    <span class="n">LinearExpression</span><span class="p">,</span>
+    <span class="n">MonomialTermExpression</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyomo.core.base.var</span><span class="w"> </span><span class="kn">import</span> <span class="n">ScalarVar</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyomo.core.base.expression</span><span class="w"> </span><span class="kn">import</span> <span class="n">IndexedExpression</span>
+
+<span class="c1"># Dictionary mapping region types to timezone strings</span>
+<span class="n">TIMEZONE_DICT</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;iso_rto_code&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;CAISO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">&quot;ERCOT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;ISONE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;MISO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;NYISO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;OTHER&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Default to Eastern Time (ET)</span>
+        <span class="s2">&quot;PJM&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;SPP&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;nerc_region&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;MRO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;NPCC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;RFC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;SERC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;SPP&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;TRE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;WECC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT) / Pacific Time (PT)</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;AK&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Anchorage&quot;</span><span class="p">,</span>  <span class="c1"># Alaska Time (AKT)</span>
+        <span class="s2">&quot;AL&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;AR&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;AZ&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Phoenix&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Standard Time (MST, no DST)</span>
+        <span class="s2">&quot;CA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">&quot;CO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">&quot;CT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;DE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;FL&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;GA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;IA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;ID&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Boise&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">&quot;IL&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;IN&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Indiana/Indianapolis&quot;</span><span class="p">,</span>  <span class="c1"># Mostly Eastern Time (ET)</span>
+        <span class="s2">&quot;KS&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;KY&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;LA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;MA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;MD&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;ME&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;MI&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Detroit&quot;</span><span class="p">,</span>  <span class="c1"># Mostly Eastern Time (ET)</span>
+        <span class="s2">&quot;MN&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;MO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;MS&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;MT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">&quot;NC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;ND&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;NE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">&quot;NH&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;NJ&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;NM&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">&quot;NV&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">&quot;NY&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;OH&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;OK&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;OR&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">&quot;PA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;RI&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;SC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;SD&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">&quot;TN&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;TX&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;UT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">&quot;VA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;VT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;WA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">&quot;WI&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;WV&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;WY&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;egrid_subregions&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;AKGD&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Anchorage&quot;</span><span class="p">,</span>  <span class="c1"># Alaska Time (AKT)</span>
+        <span class="s2">&quot;AZNM&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Phoenix&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Standard Time (MST, no DST)</span>
+        <span class="s2">&quot;CAMX&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">&quot;ERCT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;FRCC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;MROE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;MROW&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;NEWE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;NWPP&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">&quot;NYCW&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;NYLI&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;NYUP&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;RFCE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;RFCM&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;RFCW&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;RMPA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">&quot;SPNO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;SPSO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;SRMV&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;SRMW&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">&quot;SRSO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;SRTV&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">&quot;SRVC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="idxparam_value"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.idxparam_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">idxparam_value</span><span class="p">(</span><span class="n">idx_param</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the parameter value at the given index.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    idx_param : pyomo.environ.Param or pyomo.environ.Var</span>
+<span class="sd">        The Pyomo parameter or variable to be converted</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        Indexed variable or parameter as a numpy array</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">idx_param</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_param</span><span class="p">))])</span></div>
+
+
+<div class="viewcode-block" id="max"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.max">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">max</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Elementwise maximum of an expression or array</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    expression : [</span>
+<span class="sd">        numpy.Array,</span>
+<span class="sd">        cvxpy.Expression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericExpression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericNDArray,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericNDArray,</span>
+<span class="sd">        pyomo.environ.Param,</span>
+<span class="sd">        pyomo.environ.Var</span>
+<span class="sd">    ]</span>
+<span class="sd">        The expression to find the maximum of</span>
+
+<span class="sd">    model : pyomo.environ.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
+<span class="sd">    varstr : str</span>
+<span class="sd">        Name of the variable to be created if using a Pyomo `model`</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        When `expression` is not of type `numpy.Array`, `cvxpy.Expression`,</span>
+<span class="sd">        `pyomo.core.expr.numeric_expr.NumericExpression`,</span>
+<span class="sd">        `pyomo.core.expr.numeric_expr.NumericNDArray`,</span>
+<span class="sd">        `pyomo.environ.Param`, or `pyomo.environ.Var`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ([numpy.Array, cvxpy.Expression, pyomo.environ.Var], pyomo.environ.Model)</span>
+<span class="sd">        Expression representing max of `expression`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="n">LinearExpression</span><span class="p">,</span> <span class="n">SumExpression</span><span class="p">,</span> <span class="n">MonomialTermExpression</span><span class="p">,</span> <span class="n">ScalarVar</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">())</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">var</span> <span class="o">&gt;=</span> <span class="n">expression</span>
+
+        <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="n">IndexedExpression</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">)):</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">())</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">var</span> <span class="o">&gt;=</span> <span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+
+        <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">expression</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">expression</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="sum"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.sum">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Elementwise maximum of an expression or array</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    expression : [</span>
+<span class="sd">        numpy.Array,</span>
+<span class="sd">        cvxpy.Expression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericExpression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericNDArray,</span>
+<span class="sd">        pyomo.environ.Param,</span>
+<span class="sd">        pyomo.environ.Var</span>
+<span class="sd">    ]</span>
+<span class="sd">        Expression representing a matrix to sum</span>
+
+<span class="sd">    axis: int</span>
+<span class="sd">        Optional axis along which to compute sum. Default is 0</span>
+
+<span class="sd">    model : pyomo.environ.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
+<span class="sd">    varstr : str</span>
+<span class="sd">        Name of the variable to be created if using a Pyomo `model`</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        When `expression` is not of type `numpy.Array`, `cvxpy.Expression`,</span>
+<span class="sd">        `pyomo.core.expr.numeric_expr.NumericExpression`,</span>
+<span class="sd">        `pyomo.core.expr.numeric_expr.NumericNDArray` `pyomo.environ.Param`,</span>
+<span class="sd">        or `pyomo.environ.Var`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    [numpy.Array, cvxpy.Expression, pyomo.environ.Expression]</span>
+<span class="sd">        Expression representing sum of `expression` along `axis`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="n">SumExpression</span><span class="p">,</span> <span class="n">IndexedExpression</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">)):</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">())</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+            <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">expression</span><span class="p">)):</span>
+                <span class="n">total</span> <span class="o">+=</span> <span class="n">expression</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">var</span> <span class="o">==</span> <span class="n">total</span>
+
+        <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="max_pos"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.max_pos">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">max_pos</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the maximum positive scalar value of an expression.</span>
+<span class="sd">    I.e., max([x, 0]) where x is any element of the expression (if a matrix)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    expression : [</span>
+<span class="sd">        numpy.Array,</span>
+<span class="sd">        cvxpy.Expression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericExpression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericNDArray,</span>
+<span class="sd">        pyomo.environ.Param,</span>
+<span class="sd">        pyomo.environ.Var</span>
+<span class="sd">    ]</span>
+<span class="sd">        Expression representing a matrix, vector, or scalar</span>
+
+<span class="sd">    model : pyomo.environ.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
+<span class="sd">    varstr : str</span>
+<span class="sd">        Name of the variable to be created if using a Pyomo `model`</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        When `expression` is not of type `numpy.Array`, `cvxpy.Expression`,</span>
+<span class="sd">        `pyomo.core.expr.numeric_expr.NumericNDArray`,</span>
+<span class="sd">        `pyomo.core.expr.numeric_expr.NumericExpression`,</span>
+<span class="sd">        `pyomo.environ.Param`,  or `pyomo.environ.Var`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    (</span>
+<span class="sd">        [numpy.float, numpy.int, numpy.Array, cvxpy.Expression, or pyomo.environ.Var],</span>
+<span class="sd">        pyomo.environ.Model</span>
+<span class="sd">    )</span>
+<span class="sd">        Expression representing maximum positive scalar value of `expression`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="n">LinearExpression</span><span class="p">,</span> <span class="n">SumExpression</span><span class="p">,</span> <span class="n">MonomialTermExpression</span><span class="p">,</span> <span class="n">ScalarVar</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">initialize</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)))</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">var</span> <span class="o">&gt;=</span> <span class="n">expression</span>
+
+        <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="n">IndexedExpression</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">)):</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)))</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">var</span> <span class="o">&gt;=</span> <span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+
+        <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">expression</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">cp</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">expression</span><span class="p">,</span> <span class="mi">0</span><span class="p">])),</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="multiply"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.multiply">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">multiply</span><span class="p">(</span><span class="n">expression1</span><span class="p">,</span> <span class="n">expression2</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Implements elementwise multiplication operation on two optimization expressions</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    expression1 : [</span>
+<span class="sd">        numpy.Array,</span>
+<span class="sd">        cvxpy.Expression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericExpression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericNDArray,</span>
+<span class="sd">        pyomo.environ.Param,</span>
+<span class="sd">        pyomo.environ.Var</span>
+<span class="sd">    ]</span>
+<span class="sd">        LHS of multiply operation</span>
+
+<span class="sd">    expression2 : [</span>
+<span class="sd">        numpy.Array,</span>
+<span class="sd">        cvxpy.Expression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericExpression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericNDArray,</span>
+<span class="sd">        pyomo.environ.Param,</span>
+<span class="sd">        pyomo.environ.Var</span>
+<span class="sd">    ]</span>
+<span class="sd">        RHS of multiply operation</span>
+
+<span class="sd">    model : pyomo.environ.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
+<span class="sd">    varstr : str</span>
+<span class="sd">        Name of the variable to be created if using a Pyomo `model`</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        When `expression` is not of type `numpy.Array`, `cvxpy.Expression`,</span>
+<span class="sd">        `pyomo.core.expr.numeric_expr.NumericNDArray`,</span>
+<span class="sd">        `pyomo.core.expr.numeric_expr.NumericExpression`,</span>
+<span class="sd">        `pyomo.environ.Param`, or `pyomo.environ.Var`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    [</span>
+<span class="sd">        numpy.Array,</span>
+<span class="sd">        cvxpy.Expression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericNDArray,</span>
+<span class="sd">        pyomo.environ.Expression</span>
+<span class="sd">    ]</span>
+<span class="sd">        result from elementwise multiplication of `expression1` and `expression2`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression1</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression2</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">expression1</span><span class="p">,</span> <span class="n">expression2</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">expression1</span><span class="p">,</span> <span class="p">(</span><span class="n">SumExpression</span><span class="p">,</span> <span class="n">IndexedExpression</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">)</span>
+    <span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">expression2</span><span class="p">,</span> <span class="p">(</span><span class="n">SumExpression</span><span class="p">,</span> <span class="n">IndexedExpression</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">expression1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># TODO: replace model.t with better way to get dimensions</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">))</span>
+            <span class="n">var</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">)</span>
+
+            <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">expression1</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">*</span> <span class="n">expression2</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+
+            <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">expression1</span> <span class="o">*</span> <span class="n">expression2</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">expression1</span><span class="p">,</span>
+        <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">),</span>
+    <span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">expression2</span><span class="p">,</span>
+        <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">),</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">expression1</span><span class="p">,</span> <span class="n">expression2</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="parse_freq"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.parse_freq">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parse_freq</span><span class="p">(</span><span class="n">freq</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parses a time frequency code string, returning its type and its freq_binsize</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    freq: str</span>
+<span class="sd">        a string of the form [type][freq_binsize], where type corresponds to a</span>
+<span class="sd">        numpy.timedelta64 encoding and freq binsize is an integer giving the number</span>
+<span class="sd">        of increments of `type` of one binned increment of our time variable</span>
+<span class="sd">        (for example &#39;6h&#39; means the data are grouped into increments of 6 hours)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        tuple of the form (`int`,`str`) giving the binsize and units (freq_type)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">freq_type</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;[0-9]&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">freq</span><span class="p">)</span>
+    <span class="n">freq_binsize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;[^0-9]&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">freq</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">freq_binsize</span><span class="p">,</span> <span class="n">freq_type</span></div>
+
+
+<div class="viewcode-block" id="get_freq_binsize_minutes"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.get_freq_binsize_minutes">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">freq</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Gets size of a given time frequency expressed in units of minutes</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    freq: str</span>
+<span class="sd">        a string of the form [type][freq_binsize], where type corresponds to a</span>
+<span class="sd">        numpy.timedelta64 encoding and freq binsize is an integer giving the number</span>
+<span class="sd">        of increments of `type` of one binned increment of our time variable</span>
+<span class="sd">        (for example &#39;6h&#39; means the data are grouped into increments of 6 hours)</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        when resolution is not minute, hourly, or daily</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    int</span>
+<span class="sd">        integer giving the number of minutes in the given time frequency unit</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">freq_binsize</span><span class="p">,</span> <span class="n">freq_type</span> <span class="o">=</span> <span class="n">parse_freq</span><span class="p">(</span><span class="n">freq</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">freq_type</span> <span class="o">==</span> <span class="s2">&quot;m&quot;</span><span class="p">:</span>
+        <span class="n">multiplier</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">elif</span> <span class="n">freq_type</span> <span class="o">==</span> <span class="s2">&quot;h&quot;</span><span class="p">:</span>
+        <span class="n">multiplier</span> <span class="o">=</span> <span class="mi">60</span>
+    <span class="k">elif</span> <span class="n">freq_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;D&quot;</span><span class="p">,</span> <span class="s2">&quot;d&quot;</span><span class="p">]:</span>
+        <span class="n">multiplier</span> <span class="o">=</span> <span class="mi">60</span> <span class="o">*</span> <span class="mi">24</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Cannot deal with data that are not in minute, hourly, or daily resolution&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">multiplier</span> <span class="o">*</span> <span class="n">freq_binsize</span></div>
+
+
+<div class="viewcode-block" id="convert_utc_to_timezone"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.convert_utc_to_timezone">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">convert_utc_to_timezone</span><span class="p">(</span><span class="n">utc_hour</span><span class="p">,</span> <span class="n">timezone_str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert UTC hour (0-23) to the corresponding hour in a specified timezone.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    utc_hour (int): Hour in UTC (0-23).</span>
+<span class="sd">    timezone_str (str): Timezone string, e.g., &#39;America/New_York&#39;.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    int: Corresponding hour in the specified timezone.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Ensure the UTC hour is within the valid range</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">utc_hour</span> <span class="o">&lt;=</span> <span class="mi">23</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;UTC hour must be between 0 and 23.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Create a UTC datetime object with the specified hour</span>
+    <span class="n">utc_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+        <span class="n">hour</span><span class="o">=</span><span class="n">utc_hour</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">tzinfo</span><span class="o">=</span><span class="n">pytz</span><span class="o">.</span><span class="n">utc</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Convert to the specified timezone</span>
+    <span class="n">target_timezone</span> <span class="o">=</span> <span class="n">pytz</span><span class="o">.</span><span class="n">timezone</span><span class="p">(</span><span class="n">timezone_str</span><span class="p">)</span>
+    <span class="n">local_time</span> <span class="o">=</span> <span class="n">utc_time</span><span class="o">.</span><span class="n">astimezone</span><span class="p">(</span><span class="n">target_timezone</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">local_time</span><span class="o">.</span><span class="n">hour</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3 Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

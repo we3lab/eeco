@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>electric_emission_cost.costs &mdash; EEC 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            EEC
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">README</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hello.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../advanced.html">Advanced Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING.html">Contribution Agreement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../LICENSE.html">LICENSE</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">EEC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../electric_emission_cost.html">electric_emission_cost</a></li>
+      <li class="breadcrumb-item active">electric_emission_cost.costs</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for electric_emission_cost.costs</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Functions to calculate costs from electricity consumption data.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">itertools</span><span class="w"> </span><span class="kn">import</span> <span class="n">compress</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">ut</span>
+
+
+<div class="viewcode-block" id="create_charge_array"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.create_charge_array">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">create_charge_array</span><span class="p">(</span><span class="n">charge</span><span class="p">,</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">effective_start_date</span><span class="p">,</span> <span class="n">effective_end_date</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a single charge array based on the given parameters.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    charge : pandas.DataFrame</span>
+<span class="sd">        data for the charge including columns `month_start`, `month_end`,</span>
+<span class="sd">        `weekday_start`, `weekday_end`, `hour_start`, `hour_end`, and `charge`</span>
+
+<span class="sd">    datetime : pandas.DataFrame, pandas.Series, or numpy.ndarray</span>
+<span class="sd">        If a pandas Series, it must be of type datetime</span>
+<span class="sd">        If a DataFrame it must have a column &quot;DateTime&quot; and row for each timestep</span>
+
+<span class="sd">    effective_start_date : datetime.datetime</span>
+<span class="sd">        date on which this charge becomes effective</span>
+
+<span class="sd">    effective_end_date : datetime.datetime</span>
+<span class="sd">        date at which this charge is no longer in effect (i.e., this day is excluded)</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        When `datetime` is not pandas.DataFrame, pandas.Series, or numpy.ndarray</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    panda.Series</span>
+<span class="sd">        timeseries of the cost of the charge with irrelevant timesteps zeroed out</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datetime</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">datetime</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datetime</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+        <span class="n">datetime</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datetime</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;&#39;datetime&#39; must be of type DataFrame, Series, or array&quot;</span><span class="p">)</span>
+
+    <span class="c1"># calculate months, days, and hours</span>
+    <span class="n">weekdays</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">weekday</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">months</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">hours</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+    <span class="c1"># Make sure hours are being incremented by XX-minute increments</span>
+    <span class="n">minutes</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">minute</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">hours</span> <span class="o">+=</span> <span class="n">minutes</span> <span class="o">/</span> <span class="mi">60</span>
+
+    <span class="c1"># create an empty charge array</span>
+    <span class="n">apply_charge</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">months</span> <span class="o">&gt;=</span> <span class="n">charge</span><span class="p">[</span><span class="s2">&quot;month_start&quot;</span><span class="p">])</span>
+        <span class="o">&amp;</span> <span class="p">(</span><span class="n">months</span> <span class="o">&lt;=</span> <span class="n">charge</span><span class="p">[</span><span class="s2">&quot;month_end&quot;</span><span class="p">])</span>
+        <span class="o">&amp;</span> <span class="p">(</span><span class="n">weekdays</span> <span class="o">&gt;=</span> <span class="n">charge</span><span class="p">[</span><span class="s2">&quot;weekday_start&quot;</span><span class="p">])</span>
+        <span class="o">&amp;</span> <span class="p">(</span><span class="n">weekdays</span> <span class="o">&lt;=</span> <span class="n">charge</span><span class="p">[</span><span class="s2">&quot;weekday_end&quot;</span><span class="p">])</span>
+        <span class="o">&amp;</span> <span class="p">(</span><span class="n">hours</span> <span class="o">&gt;=</span> <span class="n">charge</span><span class="p">[</span><span class="s2">&quot;hour_start&quot;</span><span class="p">])</span>
+        <span class="o">&amp;</span> <span class="p">(</span><span class="n">hours</span> <span class="o">&lt;</span> <span class="n">charge</span><span class="p">[</span><span class="s2">&quot;hour_end&quot;</span><span class="p">])</span>
+        <span class="o">&amp;</span> <span class="p">(</span><span class="n">datetime</span> <span class="o">&gt;=</span> <span class="n">effective_start_date</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="o">&amp;</span> <span class="p">(</span><span class="n">datetime</span> <span class="o">&lt;</span> <span class="n">effective_end_date</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+    <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">charge_array</span> <span class="o">=</span> <span class="n">apply_charge</span> <span class="o">*</span> <span class="n">charge</span><span class="p">[</span><span class="s2">&quot;charge (metric)&quot;</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Please switch to new &#39;charge (metric)&#39; and &#39;charge (imperial)&#39; format&quot;</span><span class="p">,</span>
+            <span class="ne">DeprecationWarning</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">charge_array</span> <span class="o">=</span> <span class="n">apply_charge</span> <span class="o">*</span> <span class="n">charge</span><span class="p">[</span><span class="s2">&quot;charge&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">charge_array</span></div>
+
+
+<div class="viewcode-block" id="add_to_charge_array"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.add_to_charge_array">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">add_to_charge_array</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add to an existing charge array, or an arrya of all zeros if this charge</span>
+<span class="sd">    array does not exist.</span>
+
+<span class="sd">    This functionality is useful for noncontiguous charges that should be saved</span>
+<span class="sd">    under the same key. For example, partial peak hours from 3-5 and 8-10 PM that</span>
+<span class="sd">    are billing as a single demand period.</span>
+
+<span class="sd">    Modifies `charge_dict` in-place, so nothing is returned.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    charge_dict : dict of numpy.ndarray</span>
+<span class="sd">        Dictionary of arrays with keys of the form</span>
+<span class="sd">        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`</span>
+<span class="sd">        and values being the $ per kW (electric demand), kWh (electric energy/export),</span>
+<span class="sd">        cubic meter / day (gas demand), cubic meter (gas energy),</span>
+<span class="sd">        or $ / month (customer)</span>
+
+<span class="sd">    key_str : str</span>
+<span class="sd">        The key for the charge array we&#39;d like to modify of the form</span>
+<span class="sd">        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`</span>
+
+<span class="sd">    charge_array : numpy.ndarray</span>
+<span class="sd">        Value of the charge to add in $ per kW (electric demand),</span>
+<span class="sd">        kWh (electric energy/export), cubic meter / day (gas demand),</span>
+<span class="sd">        cubic meter (gas energy), or $ / month (customer)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">old_charge_array</span> <span class="o">=</span> <span class="n">charge_dict</span><span class="p">[</span><span class="n">key_str</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="n">old_charge_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">charge_array</span><span class="p">))</span>
+
+    <span class="n">charge_dict</span><span class="p">[</span><span class="n">key_str</span><span class="p">]</span> <span class="o">=</span> <span class="n">old_charge_array</span> <span class="o">+</span> <span class="n">charge_array</span></div>
+
+
+<div class="viewcode-block" id="get_charge_dict"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_charge_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a dictionary where the values are charge arrays and keys are of the form</span>
+<span class="sd">    `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    start_dt : datetime.datetime</span>
+<span class="sd">        first timestep to be included in the cost analysis</span>
+
+<span class="sd">    end_dt : datetime.datetime</span>
+<span class="sd">        last timestep to be included in the cost analysis</span>
+
+<span class="sd">    rate_data : pandas.DataFrame</span>
+<span class="sd">        tariff data with required columns `utility`, `type`, `basic_charge_limit`,</span>
+<span class="sd">        `name`, `month_start`, `month_end`, `weekday_start`, `weekday_end`,</span>
+<span class="sd">        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`,</span>
+<span class="sd">        `effective_start_date`, and `effective_end_date`</span>
+
+<span class="sd">    resolution : str</span>
+<span class="sd">        granularity of each timestep in string form with default value of &quot;15m&quot;</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        dictionary of charge arrays</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">charge_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Get the number of timesteps in a day (according to charge resolution)</span>
+    <span class="n">res_binsize_minutes</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">end_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">):</span>
+        <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">res_binsize_minutes</span><span class="p">))</span>
+        <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">start_dt</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">i</span> <span class="o">*</span> <span class="n">res_binsize_minutes</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span>
+                <span class="p">]</span>
+            <span class="p">),</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="n">res_binsize_minutes</span><span class="p">,</span> <span class="s2">&quot;m&quot;</span><span class="p">))</span>
+        <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">start_dt</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">res_binsize_minutes</span><span class="p">,</span> <span class="s2">&quot;m&quot;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span>
+                <span class="p">]</span>
+            <span class="p">),</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+    <span class="n">hours</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+    <span class="c1"># Make sure hours are being incremented by XX-minute increments</span>
+    <span class="n">minutes</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">minute</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">hours</span> <span class="o">+=</span> <span class="n">minutes</span> <span class="o">/</span> <span class="mi">60</span>
+
+    <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;gas&quot;</span><span class="p">,</span> <span class="s2">&quot;electric&quot;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;customer&quot;</span><span class="p">,</span> <span class="s2">&quot;energy&quot;</span><span class="p">,</span> <span class="s2">&quot;demand&quot;</span><span class="p">,</span> <span class="s2">&quot;export&quot;</span><span class="p">]:</span>
+            <span class="n">charges</span> <span class="o">=</span> <span class="n">rate_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                <span class="p">(</span><span class="n">rate_data</span><span class="p">[</span><span class="s2">&quot;utility&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">utility</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">rate_data</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">charge_type</span><span class="p">),</span>
+                <span class="p">:,</span>
+            <span class="p">]</span>
+            <span class="c1"># if there are no charges of this type skip to the next iteration</span>
+            <span class="k">if</span> <span class="n">charges</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">effective_starts</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">charges</span><span class="p">[</span><span class="s2">&quot;effective_start_date&quot;</span><span class="p">])</span>
+                <span class="n">effective_ends</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">charges</span><span class="p">[</span><span class="s2">&quot;effective_end_date&quot;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="c1"># repeat start datetime for every charge</span>
+                <span class="n">effective_starts</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="n">start_dt</span><span class="p">])</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">charges</span><span class="p">))</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">end_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">):</span>
+                    <span class="n">effective_ends</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)])</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span>
+                        <span class="nb">len</span><span class="p">(</span><span class="n">charges</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">effective_ends</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;D&quot;</span><span class="p">)]</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">charges</span><span class="p">))</span>
+
+            <span class="c1"># numpy.unique does not work on datetimes so this is a workaround</span>
+            <span class="n">starts_ends</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">effective_starts</span><span class="p">,</span> <span class="n">effective_ends</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">starts_ends</span><span class="p">:</span>
+                    <span class="n">starts_ends</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">))</span>
+
+            <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="n">starts_ends</span><span class="p">:</span>
+                <span class="c1"># effective_end_date is meant to be inclusive, so add a day</span>
+                <span class="n">new_end</span> <span class="o">=</span> <span class="n">end</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">effective_charges</span> <span class="o">=</span> <span class="n">charges</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">effective_starts</span> <span class="o">==</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">values</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">effective_ends</span> <span class="o">==</span> <span class="n">end</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="p">:,</span>
+                <span class="p">]</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">charge_limits</span> <span class="o">=</span> <span class="n">effective_charges</span><span class="p">[</span><span class="s2">&quot;basic_charge_limit (metric)&quot;</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="n">charge_limits</span> <span class="o">=</span> <span class="n">effective_charges</span><span class="p">[</span><span class="s2">&quot;basic_charge_limit&quot;</span><span class="p">]</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                        <span class="s2">&quot;Please switch to new &#39;basic_charge_limit (metric)&#39; &quot;</span>
+                        <span class="s2">&quot;and &#39;basic_charge_limit (imperial)&#39; format&quot;</span><span class="p">,</span>
+                        <span class="ne">DeprecationWarning</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="k">for</span> <span class="n">limit</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">charge_limits</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">limit</span><span class="p">):</span>
+                        <span class="n">limit_charges</span> <span class="o">=</span> <span class="n">effective_charges</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">charge_limits</span><span class="p">),</span> <span class="p">:</span>
+                        <span class="p">]</span>
+                        <span class="n">limit</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">limit_charges</span> <span class="o">=</span> <span class="n">effective_charges</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">charge_limits</span> <span class="o">==</span> <span class="n">limit</span><span class="p">,</span> <span class="p">:]</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">limit_charges</span><span class="o">.</span><span class="n">index</span><span class="p">):</span>
+                        <span class="n">charge</span> <span class="o">=</span> <span class="n">limit_charges</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">name</span> <span class="o">=</span> <span class="n">charge</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+                        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                            <span class="n">name</span> <span class="o">=</span> <span class="n">charge</span><span class="p">[</span><span class="s2">&quot;period&quot;</span><span class="p">]</span>
+
+                        <span class="c1"># if no name was given just use the index to differentiate</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">name</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
+                            <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                        <span class="c1"># replace underscores with dashes for unique delimiter</span>
+                        <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span>
+
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">assessed</span> <span class="o">=</span> <span class="n">charge</span><span class="p">[</span><span class="s2">&quot;assessed&quot;</span><span class="p">]</span>
+                        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                            <span class="n">assessed</span> <span class="o">=</span> <span class="s2">&quot;monthly&quot;</span>
+
+                        <span class="k">if</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="s2">&quot;customer&quot;</span><span class="p">:</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">charge_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">charge</span><span class="p">[</span><span class="s2">&quot;charge (metric)&quot;</span><span class="p">]])</span>
+                            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                                <span class="n">charge_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">charge</span><span class="p">[</span><span class="s2">&quot;charge&quot;</span><span class="p">]])</span>
+                                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                                    <span class="s2">&quot;Please switch to new &#39;charge (metric)&#39; &quot;</span>
+                                    <span class="s2">&quot;and &#39;charge (imperial)&#39; format&quot;</span><span class="p">,</span>
+                                    <span class="ne">DeprecationWarning</span><span class="p">,</span>
+                                <span class="p">)</span>
+                            <span class="n">key_str</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                                <span class="p">(</span>
+                                    <span class="n">utility</span><span class="p">,</span>
+                                    <span class="n">charge_type</span><span class="p">,</span>
+                                    <span class="n">name</span><span class="p">,</span>
+                                    <span class="n">start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                    <span class="n">end</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                    <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">limit</span><span class="p">)),</span>
+                                <span class="p">)</span>
+                            <span class="p">)</span>
+                            <span class="n">add_to_charge_array</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="s2">&quot;demand&quot;</span> <span class="ow">and</span> <span class="n">assessed</span> <span class="o">==</span> <span class="s2">&quot;daily&quot;</span><span class="p">:</span>
+                            <span class="k">for</span> <span class="n">day</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">((</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                                <span class="n">new_start</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">day</span><span class="p">)</span>
+                                <span class="n">new_end</span> <span class="o">=</span> <span class="n">new_start</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                                <span class="n">charge_array</span> <span class="o">=</span> <span class="n">create_charge_array</span><span class="p">(</span>
+                                    <span class="n">charge</span><span class="p">,</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">new_start</span><span class="p">,</span> <span class="n">new_end</span>
+                                <span class="p">)</span>
+                                <span class="n">key_str</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                                    <span class="p">(</span>
+                                        <span class="n">utility</span><span class="p">,</span>
+                                        <span class="n">charge_type</span><span class="p">,</span>
+                                        <span class="n">name</span><span class="p">,</span>
+                                        <span class="n">new_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                        <span class="n">new_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                        <span class="nb">str</span><span class="p">(</span><span class="n">limit</span><span class="p">),</span>
+                                    <span class="p">)</span>
+                                <span class="p">)</span>
+                                <span class="n">add_to_charge_array</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">charge_array</span> <span class="o">=</span> <span class="n">create_charge_array</span><span class="p">(</span>
+                                <span class="n">charge</span><span class="p">,</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">new_end</span>
+                            <span class="p">)</span>
+                            <span class="n">key_str</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                                <span class="p">(</span>
+                                    <span class="n">utility</span><span class="p">,</span>
+                                    <span class="n">charge_type</span><span class="p">,</span>
+                                    <span class="n">name</span><span class="p">,</span>
+                                    <span class="n">start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                    <span class="n">end</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                    <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">limit</span><span class="p">)),</span>
+                                <span class="p">)</span>
+                            <span class="p">)</span>
+                            <span class="n">add_to_charge_array</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">charge_dict</span></div>
+
+
+<div class="viewcode-block" id="get_charge_df"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_charge_df">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_df</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a dictionary where the values are charge arrays and keys are of the form</span>
+<span class="sd">    `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    start_dt : datetime.datetime</span>
+<span class="sd">        first timestep to be included in the cost analysis</span>
+
+<span class="sd">    end_dt : datetime.datetime</span>
+<span class="sd">        last timestep to be included in the cost analysis</span>
+
+<span class="sd">    rate_data : pandas.DataFrame</span>
+<span class="sd">        tariff data with required columns `utility`, `type`, `basic_charge_limit`,</span>
+<span class="sd">        `name`, `month_start`, `month_end`, `weekday_start`, `weekday_end`,</span>
+<span class="sd">        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`,</span>
+<span class="sd">        `effective_start_date`, and `effective_end_date`</span>
+
+<span class="sd">    resolution : str</span>
+<span class="sd">        granularity of each timestep in string form with default value of &quot;15m&quot;</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        DataFrame of charge arrays</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="n">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_next_limit"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_next_limit">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_next_limit</span><span class="p">(</span><span class="n">key_substr</span><span class="p">,</span> <span class="n">current_limit</span><span class="p">,</span> <span class="n">keys</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Finds the next charge limit for the charge represented by `key`</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    key_substr : str</span>
+<span class="sd">        The beginnging of the key for which we want to get the next limit</span>
+<span class="sd">        (i.e., `{utility}_{type}_{name}_{start_date}_{end_date}`)</span>
+
+<span class="sd">    current_limit : int</span>
+<span class="sd">        The limit for the current tier</span>
+
+<span class="sd">    keys : list of str</span>
+<span class="sd">        List of all the keys in the charge dictionary</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        limit in the tier after `key`, which is `inf` if there is no higher tier</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">matching_keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">key_substr</span> <span class="ow">in</span> <span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">]</span>
+    <span class="n">limits</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">compress</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">matching_keys</span><span class="p">)]</span>
+    <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">matching_idx</span> <span class="o">=</span> <span class="n">limits</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">current_limit</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">limits</span><span class="p">[</span><span class="n">matching_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="calculate_demand_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_demand_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_demand_cost</span><span class="p">(</span>
+    <span class="n">charge_array</span><span class="p">,</span>
+    <span class="n">consumption_data</span><span class="p">,</span>
+    <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">next_limit</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">),</span>
+    <span class="n">prev_demand</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">prev_demand_cost</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">consumption_estimate</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">scale_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the cost of given demand charges for the given billing rate structure,</span>
+<span class="sd">    utility, and consumption information</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    charge_array : array</span>
+<span class="sd">        Array of charge cost (in $/kW)</span>
+
+<span class="sd">    consumption_data : numpy.ndarray or cvxpy.Expression</span>
+<span class="sd">        Baseline electrical or gas usage data as an optimization variable object</span>
+
+<span class="sd">    limit : float</span>
+<span class="sd">        The total consumption, or limit, that this charge came into effect.</span>
+<span class="sd">        Default is 0</span>
+
+<span class="sd">    next_limit : float</span>
+<span class="sd">        The total consumption, or limit, that the next charge comes into effect.</span>
+<span class="sd">        Default is float(&#39;inf&#39;) indicating that there is no higher tier</span>
+
+<span class="sd">    prev_demand : float</span>
+<span class="sd">        The previous maximum demand for this charge during the same billing period.</span>
+<span class="sd">        Only used for optimizing on a horizon shorter than the billing period,</span>
+<span class="sd">        so the default is 0</span>
+
+<span class="sd">    prev_demand_cost : float</span>
+<span class="sd">        The previous cost for this demand charge during the same billing period.</span>
+<span class="sd">        Only used for optimizing on a horizon shorter than the billing period,</span>
+<span class="sd">        so the default is 0</span>
+
+<span class="sd">    consumption_estimate : float</span>
+<span class="sd">        Estimate of the total monthly demand or energy consumption from baseline data.</span>
+<span class="sd">        Only used when `consumption_data` is cvxpy.Expression for convex relaxation</span>
+<span class="sd">        of tiered charges, while numpy.ndarray `consumption_data` will use actual</span>
+<span class="sd">        consumption and ignore the estimate.</span>
+
+<span class="sd">    scale_factor : float</span>
+<span class="sd">        Optional factor for scaling demand charges relative to energy charges</span>
+<span class="sd">        when the optimization/simulation period is not a full billing cycle.</span>
+<span class="sd">        Default is 1</span>
+
+<span class="sd">    model : pyomo.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
+<span class="sd">    varstr : str</span>
+<span class="sd">        Name of the variable to be created if using a Pyomo `model`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cvxpy.Expression or float</span>
+<span class="sd">        float or cvxpy Expression representing cost in USD for the given</span>
+<span class="sd">        `charge_array` and `consumption_data`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">limit</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">prev_demand</span> <span class="o">&gt;=</span> <span class="n">limit</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">prev_demand</span> <span class="o">&lt;=</span> <span class="n">next_limit</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">next_limit</span><span class="p">:</span>
+                <span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">next_limit</span> <span class="o">-</span> <span class="n">limit</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
+                    <span class="n">consumption_data</span> <span class="o">-</span> <span class="n">limit</span><span class="p">,</span> <span class="n">charge_array</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># ignore if current and previous maxima outside of charge limit</span>
+            <span class="n">demand_charged</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="p">(</span><span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">consumption_estimate</span> <span class="o">&gt;=</span> <span class="n">limit</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">consumption_estimate</span> <span class="o">&lt;=</span> <span class="n">next_limit</span><span class="p">:</span>
+                <span class="nb">setattr</span><span class="p">(</span>
+                    <span class="n">model</span><span class="p">,</span>
+                    <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_limit&quot;</span><span class="p">,</span>
+                    <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">initialize</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
+                <span class="p">)</span>
+                <span class="n">var</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_limit&quot;</span><span class="p">)</span>
+
+                <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="n">var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">consumption_data</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">-</span> <span class="n">limit</span>
+
+                <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_limit_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+
+                <span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
+                    <span class="n">var</span><span class="p">,</span>
+                    <span class="n">charge_array</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_multiply&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
+                    <span class="n">next_limit</span> <span class="o">-</span> <span class="n">limit</span><span class="p">,</span>
+                    <span class="n">charge_array</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_multiply&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">demand_charged</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">consumption_estimate</span> <span class="o">&gt;=</span> <span class="n">limit</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">consumption_estimate</span> <span class="o">&lt;=</span> <span class="n">next_limit</span><span class="p">:</span>
+                <span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
+                    <span class="n">consumption_data</span> <span class="o">-</span> <span class="n">limit</span><span class="p">,</span>
+                    <span class="n">charge_array</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_multiply&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
+                    <span class="n">next_limit</span> <span class="o">-</span> <span class="n">limit</span><span class="p">,</span>
+                    <span class="n">charge_array</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_multiply&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">demand_charged</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;consumption_data must be of type numpy.ndarray or cvxpy.Expression&quot;</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">result</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">demand_charged</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span><span class="n">result</span> <span class="o">-</span> <span class="n">prev_demand_cost</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale_factor</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">max_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_max&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span>
+                <span class="n">max_var</span> <span class="o">-</span> <span class="n">prev_demand_cost</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_max_pos&quot;</span>
+            <span class="p">)</span>
+            <span class="o">*</span> <span class="n">scale_factor</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="calculate_energy_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_energy_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_energy_cost</span><span class="p">(</span>
+    <span class="n">charge_array</span><span class="p">,</span>
+    <span class="n">consumption_data</span><span class="p">,</span>
+    <span class="n">divisor</span><span class="p">,</span>
+    <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">next_limit</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">),</span>
+    <span class="n">prev_consumption</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">consumption_estimate</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the cost of given energy charges for the given billing rate</span>
+<span class="sd">    structure, utility, and consumption information.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    charge_array : numpy.ndarray</span>
+<span class="sd">        Array of the charges in $/kWh for electric and $/cubic meter for gas</span>
+
+<span class="sd">    consumption_data : numpy.ndarray or cvxpy.Expression</span>
+<span class="sd">        Baseline electrical or gas usage data as an optimization variable object</span>
+
+<span class="sd">    divisor : int</span>
+<span class="sd">        Divisor for the energy charges</span>
+
+<span class="sd">    limit : float</span>
+<span class="sd">        The total consumption, or limit, that this charge came into effect.</span>
+<span class="sd">        Default is 0</span>
+
+<span class="sd">    next_limit : float</span>
+<span class="sd">        The total consumption, or limit, that the next charge comes into effect.</span>
+<span class="sd">        Default is float(&#39;inf&#39;) indicating that there is no higher tier</span>
+
+<span class="sd">    consumption_estimate : float</span>
+<span class="sd">        Estimate of the total monthly demand or energy consumption from baseline data.</span>
+<span class="sd">        Only used when `consumption_data` is cvxpy.Expression for convex relaxation</span>
+<span class="sd">        of tiered charges, while numpy.ndarray `consumption_data` will use actual</span>
+<span class="sd">        consumption and ignore the estimate.</span>
+
+<span class="sd">    model : pyomo.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
+<span class="sd">    varstr : str</span>
+<span class="sd">        Name of the variable to be created if using a Pyomo `model`</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        When invalid `utility`, `charge_type`, or `assessed`</span>
+<span class="sd">        is provided in `charge_arrays`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cvxpy.Expression, pyomo.Model, or float</span>
+<span class="sd">        float or cvxpy Expression representing cost in USD for the given</span>
+<span class="sd">        `charge_array` and `consumption_data`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cost</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">n_steps</span> <span class="o">=</span> <span class="n">consumption_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># Pyomo does not support shape attribute</span>
+        <span class="n">n_steps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">consumption_data</span><span class="o">.</span><span class="n">extract_values</span><span class="p">())</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="n">energy</span> <span class="o">=</span> <span class="n">prev_consumption</span>
+        <span class="c1"># set the flag if we are starting with previous consumption that lands us</span>
+        <span class="c1"># within the current tier of charge limits</span>
+        <span class="n">within_limit_flag</span> <span class="o">=</span> <span class="n">energy</span> <span class="o">&gt;=</span> <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span> <span class="ow">and</span> <span class="n">energy</span> <span class="o">&lt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">next_limit</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">)):</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">consumption_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">divisor</span>
+            <span class="c1"># only add to charges if already within correct charge limits</span>
+            <span class="k">if</span> <span class="n">within_limit_flag</span><span class="p">:</span>
+                <span class="c1"># went over next charge limit on this iteration</span>
+                <span class="c1"># set flag to false to avoid overcounting after this iteration</span>
+                <span class="k">if</span> <span class="n">energy</span> <span class="o">&gt;=</span> <span class="nb">float</span><span class="p">(</span><span class="n">next_limit</span><span class="p">):</span>
+                    <span class="n">within_limit_flag</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="n">cost</span> <span class="o">+=</span> <span class="p">(</span>
+                        <span class="nb">float</span><span class="p">(</span><span class="n">next_limit</span><span class="p">)</span> <span class="o">+</span> <span class="n">consumption_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">divisor</span> <span class="o">-</span> <span class="n">energy</span>
+                    <span class="p">)</span> <span class="o">*</span> <span class="n">charge_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">cost</span> <span class="o">+=</span> <span class="n">consumption_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">divisor</span> <span class="o">*</span> <span class="n">charge_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="c1"># went over existing charge limit on this iteration</span>
+            <span class="k">elif</span> <span class="n">energy</span> <span class="o">&gt;=</span> <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span> <span class="ow">and</span> <span class="n">energy</span> <span class="o">&lt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">next_limit</span><span class="p">):</span>
+                <span class="n">within_limit_flag</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">cost</span> <span class="o">+=</span> <span class="p">(</span><span class="n">energy</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">))</span> <span class="o">*</span> <span class="n">charge_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">)):</span>
+        <span class="n">charge_expr</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
+            <span class="n">consumption_data</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_multiply&quot;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">next_limit</span> <span class="o">==</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">):</span>
+            <span class="n">limit_to_subtract</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_steps</span>
+            <span class="n">sum_result</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">charge_expr</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_sum&quot;</span><span class="p">)</span>
+            <span class="n">cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">sum_result</span> <span class="o">/</span> <span class="n">divisor</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">charge_array</span> <span class="o">*</span> <span class="n">limit_to_subtract</span><span class="p">)),</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">consumption_estimate</span> <span class="o">&lt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">next_limit</span><span class="p">):</span>
+                <span class="n">prev_limit_expr</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
+                    <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_steps</span><span class="p">,</span>
+                    <span class="n">charge_array</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_prev&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">sum_result</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                    <span class="n">charge_expr</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_sum&quot;</span>
+                <span class="p">)</span>
+                <span class="n">cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span>
+                    <span class="n">sum_result</span> <span class="o">/</span> <span class="n">divisor</span> <span class="o">-</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">prev_limit_expr</span><span class="p">)),</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                    <span class="n">charge_array</span> <span class="o">*</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">next_limit</span><span class="p">)</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">))</span> <span class="o">/</span> <span class="n">n_steps</span>
+                <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;consumption_data must be of type numpy.ndarray or cvxpy.Expression&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">cost</span><span class="p">,</span> <span class="n">model</span></div>
+
+
+<div class="viewcode-block" id="calculate_export_revenues"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_export_revenues">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_export_revenues</span><span class="p">(</span>
+    <span class="n">charge_array</span><span class="p">,</span> <span class="n">export_data</span><span class="p">,</span> <span class="n">divisor</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the export revenues for the given billing rate structure,</span>
+<span class="sd">    utility, and consumption information.</span>
+
+<span class="sd">    Only flat rates for exports are supported (in $ / kWh).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    charge_array : numpy.ndarray</span>
+<span class="sd">        array with price per kWh sold back to the grid</span>
+
+<span class="sd">    consumption_data : numpy.ndarray or cvxpy.Expression</span>
+<span class="sd">        Baseline electrical or gas usage data as an optimization variable object</span>
+
+<span class="sd">    divisor : int</span>
+<span class="sd">        Divisor for the energy charges</span>
+
+<span class="sd">    model : pyomo.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
+<span class="sd">    varstr : str</span>
+<span class="sd">        Name of the variable to be created if using a Pyomo `model`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cvxpy.Expression or float</span>
+<span class="sd">        float or cvxpy Expression representing revenue in USD for the given</span>
+<span class="sd">        `charge_array` and `export_data`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">varstr_mul</span> <span class="o">=</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_multiply&quot;</span> <span class="k">if</span> <span class="n">varstr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">varstr_sum</span> <span class="o">=</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_sum&quot;</span> <span class="k">if</span> <span class="n">varstr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">result</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
+        <span class="n">charge_array</span><span class="p">,</span> <span class="n">export_data</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr_mul</span>
+    <span class="p">)</span>
+    <span class="n">revenues</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr_sum</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">revenues</span> <span class="o">/</span> <span class="n">divisor</span><span class="p">,</span> <span class="n">model</span></div>
+
+
+<div class="viewcode-block" id="calculate_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="n">consumption_data_dict</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">prev_demand_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">prev_consumption_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">consumption_estimate</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">desired_charge_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">demand_scale_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the cost of given charges (demand or energy) for the given</span>
+<span class="sd">    billing rate structure, utility, and consumption information as a</span>
+<span class="sd">    cvxpy expression or numpy array</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    charge_dict : dict</span>
+<span class="sd">        dictionary of arrays with keys of the form</span>
+<span class="sd">        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`</span>
+<span class="sd">        and values being the $ per kW (electric demand), kWh (electric energy/export),</span>
+<span class="sd">        cubic meter / day (gas demand), cubic meter (gas energy),</span>
+<span class="sd">        or $ / month (customer)</span>
+
+<span class="sd">    consumption_data_dict : dict of numpy.ndarray or cvxpy.Expression</span>
+<span class="sd">        Baseline electrical and gas usage data as an optimization variable object</span>
+<span class="sd">        with keys &quot;electric&quot; and &quot;gas&quot;</span>
+
+<span class="sd">    resolution : str</span>
+<span class="sd">        String of the form `[int][str]` giving the temporal resolution</span>
+<span class="sd">        on which charges are assessed, the `str` portion corresponds to</span>
+<span class="sd">        numpy.timedelta64 types for example &#39;15m&#39; specifying demand charges</span>
+<span class="sd">        that are applied to 15-minute intervals of electricity consumption</span>
+
+<span class="sd">    prev_demand_dict : dict</span>
+<span class="sd">        Nested dictionary previous maximmum demand charges with an entry of the form</span>
+<span class="sd">        {&quot;cost&quot; : float, &quot;demand&quot; : float} for each charge.</span>
+<span class="sd">        Default is None, which results in an a prev_demand and prev_demand_cost</span>
+<span class="sd">        of zero for all charges.</span>
+
+<span class="sd">    prev_consumption_dict : dict</span>
+<span class="sd">        Dictionary of previous total energy consumption with a key for each charge</span>
+<span class="sd">        to be used when starting the cost calculation partway into a billing period</span>
+<span class="sd">        (e.g., while using a moving horizon that is shorter than a month).</span>
+<span class="sd">        Default is None, resulting in an a prev_consumption of zero for all charges.</span>
+
+<span class="sd">    consumption_estimate : float</span>
+<span class="sd">        Estimate of the total monthly demand or energy consumption from baseline data.</span>
+<span class="sd">        Only used when `consumption_data` is cvxpy.Expression for convex relaxation</span>
+<span class="sd">         of tiered charges, while numpy.ndarray `consumption_data` will use actual</span>
+<span class="sd">         consumption and ignore the estimate.</span>
+
+<span class="sd">    desired_charge_type : str</span>
+<span class="sd">        Name of desired charge type for itemized costs.</span>
+<span class="sd">        Either &#39;customer&#39;, &#39;energy&#39;, &#39;demand&#39;, or &#39;export&#39;.</span>
+<span class="sd">        Default is None, meaning that all costs will be summed together.</span>
+
+<span class="sd">    desired_utility : str</span>
+<span class="sd">        Name of desired utility for itemized costs. Either &#39;electric&#39; or &#39;gas&#39;</span>
+<span class="sd">        Default is None, meaning that all costs will be summed together.</span>
+
+<span class="sd">    demand_scale_factor : float</span>
+<span class="sd">        Optional factor for scaling demand charges relative to energy charges</span>
+<span class="sd">        when the optimization/simulation period is not a full billing cycle.</span>
+<span class="sd">        Default is 1</span>
+
+<span class="sd">    model : pyomo.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        When invalid `utility`, `charge_type`, or `assessed`</span>
+<span class="sd">        is provided in `charge_arrays`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.Array, cvxpy.Expression, or pyomo.Model</span>
+<span class="sd">        numpy array, cvxpy Expression representing cost in USD for the given</span>
+<span class="sd">        `consumption_data`, `charge_type`, and `utility`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cost</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">n_per_hour</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">60</span> <span class="o">/</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">))</span>
+    <span class="n">n_per_day</span> <span class="o">=</span> <span class="n">n_per_hour</span> <span class="o">*</span> <span class="mi">24</span>
+
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">charge_array</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">,</span> <span class="n">limit_str</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+        <span class="c1"># if we want itemized costs skip irrelvant portions of the bill</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">desired_utility</span> <span class="ow">and</span> <span class="n">utility</span> <span class="o">!=</span> <span class="n">desired_utility</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="n">desired_charge_type</span> <span class="ow">and</span> <span class="n">charge_type</span> <span class="o">!=</span> <span class="n">desired_charge_type</span>
+        <span class="p">):</span>
+            <span class="k">continue</span>
+
+        <span class="n">charge_limit</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">limit_str</span><span class="p">)</span>
+        <span class="n">key_substr</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">])</span>
+        <span class="n">next_limit</span> <span class="o">=</span> <span class="n">get_next_limit</span><span class="p">(</span><span class="n">key_substr</span><span class="p">,</span> <span class="n">charge_limit</span><span class="p">,</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">consumption_data</span> <span class="o">=</span> <span class="n">consumption_data_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">]</span>
+
+        <span class="c1"># TODO: this assumes units of kW for electricity and meters cubed for gas</span>
+        <span class="k">if</span> <span class="n">utility</span> <span class="o">==</span> <span class="s2">&quot;electric&quot;</span><span class="p">:</span>
+            <span class="n">divisor</span> <span class="o">=</span> <span class="n">n_per_hour</span>
+        <span class="k">elif</span> <span class="n">utility</span> <span class="o">==</span> <span class="s2">&quot;gas&quot;</span><span class="p">:</span>
+            <span class="n">divisor</span> <span class="o">=</span> <span class="n">n_per_day</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid utility: &quot;</span> <span class="o">+</span> <span class="n">utility</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="s2">&quot;demand&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">prev_demand_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">prev_demand</span> <span class="o">=</span> <span class="n">prev_demand_dict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;demand&quot;</span><span class="p">]</span>
+                <span class="n">prev_demand_cost</span> <span class="o">=</span> <span class="n">prev_demand_dict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;cost&quot;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">prev_demand</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">prev_demand_cost</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">new_cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_demand_cost</span><span class="p">(</span>
+                <span class="n">charge_array</span><span class="p">,</span>
+                <span class="n">consumption_data</span><span class="p">,</span>
+                <span class="n">limit</span><span class="o">=</span><span class="n">charge_limit</span><span class="p">,</span>
+                <span class="n">next_limit</span><span class="o">=</span><span class="n">next_limit</span><span class="p">,</span>
+                <span class="n">prev_demand</span><span class="o">=</span><span class="n">prev_demand</span><span class="p">,</span>
+                <span class="n">prev_demand_cost</span><span class="o">=</span><span class="n">prev_demand_cost</span><span class="p">,</span>
+                <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
+                <span class="n">scale_factor</span><span class="o">=</span><span class="n">demand_scale_factor</span><span class="p">,</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">varstr</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">cost</span> <span class="o">+=</span> <span class="n">new_cost</span>
+        <span class="k">elif</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="s2">&quot;energy&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">prev_consumption_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">prev_consumption</span> <span class="o">=</span> <span class="n">prev_consumption_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">prev_consumption</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">new_cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_energy_cost</span><span class="p">(</span>
+                <span class="n">charge_array</span><span class="p">,</span>
+                <span class="n">consumption_data</span><span class="p">,</span>
+                <span class="n">divisor</span><span class="p">,</span>
+                <span class="n">limit</span><span class="o">=</span><span class="n">charge_limit</span><span class="p">,</span>
+                <span class="n">next_limit</span><span class="o">=</span><span class="n">next_limit</span><span class="p">,</span>
+                <span class="n">prev_consumption</span><span class="o">=</span><span class="n">prev_consumption</span><span class="p">,</span>
+                <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">varstr</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">cost</span> <span class="o">+=</span> <span class="n">new_cost</span>
+        <span class="k">elif</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="s2">&quot;export&quot;</span><span class="p">:</span>
+            <span class="n">new_cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_export_revenues</span><span class="p">(</span>
+                <span class="n">charge_array</span><span class="p">,</span> <span class="n">consumption_data</span><span class="p">,</span> <span class="n">divisor</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">key</span>
+            <span class="p">)</span>
+            <span class="n">cost</span> <span class="o">-=</span> <span class="n">new_cost</span>
+        <span class="k">elif</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="s2">&quot;customer&quot;</span><span class="p">:</span>
+            <span class="n">cost</span> <span class="o">+=</span> <span class="n">charge_array</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid charge_type: &quot;</span> <span class="o">+</span> <span class="n">charge_type</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cost</span><span class="p">,</span> <span class="n">model</span></div>
+
+
+<div class="viewcode-block" id="calculate_itemized_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_itemized_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_itemized_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="n">consumption_data</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">prev_demand_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">consumption_estimate</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates itemized costs as a nested dictionary</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    charge_dict : dict</span>
+<span class="sd">        dictionary of arrays with keys of the form</span>
+<span class="sd">        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`</span>
+<span class="sd">        and values being the $ per kW (electric demand), kWh (electric energy/export),</span>
+<span class="sd">        cubic meter / day (gas demand), cubic meter (gas energy),</span>
+<span class="sd">        or $ / month (customer)</span>
+
+<span class="sd">    consumption_data : numpy.ndarray or cvxpy.Expression</span>
+<span class="sd">        Baseline electrical or gas usage data as an optimization variable object</span>
+
+<span class="sd">    resolution : str</span>
+<span class="sd">        granularity of each timestep in string form with default value of &quot;15m&quot;</span>
+
+<span class="sd">     prev_demand_dict : dict</span>
+<span class="sd">        Dictionary previous maximmum demand charges with a key for each charge.</span>
+<span class="sd">        Default is None, which results in an a prev_demand of zero for all charges.</span>
+
+<span class="sd">    consumption_estimate : float</span>
+<span class="sd">        estimated total consumption up to this point in the bililng period to determine</span>
+<span class="sd">        correct tier based on charge limits</span>
+
+<span class="sd">    model : pyomo.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        {</span>
+
+<span class="sd">            &quot;electric&quot;: {</span>
+
+<span class="sd">                &quot;customer&quot;: `float`</span>
+
+<span class="sd">                &quot;energy&quot;: `float`</span>
+
+<span class="sd">                &quot;demand&quot;: `float`</span>
+
+<span class="sd">                &quot;export&quot;: `float`</span>
+
+<span class="sd">                &quot;total&quot;: `float`</span>
+
+<span class="sd">            }</span>
+
+<span class="sd">            &quot;gas&quot;: {</span>
+
+<span class="sd">                &quot;customer&quot;: `float`,</span>
+
+<span class="sd">                &quot;energy&quot;: `float`</span>
+
+<span class="sd">                &quot;demand&quot;: `float`</span>
+
+<span class="sd">                &quot;export&quot;: `float`</span>
+
+<span class="sd">                &quot;total&quot;: `float`</span>
+
+<span class="sd">            }</span>
+
+<span class="sd">            &quot;total&quot;: `float`</span>
+
+<span class="sd">        }</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">total_cost</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">results_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span> <span class="s2">&quot;gas&quot;</span><span class="p">]:</span>
+        <span class="n">total_utility_cost</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;customer&quot;</span><span class="p">,</span> <span class="s2">&quot;energy&quot;</span><span class="p">,</span> <span class="s2">&quot;demand&quot;</span><span class="p">,</span> <span class="s2">&quot;export&quot;</span><span class="p">]:</span>
+            <span class="n">cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_cost</span><span class="p">(</span>
+                <span class="n">charge_dict</span><span class="p">,</span>
+                <span class="n">consumption_data</span><span class="p">,</span>
+                <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">,</span>
+                <span class="n">prev_demand_dict</span><span class="o">=</span><span class="n">prev_demand_dict</span><span class="p">,</span>
+                <span class="n">desired_utility</span><span class="o">=</span><span class="n">utility</span><span class="p">,</span>
+                <span class="n">desired_charge_type</span><span class="o">=</span><span class="n">charge_type</span><span class="p">,</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">cost</span>
+            <span class="n">total_utility_cost</span> <span class="o">+=</span> <span class="n">cost</span>
+
+        <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_utility_cost</span>
+        <span class="n">total_cost</span> <span class="o">+=</span> <span class="n">total_utility_cost</span>
+
+    <span class="n">results_dict</span><span class="p">[</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_cost</span>
+    <span class="k">return</span> <span class="n">results_dict</span><span class="p">,</span> <span class="n">model</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3 Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
