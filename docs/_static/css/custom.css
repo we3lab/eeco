@@ -1,0 +1,16 @@
+body {
+    margin:0;
+}
+
+table {
+    white-space: nowrap;
+}
+
+td {
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.wy-nav-content {
+    max-width: none;
+}

@@ -1,0 +1,5 @@
+utility,type,name,basic_charge_limit,assessed,month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge,units
+electric,demand,all-day,0,,0,12,0,24,0,6,5,$/kW
+electric,demand,all-day,100,,0,12,0,24,0,6,10,$/kW
+electric,demand,on-peak,0,,0,12,16,21,0,6,20,$/kW
+electric,demand,on-peak,100,,0,12,16,21,0,6,30,$/kW

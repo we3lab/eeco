@@ -1,0 +1,53 @@
+name: Build Main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Conda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+        python-version: ${{ matrix.python-version }}
+        channels: conda-forge
+    - name: Install Dependencies
+      shell: bash -el {0}
+      run: |
+        conda install ipopt
+        python -m pip install --upgrade pip
+        pip install .[test]
+    - name: Test with pytest
+      shell: bash -el {0}
+      run: |
+        pytest --cov-report xml --cov=electric_emission_cost electric_emission_cost/tests/
+        codecov -t ${{ secrets.CODECOV_TOKEN }}
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.13
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[test]
+    - name: Lint with flake8
+      run: |
+        flake8 electric_emission_cost --count --verbose --show-source --statistics
+    - name: Check with black
+      run: |
+        black --check electric_emission_cost
