@@ -543,28 +543,29 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
         # energy charge with charge limit
         (
             {
-                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate([
-                    np.ones(64) * 0.05,
-                    np.ones(20) * 0.1,
-                    np.ones(12) * 0.05,
-                ]),
-                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate([
-                    np.ones(64) * 0.1,
-                    np.ones(20) * 0.15,
-                    np.ones(12) * 0.1,
-                ]),
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
             },
-            {
-                "electric": np.ones(96) * 100,
-                "gas": np.ones(96)
-            },
+            {"electric": np.ones(96) * 100, "gas": np.ones(96)},
             "15m",
             None,
             2400,
             None,
             None,
             260,
-        )
+        ),
     ],
 )
 def test_calculate_cost_np(
