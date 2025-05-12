@@ -19,8 +19,6 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3
       with:
         auto-update-conda: true
-        auto-activate-base: true
-        activate-environment: ""
         python-version: ${{ matrix.python-version }}
         channels: conda-forge
     - name: Install Dependencies
@@ -30,6 +28,7 @@ jobs:
         pip install .[test]
     - name: Test with pytest
       run: |
+        conda activate test
         pytest --cov-report xml --cov=electric_emission_cost electric_emission_cost/tests/
         codecov -t ${{ secrets.CODECOV_TOKEN }}
   lint:
