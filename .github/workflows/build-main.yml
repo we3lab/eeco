@@ -22,13 +22,14 @@ jobs:
         python-version: ${{ matrix.python-version }}
         channels: conda-forge
     - name: Install Dependencies
+      shell: bash -el {0}
       run: |
         conda install ipopt
         python -m pip install --upgrade pip
         pip install .[test]
     - name: Test with pytest
+      shell: bash -el {0}
       run: |
-        conda activate test
         pytest --cov-report xml --cov=electric_emission_cost electric_emission_cost/tests/
         codecov -t ${{ secrets.CODECOV_TOKEN }}
   lint:
