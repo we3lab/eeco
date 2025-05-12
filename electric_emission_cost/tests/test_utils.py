@@ -83,7 +83,7 @@ def test_multiply_pyo(consumption_data, varstr1, varstr2, expected):
     var2 = getattr(model, varstr2)
     result, model = ut.multiply(var1, var2, model=model, varstr="test")
     model.obj = pyo.Objective(expr=0)
-    solver = pyo.SolverFactory("ipopt", executable="ipopt-linux64/ipopt")
+    solver = pyo.SolverFactory("ipopt", executable="/ipopt")
     solver.solve(model)
     assert np.allclose([pyo.value(result[i]) for i in range(len(result))], expected)
     assert model is not None
