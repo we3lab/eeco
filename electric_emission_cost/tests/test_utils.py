@@ -4,17 +4,13 @@ import numpy as np
 import pyomo.environ as pyo
 
 from electric_emission_cost import utils as ut
+
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False
 
+
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-@pytest.mark.parametrize(
-    "freq, expected",
-    [
-        ("15m", (15, "m")),
-        ("1h", (1, "h"))
-    ]
-)
+@pytest.mark.parametrize("freq, expected", [("15m", (15, "m")), ("1h", (1, "h"))])
 def test_parse_freq(freq, expected):
     assert ut.parse_freq(freq) == expected
 
@@ -23,15 +19,8 @@ def test_parse_freq(freq, expected):
 @pytest.mark.parametrize(
     "consumption_data, varstr, expected",
     [
-        (
-            {
-                "electric": np.ones(96) * 100, 
-                "gas": np.ones(96)
-            },
-            "electric",
-            9600
-        ),
-    ]
+        ({"electric": np.ones(96) * 100, "gas": np.ones(96)}, "electric", 9600),
+    ],
 )
 def test_sum_pyo(consumption_data, varstr, expected):
     model = pyo.ConcreteModel()
@@ -65,15 +54,12 @@ def test_sum_pyo(consumption_data, varstr, expected):
     "consumption_data, varstr1, varstr2, expected",
     [
         (
-            {
-                "electric": np.ones(96) * 100, 
-                "gas": np.ones(96)
-            },
+            {"electric": np.ones(96) * 100, "gas": np.ones(96)},
             "electric",
             "gas",
-            np.ones(96) * 100
+            np.ones(96) * 100,
         ),
-    ]
+    ],
 )
 def test_multiply_pyo(consumption_data, varstr1, varstr2, expected):
     model = pyo.ConcreteModel()
@@ -107,31 +93,10 @@ def test_multiply_pyo(consumption_data, varstr1, varstr2, expected):
 @pytest.mark.parametrize(
     "consumption_data, varstr, expected",
     [
-        (
-            {
-                "electric": np.ones(96) * 100, 
-                "gas": np.ones(96)
-            },
-            "electric",
-            100
-        ),
-        (
-            {
-                "electric": np.arange(96), 
-                "gas": np.ones(96)
-            },
-            "electric",
-            95
-        ),
-        (
-            {
-                "electric": np.arange(96), 
-                "gas": np.ones(96)
-            },
-            "gas",
-            1
-        ),
-    ]
+        ({"electric": np.ones(96) * 100, "gas": np.ones(96)}, "electric", 100),
+        ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", 95),
+        ({"electric": np.arange(96), "gas": np.ones(96)}, "gas", 1),
+    ],
 )
 def test_max_pyo(consumption_data, varstr, expected):
     model = pyo.ConcreteModel()
@@ -159,27 +124,14 @@ def test_max_pyo(consumption_data, varstr, expected):
     assert pyo.value(result) == expected
     assert model is not None
 
+
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "consumption_data, varstr, expected",
     [
-        (
-            {
-                "electric": np.ones(96) * 45, 
-                "gas": np.ones(96) * -1
-            },
-            "electric",
-            45
-        ),
-        (
-            {
-                "electric": np.ones(96) * 100, 
-                "gas": np.ones(96) * -1
-            },
-            "gas",
-            0
-        ),
-    ]
+        ({"electric": np.ones(96) * 45, "gas": np.ones(96) * -1}, "electric", 45),
+        ({"electric": np.ones(96) * 100, "gas": np.ones(96) * -1}, "gas", 0),
+    ],
 )
 def test_max_pos_pyo(consumption_data, varstr, expected):
     model = pyo.ConcreteModel()

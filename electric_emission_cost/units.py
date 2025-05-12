@@ -1,4 +1,3 @@
-import os
 import pint
 
 # A global unit registry that can be used by any of other module.

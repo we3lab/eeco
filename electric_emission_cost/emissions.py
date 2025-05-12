@@ -1,4 +1,4 @@
-""" Functions to calculate emissions from electricity consumption data."""
+"""Functions to calculate emissions from electricity consumption data."""
 
 import datetime
 import calendar
@@ -61,9 +61,13 @@ def calculate_grid_emissions(
         emission_units = carbon_intensity.units
         carbon_intensity = carbon_intensity.magnitude
     df = df.merge(carbon_intensity, on=[MONTH_VARNAME, HOUR_VARNAME])
-    emissions = np.sum(
-        df[net_demand_varname]  * df[ei_varname]
-    ) * consumption_units * emission_units * u.hour / n_per_hour
+    emissions = (
+        np.sum(df[net_demand_varname] * df[ei_varname])
+        * consumption_units
+        * emission_units
+        * u.hour
+        / n_per_hour
+    )
     return emissions.to(u.kg)
 
 
@@ -76,7 +80,7 @@ def calculate_grid_emissions_cvx(
 ):
     """Calculates the emissions for the given consumption information as a cvxpy object
     carbon intensity of electricity generation structure as a DataFrame.
-    
+
     Parameters
     ----------
     carbon_intensity : array
@@ -101,7 +105,7 @@ def calculate_grid_emissions_cvx(
         `consumption_data` and `carbon_intensity`
     """
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
-    if isinstance(emissions, pint.Quantity):
+    if isinstance(carbon_intensity, pint.Quantity):
         emission_units = carbon_intensity.units
         carbon_intensity = carbon_intensity.magnitude
     conversion_factor = (consumption_units * emission_units / u.hour).magnitude
@@ -128,22 +132,24 @@ def get_carbon_intensity(
         End datetime to gather rate information
 
     emissions_data : DataFrame
-        Electric grid emissions information. Only one of `datetime_local` and `month`/`day`/`hour` are required.
+        Electric grid emissions information.
+        Only one of `datetime_local` and `month`/`day`/`hour` are required.
 
-        ==================  ===============================================================
-        datetime_local      local datetime for which the marginal emissions were estimated
+        ==================  =================================================
+        datetime_local      local datetime to estimate the marginal emissions
         month               month for which the emissions data was averaged
         day                 day for which the emissions data was averaged
         hour                hour for which the emissions data was averaged
-        co2_eq_kg_per_MWh   emissions in kg of CO2 per MWh of grid electricity purchased
-        ==================  ===============================================================
+        co2_eq_kg_per_MWh   emissions in kg of CO2 per MWh of grid electricity
+        ==================  ==================================================
 
     emissions_units : pint.Unit
         Units for the emissions data. Default is kg / MWh
 
     resolution : str
-        a string of the form `[int][str]` giving the temporal resolution on which charges are assessed,
-        the `str` portion corresponds to numpy timedelta64 types for example '15m' specifying demand charges
+        a string of the form `[int][str]` giving the temporal resolution
+        on which charges are assessed. The `str` portion corresponds to numpy
+        timedelta64 types. For example '15m' specifying demand charges
         that are applied to 15-minute intervals of electricity consumption
 
     Returns
@@ -187,8 +193,8 @@ def get_carbon_intensity(
         emissions_data[DAY_VARNAME] = emissions_data.datetime_local.dt.day
         emissions_data[HOUR_VARNAME] = emissions_data.datetime_local.dt.hour
     except KeyError:
-        # if datetime_local is not found then assume month and hour are already accounted for
-        # but day is not for backwards compatability
+        # if datetime_local is not found then assume month and hour
+        # are already accounted for but day is not for backwards compatability
         if DAY_VARNAME not in emissions_data.columns:
             no_day_var = True
 

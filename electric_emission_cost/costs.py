@@ -1,6 +1,5 @@
-""" Functions to calculate costs from electricity consumption data."""
+"""Functions to calculate costs from electricity consumption data."""
 
-import os
 import warnings
 import cvxpy as cp
 import numpy as np
@@ -8,7 +7,6 @@ import pandas as pd
 import datetime as dt
 import pyomo.environ as pyo
 from itertools import compress
-import matplotlib.pyplot as plt
 
 from . import utils as ut
 
@@ -19,8 +17,8 @@ def create_charge_array(charge, datetime, effective_start_date, effective_end_da
     Parameters
     ----------
     charge : pandas.DataFrame
-        data for the charge including columns `month_start`, `month_end`, `weekday_start`,
-        `weekday_end`, `hour_start`, `hour_end`, and `charge`
+        data for the charge including columns `month_start`, `month_end`,
+        `weekday_start`, `weekday_end`, `hour_start`, `hour_end`, and `charge`
 
     datetime : pandas.DataFrame, pandas.Series, or numpy.ndarray
         If a pandas Series, it must be of type datetime
@@ -35,7 +33,7 @@ def create_charge_array(charge, datetime, effective_start_date, effective_end_da
     Raises
     ------
     TypeError
-        When `datetime` is not of type pandas.DataFrame, pandas.Series, or numpy.ndarray
+        When `datetime` is not pandas.DataFrame, pandas.Series, or numpy.ndarray
 
     Returns
     -------
@@ -81,10 +79,12 @@ def create_charge_array(charge, datetime, effective_start_date, effective_end_da
 
 
 def add_to_charge_array(charge_dict, key_str, charge_array):
-    """Add to an existing charge array, or an arrya of all zeros if this charge array does not exist.
+    """Add to an existing charge array, or an arrya of all zeros if this charge
+    array does not exist.
 
-    This functionality is useful for noncontiguous charges that should be saved under the same key.
-    For example, partial peak hours from 3-5 and 8-10 PM that are billing as a single demand period.
+    This functionality is useful for noncontiguous charges that should be saved
+    under the same key. For example, partial peak hours from 3-5 and 8-10 PM that
+    are billing as a single demand period.
 
     Modifies `charge_dict` in-place, so nothing is returned.
 
@@ -92,17 +92,19 @@ def add_to_charge_array(charge_dict, key_str, charge_array):
     ----------
     charge_dict : dict of numpy.ndarray
         Dictionary of arrays with keys of the form
-        `utility`_`charge_type`_`name`_`effective_start_date`_`effective_end_date`_`charge_limit`
+        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
         and values being the $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy), or $ / month (customer)
+        cubic meter / day (gas demand), cubic meter (gas energy),
+        or $ / month (customer)
 
     key_str : str
         The key for the charge array we'd like to modify of the form
-        `utility`_`charge_type`_`name`_`effective_start_date`_`effective_end_date`_`charge_limit`
+        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
 
     charge_array : numpy.ndarray
-        Value of the charge to add in $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy), or $ / month (customer)
+        Value of the charge to add in $ per kW (electric demand),
+        kWh (electric energy/export), cubic meter / day (gas demand),
+        cubic meter (gas energy), or $ / month (customer)
     """
     try:
         old_charge_array = charge_dict[key_str]
@@ -114,7 +116,7 @@ def add_to_charge_array(charge_dict, key_str, charge_array):
 
 def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
     """Creates a dictionary where the values are charge arrays and keys are of the form
-    `{utility}_{type}_{name}_{effective_start_date}_{effective_end_date}_{limit}`
+    `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
 
     Parameters
     ----------
@@ -125,9 +127,10 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
         last timestep to be included in the cost analysis
 
     rate_data : pandas.DataFrame
-        tariff data with required columns `utility`, `type`, `basic_charge_limit`, `name`,
-        `month_start`, `month_end`, `weekday_start`, `weekday_end`, `hour_start`, `hour_end`, and `charge`
-        and optional columns `assessed`, `effective_start_date`, and `effective_end_date`
+        tariff data with required columns `utility`, `type`, `basic_charge_limit`,
+        `name`, `month_start`, `month_end`, `weekday_start`, `weekday_end`,
+        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`,
+        `effective_start_date`, and `effective_end_date`
 
     resolution : str
         granularity of each timestep in string form with default value of "15m"
@@ -141,7 +144,6 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
 
     # Get the number of timesteps in a day (according to charge resolution)
     res_binsize_minutes = ut.get_freq_binsize_minutes(resolution)
-    n_per_hour = int(60 / res_binsize_minutes)
     if isinstance(start_dt, dt.datetime) or isinstance(end_dt, dt.datetime):
         ntsteps = int((end_dt - start_dt) / dt.timedelta(minutes=res_binsize_minutes))
         datetime = pd.DataFrame(
@@ -212,7 +214,8 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                 except KeyError:
                     charge_limits = effective_charges["basic_charge_limit"]
                     warnings.warn(
-                        "Please switch to new 'basic_charge_limit (metric)' and 'basic_charge_limit (imperial)' format",
+                        "Please switch to new 'basic_charge_limit (metric)' "
+                        "and 'basic_charge_limit (imperial)' format",
                         DeprecationWarning,
                     )
                 for limit in np.unique(charge_limits):
@@ -247,7 +250,8 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                             except KeyError:
                                 charge_array = np.array([charge["charge"]])
                                 warnings.warn(
-                                    "Please switch to new 'charge (metric)' and 'charge (imperial)' format",
+                                    "Please switch to new 'charge (metric)' "
+                                    "and 'charge (imperial)' format",
                                     DeprecationWarning,
                                 )
                             key_str = "_".join(
@@ -297,6 +301,37 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
     return charge_dict
 
 
+def get_charge_df(start_dt, end_dt, rate_data, resolution="15m"):
+    """Creates a dictionary where the values are charge arrays and keys are of the form
+    `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
+
+    Parameters
+    ----------
+    start_dt : datetime.datetime
+        first timestep to be included in the cost analysis
+
+    end_dt : datetime.datetime
+        last timestep to be included in the cost analysis
+
+    rate_data : pandas.DataFrame
+        tariff data with required columns `utility`, `type`, `basic_charge_limit`,
+        `name`, `month_start`, `month_end`, `weekday_start`, `weekday_end`,
+        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`,
+        `effective_start_date`, and `effective_end_date`
+
+    resolution : str
+        granularity of each timestep in string form with default value of "15m"
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame of charge arrays
+    """
+    return pd.DataFrame(
+        get_charge_dict(start_dt, end_dt, rate_data, resolution=resolution)
+    )
+
+
 def get_next_limit(key_substr, current_limit, keys):
     """Finds the next charge limit for the charge represented by `key`
 
@@ -304,7 +339,7 @@ def get_next_limit(key_substr, current_limit, keys):
     ----------
     key_substr : str
         The beginnging of the key for which we want to get the next limit
-        (i.e., `{utility}_{type}_{name}_{effective_start_date}_{effective_end_date}`)
+        (i.e., `{utility}_{type}_{name}_{start_date}_{end_date}`)
 
     current_limit : int
         The limit for the current tier
@@ -352,7 +387,8 @@ def calculate_demand_cost(
         Baseline electrical or gas usage data as an optimization variable object
 
     limit : float
-        The total consumption, or limit, that this charge came into effect. Default is 0
+        The total consumption, or limit, that this charge came into effect.
+        Default is 0
 
     next_limit : float
         The total consumption, or limit, that the next charge comes into effect.
@@ -360,20 +396,24 @@ def calculate_demand_cost(
 
     prev_demand : float
         The previous maximum demand for this charge during the same billing period.
-        Only used for optimizing on a horizon shorter than the billing period, so the default is 0
+        Only used for optimizing on a horizon shorter than the billing period,
+        so the default is 0
 
     prev_demand_cost : float
         The previous cost for this demand charge during the same billing period.
-        Only used for optimizing on a horizon shorter than the billing period, so the default is 0
+        Only used for optimizing on a horizon shorter than the billing period,
+        so the default is 0
 
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
-        Only used when `consumption_data` is cvxpy.Expression for convex relaxation of tiered charges,
-        while numpy.ndarray `consumption_data` will use actual consumption and ignore the estimate.
+        Only used when `consumption_data` is cvxpy.Expression for convex relaxation
+        of tiered charges, while numpy.ndarray `consumption_data` will use actual
+        consumption and ignore the estimate.
 
     scale_factor : float
         Optional factor for scaling demand charges relative to energy charges
-        when the optimization/simulation period is not a full billing cycle. Default is 1
+        when the optimization/simulation period is not a full billing cycle.
+        Default is 1
 
     model : pyomo.Model
         The model object associated with the problem.
@@ -385,7 +425,8 @@ def calculate_demand_cost(
     Returns
     -------
     cvxpy.Expression or float
-        float or cvxpy Expression representing cost in USD for the given `consumption_data`
+        float or cvxpy Expression representing cost in USD for the given
+        `charge_array` and `consumption_data`
     """
     if isinstance(consumption_data, np.ndarray):
         if (np.max(consumption_data) >= limit) or (
@@ -402,7 +443,11 @@ def calculate_demand_cost(
     elif isinstance(consumption_data, (pyo.Param, pyo.Var)):
         if consumption_estimate >= limit:
             if consumption_estimate <= next_limit:
-                setattr(model, varstr + "_limit", pyo.Var(model.t, initialize=0, bounds=(0,None)))
+                setattr(
+                    model,
+                    varstr + "_limit",
+                    pyo.Var(model.t, initialize=0, bounds=(0, None)),
+                )
                 var = getattr(model, varstr + "_limit")
 
                 def const_rule(model, t):
@@ -410,7 +455,7 @@ def calculate_demand_cost(
 
                 constraint = pyo.Constraint(model.t, rule=const_rule)
                 setattr(model, varstr + "_limit_constraint", constraint)
-                
+
                 demand_charged, model = ut.multiply(
                     var,
                     charge_array,
@@ -453,7 +498,12 @@ def calculate_demand_cost(
         return ut.max_pos(result - prev_demand_cost) * scale_factor
     else:
         max_var, model = ut.max(demand_charged, model=model, varstr=varstr + "_max")
-        return ut.max_pos(max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos") * scale_factor
+        return (
+            ut.max_pos(
+                max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
+            )
+            * scale_factor
+        )
 
 
 def calculate_energy_cost(
@@ -467,8 +517,8 @@ def calculate_energy_cost(
     model=None,
     varstr=None,
 ):
-    """Calculates the cost of given energy charges for the given billing rate structure,
-    utility, and consumption information
+    """Calculates the cost of given energy charges for the given billing rate
+    structure, utility, and consumption information.
 
     Parameters
     ----------
@@ -482,7 +532,8 @@ def calculate_energy_cost(
         Divisor for the energy charges
 
     limit : float
-        The total consumption, or limit, that this charge came into effect. Default is 0
+        The total consumption, or limit, that this charge came into effect.
+        Default is 0
 
     next_limit : float
         The total consumption, or limit, that the next charge comes into effect.
@@ -490,8 +541,9 @@ def calculate_energy_cost(
 
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
-        Only used when `consumption_data` is cvxpy.Expression for convex relaxation of tiered charges,
-        while numpy.ndarray `consumption_data` will use actual consumption and ignore the estimate.
+        Only used when `consumption_data` is cvxpy.Expression for convex relaxation
+        of tiered charges, while numpy.ndarray `consumption_data` will use actual
+        consumption and ignore the estimate.
 
     model : pyomo.Model
         The model object associated with the problem.
@@ -503,12 +555,14 @@ def calculate_energy_cost(
     Raises
     ------
     ValueError
-        When invalid `utility`, `charge_type`, or `assessed` is provided in `charge_arrays`
+        When invalid `utility`, `charge_type`, or `assessed`
+        is provided in `charge_arrays`
 
     Returns
     -------
     cvxpy.Expression, pyomo.Model, or float
-        float or cvxpy Expression representing cost in USD for the given `consumption_data`
+        float or cvxpy Expression representing cost in USD for the given
+        `charge_array` and `consumption_data`
     """
     cost = 0
     if model is None:
@@ -606,7 +660,8 @@ def calculate_export_revenues(
     Returns
     -------
     cvxpy.Expression or float
-        float or cvxpy Expression representing revenue in USD for the given `consumption_data`
+        float or cvxpy Expression representing revenue in USD for the given
+        `charge_array` and `export_data`
     """
     varstr_mul = varstr + "_multiply" if varstr is not None else None
     varstr_sum = varstr + "_sum" if varstr is not None else None
@@ -637,9 +692,10 @@ def calculate_cost(
     ----------
     charge_dict : dict
         dictionary of arrays with keys of the form
-        `utility`_`charge_type`_`name`_`effective_start_date`_`effective_end_date`_`charge_limit`
+        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
         and values being the $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy), or $ / month (customer)
+        cubic meter / day (gas demand), cubic meter (gas energy),
+        or $ / month (customer)
 
     consumption_data_dict : dict of numpy.ndarray or cvxpy.Expression
         Baseline electrical and gas usage data as an optimization variable object
@@ -647,28 +703,31 @@ def calculate_cost(
 
     resolution : str
         String of the form `[int][str]` giving the temporal resolution
-        on which charges are assessed, the `str` portion corresponds to numpy timedelta64
-        types for example '15m' specifying demand charges that are applied to 15-minute
-        intervals of electricity consumption
+        on which charges are assessed, the `str` portion corresponds to
+        numpy.timedelta64 types for example '15m' specifying demand charges
+        that are applied to 15-minute intervals of electricity consumption
 
     prev_demand_dict : dict
         Nested dictionary previous maximmum demand charges with an entry of the form
         {"cost" : float, "demand" : float} for each charge.
-        Default is None, which results in an a prev_demand and prev_demand_cost of zero for all charges.
+        Default is None, which results in an a prev_demand and prev_demand_cost
+        of zero for all charges.
 
     prev_consumption_dict : dict
         Dictionary of previous total energy consumption with a key for each charge
         to be used when starting the cost calculation partway into a billing period
         (e.g., while using a moving horizon that is shorter than a month).
-        Default is None, which results in an a prev_consumption of zero for all charges.
+        Default is None, resulting in an a prev_consumption of zero for all charges.
 
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
-        Only used when `consumption_data` is cvxpy.Expression for convex relaxation of tiered charges,
-        while numpy.ndarray `consumption_data` will use actual consumption and ignore the estimate.
+        Only used when `consumption_data` is cvxpy.Expression for convex relaxation
+         of tiered charges, while numpy.ndarray `consumption_data` will use actual
+         consumption and ignore the estimate.
 
     desired_charge_type : str
-        Name of desired charge type for itemized costs. Either 'customer', 'energy', 'demand', or 'export'.
+        Name of desired charge type for itemized costs.
+        Either 'customer', 'energy', 'demand', or 'export'.
         Default is None, meaning that all costs will be summed together.
 
     desired_utility : str
@@ -677,7 +736,8 @@ def calculate_cost(
 
     demand_scale_factor : float
         Optional factor for scaling demand charges relative to energy charges
-        when the optimization/simulation period is not a full billing cycle. Default is 1
+        when the optimization/simulation period is not a full billing cycle.
+        Default is 1
 
     model : pyomo.Model
         The model object associated with the problem.
@@ -686,13 +746,14 @@ def calculate_cost(
     Raises
     ------
     ValueError
-        When invalid `utility`, `charge_type`, or `assessed` is provided in `charge_arrays`
+        When invalid `utility`, `charge_type`, or `assessed`
+        is provided in `charge_arrays`
 
     Returns
     -------
     numpy.Array, cvxpy.Expression, or pyomo.Model
-        numpy array, cvxpy Expression representing cost in USD for the given `consumption_data`,
-        `charge_type`, and `utility`
+        numpy array, cvxpy Expression representing cost in USD for the given
+        `consumption_data`, `charge_type`, and `utility`
     """
     cost = 0
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
@@ -706,8 +767,6 @@ def calculate_cost(
         ):
             continue
 
-        eff_start_dt = dt.datetime.strptime(eff_start, "%Y-%m-%d")
-        eff_end_dt = dt.datetime.strptime(eff_end, "%Y-%m-%d")
         charge_limit = int(limit_str)
         key_substr = "_".join([utility, charge_type, name, eff_start, eff_end])
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
@@ -784,9 +843,10 @@ def calculate_itemized_cost(
     ----------
     charge_dict : dict
         dictionary of arrays with keys of the form
-        `utility`_`charge_type`_`name`_`effective_start_date`_`effective_end_date`_`charge_limit`
+        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
         and values being the $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy), or $ / month (customer)
+        cubic meter / day (gas demand), cubic meter (gas energy),
+        or $ / month (customer)
 
     consumption_data : numpy.ndarray or cvxpy.Expression
         Baseline electrical or gas usage data as an optimization variable object
@@ -828,7 +888,7 @@ def calculate_itemized_cost(
             "gas": {
 
                 "customer": `float`,
-                
+
                 "energy": `float`
 
                 "demand": `float`
@@ -853,7 +913,7 @@ def calculate_itemized_cost(
                 charge_dict,
                 consumption_data,
                 resolution=resolution,
-                prev_demand=prev_demand,
+                prev_demand_dict=prev_demand_dict,
                 desired_utility=utility,
                 desired_charge_type=charge_type,
                 model=model,
