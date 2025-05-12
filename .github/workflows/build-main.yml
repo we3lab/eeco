@@ -19,10 +19,13 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+    - uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
     - name: Install Dependencies
       run: |
-        sudo wget -N -q "https://matematica.unipv.it/gualandi/solvers/ipopt-linux64.zip"
-        sudo unzip -o -q ipopt-linux64
+        conda install ipopt
         python -m pip install --upgrade pip
         pip install .[test]
     - name: Test with pytest
