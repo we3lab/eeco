@@ -31,7 +31,7 @@ requirements = [
     "seaborn>=0.13.2",
     "scipy>=1.2.1",
     "pyomo>=6.7",
-    "gurobipy==11.0",
+    "gurobipy>=11.0",
     "pint>=0.19.2",
 ]
 
