@@ -1,0 +1,199 @@
+############################################################
+#
+# This file contains an example of a time-discretized
+# Pyomo model for a battery energy storage system 
+# operating on the site of an industrial power consumer.
+#
+############################################################
+
+# Import necessary libraries
+import numpy as np 
+import pandas as pd 
+import os, json, warnings, calendar
+from datetime import datetime, timedelta
+from pyomo.environ import (
+    SolverFactory, 
+    ConcreteModel,
+    Block,
+    Var, 
+    Param, 
+    Set,
+    Objective,
+    Constraint, 
+    Expression, 
+    exp, 
+    units as pyunits,
+    value, 
+    minimize,
+)
+
+# create a class for the battery optimization model 
+class BatteryPyomo:
+    def __init__(self, params, baseload, baseload_repeat=False):
+        
+        # assign all items in params to attributes of the class
+        for key, value in params.items():
+            setattr(self, key, value)
+        
+        # set the parameters for the battery model
+        self.baseload = baseload
+        self.baseload_repeat = baseload_repeat
+
+        # set up timing for the model 
+        self.start_dt = datetime.fromisoformat(self.start_date)
+        self.end_dt = datetime.fromisoformat(self.end_date)
+        self.time_delta = timedelta(hours=self.timestep)
+        self.datetimerange = datetime.fromisoformat(self.end_date) - datetime.fromisoformat(
+            self.start_date
+        )
+
+        self.t = np.arange(
+            self.start_dt, self.end_dt, timedelta(hours=self.timestep)
+        ).astype(datetime)
+        # number of time steps
+        self.num_steps = int(len(self.t))
+        # length of time step in seconds
+        self.dt_seconds = self.timestep * 3600
+        # total sim time in seconds
+        self.sim_time_seconds = self.datetimerange.total_seconds()
+        # number of days
+        self.days = self.sim_time_seconds / (3600 * 24)
+        # number of hours
+        self.hours = self.days * 24
+        # find the number of days in the month associated with the start date
+        days_in_month = calendar.monthrange(
+            month=self.start_dt.month, year=self.start_dt.year
+        )[1]
+        # number of months
+        self.months = self.days / days_in_month
+        # time step in hours
+        self.h_scale = self.timestep
+        # time step in months
+        self.m_scale = self.timestep / (24 * days_in_month)
+
+        # repeat baseline pattern over full simulation period
+        if self.baseload_repeat == True:
+            baseload = np.repeat(
+                self.baseload, int(1 / self.timestep)
+            )  # match timestep resolution
+            self.baseload = np.tile(baseload, math.ceil(self.days))[
+                : self.num_steps
+            ]  # repeat pattern over simulation
+        return 
+
+    def create_model(self):
+        # create a concrete model 
+
+        model = ConcreteModel()
+
+        # create timing parameters on the model
+        model.timerange = Set(initialize=range(self.num_steps))
+        model.dt = Param(initialize=self.timestep, mutable=False)
+        model.h_scale = Param(initialize=self.h_scale)
+        model.m_scale = Param(initialize=self.m_scale)
+        model.months = Param(initialize=self.months)
+
+        # define the characteristics of the battery
+        model.eta_charging = Param(initialize=np.sqrt(self.rte))
+        model.eta_discharging = Param(initialize=1 / np.sqrt(self.rte))
+        model.e_capacity = Param(initialize=self.energycapacity)
+        model.p_capacity = Param(initialize=self.powercapacity)
+
+        # add the baseload to the model 
+        def init_baseload(model, t, data=self.baseload):
+            return data[t]
+        model.baseload = Param(model.timerange, initialize=init_baseload)
+
+        # add battery dynamics 
+            # create variables
+        model.soc = Var(model.timerange, bounds=(self.soc_min, self.soc_max), initialize=self.soc_init, doc="State of charge")
+        model.energy = Var(model.timerange, bounds=(0, self.energycapacity), initialize=self.soc_init*self.energycapacity, doc="Energy stored")
+        model.power = Var(model.timerange, bounds=(-self.powercapacity, self.powercapacity), initialize=0, doc="Power into the battery")
+        model.power_C = Var(model.timerange, bounds=(0, self.powercapacity), initialize=0, doc="Charging power")
+        model.power_D = Var(model.timerange, bounds=(0, self.powercapacity), initialize=0, doc="Discharging power")
+
+        model.net_facility_load = Var(model.timerange, bounds=(None, None), initialize=0, doc="Net facility load including battery")
+
+            # create solution heuristic parameters
+        model.output_smoothing = Param(initialize=self.output_smoothing, mutable=True, doc="Smoothing factor for power draw")
+
+            # create model constraints
+        @model.Constraint(model.timerange)
+        def state_of_charge_constraint(b, t):
+            return b.soc[t] == b.energy[t] / b.e_capacity
+        
+        @model.Constraint(model.timerange)
+        def energy_balance_constraint(b, t):
+            if t == 0:
+                return Constraint.Skip
+            else:
+                return b.energy[t] == b.energy[t-1] + b.power[t-1] * b.dt
+        
+        @model.Constraint(model.timerange)
+        def power_balance_constraint(b, t):
+            return b.power[t] == b.power_C[t] * b.eta_charging - b.power_D[t] * b.eta_discharging
+        
+        @model.Constraint(model.timerange)
+        def net_facility_load_constraint(b, t):
+            return b.net_facility_load[t] == b.baseload[t] + b.power[t]
+
+            # set boundary conditions 
+        @model.Constraint()
+        def initial_soc_constraint(b):
+            return b.soc[0] == self.soc_init
+        
+        @model.Constraint()
+        def final_soc_constraint(b):
+            return b.soc[self.num_steps] == self.soc_init
+
+        # assign the model as an attribute of the class
+        self.model = model
+        return model 
+    
+    def add_objective(self, model):
+        # check if the model has an attribute for electricity cost 
+        if model.find_component("electricity_cost"):
+            pass 
+        else:
+            # create a 0 expression for electricity cost
+            model.electricity_cost = Expression(
+                expr=0,
+                doc="Electricity cost",
+            )
+            
+            # raise a warning
+            warnings.warn(
+                "Electricity cost not provided. Setting electricity cost to zero to solve feasibility problem."
+            )
+
+        # add the objective function to the model
+        model.objective = Objective(
+            expr=model.electricity_cost,
+            sense=minimize,
+        )
+
+        self.model = model
+        return self.model
+
+
+if __name__ == "__main__":
+    # Define the parameters for the battery model
+    battery_params = {
+        "sysname": "battery",
+        "start_date": "2022-07-01 00:00:00",
+        "end_date": "2022-07-02 00:00:00",
+        "timestep": 0.25,   # 15 minutes defined in hours
+        "rte": 0.86,
+        "ed_norm": 0.05,
+        "p_norm": 0.15,
+        "soc_min": 0.05,
+        "soc_max": 0.95,
+        "soc_init": 0.5,
+        "output_smoothing": 1e-6,
+    }
+    
+    # Create a sample baseload profile
+    baseload = pd.Series(np.random.normal(1.0, 0.1, size=24), index=pd.date_range("2023-01-01", periods=24, freq="h"))
+    
+    # Create an instance of the BatteryOpt class
+    battery = BatteryPyomo(battery_params, baseload)
