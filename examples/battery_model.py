@@ -9,7 +9,7 @@
 # Import necessary libraries
 import numpy as np 
 import pandas as pd 
-import os, json, warnings, calendar
+import os, json, warnings, calendar, math
 from datetime import datetime, timedelta
 from pyomo.environ import (
     SolverFactory, 
@@ -87,7 +87,7 @@ class BatteryPyomo:
         model = ConcreteModel()
 
         # create timing parameters on the model
-        model.timerange = Set(initialize=range(self.num_steps))
+        model.t = Set(initialize=range(self.num_steps))
         model.dt = Param(initialize=self.timestep, mutable=False)
         model.h_scale = Param(initialize=self.h_scale)
         model.m_scale = Param(initialize=self.m_scale)
@@ -102,38 +102,35 @@ class BatteryPyomo:
         # add the baseload to the model 
         def init_baseload(model, t, data=self.baseload):
             return data[t]
-        model.baseload = Param(model.timerange, initialize=init_baseload)
+        model.baseload = Param(model.t, initialize=init_baseload)
 
         # add battery dynamics 
             # create variables
-        model.soc = Var(model.timerange, bounds=(self.soc_min, self.soc_max), initialize=self.soc_init, doc="State of charge")
-        model.energy = Var(model.timerange, bounds=(0, self.energycapacity), initialize=self.soc_init*self.energycapacity, doc="Energy stored")
-        model.power = Var(model.timerange, bounds=(-self.powercapacity, self.powercapacity), initialize=0, doc="Power into the battery")
-        model.power_C = Var(model.timerange, bounds=(0, self.powercapacity), initialize=0, doc="Charging power")
-        model.power_D = Var(model.timerange, bounds=(0, self.powercapacity), initialize=0, doc="Discharging power")
+        model.soc = Var(model.t, bounds=(self.soc_min, self.soc_max), initialize=self.soc_init, doc="State of charge")
+        model.energy = Var(model.t, bounds=(0, self.energycapacity), initialize=self.soc_init*self.energycapacity, doc="Energy stored")
+        model.power = Var(model.t, bounds=(-self.powercapacity, self.powercapacity), initialize=0, doc="Power into the battery")
+        model.power_C = Var(model.t, bounds=(0, self.powercapacity), initialize=0, doc="Charging power")
+        model.power_D = Var(model.t, bounds=(0, self.powercapacity), initialize=0, doc="Discharging power")
 
-        model.net_facility_load = Var(model.timerange, bounds=(None, None), initialize=0, doc="Net facility load including battery")
-
-            # create solution heuristic parameters
-        model.output_smoothing = Param(initialize=self.output_smoothing, mutable=True, doc="Smoothing factor for power draw")
+        model.net_facility_load = Var(model.t, bounds=(None, None), initialize=0, doc="Net facility load including battery")
 
             # create model constraints
-        @model.Constraint(model.timerange)
+        @model.Constraint(model.t)
         def state_of_charge_constraint(b, t):
             return b.soc[t] == b.energy[t] / b.e_capacity
         
-        @model.Constraint(model.timerange)
+        @model.Constraint(model.t)
         def energy_balance_constraint(b, t):
             if t == 0:
                 return Constraint.Skip
             else:
                 return b.energy[t] == b.energy[t-1] + b.power[t-1] * b.dt
         
-        @model.Constraint(model.timerange)
+        @model.Constraint(model.t)
         def power_balance_constraint(b, t):
             return b.power[t] == b.power_C[t] * b.eta_charging - b.power_D[t] * b.eta_discharging
         
-        @model.Constraint(model.timerange)
+        @model.Constraint(model.t)
         def net_facility_load_constraint(b, t):
             return b.net_facility_load[t] == b.baseload[t] + b.power[t]
 
@@ -144,37 +141,11 @@ class BatteryPyomo:
         
         @model.Constraint()
         def final_soc_constraint(b):
-            return b.soc[self.num_steps] == self.soc_init
+            return b.soc[self.num_steps-1] == self.soc_init
 
         # assign the model as an attribute of the class
         self.model = model
         return model 
-    
-    def add_objective(self, model):
-        # check if the model has an attribute for electricity cost 
-        if model.find_component("electricity_cost"):
-            pass 
-        else:
-            # create a 0 expression for electricity cost
-            model.electricity_cost = Expression(
-                expr=0,
-                doc="Electricity cost",
-            )
-            
-            # raise a warning
-            warnings.warn(
-                "Electricity cost not provided. Setting electricity cost to zero to solve feasibility problem."
-            )
-
-        # add the objective function to the model
-        model.objective = Objective(
-            expr=model.electricity_cost,
-            sense=minimize,
-        )
-
-        self.model = model
-        return self.model
-
 
 if __name__ == "__main__":
     # Define the parameters for the battery model
