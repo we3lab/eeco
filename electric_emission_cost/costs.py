@@ -301,7 +301,7 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
     return charge_dict
 
 
-def get_charge_df(start_dt, end_dt, rate_data, resolution="15m"):
+def get_charge_df(start_dt, end_dt, rate_data, resolution="15m", keep_fixed_charges=False):
     """Creates a dictionary where the values are charge arrays and keys are of the form
     `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
 
@@ -322,14 +322,65 @@ def get_charge_df(start_dt, end_dt, rate_data, resolution="15m"):
     resolution : str
         granularity of each timestep in string form with default value of "15m"
 
+    keep_fixed_charges : bool
+        If True, fixed charges will be divided amongst all time steps and included.
+        If False, fixed charges will be dropped from the output. Default is False.
+
     Returns
     -------
     pandas.DataFrame
         DataFrame of charge arrays
     """
-    return pd.DataFrame(
-        get_charge_dict(start_dt, end_dt, rate_data, resolution=resolution)
-    )
+    charge_dict = get_charge_dict(start_dt, end_dt, rate_data, resolution=resolution)
+
+    res_binsize_minutes = ut.get_freq_binsize_minutes(resolution)
+    if isinstance(start_dt, dt.datetime) or isinstance(end_dt, dt.datetime):
+        ntsteps = int((end_dt - start_dt) / dt.timedelta(minutes=res_binsize_minutes))
+        datetime = pd.DataFrame(
+            np.array(
+                [
+                    start_dt + dt.timedelta(minutes=i * res_binsize_minutes)
+                    for i in range(ntsteps)
+                ]
+            ),
+            columns=["DateTime"],
+        )
+    else:
+        ntsteps = int((end_dt - start_dt) / np.timedelta64(res_binsize_minutes, "m"))
+        datetime = pd.DataFrame(
+            np.array(
+                [
+                    start_dt + np.timedelta64(i * res_binsize_minutes, "m")
+                    for i in range(ntsteps)
+                ]
+            ),
+            columns=["DateTime"],
+        )
+
+    # first find the value of the fixed charge
+    fixed_charge_dict = {
+        key: value
+        for key, value in charge_dict.items()
+        if any(k in key for k in ["electric_customer", "gas_customer"])
+    }
+
+    if keep_fixed_charges:
+        # replace the fixed charge in charge_dict with its time-averaged value
+        for key, value in fixed_charge_dict.items():
+            charge_dict[key] = np.ones(ntsteps) * value / ntsteps
+
+    else:
+        # remove fixed charges from the charge_dict
+        for key in fixed_charge_dict.keys():
+            del charge_dict[key]
+
+    charge_df = pd.DataFrame(charge_dict)
+
+    charge_df = pd.concat([datetime, charge_df], axis=1)
+
+    # remove all zero columns
+    charge_df = charge_df.loc[:, (charge_df != 0).any(axis=0)]
+    return charge_df
 
 
 def get_next_limit(key_substr, current_limit, keys):
@@ -568,7 +619,8 @@ def calculate_energy_cost(
     if model is None:
         n_steps = consumption_data.shape[0]
     else:  # Pyomo does not support shape attribute
-        n_steps = len(consumption_data.extract_values())
+        n_steps = len(consumption_data)
+        
     if isinstance(consumption_data, np.ndarray):
         energy = prev_consumption
         # set the flag if we are starting with previous consumption that lands us
