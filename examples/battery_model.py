@@ -146,25 +146,3 @@ class BatteryPyomo:
         # assign the model as an attribute of the class
         self.model = model
         return model 
-
-if __name__ == "__main__":
-    # Define the parameters for the battery model
-    battery_params = {
-        "sysname": "battery",
-        "start_date": "2022-07-01 00:00:00",
-        "end_date": "2022-07-02 00:00:00",
-        "timestep": 0.25,   # 15 minutes defined in hours
-        "rte": 0.86,
-        "ed_norm": 0.05,
-        "p_norm": 0.15,
-        "soc_min": 0.05,
-        "soc_max": 0.95,
-        "soc_init": 0.5,
-        "output_smoothing": 1e-6,
-    }
-    
-    # Create a sample baseload profile
-    baseload = pd.Series(np.random.normal(1.0, 0.1, size=24), index=pd.date_range("2023-01-01", periods=24, freq="h"))
-    
-    # Create an instance of the BatteryOpt class
-    battery = BatteryPyomo(battery_params, baseload)
