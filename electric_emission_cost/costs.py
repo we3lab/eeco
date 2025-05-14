@@ -301,7 +301,9 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
     return charge_dict
 
 
-def get_charge_df(start_dt, end_dt, rate_data, resolution="15m", keep_fixed_charges=False):
+def get_charge_df(
+    start_dt, end_dt, rate_data, resolution="15m", keep_fixed_charges=False
+):
     """Creates a dictionary where the values are charge arrays and keys are of the form
     `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
 
@@ -620,7 +622,7 @@ def calculate_energy_cost(
         n_steps = consumption_data.shape[0]
     else:  # Pyomo does not support shape attribute
         n_steps = len(consumption_data)
-        
+
     if isinstance(consumption_data, np.ndarray):
         energy = prev_consumption
         # set the flag if we are starting with previous consumption that lands us
