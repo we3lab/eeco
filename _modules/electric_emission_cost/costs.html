@@ -388,7 +388,9 @@
     <span class="k">return</span> <span class="n">charge_dict</span></div>
 
 
-<div class="viewcode-block" id="get_charge_df"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_charge_df">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_df</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">):</span>
+<div class="viewcode-block" id="get_charge_df"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_charge_df">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_df</span><span class="p">(</span>
+    <span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span> <span class="n">keep_fixed_charges</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a dictionary where the values are charge arrays and keys are of the form</span>
 <span class="sd">    `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`</span>
 
@@ -409,14 +411,65 @@
 <span class="sd">    resolution : str</span>
 <span class="sd">        granularity of each timestep in string form with default value of &quot;15m&quot;</span>
 
+<span class="sd">    keep_fixed_charges : bool</span>
+<span class="sd">        If True, fixed charges will be divided amongst all time steps and included.</span>
+<span class="sd">        If False, fixed charges will be dropped from the output. Default is False.</span>
+
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    pandas.DataFrame</span>
 <span class="sd">        DataFrame of charge arrays</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-        <span class="n">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">)</span>
-    <span class="p">)</span></div>
+    <span class="n">charge_dict</span> <span class="o">=</span> <span class="n">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">)</span>
+
+    <span class="n">res_binsize_minutes</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">end_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">):</span>
+        <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">res_binsize_minutes</span><span class="p">))</span>
+        <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">start_dt</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">i</span> <span class="o">*</span> <span class="n">res_binsize_minutes</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span>
+                <span class="p">]</span>
+            <span class="p">),</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="n">res_binsize_minutes</span><span class="p">,</span> <span class="s2">&quot;m&quot;</span><span class="p">))</span>
+        <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">start_dt</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">res_binsize_minutes</span><span class="p">,</span> <span class="s2">&quot;m&quot;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span>
+                <span class="p">]</span>
+            <span class="p">),</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+    <span class="c1"># first find the value of the fixed charge</span>
+    <span class="n">fixed_charge_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">key</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;electric_customer&quot;</span><span class="p">,</span> <span class="s2">&quot;gas_customer&quot;</span><span class="p">])</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">keep_fixed_charges</span><span class="p">:</span>
+        <span class="c1"># replace the fixed charge in charge_dict with its time-averaged value</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">fixed_charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">charge_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span> <span class="o">*</span> <span class="n">value</span> <span class="o">/</span> <span class="n">ntsteps</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># remove fixed charges from the charge_dict</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">fixed_charge_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">del</span> <span class="n">charge_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="n">charge_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">)</span>
+
+    <span class="n">charge_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">datetime</span><span class="p">,</span> <span class="n">charge_df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># remove all zero columns</span>
+    <span class="n">charge_df</span> <span class="o">=</span> <span class="n">charge_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">(</span><span class="n">charge_df</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">charge_df</span></div>
 
 
 <div class="viewcode-block" id="get_next_limit"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_next_limit">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_next_limit</span><span class="p">(</span><span class="n">key_substr</span><span class="p">,</span> <span class="n">current_limit</span><span class="p">,</span> <span class="n">keys</span><span class="p">):</span>
@@ -655,7 +708,8 @@
     <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">n_steps</span> <span class="o">=</span> <span class="n">consumption_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>  <span class="c1"># Pyomo does not support shape attribute</span>
-        <span class="n">n_steps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">consumption_data</span><span class="o">.</span><span class="n">extract_values</span><span class="p">())</span>
+        <span class="n">n_steps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">)</span>
+
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
         <span class="n">energy</span> <span class="o">=</span> <span class="n">prev_consumption</span>
         <span class="c1"># set the flag if we are starting with previous consumption that lands us</span>

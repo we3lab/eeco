@@ -374,7 +374,7 @@ If a DataFrame it must have a column “DateTime” and row for each timestep</p
 
 <dl class="py function">
 <dt class="sig sig-object py" id="electric_emission_cost.costs.get_charge_df">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">get_charge_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'15m'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#get_charge_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.get_charge_df" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">get_charge_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_fixed_charges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#get_charge_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.get_charge_df" title="Permalink to this definition"></a></dt>
 <dd><p>Creates a dictionary where the values are charge arrays and keys are of the form
 <cite>{utility}_{type}_{name}_{start_date}_{end_date}_{limit}</cite></p>
 <dl class="field-list simple">
@@ -387,6 +387,8 @@ If a DataFrame it must have a column “DateTime” and row for each timestep</p
 <cite>hour_start</cite>, <cite>hour_end</cite>, and <cite>charge</cite> and optional columns <cite>assessed</cite>,
 <cite>effective_start_date</cite>, and <cite>effective_end_date</cite></p></li>
 <li><p><strong>resolution</strong> (<em>str</em>) – granularity of each timestep in string form with default value of “15m”</p></li>
+<li><p><strong>keep_fixed_charges</strong> (<em>bool</em>) – If True, fixed charges will be divided amongst all time steps and included.
+If False, fixed charges will be dropped from the output. Default is False.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
