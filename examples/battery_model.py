@@ -35,18 +35,18 @@ class BatteryPyomo:
     This class models the behavior of a battery system operating on the site of an industrial power consumer.
     It uses time-discretized simulation to optimize battery usage based on input parameters and baseline load data.
 
-    Parameters:
-        params (dict): A dictionary of model parameters. Expected keys include:
+    Parameters
+    -----------
+    params (dict): A dictionary of model parameters. Expected keys include:
             - 'start_date' (str): The start date of the simulation in ISO format (e.g., 'YYYY-MM-DDTHH:MM:SS').
             - 'end_date' (str): The end date of the simulation in ISO format.
             - 'timestep' (float): The time step for the simulation in hours.
             (Additional keys may be required depending on the specific model configuration.)
-        baseload (array-like): The baseline load profile for the site, provided as a time series.
-        baseload_repeat (bool, optional): If True, the baseline load profile is repeated to match the simulation period.
+    
+    baseload (array-like): The baseline load profile for the site, provided as a time series.
+    
+    baseload_repeat (bool, optional): If True, the baseline load profile is repeated to match the simulation period.
             Defaults to False.
-
-    Usage:
-        Instantiate the class with the required parameters and call the `create_model` method to set up the Pyomo model.
     """
     def __init__(self, params, baseload, baseload_repeat=False):
         

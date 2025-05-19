@@ -302,7 +302,7 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
 
 
 def get_charge_df(
-    start_dt, end_dt, rate_data, resolution="15m", keep_fixed_charges=False
+    start_dt, end_dt, rate_data, resolution="15m", keep_fixed_charges=True
 ):
     """Creates a dictionary where the values are charge arrays and keys are of the form
     `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
