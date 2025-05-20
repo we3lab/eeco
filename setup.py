@@ -19,17 +19,15 @@ dev_requirements = [
     *test_requirements,
     "Sphinx==7.0.1",
     "sphinx-rtd-theme==2.0.0",
-    "tox>=3.24.5"
+    "tox>=3.24.5",
+    "matplotlib>=3.8.4",
+    "ipykernel"
 ]
 
 requirements = [
     "pandas>=2.2.1",
     "numpy>=1.26.4",
-    "matplotlib>=3.8.4",
-    "requests>=2.31.0",
     "cvxpy>=1.3.0",
-    "seaborn>=0.13.2",
-    "scipy>=1.2.1",
     "pyomo>=6.7",
     "gurobipy>=11.0",
     "pint>=0.19.2",
