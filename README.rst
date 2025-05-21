@@ -49,7 +49,7 @@ Useful Commands
 
 Documentation
 ==============
-The documentation for this package is hosted on `GitHub Pages <https://we3lab.github.io/electric-emission-cost>`.
+The documentation for this package is hosted on `GitHub Pages <https://we3lab.github.io/electric-emission-cost>`_.
 
 Legal Documents
 ===============
