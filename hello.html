@@ -51,7 +51,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#installing-electric-emissions-costs-eec">Installing Electric Emissions &amp; Costs (EEC)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#core-functionality">Core Functionality</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#sample-model-virtual-battery">Sample Model: Virtual Battery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sample-model-battery-optimization">Sample Model: Battery Optimization</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
@@ -98,7 +98,7 @@
 <ul>
 <li><p><a class="reference internal" href="#installing-electric-emissions-costs-eec" id="id2">Installing Electric Emissions &amp; Costs (EEC)</a></p></li>
 <li><p><a class="reference internal" href="#core-functionality" id="id3">Core Functionality</a></p></li>
-<li><p><a class="reference internal" href="#sample-model-virtual-battery" id="id4">Sample Model: Virtual Battery</a></p></li>
+<li><p><a class="reference internal" href="#sample-model-battery-optimization" id="id4">Sample Model: Battery Optimization</a></p></li>
 </ul>
 </li>
 </ul>
@@ -127,9 +127,17 @@
 </ol>
 <p>More information about how to correctly format data inputs can be found in <a class="reference internal" href="data_format.html#dataformat"><span class="std std-ref">Data Formats</span></a>.</p>
 </section>
-<section id="sample-model-virtual-battery">
-<span id="virtualbattery"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">Sample Model: Virtual Battery</a><a class="headerlink" href="#sample-model-virtual-battery" title="Permalink to this heading"></a></h2>
-<p>Besides the core functionality and utility functions, a simple virtual battery model is included as an example.</p>
+<section id="sample-model-battery-optimization">
+<span id="batteryoptimization"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">Sample Model: Battery Optimization</a><a class="headerlink" href="#sample-model-battery-optimization" title="Permalink to this heading"></a></h2>
+<p>Besides the core functionality and utility functions, a simple electric battery model (Pyomo) is included as an example.
+The model uses a linear program to minimize the electricity cost of a facility + battery subject to the baseline power consumption of the facility, dynamic constraints associated with battery charging and discharging, and the rules of the electricity tariff.
+This example is not intended to comprehensive model battery dynamics, but rather a illustrate how to use the <code class="docutils literal notranslate"><span class="pre">electric-emission-cost</span></code> package in within and outside of an optimization problem.</p>
+<p>The model file is located in the <code class="docutils literal notranslate"><span class="pre">examples</span></code> directory, and can be run with the following command after installing in editable mode:
+.. code-block:: bash</p>
+<blockquote>
+<div><p>python examples/battery_optimization.py</p>
+</div></blockquote>
+<p>A full walkthrough to use this example is available in the Jupyter notebook within the <a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/examples/example_pyomo_jupyter.ipynb">github repository</a> at <code class="docutils literal notranslate"><span class="pre">examples/example_pyomo_jupyter.ipynb</span></code>.</p>
 </section>
 </section>
 
