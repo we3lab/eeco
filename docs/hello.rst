@@ -47,4 +47,4 @@ The model file is located in the ``examples`` directory, and can be run with the
 
     python examples/battery_optimization.py
 
-A full walkthrough to use this example is available in the Jupyter notebook within the `github repository <https://github.com/we3lab/electric-emission-cost/blob/main/examples/example_pyomo_jupyter.ipynb>` at ``examples/example_pyomo_jupyter.ipynb``.
+A full walkthrough to use this example is available in the Jupyter notebook within the `github repository <https://github.com/we3lab/electric-emission-cost/blob/main/examples/example_pyomo_jupyter.ipynb>`_ at ``examples/example_pyomo_jupyter.ipynb``.
