@@ -47,6 +47,10 @@ Useful Commands
 
   This will reformat the code according to strict style guidelines.
 
+Documentation
+==============
+The documentation for this package is hosted on `GitHub Pages <https://we3lab.github.io/electric-emission-cost>`.
+
 Legal Documents
 ===============
 
