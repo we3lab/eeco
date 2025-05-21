@@ -50,7 +50,8 @@ Useful Commands
 Legal Documents
 ===============
 
-This work was funded XX.
+This work was funded by the National Alliance for Water Innovation (NAWI, grant number UBJQH - MSM), the Office of Energy Efficiency and Renewable Energy (EERE, grant number 0009499 - MSM), and the Office of Energy Efficiency and Renewable Energy, Advanced Manufacturing Office (grant number DE-EE0009499).
+The views and opinions of authors expressed herein do not necessarily state or reflect those of the United States Government or any agency thereof. Neither the United States Government nor any agency thereof, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, apparatus, product, or process disclosed, or represents that its use would not infringe privately owned rights.
 
 - `LICENSE <https://github.com/we3lab/electric-emission-cost/blob/main/LICENSE/>`_
 - `CONTRIBUTING <https://github.com/we3lab/electric-emission-cost/blob/main/CONTRIBUTING.rst/>`_
