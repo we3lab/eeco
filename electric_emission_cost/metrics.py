@@ -210,17 +210,21 @@ def net_present_value(
     electricity_savings : float
         The electricity savings from the flexible operation in $.
     maintenance_diff : float
-        The difference in maintenance costs between the baseline and flexible operation in $.
+        The difference in maintenance costs between the baseline 
+        and flexible operation in $.
     ancillary_service_benefit : float
         The benefit from providing ancillary services in $.
     service_curtailment : float
-        The amount of service curtailment. If the virtual battery system produces a product, this may be in units of volume or mass (e.g., m^3 or kg).
+        The amount of service curtailment. If the virtual battery system produces 
+        a product, this may be in units of volume or mass (e.g., m^3 or kg).
     service_price : float
-        The marginal price of curtailed service $/amount. Amount here may refer to units of volume or mass (e.g., $/m^3 or $/kg).
+        The marginal price of curtailed service $/amount. 
+        Amount here may refer to units of volume or mass (e.g., $/m^3 or $/kg).
     timestep : float
         The time step of the data in hours. Default is 0.25 hours (15 minutes).
     simulation_years : int
-        The number of years in which the electricity savings or ancillary service benefits are calculated for. Default is 1 year.
+        The number of years in which the electricity savings or 
+        ancillary service benefits are calculated for. Default is 1 year.
     upgrade_lifetime : int
         The number of years of operation left for the upgrade. Default is 30 years.
     interest_rate : float
