@@ -2,7 +2,6 @@
 
 import warnings
 import numpy as np
-from . import utils as ut
 
 
 def roundtrip_efficiency(baseline_kW, flexible_kW):
@@ -210,20 +209,20 @@ def net_present_value(
     electricity_savings : float
         The electricity savings from the flexible operation in $.
     maintenance_diff : float
-        The difference in maintenance costs between the baseline 
+        The difference in maintenance costs between the baseline
         and flexible operation in $.
     ancillary_service_benefit : float
         The benefit from providing ancillary services in $.
     service_curtailment : float
-        The amount of service curtailment. If the virtual battery system produces 
+        The amount of service curtailment. If the virtual battery system produces
         a product, this may be in units of volume or mass (e.g., m^3 or kg).
     service_price : float
-        The marginal price of curtailed service $/amount. 
+        The marginal price of curtailed service $/amount.
         Amount here may refer to units of volume or mass (e.g., $/m^3 or $/kg).
     timestep : float
         The time step of the data in hours. Default is 0.25 hours (15 minutes).
     simulation_years : int
-        The number of years in which the electricity savings or 
+        The number of years in which the electricity savings or
         ancillary service benefits are calculated for. Default is 1 year.
     upgrade_lifetime : int
         The number of years of operation left for the upgrade. Default is 30 years.
@@ -265,9 +264,6 @@ def net_present_value(
     benefit = electricity_savings + ancillary_service_benefit
     cost = maintenance_diff + service_curtailment * service_price
     cash_flow = benefit - cost
-
-    # calculate the time extrapolation factor
-    time_scaling = simulation_years / upgrade_lifetime
 
     # calculate the net discount factor
     discount = sum([1 / ((1 + interest_rate) ** n) for n in range(1, upgrade_lifetime)])

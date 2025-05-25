@@ -72,6 +72,9 @@ def test_metrics(
     flexible_kW = np.random.normal(loc=1200, scale=300, size=len(baseline_kW))
     if metric == "rte":
         rte = metrics.roundtrip_efficiency(baseline_kW, flexible_kW)
+        # assert output is a float
+        assert isinstance(rte, float), "Round trip efficiency should be a float"
+
     elif metric == "pc":
         pc = metrics.power_capacity(
             baseline_kW,
@@ -80,6 +83,8 @@ def test_metrics(
             pc_type=power_capacity_type,
             relative=True,
         )
+        assert isinstance(pc, float), "Round trip efficiency should be a float"
+
     elif metric == "ec":
         ec = metrics.energy_capacity(
             baseline_kW,
@@ -88,6 +93,7 @@ def test_metrics(
             ec_type=energy_capacity_type,
             relative=True,
         )
+        assert isinstance(ec, float), "Round trip efficiency should be a float"
 
     return
 
