@@ -1,11 +1,13 @@
 """Functions to estimate flexibility metrics from power consumption trajectories."""
+
 import warnings
 import numpy as np
 from . import utils as ut
 
-def rte(baseline_kW, flexible_kW):
-    """Calculate the Round-trip efficiency of a flexibly operating power trajectory relative to a baseline.
-    
+
+def roundtrip_efficiency(baseline_kW, flexible_kW):
+    """Calculate the round-trip efficiency of a flexibly operating power trajectory relative to a baseline.
+
     Parameters
     ----------
     baseline_kW : list or np.ndarray
@@ -49,29 +51,37 @@ def rte(baseline_kW, flexible_kW):
 
     # Check for negative or missing values
     if np.any(baseline_kW < 0) or np.any(flexible_kW < 0):
-        warnings.warn("Negative values detected in baseline_kW or flexible_kW. This may indicate an error in the data.")
-    
+        warnings.warn(
+            "Negative values detected in baseline_kW or flexible_kW. This may indicate an error in the data."
+        )
+
     if np.any(np.isnan(baseline_kW)) or np.any(np.isnan(flexible_kW)):
-        raise ValueError("Missing values detected in baseline_kW or flexible_kW. This may indicate an error in the data.")
+        raise ValueError(
+            "Missing values detected in baseline_kW or flexible_kW. This may indicate an error in the data."
+        )
 
     # Calculate the round-trip efficiency
     baseline_energy = np.sum(baseline_kW)
     flexible_energy = np.sum(flexible_kW)
     if flexible_energy == 0:
         raise ValueError("The sum of flexible_kW is zero, cannot compute rte.")
-    
+
     rte_value = baseline_energy / flexible_energy
     if rte_value > 1:
-        warnings.warn("RTE calculated to be greater than 1. This may indicate an error in the assumptions behind the data.")
+        warnings.warn(
+            "RTE calculated to be greater than 1. This may indicate an error in the assumptions behind the data."
+        )
 
     return rte_value
 
 
-def calc_power_capacity(baseline_kW, flexible_kW, timestep=0.25, pc_type='average', relative=True):
+def power_capacity(
+    baseline_kW, flexible_kW, timestep=0.25, pc_type="average", relative=True
+):
     """
     Calculate the round trip efficiency of a virtual battery system.
     This approach implicitly assumes the system has completed a round-trip.
-    
+
     Parameters
     ----------
     baseline_kW : array-like
@@ -84,12 +94,12 @@ def calc_power_capacity(baseline_kW, flexible_kW, timestep=0.25, pc_type='averag
         The type of power capacity to calculate. Options are 'average', 'charging', 'discharging', 'maximum'
     relative : bool
         If True, return the fractional power capacity. If False, return the absolute power capacity.
-    
+
     Raises
     ------
     ValueError
         If `pc_type` is not one of the expected values ('average', 'charging', 'discharging', 'maximum').
-    
+
     Returns
     -------
     float
@@ -102,27 +112,32 @@ def calc_power_capacity(baseline_kW, flexible_kW, timestep=0.25, pc_type='averag
     discharging = np.where(diff_kW < 0, -diff_kW, 0)
 
     # calculate the power capacity
-    if pc_type == 'average':
+    if pc_type == "average":
         power_capacity = (np.sum(charging) + np.sum(discharging)) / (len(diff_kW))
-    elif pc_type == 'charging':
+    elif pc_type == "charging":
         power_capacity = np.sum(charging) / (len(charging))
-    elif pc_type == 'discharging':
+    elif pc_type == "discharging":
         power_capacity = np.sum(discharging) / (len(discharging))
-    elif pc_type == 'maximum':
+    elif pc_type == "maximum":
         power_capacity = np.max(np.abs(diff_kW))
     else:
-        raise ValueError("Invalid power capacity type. Must be 'average', 'charging', 'discharging', or 'maximum'.")
-    
+        raise ValueError(
+            "Invalid power capacity type. Must be 'average', 'charging', 'discharging', or 'maximum'."
+        )
+
     if relative:
         # normalize by the max baseline power
         return power_capacity / np.max(baseline_kW)
     else:
         return power_capacity
 
-def calc_energy_capacity(baseline_kW, flexible_kW, timestep=0.25, ec_type='discharging', relative=True):
+
+def energy_capacity(
+    baseline_kW, flexible_kW, timestep=0.25, ec_type="discharging", relative=True
+):
     """
     Calculate the round trip efficiency of a virtual battery system. This approach implicitly assumes the system has completed a round-trip.
-    
+
     Parameters
     ----------
     baseline_kW : array-like
@@ -135,49 +150,56 @@ def calc_energy_capacity(baseline_kW, flexible_kW, timestep=0.25, ec_type='disch
         The type of power capacity to calculate. Options are 'average', 'charging', 'discharging'
     relative : bool
         If True, return the fractional power capacity. If False, return the absolute power capacity.
-    
+
     Raises
     ------
     ValueError
         If `ec_type` is not one of the expected values ('average', 'charging', 'discharging').
-    
+
     Returns
     -------
     float
         The power capacity of the virtual battery system in either relative or absolute terms.
     """
     # calculate the effective battery power (diff)
-    diff_kW = flexible_kW - baseline_kW   
+    diff_kW = flexible_kW - baseline_kW
     # charging is positive, discharging is negative
     charging = np.where(diff_kW > 0, diff_kW, 0)
     discharging = np.where(diff_kW < 0, -diff_kW, 0)
 
     # calculate the energy capacity
-    if ec_type == 'average':
+    if ec_type == "average":
         energy_capacity = (np.sum(charging) + np.sum(discharging)) * timestep
-    elif ec_type == 'charging':
+    elif ec_type == "charging":
         energy_capacity = np.sum(charging) * timestep
-    elif ec_type == 'discharging':
+    elif ec_type == "discharging":
         energy_capacity = np.sum(discharging) * timestep
     else:
-        raise ValueError("Invalid energy capacity type. Must be 'average', 'charging', or 'discharging'.")
+        raise ValueError(
+            "Invalid energy capacity type. Must be 'average', 'charging', or 'discharging'."
+        )
 
     if relative:
         # normalize by the total baseline power
-        return energy_capacity / (np.sum(baseline_kW) * timestep + 1e-12)  # add small value to avoid division by zero
+        return energy_capacity / (
+            np.sum(baseline_kW) * timestep + 1e-12
+        )  # add small value to avoid division by zero
     else:
-        return energy_capacity 
+        return energy_capacity
 
-def calc_npv(capital_cost=0, 
-                electricity_savings=0, 
-                maintenance_diff=0, 
-                ancillary_service_benefit=0, 
-                service_curtailment=0, 
-                service_price=1.0, 
-                timestep=0.25, 
-                simulation_years=1,
-                upgrade_lifetime=30,
-                interest_rate=0.03):
+
+def net_present_value(
+    capital_cost=0,
+    electricity_savings=0,
+    maintenance_diff=0,
+    ancillary_service_benefit=0,
+    service_curtailment=0,
+    service_price=1.0,
+    timestep=0.25,
+    simulation_years=1,
+    upgrade_lifetime=30,
+    interest_rate=0.03,
+):
     """
     Calculate the net present value of flexibility of a virtual battery system.
 
@@ -185,7 +207,7 @@ def calc_npv(capital_cost=0,
     ----------
     capital_cost : float
         The capital cost of the virtual battery system in $.
-    electricity_savings : float  
+    electricity_savings : float
         The electricity savings from the flexible operation in $.
     maintenance_diff : float
         The difference in maintenance costs between the baseline and flexible operation in $.
@@ -209,8 +231,8 @@ def calc_npv(capital_cost=0,
     Warning
         if the capital cost is less than 0
     ValueError
-        if the upgrade lifetime is less than or equal to 0 
-    ValueError    
+        if the upgrade lifetime is less than or equal to 0
+    ValueError
     if the interest rate is less than 0.
     ValueError
         if the timestep is less than or equal to 0.
@@ -222,7 +244,9 @@ def calc_npv(capital_cost=0,
     """
     # check if capital cost is negative
     if capital_cost < 0:
-        warnings.warn("Capital cost is negative. This may indicate an error in the data.")
+        warnings.warn(
+            "Capital cost is negative. This may indicate an error in the data."
+        )
     # check if upgrade lifetime is valid
     if upgrade_lifetime <= 0:
         raise ValueError("Upgrade lifetime must be greater than 0 years.")
@@ -233,7 +257,6 @@ def calc_npv(capital_cost=0,
     if timestep <= 0:
         raise ValueError("Timestep must be greater than 0 hours.")
 
-
     # calculate the total cash flow
     benefit = electricity_savings + ancillary_service_benefit
     cost = maintenance_diff + service_curtailment * service_price
@@ -243,7 +266,7 @@ def calc_npv(capital_cost=0,
     time_scaling = simulation_years / upgrade_lifetime
 
     # calculate the net discount factor
-    discount = sum([1/((1+interest_rate)**n) for n in range(1, upgrade_lifetime)])
+    discount = sum([1 / ((1 + interest_rate) ** n) for n in range(1, upgrade_lifetime)])
 
     # calculate the net present value
     npv = discount * (cash_flow / simulation_years) - capital_cost
