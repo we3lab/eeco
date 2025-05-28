@@ -20,6 +20,14 @@ electric\_emission\_cost.emissions module
    :undoc-members:
    :show-inheritance:
 
+electric\_emission\_cost.metrics module
+---------------------------------------
+
+.. automodule:: electric_emission_cost.metrics
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 electric\_emission\_cost.units module
 -------------------------------------
 

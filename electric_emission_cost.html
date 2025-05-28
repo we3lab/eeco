@@ -529,6 +529,147 @@ that are applied to 15-minute intervals of electricity consumption</p></li>
 </dd></dl>
 
 </section>
+<section id="module-electric_emission_cost.metrics">
+<span id="electric-emission-cost-metrics-module"></span><h2>electric_emission_cost.metrics module<a class="headerlink" href="#module-electric_emission_cost.metrics" title="Permalink to this heading"></a></h2>
+<p>Functions to estimate flexibility metrics from power consumption trajectories.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.metrics.energy_capacity">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.metrics.</span></span><span class="sig-name descname"><span class="pre">energy_capacity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flexible_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ec_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'discharging'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/metrics.html#energy_capacity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.metrics.energy_capacity" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the energy capacity of a virtual battery system.
+This approach implicitly assumes the system has completed a round-trip.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>baseline_kW</strong> (<em>array-like</em>) – The baseline power consumption of the facility in kW.</p></li>
+<li><p><strong>flexible_kW</strong> (<em>array-like</em>) – The flexible power consumption of the facility in kW.</p></li>
+<li><p><strong>timestep</strong> (<em>float</em>) – The time step of the data in hours. Default is 0.25 hours (15 minutes).</p></li>
+<li><p><strong>ec_type</strong> (<em>str</em>) – The type of energy capacity to calculate.
+Options are ‘average’, ‘charging’, ‘discharging’</p></li>
+<li><p><strong>relative</strong> (<em>bool</em>) – If True, return the fractional energy capacity.
+If False, return the absolute energy capacity.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – If <cite>ec_type</cite> is not one of the expected values
+    (‘average’, ‘charging’, ‘discharging’).</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The energy capacity of the virtual battery system in either relative
+or absolute terms.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.metrics.net_present_value">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.metrics.</span></span><span class="sig-name descname"><span class="pre">net_present_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">capital_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electricity_savings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maintenance_diff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ancillary_service_benefit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_curtailment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_price</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">simulation_years</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upgrade_lifetime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interest_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.03</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/metrics.html#net_present_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.metrics.net_present_value" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the net present value of flexibility of a virtual battery system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>capital_cost</strong> (<em>float</em>) – The capital cost of the virtual battery system in $.</p></li>
+<li><p><strong>electricity_savings</strong> (<em>float</em>) – The electricity savings from the flexible operation in $.</p></li>
+<li><p><strong>maintenance_diff</strong> (<em>float</em>) – The difference in maintenance costs between the baseline
+and flexible operation in $.</p></li>
+<li><p><strong>ancillary_service_benefit</strong> (<em>float</em>) – The benefit from providing ancillary services in $.</p></li>
+<li><p><strong>service_curtailment</strong> (<em>float</em>) – The amount of service curtailment. If the virtual battery system produces
+a product, this may be in units of volume or mass (e.g., m^3 or kg).</p></li>
+<li><p><strong>service_price</strong> (<em>float</em>) – The marginal price of curtailed service $/amount.
+Amount here may refer to units of volume or mass (e.g., $/m^3 or $/kg).</p></li>
+<li><p><strong>timestep</strong> (<em>float</em>) – The time step of the data in hours. Default is 0.25 hours (15 minutes).</p></li>
+<li><p><strong>simulation_years</strong> (<em>int</em>) – The number of years in which the electricity savings or
+ancillary service benefits are calculated for. Default is 1 year.</p></li>
+<li><p><strong>upgrade_lifetime</strong> (<em>int</em>) – The number of years of operation left for the upgrade. Default is 30 years.</p></li>
+<li><p><strong>interest_rate</strong> (<em>float</em>) – The interest rate used to discount future cash flows. Default is 0.03.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Warning" title="(in Python v3.13)"><strong>Warning</strong></a> – If the capital cost is less than 0</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – If the upgrade lifetime is less than or equal to 0</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – If the interest rate is less than 0.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – if the timestep is less than or equal to 0.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The net present value benefit of the virtual battery system in $.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.metrics.power_capacity">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.metrics.</span></span><span class="sig-name descname"><span class="pre">power_capacity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flexible_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pc_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'average'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/metrics.html#power_capacity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.metrics.power_capacity" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the power capacity of a virtual battery system.
+This approach implicitly assumes the system has completed a round-trip.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>baseline_kW</strong> (<em>array-like</em>) – The baseline power consumption of the facility in kW.</p></li>
+<li><p><strong>flexible_kW</strong> (<em>array-like</em>) – The flexible power consumption of the facility in kW.</p></li>
+<li><p><strong>timestep</strong> (<em>float</em>) – The time step of the data in hours. Default is 0.25 hours (15 minutes).</p></li>
+<li><p><strong>pc_type</strong> (<em>str</em>) – The type of power capacity to calculate.
+Options are ‘average’, ‘charging’, ‘discharging’, ‘maximum’</p></li>
+<li><p><strong>relative</strong> (<em>bool</em>) – If True, return the fractional power capacity.
+If False, return the absolute power capacity.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – If <cite>pc_type</cite> is not one of the expected values
+    (‘average’, ‘charging’, ‘discharging’, ‘maximum’).</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The power capacity of the virtual battery system in either relative
+or absolute terms.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.metrics.roundtrip_efficiency">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.metrics.</span></span><span class="sig-name descname"><span class="pre">roundtrip_efficiency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flexible_kW</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/metrics.html#roundtrip_efficiency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.metrics.roundtrip_efficiency" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the round-trip efficiency of a flexibly operating power trajectory
+relative to a baseline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>baseline_kW</strong> (<em>list or np.ndarray</em>) – power consumption data of the baseline system in units of kW</p></li>
+<li><p><strong>flexible_kW</strong> (<em>list or np.ndarray</em>) – power consumption data of the flexibly operating or cost-optimized system
+in units of kW.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.13)"><strong>TypeError</strong></a> – When <cite>baseline_kW</cite> and <cite>flexible_kW</cite> are not an acceptable type
+    (e.g., list vs. np.ndarray).</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – When <cite>baseline_kW</cite> and <cite>flexible_kW</cite> are not of the same length</p></li>
+<li><p><strong>Warnings</strong> – When <cite>baseline_kW</cite> and <cite>flexible_kW</cite> contain negative values,
+    which may indicate an error in the data.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – When <cite>baseline_kW</cite> and <cite>flexible_kW</cite> contain missing values.</p></li>
+<li><p><strong>Warnings</strong> – When rte is calculated to be greater than 1.
+    This may indicate an error in the assumptions behind the data.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The round-trip efficiency [0,1] of the flexible power trajectory
+relative to the baseline.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 <section id="module-electric_emission_cost.units">
 <span id="electric-emission-cost-units-module"></span><h2>electric_emission_cost.units module<a class="headerlink" href="#module-electric_emission_cost.units" title="Permalink to this heading"></a></h2>
 <dl class="py function">

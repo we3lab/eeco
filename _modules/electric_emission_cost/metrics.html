@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>electric_emission_cost.metrics &mdash; EEC 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            EEC
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">README</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hello.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../advanced.html">Advanced Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING.html">Contribution Agreement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../LICENSE.html">LICENSE</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">EEC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../electric_emission_cost.html">electric_emission_cost</a></li>
+      <li class="breadcrumb-item active">electric_emission_cost.metrics</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for electric_emission_cost.metrics</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Functions to estimate flexibility metrics from power consumption trajectories.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+
+<div class="viewcode-block" id="roundtrip_efficiency"><a class="viewcode-back" href="../../metrics.html#electric_emission_cost.metrics.roundtrip_efficiency">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">roundtrip_efficiency</span><span class="p">(</span><span class="n">baseline_kW</span><span class="p">,</span> <span class="n">flexible_kW</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate the round-trip efficiency of a flexibly operating power trajectory</span>
+<span class="sd">    relative to a baseline.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    baseline_kW : list or np.ndarray</span>
+<span class="sd">        power consumption data of the baseline system in units of kW</span>
+
+<span class="sd">    flexible_kW : list or np.ndarray</span>
+<span class="sd">        power consumption data of the flexibly operating or cost-optimized system</span>
+<span class="sd">        in units of kW.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        When `baseline_kW` and `flexible_kW` are not an acceptable type</span>
+<span class="sd">        (e.g., list vs. np.ndarray).</span>
+
+<span class="sd">    ValueError</span>
+<span class="sd">        When `baseline_kW` and `flexible_kW` are not of the same length</span>
+
+<span class="sd">    Warnings</span>
+<span class="sd">        When `baseline_kW` and `flexible_kW` contain negative values,</span>
+<span class="sd">        which may indicate an error in the data.</span>
+
+<span class="sd">    ValueError</span>
+<span class="sd">        When `baseline_kW` and `flexible_kW` contain missing values.</span>
+
+<span class="sd">    Warnings</span>
+<span class="sd">        When rte is calculated to be greater than 1.</span>
+<span class="sd">        This may indicate an error in the assumptions behind the data.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        The round-trip efficiency [0,1] of the flexible power trajectory</span>
+<span class="sd">        relative to the baseline.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Check if inputs are lists or numpy arrays</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">baseline_kW</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;baseline_kW must be a list or numpy array.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">flexible_kW</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;flexible_kW must be a list or numpy array.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Check if inputs are of the same length</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">baseline_kW</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">flexible_kW</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;baseline_kW and flexible_kW must have the same length.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Convert inputs to numpy arrays for easier calculations</span>
+    <span class="n">baseline_kW</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">baseline_kW</span><span class="p">)</span>
+    <span class="n">flexible_kW</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">flexible_kW</span><span class="p">)</span>
+
+    <span class="c1"># Check for negative or missing values</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">baseline_kW</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">flexible_kW</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Negative values detected in baseline_kW or flexible_kW. &quot;</span>
+            <span class="s2">&quot;This may indicate an error in the data.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">baseline_kW</span><span class="p">))</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">flexible_kW</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Missing values detected in baseline_kW or flexible_kW. &quot;</span>
+            <span class="s2">&quot;This may indicate an error in the data.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Calculate the round-trip efficiency</span>
+    <span class="n">baseline_energy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">baseline_kW</span><span class="p">)</span>
+    <span class="n">flexible_energy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">flexible_kW</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">flexible_energy</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The sum of flexible_kW is zero, cannot compute rte.&quot;</span><span class="p">)</span>
+
+    <span class="n">rte_value</span> <span class="o">=</span> <span class="n">baseline_energy</span> <span class="o">/</span> <span class="n">flexible_energy</span>
+    <span class="k">if</span> <span class="n">rte_value</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;RTE calculated to be greater than 1. &quot;</span>
+            <span class="s2">&quot;This may indicate an error in the assumptions behind the data.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">rte_value</span></div>
+
+
+<div class="viewcode-block" id="power_capacity"><a class="viewcode-back" href="../../metrics.html#electric_emission_cost.metrics.power_capacity">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">power_capacity</span><span class="p">(</span>
+    <span class="n">baseline_kW</span><span class="p">,</span> <span class="n">flexible_kW</span><span class="p">,</span> <span class="n">timestep</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">pc_type</span><span class="o">=</span><span class="s2">&quot;average&quot;</span><span class="p">,</span> <span class="n">relative</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate the power capacity of a virtual battery system.</span>
+<span class="sd">    This approach implicitly assumes the system has completed a round-trip.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    baseline_kW : array-like</span>
+<span class="sd">        The baseline power consumption of the facility in kW.</span>
+
+<span class="sd">    flexible_kW : array-like</span>
+<span class="sd">        The flexible power consumption of the facility in kW.</span>
+
+<span class="sd">    timestep : float</span>
+<span class="sd">        The time step of the data in hours. Default is 0.25 hours (15 minutes).</span>
+
+<span class="sd">    pc_type : str</span>
+<span class="sd">        The type of power capacity to calculate.</span>
+<span class="sd">        Options are &#39;average&#39;, &#39;charging&#39;, &#39;discharging&#39;, &#39;maximum&#39;</span>
+
+<span class="sd">    relative : bool</span>
+<span class="sd">        If True, return the fractional power capacity.</span>
+<span class="sd">        If False, return the absolute power capacity.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If `pc_type` is not one of the expected values</span>
+<span class="sd">        (&#39;average&#39;, &#39;charging&#39;, &#39;discharging&#39;, &#39;maximum&#39;).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        The power capacity of the virtual battery system in either relative</span>
+<span class="sd">        or absolute terms.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># calculate the effective battery power (diff)</span>
+    <span class="n">diff_kW</span> <span class="o">=</span> <span class="n">flexible_kW</span> <span class="o">-</span> <span class="n">baseline_kW</span>
+    <span class="c1"># charging is positive, discharging is negative</span>
+    <span class="n">charging</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">diff_kW</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">diff_kW</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">discharging</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">diff_kW</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">diff_kW</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># calculate the power capacity</span>
+    <span class="k">if</span> <span class="n">pc_type</span> <span class="o">==</span> <span class="s2">&quot;average&quot;</span><span class="p">:</span>
+        <span class="n">power_capacity</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">charging</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">discharging</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">diff_kW</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">pc_type</span> <span class="o">==</span> <span class="s2">&quot;charging&quot;</span><span class="p">:</span>
+        <span class="n">power_capacity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">charging</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">charging</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">pc_type</span> <span class="o">==</span> <span class="s2">&quot;discharging&quot;</span><span class="p">:</span>
+        <span class="n">power_capacity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">discharging</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">discharging</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">pc_type</span> <span class="o">==</span> <span class="s2">&quot;maximum&quot;</span><span class="p">:</span>
+        <span class="n">power_capacity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">diff_kW</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Invalid power capacity type. Must be &#39;average&#39;, &quot;</span>
+            <span class="s2">&quot;&#39;charging&#39;, &#39;discharging&#39;, or &#39;maximum&#39;.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">relative</span><span class="p">:</span>
+        <span class="c1"># normalize by the max baseline power</span>
+        <span class="k">return</span> <span class="n">power_capacity</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">baseline_kW</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">power_capacity</span></div>
+
+
+<div class="viewcode-block" id="energy_capacity"><a class="viewcode-back" href="../../metrics.html#electric_emission_cost.metrics.energy_capacity">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">energy_capacity</span><span class="p">(</span>
+    <span class="n">baseline_kW</span><span class="p">,</span> <span class="n">flexible_kW</span><span class="p">,</span> <span class="n">timestep</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">ec_type</span><span class="o">=</span><span class="s2">&quot;discharging&quot;</span><span class="p">,</span> <span class="n">relative</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate the energy capacity of a virtual battery system.</span>
+<span class="sd">    This approach implicitly assumes the system has completed a round-trip.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    baseline_kW : array-like</span>
+<span class="sd">        The baseline power consumption of the facility in kW.</span>
+
+<span class="sd">    flexible_kW : array-like</span>
+<span class="sd">        The flexible power consumption of the facility in kW.</span>
+
+<span class="sd">    timestep : float</span>
+<span class="sd">        The time step of the data in hours. Default is 0.25 hours (15 minutes).</span>
+
+<span class="sd">    ec_type : str</span>
+<span class="sd">        The type of energy capacity to calculate.</span>
+<span class="sd">        Options are &#39;average&#39;, &#39;charging&#39;, &#39;discharging&#39;</span>
+
+<span class="sd">    relative : bool</span>
+<span class="sd">        If True, return the fractional energy capacity.</span>
+<span class="sd">        If False, return the absolute energy capacity.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If `ec_type` is not one of the expected values</span>
+<span class="sd">        (&#39;average&#39;, &#39;charging&#39;, &#39;discharging&#39;).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        The energy capacity of the virtual battery system in either relative</span>
+<span class="sd">        or absolute terms.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># calculate the effective battery power (diff)</span>
+    <span class="n">diff_kW</span> <span class="o">=</span> <span class="n">flexible_kW</span> <span class="o">-</span> <span class="n">baseline_kW</span>
+    <span class="c1"># charging is positive, discharging is negative</span>
+    <span class="n">charging</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">diff_kW</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">diff_kW</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">discharging</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">diff_kW</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">diff_kW</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># calculate the energy capacity</span>
+    <span class="k">if</span> <span class="n">ec_type</span> <span class="o">==</span> <span class="s2">&quot;average&quot;</span><span class="p">:</span>
+        <span class="n">energy_capacity</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">charging</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">discharging</span><span class="p">))</span> <span class="o">*</span> <span class="n">timestep</span>
+    <span class="k">elif</span> <span class="n">ec_type</span> <span class="o">==</span> <span class="s2">&quot;charging&quot;</span><span class="p">:</span>
+        <span class="n">energy_capacity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">charging</span><span class="p">)</span> <span class="o">*</span> <span class="n">timestep</span>
+    <span class="k">elif</span> <span class="n">ec_type</span> <span class="o">==</span> <span class="s2">&quot;discharging&quot;</span><span class="p">:</span>
+        <span class="n">energy_capacity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">discharging</span><span class="p">)</span> <span class="o">*</span> <span class="n">timestep</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Invalid energy capacity type. &quot;</span>
+            <span class="s2">&quot;Must be &#39;average&#39;, &#39;charging&#39;, or &#39;discharging&#39;.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">relative</span><span class="p">:</span>
+        <span class="c1"># normalize by the total baseline power</span>
+        <span class="k">return</span> <span class="n">energy_capacity</span> <span class="o">/</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">baseline_kW</span><span class="p">)</span> <span class="o">*</span> <span class="n">timestep</span> <span class="o">+</span> <span class="mf">1e-12</span>
+        <span class="p">)</span>  <span class="c1"># add small value to avoid division by zero</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">energy_capacity</span></div>
+
+
+<div class="viewcode-block" id="net_present_value"><a class="viewcode-back" href="../../metrics.html#electric_emission_cost.metrics.net_present_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">net_present_value</span><span class="p">(</span>
+    <span class="n">capital_cost</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">electricity_savings</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">maintenance_diff</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">ancillary_service_benefit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">service_curtailment</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">service_price</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">timestep</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+    <span class="n">simulation_years</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">upgrade_lifetime</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+    <span class="n">interest_rate</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the net present value of flexibility of a virtual battery system.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    capital_cost : float</span>
+<span class="sd">        The capital cost of the virtual battery system in $.</span>
+
+<span class="sd">    electricity_savings : float</span>
+<span class="sd">        The electricity savings from the flexible operation in $.</span>
+
+<span class="sd">    maintenance_diff : float</span>
+<span class="sd">        The difference in maintenance costs between the baseline</span>
+<span class="sd">        and flexible operation in $.</span>
+
+<span class="sd">    ancillary_service_benefit : float</span>
+<span class="sd">        The benefit from providing ancillary services in $.</span>
+
+<span class="sd">    service_curtailment : float</span>
+<span class="sd">        The amount of service curtailment. If the virtual battery system produces</span>
+<span class="sd">        a product, this may be in units of volume or mass (e.g., m^3 or kg).</span>
+
+<span class="sd">    service_price : float</span>
+<span class="sd">        The marginal price of curtailed service $/amount.</span>
+<span class="sd">        Amount here may refer to units of volume or mass (e.g., $/m^3 or $/kg).</span>
+
+<span class="sd">    timestep : float</span>
+<span class="sd">        The time step of the data in hours. Default is 0.25 hours (15 minutes).</span>
+
+<span class="sd">    simulation_years : int</span>
+<span class="sd">        The number of years in which the electricity savings or</span>
+<span class="sd">        ancillary service benefits are calculated for. Default is 1 year.</span>
+
+<span class="sd">    upgrade_lifetime : int</span>
+<span class="sd">        The number of years of operation left for the upgrade. Default is 30 years.</span>
+
+<span class="sd">    interest_rate : float</span>
+<span class="sd">        The interest rate used to discount future cash flows. Default is 0.03.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    Warning</span>
+<span class="sd">        If the capital cost is less than 0</span>
+
+<span class="sd">    ValueError</span>
+<span class="sd">        If the upgrade lifetime is less than or equal to 0</span>
+
+<span class="sd">    ValueError</span>
+<span class="sd">        If the interest rate is less than 0.</span>
+
+<span class="sd">    ValueError</span>
+<span class="sd">        if the timestep is less than or equal to 0.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        The net present value benefit of the virtual battery system in $.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># check if capital cost is negative</span>
+    <span class="k">if</span> <span class="n">capital_cost</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Capital cost is negative. This may indicate an error in the data.&quot;</span>
+        <span class="p">)</span>
+    <span class="c1"># check if upgrade lifetime is valid</span>
+    <span class="k">if</span> <span class="n">upgrade_lifetime</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Upgrade lifetime must be greater than 0 years.&quot;</span><span class="p">)</span>
+    <span class="c1"># check if interest rate is valid</span>
+    <span class="k">if</span> <span class="n">interest_rate</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Interest rate must be greater than or equal to 0.&quot;</span><span class="p">)</span>
+    <span class="c1"># check if timestep is valid</span>
+    <span class="k">if</span> <span class="n">timestep</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Timestep must be greater than 0 hours.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># calculate the total cash flow</span>
+    <span class="n">benefit</span> <span class="o">=</span> <span class="n">electricity_savings</span> <span class="o">+</span> <span class="n">ancillary_service_benefit</span>
+    <span class="n">cost</span> <span class="o">=</span> <span class="n">maintenance_diff</span> <span class="o">+</span> <span class="n">service_curtailment</span> <span class="o">*</span> <span class="n">service_price</span>
+    <span class="n">cash_flow</span> <span class="o">=</span> <span class="n">benefit</span> <span class="o">-</span> <span class="n">cost</span>
+
+    <span class="c1"># calculate the net discount factor</span>
+    <span class="n">discount</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="mi">1</span> <span class="o">/</span> <span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="n">interest_rate</span><span class="p">)</span> <span class="o">**</span> <span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">upgrade_lifetime</span><span class="p">)])</span>
+
+    <span class="c1"># calculate the net present value</span>
+    <span class="n">npv</span> <span class="o">=</span> <span class="n">discount</span> <span class="o">*</span> <span class="p">(</span><span class="n">cash_flow</span> <span class="o">/</span> <span class="n">simulation_years</span><span class="p">)</span> <span class="o">-</span> <span class="n">capital_cost</span>
+
+    <span class="k">return</span> <span class="n">npv</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3 Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
