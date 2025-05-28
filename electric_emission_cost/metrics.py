@@ -89,8 +89,7 @@ def roundtrip_efficiency(baseline_kW, flexible_kW):
 def power_capacity(
     baseline_kW, flexible_kW, timestep=0.25, pc_type="average", relative=True
 ):
-    """
-    Calculate the round trip efficiency of a virtual battery system.
+    """Calculate the power capacity of a virtual battery system.
     This approach implicitly assumes the system has completed a round-trip.
 
     Parameters
@@ -155,8 +154,7 @@ def power_capacity(
 def energy_capacity(
     baseline_kW, flexible_kW, timestep=0.25, ec_type="discharging", relative=True
 ):
-    """
-    Calculate the round trip efficiency of a virtual battery system.
+    """Calculate the energy capacity of a virtual battery system.
     This approach implicitly assumes the system has completed a round-trip.
 
     Parameters
@@ -171,12 +169,12 @@ def energy_capacity(
         The time step of the data in hours. Default is 0.25 hours (15 minutes).
 
     ec_type : str
-        The type of power capacity to calculate.
+        The type of energy capacity to calculate.
         Options are 'average', 'charging', 'discharging'
 
     relative : bool
-        If True, return the fractional power capacity.
-        If False, return the absolute power capacity.
+        If True, return the fractional energy capacity.
+        If False, return the absolute energy capacity.
 
     Raises
     ------
@@ -187,7 +185,7 @@ def energy_capacity(
     Returns
     -------
     float
-        The power capacity of the virtual battery system in either relative
+        The energy capacity of the virtual battery system in either relative
         or absolute terms.
     """
     # calculate the effective battery power (diff)
