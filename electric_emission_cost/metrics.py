@@ -5,7 +5,8 @@ import numpy as np
 
 
 def roundtrip_efficiency(baseline_kW, flexible_kW):
-    """Calculate the round-trip efficiency of a flexibly operating power trajectory relative to a baseline.
+    """Calculate the round-trip efficiency of a flexibly operating power trajectory
+    relative to a baseline.
 
     Parameters
     ----------
@@ -13,27 +14,35 @@ def roundtrip_efficiency(baseline_kW, flexible_kW):
         power consumption data of the baseline system in units of kW
 
     flexible_kW : list or np.ndarray
-        power consumption data of the flexibly operating or cost-optimized system in units of kW.
+        power consumption data of the flexibly operating or cost-optimized system
+        in units of kW.
 
     Raises
     ------
     TypeError
-        When `baseline_kW` and `flexible_kW` are not an acceptable type (e.g., list vs. np.ndarray).
+        When `baseline_kW` and `flexible_kW` are not an acceptable type
+        (e.g., list vs. np.ndarray).
+
     ValueError
         When `baseline_kW` and `flexible_kW` are not of the same length
+
     Warnings
-        When `baseline_kW` and `flexible_kW` contain negative values, which may indicate an error in the data.
+        When `baseline_kW` and `flexible_kW` contain negative values,
+        which may indicate an error in the data.
+
     ValueError
         When `baseline_kW` and `flexible_kW` contain missing values.
+
     Warnings
-        When rte is calculated to be greater than 1. This may indicate an error in the assumptions behind the data.
+        When rte is calculated to be greater than 1.
+        This may indicate an error in the assumptions behind the data.
 
     Returns
     -------
     float
-        The round-trip efficiency [0,1] of the flexible power trajectory relative to the baseline.
+        The round-trip efficiency [0,1] of the flexible power trajectory
+        relative to the baseline.
     """
-
     # Check if inputs are lists or numpy arrays
     if not isinstance(baseline_kW, (list, np.ndarray)):
         raise TypeError("baseline_kW must be a list or numpy array.")
@@ -51,12 +60,14 @@ def roundtrip_efficiency(baseline_kW, flexible_kW):
     # Check for negative or missing values
     if np.any(baseline_kW < 0) or np.any(flexible_kW < 0):
         warnings.warn(
-            "Negative values detected in baseline_kW or flexible_kW. This may indicate an error in the data."
+            "Negative values detected in baseline_kW or flexible_kW. "
+            "This may indicate an error in the data."
         )
 
     if np.any(np.isnan(baseline_kW)) or np.any(np.isnan(flexible_kW)):
         raise ValueError(
-            "Missing values detected in baseline_kW or flexible_kW. This may indicate an error in the data."
+            "Missing values detected in baseline_kW or flexible_kW. "
+            "This may indicate an error in the data."
         )
 
     # Calculate the round-trip efficiency
@@ -68,7 +79,8 @@ def roundtrip_efficiency(baseline_kW, flexible_kW):
     rte_value = baseline_energy / flexible_energy
     if rte_value > 1:
         warnings.warn(
-            "RTE calculated to be greater than 1. This may indicate an error in the assumptions behind the data."
+            "RTE calculated to be greater than 1. "
+            "This may indicate an error in the assumptions behind the data."
         )
 
     return rte_value
@@ -85,24 +97,32 @@ def power_capacity(
     ----------
     baseline_kW : array-like
         The baseline power consumption of the facility in kW.
+
     flexible_kW : array-like
         The flexible power consumption of the facility in kW.
+
     timestep : float
         The time step of the data in hours. Default is 0.25 hours (15 minutes).
+
     pc_type : str
-        The type of power capacity to calculate. Options are 'average', 'charging', 'discharging', 'maximum'
+        The type of power capacity to calculate.
+        Options are 'average', 'charging', 'discharging', 'maximum'
+
     relative : bool
-        If True, return the fractional power capacity. If False, return the absolute power capacity.
+        If True, return the fractional power capacity.
+        If False, return the absolute power capacity.
 
     Raises
     ------
     ValueError
-        If `pc_type` is not one of the expected values ('average', 'charging', 'discharging', 'maximum').
+        If `pc_type` is not one of the expected values
+        ('average', 'charging', 'discharging', 'maximum').
 
     Returns
     -------
     float
-        The power capacity of the virtual battery system in either relative or absolute terms.
+        The power capacity of the virtual battery system in either relative
+        or absolute terms.
     """
     # calculate the effective battery power (diff)
     diff_kW = flexible_kW - baseline_kW
@@ -121,7 +141,8 @@ def power_capacity(
         power_capacity = np.max(np.abs(diff_kW))
     else:
         raise ValueError(
-            "Invalid power capacity type. Must be 'average', 'charging', 'discharging', or 'maximum'."
+            "Invalid power capacity type. Must be 'average', "
+            "'charging', 'discharging', or 'maximum'."
         )
 
     if relative:
@@ -135,30 +156,39 @@ def energy_capacity(
     baseline_kW, flexible_kW, timestep=0.25, ec_type="discharging", relative=True
 ):
     """
-    Calculate the round trip efficiency of a virtual battery system. This approach implicitly assumes the system has completed a round-trip.
+    Calculate the round trip efficiency of a virtual battery system.
+    This approach implicitly assumes the system has completed a round-trip.
 
     Parameters
     ----------
     baseline_kW : array-like
         The baseline power consumption of the facility in kW.
+
     flexible_kW : array-like
         The flexible power consumption of the facility in kW.
+
     timestep : float
         The time step of the data in hours. Default is 0.25 hours (15 minutes).
+
     ec_type : str
-        The type of power capacity to calculate. Options are 'average', 'charging', 'discharging'
+        The type of power capacity to calculate.
+        Options are 'average', 'charging', 'discharging'
+
     relative : bool
-        If True, return the fractional power capacity. If False, return the absolute power capacity.
+        If True, return the fractional power capacity.
+        If False, return the absolute power capacity.
 
     Raises
     ------
     ValueError
-        If `ec_type` is not one of the expected values ('average', 'charging', 'discharging').
+        If `ec_type` is not one of the expected values
+        ('average', 'charging', 'discharging').
 
     Returns
     -------
     float
-        The power capacity of the virtual battery system in either relative or absolute terms.
+        The power capacity of the virtual battery system in either relative
+        or absolute terms.
     """
     # calculate the effective battery power (diff)
     diff_kW = flexible_kW - baseline_kW
@@ -175,7 +205,8 @@ def energy_capacity(
         energy_capacity = np.sum(discharging) * timestep
     else:
         raise ValueError(
-            "Invalid energy capacity type. Must be 'average', 'charging', or 'discharging'."
+            "Invalid energy capacity type. "
+            "Must be 'average', 'charging', or 'discharging'."
         )
 
     if relative:
@@ -206,37 +237,49 @@ def net_present_value(
     ----------
     capital_cost : float
         The capital cost of the virtual battery system in $.
+
     electricity_savings : float
         The electricity savings from the flexible operation in $.
+
     maintenance_diff : float
         The difference in maintenance costs between the baseline
         and flexible operation in $.
+
     ancillary_service_benefit : float
         The benefit from providing ancillary services in $.
+
     service_curtailment : float
         The amount of service curtailment. If the virtual battery system produces
         a product, this may be in units of volume or mass (e.g., m^3 or kg).
+
     service_price : float
         The marginal price of curtailed service $/amount.
         Amount here may refer to units of volume or mass (e.g., $/m^3 or $/kg).
+
     timestep : float
         The time step of the data in hours. Default is 0.25 hours (15 minutes).
+
     simulation_years : int
         The number of years in which the electricity savings or
         ancillary service benefits are calculated for. Default is 1 year.
+
     upgrade_lifetime : int
         The number of years of operation left for the upgrade. Default is 30 years.
+
     interest_rate : float
         The interest rate used to discount future cash flows. Default is 0.03.
 
     Raises
     ------
     Warning
-        if the capital cost is less than 0
+        If the capital cost is less than 0
+
     ValueError
-        if the upgrade lifetime is less than or equal to 0
+        If the upgrade lifetime is less than or equal to 0
+
     ValueError
-    if the interest rate is less than 0.
+        If the interest rate is less than 0.
+
     ValueError
         if the timestep is less than or equal to 0.
 
