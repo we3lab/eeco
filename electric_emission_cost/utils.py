@@ -178,7 +178,7 @@ def max(expression, model=None, varstr=None):
         constraint = pyo.Constraint(rule=const_rule)
         model.add_component(name=varstr + "_constraint", val=constraint)
         return (var, model)
-    
+
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
         model.add_component(name=varstr, val=pyo.Var())
         var = model.find_component(varstr)
@@ -322,7 +322,7 @@ def max_pos(expression, model=None, varstr=None):
         return (var, model)
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
         model.add_component(name=varstr, val=pyo.Var(initialize=0, bounds=(0, None)))
-        var=model.find_component(varstr)
+        var = model.find_component(varstr)
 
         def const_rule(model, t):
             return var >= expression[t]
