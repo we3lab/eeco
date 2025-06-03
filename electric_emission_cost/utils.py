@@ -164,27 +164,31 @@ def max(expression, model=None, varstr=None):
     ([numpy.Array, cvxpy.Expression, pyomo.environ.Var], pyomo.environ.Model)
         Expression representing max of `expression`
     """
+    # replace any - with _ in varstr
+    varstr = re.sub("-", "_", varstr)
     if isinstance(
         expression, (LinearExpression, SumExpression, MonomialTermExpression, ScalarVar)
     ):
-        setattr(model, varstr, pyo.Var())
-        var = getattr(model, varstr)
+        model.add_component(name=varstr, val=pyo.Var())
+        var = model.find_component(varstr)
 
         def const_rule(model):
             return var >= expression
 
         constraint = pyo.Constraint(rule=const_rule)
-        setattr(model, varstr + "_constraint", constraint)
+        model.add_component(name=varstr + "_constraint", val=constraint)
         return (var, model)
+    
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
-        setattr(model, varstr, pyo.Var())
-        var = getattr(model, varstr)
+        model.add_component(name=varstr, val=pyo.Var())
+        var = model.find_component(varstr)
 
         def const_rule(model, t):
             return var >= expression[t]
 
         constraint = pyo.Constraint(model.t, rule=const_rule)
-        setattr(model, varstr + "_constraint", constraint)
+        model.add_component(name=varstr + "_constraint", val=constraint)
+
         return (var, model)
     elif isinstance(
         expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
@@ -236,9 +240,11 @@ def sum(expression, axis=0, model=None, varstr=None):
     [numpy.Array, cvxpy.Expression, pyomo.environ.Expression]
         Expression representing sum of `expression` along `axis`
     """
+    # replace any - with _ in varstr
+    varstr = re.sub("-", "_", varstr)
     if isinstance(expression, (SumExpression, IndexedExpression, pyo.Param, pyo.Var)):
-        setattr(model, varstr, pyo.Var())
-        var = getattr(model, varstr)
+        model.add_component(name=varstr, val=pyo.Var())
+        var = model.find_component(varstr)
 
         def const_rule(model):
             total = 0
@@ -247,7 +253,7 @@ def sum(expression, axis=0, model=None, varstr=None):
             return var == total
 
         constraint = pyo.Constraint(rule=const_rule)
-        setattr(model, varstr + "_constraint", constraint)
+        model.add_component(name=varstr + "_constraint", val=constraint)
         return (var, model)
     elif isinstance(
         expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
@@ -300,27 +306,29 @@ def max_pos(expression, model=None, varstr=None):
     )
         Expression representing maximum positive scalar value of `expression`
     """
+    # replace any - with _ in varstr
+    varstr = re.sub("-", "_", varstr)
     if isinstance(
         expression, (LinearExpression, SumExpression, MonomialTermExpression, ScalarVar)
     ):
-        setattr(model, varstr, pyo.Var(initialize=0, bounds=(0, None)))
-        var = getattr(model, varstr)
+        model.add_component(name=varstr, val=pyo.Var(initialize=0, bounds=(0, None)))
+        var = model.find_component(varstr)
 
         def const_rule(model):
             return var >= expression
 
         constraint = pyo.Constraint(rule=const_rule)
-        setattr(model, varstr + "_constraint", constraint)
+        model.add_component(name=varstr + "_constraint", val=constraint)
         return (var, model)
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
-        setattr(model, varstr, pyo.Var(bounds=(0, None)))
-        var = getattr(model, varstr)
+        model.add_component(name=varstr, val=pyo.Var(initialize=0, bounds=(0, None)))
+        var=model.find_component(varstr)
 
         def const_rule(model, t):
             return var >= expression[t]
 
         constraint = pyo.Constraint(model.t, rule=const_rule)
-        setattr(model, varstr + "_constraint", constraint)
+        model.add_component(name=varstr + "_constraint", val=constraint)
         return (var, model)
     elif isinstance(
         expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
@@ -384,6 +392,8 @@ def multiply(expression1, expression2, model=None, varstr=None):
     ]
         result from elementwise multiplication of `expression1` and `expression2`
     """
+    # replace any - with _ in varstr
+    varstr = re.sub("-", "_", varstr)
     if isinstance(expression1, cp.Expression) or isinstance(expression2, cp.Expression):
         return (cp.multiply(expression1, expression2), None)
     elif isinstance(
@@ -393,14 +403,14 @@ def multiply(expression1, expression2, model=None, varstr=None):
     ):
         if len(expression1) > 1:
             # TODO: replace model.t with better way to get dimensions
-            setattr(model, varstr, pyo.Var(model.t))
-            var = getattr(model, varstr)
+            model.add_component(name=varstr, val=pyo.Var(model.t))
+            var = model.find_component(varstr)
 
             def const_rule(model, t):
                 return var[t] == expression1[t] * expression2[t]
 
             constraint = pyo.Constraint(model.t, rule=const_rule)
-            setattr(model, varstr + "_constraint", constraint)
+            model.add_component(name=varstr + "_constraint", val=constraint)
             return (var, model)
         else:
             return (expression1 * expression2, model)
