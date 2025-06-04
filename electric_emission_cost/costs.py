@@ -981,3 +981,259 @@ def calculate_itemized_cost(
 
     results_dict["total"] = total_cost
     return results_dict, model
+
+def parametrize_rate_data(rate_data, variants):
+    """Takes in rate data and creates parametric variations.
+
+    Parameters
+    ----------
+    rate_data : pandas.DataFrame
+        Tariff data df with columns: utility, type, basic_charge_limit, name,
+        month_start, month_end, weekday_start, weekday_end, hour_start, hour_end, charge
+        or charge (metric) and charge (imperial)
+    variants : list[dict]
+        List of dictionaries, where each dictionary contains:
+        - peak_demand_ratio: float to scale peak demand charges
+        - peak_energy_ratio: float to scale peak energy charges
+        - average_demand_ratio: float to scale average demand charges  
+        - average_energy_ratio: float to scale average energy charges
+        - peak_window_size_ratio: float to scale peak window sizes
+
+    Returns
+    -------
+    dict
+        Dictionary of charge_dicts with different variations
+    """
+    # Initialize variants dictionary with copy of original data
+    billing_data_variants = {'original': rate_data.copy(deep=True)}
+    
+    # Pre-create all variant DataFrames
+    for i, variant in enumerate(variants):
+        billing_data_variants[f"variant_{i}"] = rate_data.copy(deep=True)
+
+    # Get unique time period combinations
+    time_periods = rate_data[
+        ['month_start', 'month_end', 'weekday_start', 'weekday_end']
+    ].drop_duplicates().values
+
+    # Check if using new format with separate metric/imperial columns
+    using_units = 'charge (metric)' in rate_data.columns
+
+    for month_start, month_end, weekday_start, weekday_end in time_periods:
+        # Filter data for current time period
+        period_mask = (
+            (rate_data['month_start'] == month_start) &
+            (rate_data['month_end'] == month_end) &
+            (rate_data['weekday_start'] == weekday_start) &
+            (rate_data['weekday_end'] == weekday_end)
+        )
+        rate_data_period = rate_data[period_mask]
+
+        # Get minimum energy charge for average energy mask
+        energy_mask = (
+            (rate_data_period['utility'] == 'electric') &
+            (rate_data_period['type'] == 'energy')
+        )
+        if using_units:
+            energy_mask &= (rate_data_period["charge (metric)"] > 0)
+        else:
+            energy_mask &= (rate_data_period["charge"] > 0)
+        periods_energy = rate_data_period[energy_mask]
+        if using_units:
+            min_energy_charge_metric = periods_energy["charge (metric)"].min() if not periods_energy.empty else 0
+            min_energy_charge_imperial = periods_energy["charge (imperial)"].min() if not periods_energy.empty else 0
+        else:
+            min_energy_charge = periods_energy["charge"].min() if not periods_energy.empty else 0
+
+        # Get demand periods for window scaling
+        peak_demand_mask_period = (
+            (rate_data_period['type'] == 'demand') &
+            ((rate_data_period['hour_end'] - rate_data_period['hour_start']) < 24) &
+            (rate_data_period['utility'] == 'electric')
+        )
+        peak_periods_demand = rate_data_period[peak_demand_mask_period]
+
+        for i, variant in enumerate(variants):
+            variant_key = f"variant_{i}"
+            variant_data = billing_data_variants[variant_key]
+            period_mask_variant = (
+                (variant_data['month_start'] == month_start) &
+                (variant_data['month_end'] == month_end) &
+                (variant_data['weekday_start'] == weekday_start) &
+                (variant_data['weekday_end'] == weekday_end)
+            )
+
+            # PEAK DEMAND MASK: demand, <24h
+            peak_demand_mask = (
+                period_mask_variant &
+                (variant_data['type'] == 'demand') &
+                (variant_data['utility'] == 'electric') &
+                ((variant_data['hour_end'] - variant_data['hour_start']) < 24)
+            )
+            # AVERAGE DEMAND MASK: demand, 0-24h
+            average_demand_mask = (
+                period_mask_variant &
+                (variant_data['type'] == 'demand') &
+                (variant_data['utility'] == 'electric') &
+                (variant_data['hour_start'] == 0) &
+                (variant_data['hour_end'] == 24)
+            )
+            # PEAK ENERGY MASK: energy, <24h
+            peak_energy_mask = (
+                period_mask_variant &
+                (variant_data['type'] == 'energy') &
+                (variant_data['utility'] == 'electric') &
+                ((variant_data['hour_end'] - variant_data['hour_start']) < 24)
+            )
+            # AVERAGE ENERGY MASK: energy, 0-24h, electric (or min charge)
+            if using_units:
+                average_energy_mask = (
+                    period_mask_variant &
+                    (variant_data['type'] == 'energy') &
+                    (variant_data['utility'] == 'electric') &
+                    (variant_data["charge (metric)"] == min_energy_charge_metric)
+                )
+            else:
+                average_energy_mask = (
+                    period_mask_variant &
+                    (variant_data['type'] == 'energy') &
+                    (variant_data['utility'] == 'electric') &
+                    (variant_data["charge"] == min_energy_charge)
+                )
+
+            # SCALING
+            if using_units:
+                variant_data.loc[peak_demand_mask, "charge (metric)"] *= variant['peak_demand_ratio']
+                variant_data.loc[peak_demand_mask, "charge (imperial)"] *= variant['peak_demand_ratio']
+                variant_data.loc[peak_energy_mask, "charge (metric)"] = (
+                    (variant_data.loc[peak_energy_mask, "charge (metric)"] - min_energy_charge_metric) * variant['peak_energy_ratio'] + min_energy_charge_metric
+                )
+                variant_data.loc[peak_energy_mask, "charge (imperial)"] = (
+                    (variant_data.loc[peak_energy_mask, "charge (imperial)"] - min_energy_charge_imperial) * variant['peak_energy_ratio'] + min_energy_charge_imperial
+                )
+                variant_data.loc[average_demand_mask, "charge (metric)"] *= variant['average_demand_ratio']
+                variant_data.loc[average_demand_mask, "charge (imperial)"] *= variant['average_demand_ratio']
+                variant_data.loc[average_energy_mask, "charge (metric)"] *= variant['average_energy_ratio']
+                variant_data.loc[average_energy_mask, "charge (imperial)"] *= variant['average_energy_ratio']
+            else:
+                variant_data.loc[peak_demand_mask, "charge"] *= variant['peak_demand_ratio']
+                variant_data.loc[peak_energy_mask, "charge"] = (
+                    (variant_data.loc[peak_energy_mask, "charge"] - min_energy_charge) * variant['peak_energy_ratio'] + min_energy_charge
+                )
+                variant_data.loc[average_demand_mask, "charge"] *= variant['average_demand_ratio']
+                variant_data.loc[average_energy_mask, "charge"] *= variant['average_energy_ratio']
+
+            # SCALING WINDOW SIZE FOR PEAK PERIODS (if needed)
+            window_ratio = variant['peak_window_size_ratio']
+            if not peak_periods_demand.empty:
+                # find highest demand period
+                if using_units:
+                    highest_period = peak_periods_demand.sort_values("charge (metric)", ascending=False).iloc[0]
+                else:
+                    highest_period = peak_periods_demand.sort_values("charge", ascending=False).iloc[0]
+                center = (highest_period['hour_start'] + highest_period['hour_end']) / 2
+                new_length = (highest_period['hour_end'] - highest_period['hour_start']) * window_ratio
+                variant_data.loc[highest_period.name, 'hour_start'] = center - (new_length / 2)
+                variant_data.loc[highest_period.name, 'hour_end'] = center + (new_length / 2)
+
+                # Find/Scale adjacent periods in both directions of the highest period
+                for direction in ['left', 'right']:
+                    if direction == 'left':
+                        adjacent_periods = peak_periods_demand[
+                            peak_periods_demand['hour_end'] <= highest_period['hour_start']
+                        ].sort_values('hour_end', ascending=False)
+                    else:
+                        adjacent_periods = peak_periods_demand[
+                            peak_periods_demand['hour_start'] >= highest_period['hour_end']
+                        ].sort_values('hour_start', ascending=True)
+                    previous = highest_period
+                    for idx, row in adjacent_periods.iterrows():
+                        new_length = (row['hour_end'] - row['hour_start']) * window_ratio
+                        if direction == 'left':
+                            if abs(row['hour_end'] - previous['hour_start']) < 0.01:
+                                variant_data.loc[idx, 'hour_end'] = variant_data.loc[previous.name, 'hour_start']
+                                new_start = variant_data.loc[previous.name, 'hour_start'] - new_length
+                                variant_data.loc[idx, 'hour_start'] = max(0, new_start)
+                        else:
+                            if abs(row['hour_start'] - previous['hour_end']) < 0.01:
+                                variant_data.loc[idx, 'hour_start'] = variant_data.loc[previous.name, 'hour_end']
+                                new_end = variant_data.loc[previous.name, 'hour_end'] + new_length
+                                variant_data.loc[idx, 'hour_end'] = min(24, new_end)
+                        previous = row
+
+            if not periods_energy.empty:
+                # Scale energy periods
+                if using_units:
+                    highest_period = periods_energy.sort_values("charge (metric)", ascending=False).iloc[0]
+                else:
+                    highest_period = periods_energy.sort_values("charge", ascending=False).iloc[0]
+                center = (highest_period['hour_start'] + highest_period['hour_end']) / 2
+                new_length = (highest_period['hour_end'] - highest_period['hour_start']) * window_ratio
+                variant_data.loc[highest_period.name, 'hour_start'] = center - (new_length / 2)
+                variant_data.loc[highest_period.name, 'hour_end'] = center + (new_length / 2)
+
+                # Find/Scale adjacent periods in both directions of the highest period
+                for direction in ['left', 'right']:
+                    if direction == 'left':
+                        adjacent_periods = periods_energy[
+                            periods_energy['hour_end'] <= highest_period['hour_start']
+                        ].sort_values('hour_end', ascending=False)
+                    else:
+                        adjacent_periods = periods_energy[
+                            periods_energy['hour_start'] >= highest_period['hour_end']
+                        ].sort_values('hour_start', ascending=True)
+                    previous = highest_period
+                    for idx, row in adjacent_periods.iterrows():
+                        new_length = (row['hour_end'] - row['hour_start']) * window_ratio
+                        if direction == 'left':
+                            if abs(row['hour_end'] - previous['hour_start']) < 0.01:
+                                variant_data.loc[idx, 'hour_end'] = variant_data.loc[previous.name, 'hour_start']
+                                new_start = variant_data.loc[previous.name, 'hour_start'] - new_length
+                                variant_data.loc[idx, 'hour_start'] = max(0, new_start)
+                        else:
+                            if abs(row['hour_start'] - previous['hour_end']) < 0.01:
+                                variant_data.loc[idx, 'hour_start'] = variant_data.loc[previous.name, 'hour_end']
+                                new_end = variant_data.loc[previous.name, 'hour_end'] + new_length
+                                variant_data.loc[idx, 'hour_end'] = min(24, new_end)
+                        previous = row
+    return billing_data_variants
+
+def parametrize_charge_dict(start_dt, end_dt, rate_data = None, variants = None):
+    """
+    Takes in an existing charge_dict and varies it parametrically to create alternatives
+
+    Parameters
+    ----------
+    start_dt : datetime.datetime
+        first timestep to be included in the cost analysis
+    end_dt : datetime.datetime
+        last timestep to be included in the cost analysis
+    rate_data : pandas.DataFrame
+        tariff data with required columns
+    variants : list[dict]
+        List of dictionaries containing variation parameters with keys:
+        - peak_demand_ratio: float to scale peak demand charges
+        - peak_energy_ratio: float to scale peak energy charges
+        - average_demand_ratio: float to scale average demand charges  
+        - average_energy_ratio: float to scale average energy charges
+        - peak_window_size_ratio: float to scale peak window sizes
+        - name: str (optional) custom name for the variant. If not provided, will use 'variant_N'
+
+    Returns
+    -------
+    dict
+        dictionary of charge_dicts with different variations
+    """
+
+    rate_data_variants = parametrize_rate_data(rate_data, variants)
+    charge_dicts = {}
+    
+    # Add original data first
+    charge_dicts['original'] = get_charge_dict(start_dt, end_dt, rate_data_variants['original'])
+    
+    # Add variants. Use name if specified, or name variant_{i}
+    for i, variant in enumerate(variants):
+        variant_key = variant.get('name', f'variant_{i}')
+        charge_dicts[variant_key] = get_charge_dict(start_dt, end_dt, rate_data_variants[f'variant_{i}'])
+
+    return charge_dicts

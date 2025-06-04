@@ -1095,3 +1095,154 @@ def test_calculate_export_revenues(charge_array, export_data, divisor, expected)
 
 
 # TODO: write test_calculate_itemized_cost
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_parametrize_rate_data():
+    """Test the parametrize_rate_data function with different variants."""
+    # Load rate data from billing_pge.csv
+    rate_data = pd.read_csv(input_dir + "billing_pge.csv")
+
+    # Define test variants
+    variants = [
+        # Double peak charges
+        {
+            'peak_demand_ratio': 2.0,
+            'peak_energy_ratio': 2.0,
+            'average_demand_ratio': 1.0,
+            'average_energy_ratio': 1.0,
+            'peak_window_size_ratio': 1.0
+        },
+        # Modified peak windows
+        {
+            'peak_demand_ratio': 1.0,
+            'peak_energy_ratio': 1.0,
+            'average_demand_ratio': 1.0,
+            'average_energy_ratio': 1.0,
+            'peak_window_size_ratio': 0.5
+        }
+    ]
+
+    # Get parametrized rate data
+    rate_data_variants = costs.parametrize_rate_data(rate_data, variants)
+
+    # Original data is unchanged
+    assert 'original' in rate_data_variants
+    assert (rate_data_variants['original'] == rate_data).all().all()
+
+    # variant_0 (double peak charges)
+    variant_0 = rate_data_variants['variant_0']
+    
+    # Get peak and average charges for demand
+    peak_demand = variant_0[
+        (variant_0['type'] == 'demand') & 
+        (variant_0['name'] == 'peak-summer')
+    ]
+    
+    half_peak_demand = variant_0[
+        (variant_0['type'] == 'demand') & 
+        (variant_0['name'] == 'half-peak-summer')
+    ]
+    
+    off_peak_demand = variant_0[
+        (variant_0['type'] == 'demand') & 
+        (variant_0['name'] == 'off-peak')
+    ]
+    
+    # Get peak and average charges for energy
+    peak_energy = variant_0[
+        (variant_0['type'] == 'energy') & 
+        (variant_0['hour_start'] == 12) & 
+        (variant_0['hour_end'] == 18)
+    ]
+    
+    half_peak_energy = variant_0[
+        (variant_0['type'] == 'energy') & 
+        ((variant_0['hour_start'] == 8.5) | (variant_0['hour_start'] == 18)) & 
+        ((variant_0['hour_end'] == 12) | (variant_0['hour_end'] == 21.5))
+    ]
+    
+    off_peak_energy = variant_0[
+        (variant_0['type'] == 'energy') & 
+        ((variant_0['hour_start'] == 0) | (variant_0['hour_start'] == 21.5)) & 
+        ((variant_0['hour_end'] == 8.5) | (variant_0['hour_end'] == 24))
+    ]
+
+    # Check if using new format with separate metric/imperial columns
+    using_units = 'charge (metric)' in rate_data.columns
+    charge_col = 'charge (metric)' if using_units else 'charge'
+
+    # Check that peak charges are doubled while average charges remain unchanged
+    # For demand charges
+    orig_peak_demand = rate_data.loc[peak_demand.index, charge_col]
+    orig_half_peak_demand = rate_data.loc[half_peak_demand.index, charge_col]
+    orig_off_peak_demand = rate_data.loc[off_peak_demand.index, charge_col]
+    
+    assert (peak_demand[charge_col] == orig_peak_demand * 2).all()  # Peak demand doubled
+    assert (half_peak_demand[charge_col] == orig_half_peak_demand * 2).all()  # Half-peak demand doubled
+    assert (off_peak_demand[charge_col] == orig_off_peak_demand).all()  # Off-peak unchanged
+
+    # For energy charges
+    orig_peak_energy = rate_data.loc[peak_energy.index, charge_col]
+    orig_half_peak_energy = rate_data.loc[half_peak_energy.index, charge_col]
+    orig_off_peak_energy = rate_data.loc[off_peak_energy.index, charge_col]
+    
+    assert (peak_energy[charge_col] == orig_peak_energy * 2).all()  # Peak energy doubled
+    assert (half_peak_energy[charge_col] == orig_half_peak_energy * 2).all()  # Half-peak energy doubled
+    assert (off_peak_energy[charge_col] == orig_off_peak_energy).all()  # Off-peak unchanged
+
+    # Test variant_1 (modified peak windows)
+    variant_1 = rate_data_variants['variant_1']
+
+    # TODO: verify window size changes
+    # Get peak windows for both demand and energy
+    peak_demand = variant_1[
+        (variant_1['type'] == 'demand') & 
+        (variant_1['name'] == 'peak-summer')
+    ]
+    
+    half_peak_demand = variant_1[
+        (variant_1['type'] == 'demand') & 
+        (variant_1['name'] == 'half-peak-summer')
+    ]
+    
+    peak_energy = variant_1[
+        (variant_1['type'] == 'energy') & 
+        (variant_1['hour_start'] == 12) & 
+        (variant_1['hour_end'] == 18)
+    ]
+    
+    half_peak_energy = variant_1[
+        (variant_1['type'] == 'energy') & 
+        ((variant_1['hour_start'] == 8.5) | (variant_1['hour_start'] == 18)) & 
+        ((variant_1['hour_end'] == 12) | (variant_1['hour_end'] == 21.5))
+    ]
+
+    # Get original windows for comparison
+    orig_peak_demand = rate_data.loc[peak_demand.index]
+    orig_half_peak_demand = rate_data.loc[half_peak_demand.index]
+    orig_peak_energy = rate_data.loc[peak_energy.index]
+    orig_half_peak_energy = rate_data.loc[half_peak_energy.index]
+
+    # Check that window sizes are halved and centered
+    for peak, orig in [
+        (peak_demand, orig_peak_demand),
+        (half_peak_demand, orig_half_peak_demand),
+        (peak_energy, orig_peak_energy),
+        (half_peak_energy, orig_half_peak_energy)
+    ]:
+        # Check window sizes are halved
+        assert all(peak['hour_end'] - peak['hour_start'] == (orig['hour_end'] - orig['hour_start']) / 2)
+        
+        # Check windows are centered
+        for idx in peak.index:
+            orig_center = (orig.loc[idx, 'hour_start'] + orig.loc[idx, 'hour_end']) / 2
+            new_center = (peak.loc[idx, 'hour_start'] + peak.loc[idx, 'hour_end']) / 2
+            assert abs(orig_center - new_center) < 0.01
+
+    # Check that charges remain unchanged
+    if using_units:
+        assert (variant_1['charge (metric)'] == rate_data['charge (metric)']).all()
+        assert (variant_1['charge (imperial)'] == rate_data['charge (imperial)']).all()
+    else:
+        assert (variant_1['charge'] == rate_data['charge']).all()
