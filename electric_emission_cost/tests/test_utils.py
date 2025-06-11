@@ -29,7 +29,7 @@ def test_sum_pyo(consumption_data, varstr, expected):
     pyo_vars = {}
     for key, val in consumption_data.items():
         var = pyo.Var(range(len(val)), initialize=np.zeros(len(val)), bounds=(0, None))
-        setattr(model, key, var)
+        model.add_component(key, var)
         pyo_vars[key] = var
 
     @model.Constraint(model.t)
@@ -68,7 +68,7 @@ def test_multiply_pyo(consumption_data, varstr1, varstr2, expected):
     pyo_vars = {}
     for key, val in consumption_data.items():
         var = pyo.Var(model.t, initialize=np.zeros(len(val)), bounds=(0, None))
-        setattr(model, key, var)
+        model.add_component(key, var)
         pyo_vars[key] = var
 
     @model.Constraint(model.t)
@@ -105,7 +105,7 @@ def test_max_pyo(consumption_data, varstr, expected):
     pyo_vars = {}
     for key, val in consumption_data.items():
         var = pyo.Var(model.t, initialize=np.zeros(len(val)), bounds=(0, None))
-        setattr(model, key, var)
+        model.add_component(key, var)
         pyo_vars[key] = var
 
     @model.Constraint(model.t)
@@ -140,7 +140,7 @@ def test_max_pos_pyo(consumption_data, varstr, expected):
     pyo_vars = {}
     for key, val in consumption_data.items():
         var = pyo.Var(model.t, initialize=np.zeros(len(val)))
-        setattr(model, key, var)
+        model.add_component(key, var)
         pyo_vars[key] = var
 
     @model.Constraint(model.t)
