@@ -259,8 +259,8 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                     utility,
                                     charge_type,
                                     name,
-                                    start.strftime("%Y-%m-%d"),
-                                    end.strftime("%Y-%m-%d"),
+                                    start.strftime("%Y%m%d"),
+                                    end.strftime("%Y%m%d"),
                                     str(int(limit)),
                                 )
                             )
@@ -277,8 +277,8 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                         utility,
                                         charge_type,
                                         name,
-                                        new_start.strftime("%Y-%m-%d"),
-                                        new_start.strftime("%Y-%m-%d"),
+                                        new_start.strftime("%Y%m%d"),
+                                        new_start.strftime("%Y%m%d"),
                                         str(limit),
                                     )
                                 )
@@ -292,8 +292,8 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                     utility,
                                     charge_type,
                                     name,
-                                    start.strftime("%Y-%m-%d"),
-                                    end.strftime("%Y-%m-%d"),
+                                    start.strftime("%Y%m%d"),
+                                    end.strftime("%Y%m%d"),
                                     str(int(limit)),
                                 )
                             )
