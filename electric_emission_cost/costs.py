@@ -961,6 +961,7 @@ def calculate_itemized_cost(
     total_cost = 0
     results_dict = {}
     for utility in ["electric", "gas"]:
+        results_dict[utility] = {}
         total_utility_cost = 0
         for charge_type in ["customer", "energy", "demand", "export"]:
             cost, model = calculate_cost(
