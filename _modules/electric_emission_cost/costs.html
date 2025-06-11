@@ -346,8 +346,8 @@
                                     <span class="n">utility</span><span class="p">,</span>
                                     <span class="n">charge_type</span><span class="p">,</span>
                                     <span class="n">name</span><span class="p">,</span>
-                                    <span class="n">start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
-                                    <span class="n">end</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                    <span class="n">start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                    <span class="n">end</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
                                     <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">limit</span><span class="p">)),</span>
                                 <span class="p">)</span>
                             <span class="p">)</span>
@@ -364,8 +364,8 @@
                                         <span class="n">utility</span><span class="p">,</span>
                                         <span class="n">charge_type</span><span class="p">,</span>
                                         <span class="n">name</span><span class="p">,</span>
-                                        <span class="n">new_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
-                                        <span class="n">new_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                        <span class="n">new_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                        <span class="n">new_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
                                         <span class="nb">str</span><span class="p">(</span><span class="n">limit</span><span class="p">),</span>
                                     <span class="p">)</span>
                                 <span class="p">)</span>
@@ -379,8 +379,8 @@
                                     <span class="n">utility</span><span class="p">,</span>
                                     <span class="n">charge_type</span><span class="p">,</span>
                                     <span class="n">name</span><span class="p">,</span>
-                                    <span class="n">start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
-                                    <span class="n">end</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                    <span class="n">start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                                    <span class="n">end</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
                                     <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">limit</span><span class="p">)),</span>
                                 <span class="p">)</span>
                             <span class="p">)</span>
@@ -583,18 +583,17 @@
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="p">(</span><span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">)):</span>
         <span class="k">if</span> <span class="n">consumption_estimate</span> <span class="o">&gt;=</span> <span class="n">limit</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">consumption_estimate</span> <span class="o">&lt;=</span> <span class="n">next_limit</span><span class="p">:</span>
-                <span class="nb">setattr</span><span class="p">(</span>
-                    <span class="n">model</span><span class="p">,</span>
+                <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span>
                     <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_limit&quot;</span><span class="p">,</span>
                     <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">initialize</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
                 <span class="p">)</span>
-                <span class="n">var</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_limit&quot;</span><span class="p">)</span>
+                <span class="n">var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_limit&quot;</span><span class="p">)</span>
 
                 <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
                     <span class="k">return</span> <span class="n">var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">consumption_data</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">-</span> <span class="n">limit</span>
 
                 <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
-                <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_limit_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+                <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_limit_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
 
                 <span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
                     <span class="n">var</span><span class="p">,</span>
