@@ -793,7 +793,7 @@ def test_calculate_cost_pyo(
     pyo_vars = {}
     for key, val in consumption_data_dict.items():
         var = pyo.Var(range(len(val)), initialize=np.zeros(len(val)), bounds=(0, None))
-        setattr(model, key, var)
+        model.add_component(key, var)
         pyo_vars[key] = var
 
     @model.Constraint(model.t)

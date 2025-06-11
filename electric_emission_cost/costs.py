@@ -496,18 +496,17 @@ def calculate_demand_cost(
     elif isinstance(consumption_data, (pyo.Param, pyo.Var)):
         if consumption_estimate >= limit:
             if consumption_estimate <= next_limit:
-                setattr(
-                    model,
+                model.add_component(
                     varstr + "_limit",
                     pyo.Var(model.t, initialize=0, bounds=(0, None)),
                 )
-                var = getattr(model, varstr + "_limit")
+                var = model.find_component(varstr + "_limit")
 
                 def const_rule(model, t):
                     return var[t] == consumption_data[t] - limit
 
                 constraint = pyo.Constraint(model.t, rule=const_rule)
-                setattr(model, varstr + "_limit_constraint", constraint)
+                model.add_component(varstr + "_limit_constraint", constraint)
 
                 demand_charged, model = ut.multiply(
                     var,
