@@ -982,225 +982,165 @@ def calculate_itemized_cost(
     results_dict["total"] = total_cost
     return results_dict, model
 
-def parametrize_rate_data(rate_data, variants):
-    """Takes in rate data and creates parametric variations.
+def parametrize_rate_data(rate_data, peak_demand_ratio = 1.0, peak_energy_ratio = 1.0, 
+                          average_demand_ratio = 1.0, average_energy_ratio = 1.0, peak_window_expand_hours = 0.0, name=None):
+    """Takes in rate datacsv and creates parametric variations.
 
     Parameters
     ----------
     rate_data : pandas.DataFrame
         Tariff data df with columns: utility, type, basic_charge_limit, name,
-        month_start, month_end, weekday_start, weekday_end, hour_start, hour_end, charge
-        or charge (metric) and charge (imperial)
-    variants : list[dict]
-        List of dictionaries, where each dictionary contains:
-        - peak_demand_ratio: float to scale peak demand charges
-        - peak_energy_ratio: float to scale peak energy charges
-        - average_demand_ratio: float to scale average demand charges  
-        - average_energy_ratio: float to scale average energy charges
-        - peak_window_size_ratio: float to scale peak window sizes
+        month_start, month_end, weekday_start, weekday_end, hour_start, hour_end, charge or charge (metric) and charge (imperial)
+    peak_demand_ratio: float 
+        Float to scale peak demand charges. Default 1.0
+    peak_energy_ratio: float
+        Float to scale peak energy charges. Default 1.0
+    average_demand_ratio: float
+        Float to scale average demand charges. Default 1.0
+    average_energy_ratio: float
+        Float to scale average energy charges. Default 1.0
+    peak_window_expand_hours: int 
+        Int to expand peak window width. Will be divided evenly on both sides of peak period (e.g. 1/2 hr before and after for value 1). Must be in hours. Default 0
 
     Returns
     -------
-    dict
-        Dictionary of charge_dicts with different variations
+    df
+        Updated rate_data dataframe for variant
     """
-    # Initialize variants dictionary with copy of original data
-    billing_data_variants = {'original': rate_data.copy(deep=True)}
-    
-    # Pre-create all variant DataFrames
-    for i, variant in enumerate(variants):
-        billing_data_variants[f"variant_{i}"] = rate_data.copy(deep=True)
+    variant_data = rate_data.copy(deep=True)
 
-    # Get unique time period combinations
-    time_periods = rate_data[
-        ['month_start', 'month_end', 'weekday_start', 'weekday_end']
-    ].drop_duplicates().values
+    # Get charge columns (based on whether tariff data has metric/imperial) TODO: remove if this is standardized
+    if 'charge (metric)' in variant_data.columns:
+        charge_cols = ['charge (metric)', 'charge (imperial)']
+    else:
+        charge_cols = ['charge']
 
-    # Check if using new format with separate metric/imperial columns
-    using_units = 'charge (metric)' in rate_data.columns
+    peak_ratios = {'energy': peak_energy_ratio, 'demand': peak_demand_ratio}
+    average_ratios = {'energy': average_energy_ratio, 'demand': average_demand_ratio}
 
-    for month_start, month_end, weekday_start, weekday_end in time_periods:
-        # Filter data for current time period
-        period_mask = (
-            (rate_data['month_start'] == month_start) &
-            (rate_data['month_end'] == month_end) &
-            (rate_data['weekday_start'] == weekday_start) &
-            (rate_data['weekday_end'] == weekday_end)
-        )
-        rate_data_period = rate_data[period_mask]
+    # Predefine masks to locate charges with different utilities, types, and durations
+    electric_mask = ((variant_data['utility'] == 'electric'))
+    type_masks = {
+        'energy': ((variant_data['type'] == 'energy')),
+        'demand': ((variant_data['type'] == 'demand'))
+    }
+    full_day_mask = ((variant_data['hour_end'] - variant_data['hour_start']) == 24)
 
-        # Get minimum energy charge for average energy mask
-        energy_mask = (
-            (rate_data_period['utility'] == 'electric') &
-            (rate_data_period['type'] == 'energy')
-        )
-        if using_units:
-            energy_mask &= (rate_data_period["charge (metric)"] > 0)
-        else:
-            energy_mask &= (rate_data_period["charge"] > 0)
-        periods_energy = rate_data_period[energy_mask]
-        if using_units:
-            min_energy_charge_metric = periods_energy["charge (metric)"].min() if not periods_energy.empty else 0
-            min_energy_charge_imperial = periods_energy["charge (imperial)"].min() if not periods_energy.empty else 0
-        else:
-            min_energy_charge = periods_energy["charge"].min() if not periods_energy.empty else 0
 
-        # Get demand periods for window scaling
-        peak_demand_mask_period = (
-            (rate_data_period['type'] == 'demand') &
-            ((rate_data_period['hour_end'] - rate_data_period['hour_start']) < 24) &
-            (rate_data_period['utility'] == 'electric')
-        )
-        peak_periods_demand = rate_data_period[peak_demand_mask_period]
+    window_expand_hours = round(peak_window_expand_hours, 0) / 2
 
-        for i, variant in enumerate(variants):
-            variant_key = f"variant_{i}"
-            variant_data = billing_data_variants[variant_key]
-            period_mask_variant = (
-                (variant_data['month_start'] == month_start) &
-                (variant_data['month_end'] == month_end) &
+    # Get unique combinations of months and weekdays in the rate data and loop through them
+    month_combos = variant_data[['month_start', 'month_end']].drop_duplicates().values
+    for month_start, month_end in month_combos:
+        month_combo_mask = ((variant_data['month_start'] == month_start) & (variant_data['month_end'] == month_end))
+        weekday_combos = variant_data[month_combo_mask][['weekday_start', 'weekday_end']].drop_duplicates().values
+
+        # Get monthly full-day charges for each type
+        monthly_full_day_charges = {'energy': {}, 'demand': {}}
+        for type in ['energy', 'demand']:
+            type_data = variant_data[month_combo_mask & electric_mask & type_masks[type] & full_day_mask]
+            for charge_col in charge_cols:
+                monthly_full_day_charges[type][charge_col] = type_data[charge_col].iloc[0] if not type_data.empty else None
+
+        for weekday_start, weekday_end in weekday_combos:
+            # Filter data for current month/weekday combination
+            month_weekday_combo_mask = (month_combo_mask & 
                 (variant_data['weekday_start'] == weekday_start) &
                 (variant_data['weekday_end'] == weekday_end)
             )
 
-            # PEAK DEMAND MASK: demand, <24h
-            peak_demand_mask = (
-                period_mask_variant &
-                (variant_data['type'] == 'demand') &
-                (variant_data['utility'] == 'electric') &
-                ((variant_data['hour_end'] - variant_data['hour_start']) < 24)
-            )
-            # AVERAGE DEMAND MASK: demand, 0-24h
-            average_demand_mask = (
-                period_mask_variant &
-                (variant_data['type'] == 'demand') &
-                (variant_data['utility'] == 'electric') &
-                (variant_data['hour_start'] == 0) &
-                (variant_data['hour_end'] == 24)
-            )
-            # PEAK ENERGY MASK: energy, <24h
-            peak_energy_mask = (
-                period_mask_variant &
-                (variant_data['type'] == 'energy') &
-                (variant_data['utility'] == 'electric') &
-                ((variant_data['hour_end'] - variant_data['hour_start']) < 24)
-            )
-            # AVERAGE ENERGY MASK: energy, 0-24h, electric (or min charge)
-            if using_units:
-                average_energy_mask = (
-                    period_mask_variant &
-                    (variant_data['type'] == 'energy') &
-                    (variant_data['utility'] == 'electric') &
-                    (variant_data["charge (metric)"] == min_energy_charge_metric)
-                )
-            else:
-                average_energy_mask = (
-                    period_mask_variant &
-                    (variant_data['type'] == 'energy') &
-                    (variant_data['utility'] == 'electric') &
-                    (variant_data["charge"] == min_energy_charge)
-                )
+            for type in ['energy', 'demand']:
+                # SCALE AVERAGE AND PEAK PERIODS
 
-            # SCALING
-            if using_units:
-                variant_data.loc[peak_demand_mask, "charge (metric)"] *= variant['peak_demand_ratio']
-                variant_data.loc[peak_demand_mask, "charge (imperial)"] *= variant['peak_demand_ratio']
-                variant_data.loc[peak_energy_mask, "charge (metric)"] = (
-                    (variant_data.loc[peak_energy_mask, "charge (metric)"] - min_energy_charge_metric) * variant['peak_energy_ratio'] + min_energy_charge_metric
-                )
-                variant_data.loc[peak_energy_mask, "charge (imperial)"] = (
-                    (variant_data.loc[peak_energy_mask, "charge (imperial)"] - min_energy_charge_imperial) * variant['peak_energy_ratio'] + min_energy_charge_imperial
-                )
-                variant_data.loc[average_demand_mask, "charge (metric)"] *= variant['average_demand_ratio']
-                variant_data.loc[average_demand_mask, "charge (imperial)"] *= variant['average_demand_ratio']
-                variant_data.loc[average_energy_mask, "charge (metric)"] *= variant['average_energy_ratio']
-                variant_data.loc[average_energy_mask, "charge (imperial)"] *= variant['average_energy_ratio']
-            else:
-                variant_data.loc[peak_demand_mask, "charge"] *= variant['peak_demand_ratio']
-                variant_data.loc[peak_energy_mask, "charge"] = (
-                    (variant_data.loc[peak_energy_mask, "charge"] - min_energy_charge) * variant['peak_energy_ratio'] + min_energy_charge
-                )
-                variant_data.loc[average_demand_mask, "charge"] *= variant['average_demand_ratio']
-                variant_data.loc[average_energy_mask, "charge"] *= variant['average_energy_ratio']
+                # Get all charges for this type and month-weekday combination
+                type_data = variant_data[month_weekday_combo_mask & electric_mask & type_masks[type]]
+                
+                if len(type_data) == 1:
+                    # Only one charge of this type - treat as average
+                    for charge_col in charge_cols:
+                        variant_data.loc[type_data.index, charge_col] *= average_ratios[type]
+                    continue
 
-            # SCALING WINDOW SIZE FOR PEAK PERIODS (if needed)
-            window_ratio = variant['peak_window_size_ratio']
-            if not peak_periods_demand.empty:
-                # find highest demand period
-                if using_units:
-                    highest_period = peak_periods_demand.sort_values("charge (metric)", ascending=False).iloc[0]
-                else:
-                    highest_period = peak_periods_demand.sort_values("charge", ascending=False).iloc[0]
-                center = (highest_period['hour_start'] + highest_period['hour_end']) / 2
-                new_length = (highest_period['hour_end'] - highest_period['hour_start']) * window_ratio
-                variant_data.loc[highest_period.name, 'hour_start'] = center - (new_length / 2)
-                variant_data.loc[highest_period.name, 'hour_end'] = center + (new_length / 2)
+                # Multiple charges of this type
+                # Align full_day_mask index with type_data
+                full_day_mask_aligned = full_day_mask.loc[type_data.index] if hasattr(full_day_mask, 'loc') else full_day_mask
+                full_day_charges = type_data[full_day_mask_aligned]
 
-                # Find/Scale adjacent periods in both directions of the highest period
-                for direction in ['left', 'right']:
-                    if direction == 'left':
-                        adjacent_periods = peak_periods_demand[
-                            peak_periods_demand['hour_end'] <= highest_period['hour_start']
-                        ].sort_values('hour_end', ascending=False)
-                    else:
-                        adjacent_periods = peak_periods_demand[
-                            peak_periods_demand['hour_start'] >= highest_period['hour_end']
-                        ].sort_values('hour_start', ascending=True)
-                    previous = highest_period
-                    for idx, row in adjacent_periods.iterrows():
-                        new_length = (row['hour_end'] - row['hour_start']) * window_ratio
-                        if direction == 'left':
-                            if abs(row['hour_end'] - previous['hour_start']) < 0.01:
-                                variant_data.loc[idx, 'hour_end'] = variant_data.loc[previous.name, 'hour_start']
-                                new_start = variant_data.loc[previous.name, 'hour_start'] - new_length
-                                variant_data.loc[idx, 'hour_start'] = max(0, new_start)
-                        else:
-                            if abs(row['hour_start'] - previous['hour_end']) < 0.01:
-                                variant_data.loc[idx, 'hour_start'] = variant_data.loc[previous.name, 'hour_end']
-                                new_end = variant_data.loc[previous.name, 'hour_end'] + new_length
-                                variant_data.loc[idx, 'hour_end'] = min(24, new_end)
-                        previous = row
+                if not full_day_charges.empty: # There is a 24-hour charge that we consider as average
+                    for charge_col in charge_cols:
+                        # Scale 24-hour charge by average ratio
+                        variant_data.loc[full_day_charges.index, charge_col] *= average_ratios[type]
 
-            if not periods_energy.empty:
-                # Scale energy periods
-                if using_units:
-                    highest_period = periods_energy.sort_values("charge (metric)", ascending=False).iloc[0]
-                else:
-                    highest_period = periods_energy.sort_values("charge", ascending=False).iloc[0]
-                center = (highest_period['hour_start'] + highest_period['hour_end']) / 2
-                new_length = (highest_period['hour_end'] - highest_period['hour_start']) * window_ratio
-                variant_data.loc[highest_period.name, 'hour_start'] = center - (new_length / 2)
-                variant_data.loc[highest_period.name, 'hour_end'] = center + (new_length / 2)
+                        # Scale non-24-hour charges by peak ratio
+                        non_full_day_charges = type_data[~full_day_mask_aligned]
+                        variant_data.loc[non_full_day_charges.index, charge_col] *= peak_ratios[type]
 
-                # Find/Scale adjacent periods in both directions of the highest period
-                for direction in ['left', 'right']:
-                    if direction == 'left':
-                        adjacent_periods = periods_energy[
-                            periods_energy['hour_end'] <= highest_period['hour_start']
-                        ].sort_values('hour_end', ascending=False)
-                    else:
-                        adjacent_periods = periods_energy[
-                            periods_energy['hour_start'] >= highest_period['hour_end']
-                        ].sort_values('hour_start', ascending=True)
-                    previous = highest_period
-                    for idx, row in adjacent_periods.iterrows():
-                        new_length = (row['hour_end'] - row['hour_start']) * window_ratio
-                        if direction == 'left':
-                            if abs(row['hour_end'] - previous['hour_start']) < 0.01:
-                                variant_data.loc[idx, 'hour_end'] = variant_data.loc[previous.name, 'hour_start']
-                                new_start = variant_data.loc[previous.name, 'hour_start'] - new_length
-                                variant_data.loc[idx, 'hour_start'] = max(0, new_start)
-                        else:
-                            if abs(row['hour_start'] - previous['hour_end']) < 0.01:
-                                variant_data.loc[idx, 'hour_start'] = variant_data.loc[previous.name, 'hour_end']
-                                new_end = variant_data.loc[previous.name, 'hour_end'] + new_length
-                                variant_data.loc[idx, 'hour_end'] = min(24, new_end)
-                        previous = row
-    return billing_data_variants
+                else: # No 24-hour charge. Define average charge as a  monthly full-day charge if it exists, else the minimum daily charge. Scale the difference between peak and average charge
+                    for charge_col in charge_cols:
+                        avg_charge = monthly_full_day_charges[type][charge_col]
+                        
+                        if avg_charge is not None: # Monthly full-day charge exists on another weekday
+                            print('avg charge for month found')
+                            # Scale all charges based on difference from average
+                            for idx in type_data.index:
+                                charge = variant_data.loc[idx, charge_col]
+                                diff = charge - avg_charge
+                                variant_data.loc[idx, charge_col] = avg_charge + (diff * peak_ratios[type])
+                            variant_data.loc[type_data.index, charge_col] *= average_ratios[type]
+                        else: # No monthly full-day charge exists Use minimum charge for the weekday-month combo as the average
+                            min_charge = type_data[charge_col].min()
+                            min_idxs = type_data[type_data[charge_col] == min_charge].index
+                            peak_idxs = type_data[type_data[charge_col] != min_charge].index
+                            # Scale minimum periods by average ratio only
+                            for idx in min_idxs:
+                                variant_data.loc[idx, charge_col] = min_charge * average_ratios[type]
+                            # Scale peak periods by: min_charge * average_ratio + (diff * peak_ratio)
+                            for idx in peak_idxs:
+                                charge = variant_data.loc[idx, charge_col]
+                                diff = charge - min_charge
+                                new_val = min_charge * average_ratios[type] + (diff * peak_ratios[type])
+                                variant_data.loc[idx, charge_col] = new_val
+        
+                
+                # SHIFT WINDOWS
+                peak_periods = variant_data[month_weekday_combo_mask & electric_mask & type_masks[type] & ~full_day_mask]
+                if not peak_periods.empty:
+                    # Find highest charge period
+                    highest_period = peak_periods.sort_values(charge_cols[0], ascending=False).iloc[0]
 
-def parametrize_charge_dict(start_dt, end_dt, rate_data = None, variants = None):
+                    orig_peak_start = highest_period['hour_start']
+                    orig_peak_end = highest_period['hour_end']
+
+                    new_peak_start = max(0, orig_peak_start - window_expand_hours)
+                    new_peak_end = min(24, orig_peak_end + window_expand_hours)
+
+                    variant_data.loc[highest_period.name, 'hour_start'] = new_peak_start
+                    variant_data.loc[highest_period.name, 'hour_end'] = new_peak_end
+
+                    # Left side: abut each period to the next period to the right
+                    left_periods = peak_periods[peak_periods['hour_end'] <= orig_peak_start].sort_values('hour_end', ascending=False)
+                    left_start = new_peak_start
+                    for idx, row in left_periods.iterrows():
+                        duration = row['hour_end'] - row['hour_start']
+                        variant_data.loc[idx, 'hour_end'] = left_start
+                        variant_data.loc[idx, 'hour_start'] = max(0, left_start - duration)
+                        left_start = variant_data.loc[idx, 'hour_start']
+
+                    # Right side: abut each period to the next period to the left
+                    right_periods = peak_periods[peak_periods['hour_start'] >= orig_peak_end].sort_values('hour_start', ascending=True)
+                    right_start = new_peak_end
+                    for idx, row in right_periods.iterrows():
+                        duration = row['hour_end'] - row['hour_start']
+                        variant_data.loc[idx, 'hour_start'] = right_start
+                        variant_data.loc[idx, 'hour_end'] = min(24, right_start + duration)
+                        right_start = variant_data.loc[idx, 'hour_end']
+
+    return variant_data
+
+def parametrize_charge_dict(start_dt, end_dt, rate_data, variants = None):
     """
-    Takes in an existing charge_dict and varies it parametrically to create alternatives
+    Takes in an existing charge_dict and varies it parametrically to create alternative rate structures.
+    Calls parametrize_rate_data to parametrize the billing csv file, then calls it on the dates specified
 
     Parameters
     ----------
@@ -1216,8 +1156,8 @@ def parametrize_charge_dict(start_dt, end_dt, rate_data = None, variants = None)
         - peak_energy_ratio: float to scale peak energy charges
         - average_demand_ratio: float to scale average demand charges  
         - average_energy_ratio: float to scale average energy charges
-        - peak_window_size_ratio: float to scale peak window sizes
-        - name: str (optional) custom name for the variant. If not provided, will use 'variant_N'
+        - peak_window_expand_hours: float to expand peak window width
+        - name: str (optional) custom name for the variant. If not provided, will use 'variant_{i}'
 
     Returns
     -------
@@ -1225,15 +1165,19 @@ def parametrize_charge_dict(start_dt, end_dt, rate_data = None, variants = None)
         dictionary of charge_dicts with different variations
     """
 
-    rate_data_variants = parametrize_rate_data(rate_data, variants)
-    charge_dicts = {}
+    # Initialize rate data dictionary with copy of original data
+    billing_data_variants = {'original': rate_data.copy(deep=True)}
+            
+    # Initialize dictionary of charge dicts for given start/end dates with variants + original
+    charge_dicts = {'original': get_charge_dict(start_dt, end_dt, rate_data)}
     
-    # Add original data first
-    charge_dicts['original'] = get_charge_dict(start_dt, end_dt, rate_data_variants['original'])
-    
-    # Add variants. Use name if specified, or name variant_{i}
     for i, variant in enumerate(variants):
+        variant_key = f"variant_{i}"
+        # Use name if specified, or name variant_{i}
         variant_key = variant.get('name', f'variant_{i}')
-        charge_dicts[variant_key] = get_charge_dict(start_dt, end_dt, rate_data_variants[f'variant_{i}'])
-
+        variant_data = parametrize_rate_data(rate_data, **variants[i])
+        
+        billing_data_variants[f"variant_{i}"] = variant_data.copy(deep=True)
+        charge_dicts[variant_key] = get_charge_dict(start_dt, end_dt, variant_data)
+        
     return charge_dicts

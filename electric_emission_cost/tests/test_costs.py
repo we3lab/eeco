@@ -1111,7 +1111,7 @@ def test_parametrize_rate_data():
             'peak_energy_ratio': 2.0,
             'average_demand_ratio': 1.0,
             'average_energy_ratio': 1.0,
-            'peak_window_shift_hours': 0.0
+            'peak_window_expand_hours': 0.0
         },
         # Modified peak windows
         # {
@@ -1119,20 +1119,12 @@ def test_parametrize_rate_data():
         #     'peak_energy_ratio': 1.0,
         #     'average_demand_ratio': 1.0,
         #     'average_energy_ratio': 1.0,
-        #     'peak_window_shift_hours': 0.5
+        #     'peak_window_expand_hours': 1.0
         # }
     ]
 
     # Get parametrized rate data
-    rate_data_variants = costs.parametrize_rate_data(rate_data, variants)
-            
-    # Original data is unchanged
-    assert 'original' in rate_data_variants
-    # have to use assert_frame_equal to handle NaN values in df
-    # pd.testing.assert_frame_equal(rate_data_variants['original'], rate_data)  # TODO: debug, since customer charges are dropped
-
-    # variant_0 (double peak charges)
-    variant_0 = rate_data_variants['variant_0']
+    variant_0 = costs.parametrize_rate_data(rate_data, **variants[0])
     
     # Get peak and average charges for demand
     peak_demand = variant_0[
@@ -1174,12 +1166,6 @@ def test_parametrize_rate_data():
     # Check if using new format with separate metric/imperial columns
     using_units = 'charge (metric)' in rate_data.columns
     charge_col = 'charge (metric)' if using_units else 'charge'
-
-    # Check that peak charges are doubled while average charges remain unchanged
-    # For demand charges
-    orig_peak_demand = rate_data.loc[peak_demand.index, charge_col]
-    orig_half_peak_demand = rate_data.loc[half_peak_demand.index, charge_col]
-    orig_off_peak_demand = rate_data.loc[off_peak_demand.index, charge_col]
     
     # For demand charges
     expected_peak_demand = 36.5
@@ -1193,16 +1179,13 @@ def test_parametrize_rate_data():
     expected_peak_value = 0.23617
     assert np.isclose(peak_energy[charge_col].values[0], expected_peak_value)
 
-    expected_half_peak = 0.1196
+    expected_half_peak = 0.14939
     assert np.allclose(half_peak_energy[charge_col], expected_half_peak)
 
     # Only check the minimum off-peak charge
     min_off_peak = off_peak_energy[charge_col].min()
     expected_off_peak = 0.08981
     assert np.isclose(min_off_peak, expected_off_peak)  # Off-peak unchanged
-
-    # Test variant_1 (modified peak windows)
-    original = rate_data_variants['original']
 
     # TODO: add window size shift test
 
