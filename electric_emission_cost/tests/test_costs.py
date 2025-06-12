@@ -129,7 +129,7 @@ def test_create_charge_array(
             input_dir + "billing_energy_1.csv",
             "15m",
             {
-                "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
+                "electric_energy_0_20240710_20240710_0": np.ones(96) * 0.05,
             },
         ),
         # only one energy charge but at 5 min. resolution
@@ -140,7 +140,7 @@ def test_create_charge_array(
             input_dir + "billing_energy_1.csv",
             "5m",
             {
-                "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(288) * 0.05,
+                "electric_energy_0_20240710_20240710_0": np.ones(288) * 0.05,
             },
         ),
         # only one energy charge but at 1 hour resolution
@@ -151,7 +151,7 @@ def test_create_charge_array(
             input_dir + "billing_energy_1.csv",
             "1h",
             {
-                "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(24) * 0.05,
+                "electric_energy_0_20240710_20240710_0": np.ones(24) * 0.05,
             },
         ),
         # three energy charges
@@ -162,20 +162,20 @@ def test_create_charge_array(
             input_dir + "billing_energy_3.csv",
             "15m",
             {
-                "electric_energy_0_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_energy_0_20240710_20240710_0": np.concatenate(
                     [
                         np.ones(64) * 0.05,
                         np.zeros(32),
                     ]
                 ),
-                "electric_energy_1_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_energy_1_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 0.1,
                         np.zeros(12),
                     ]
                 ),
-                "electric_energy_2_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_energy_2_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(84),
                         np.ones(12) * 0.05,
@@ -191,14 +191,14 @@ def test_create_charge_array(
             input_dir + "billing_energy_peak.csv",
             "15m",
             {
-                "electric_energy_off-peak_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_energy_off-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.ones(64) * 0.05,
                         np.zeros(20),
                         np.ones(12) * 0.05,
                     ]
                 ),
-                "electric_energy_on-peak_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_energy_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 0.1,
@@ -215,7 +215,7 @@ def test_create_charge_array(
             input_dir + "billing_energy_combine.csv",
             "15m",
             {
-                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_energy_all-day_20240710_20240710_0": np.concatenate(
                     [
                         np.ones(64) * 0.05,
                         np.ones(20) * 0.1,
@@ -231,8 +231,8 @@ def test_create_charge_array(
             input_dir + "billing_demand_2.csv",
             "15m",
             {
-                "electric_demand_all-day_2024-07-10_2024-07-10_0": np.ones(96) * 5,
-                "electric_demand_on-peak_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
@@ -248,8 +248,8 @@ def test_create_charge_array(
             input_dir + "billing_demand_monthly.csv",
             "15m",
             {
-                "electric_demand_all-day_2024-07-10_2024-07-10_0": np.ones(96) * 5,
-                "electric_demand_on-peak_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
@@ -266,8 +266,8 @@ def test_create_charge_array(
             input_dir + "billing_demand_daily.csv",
             "15m",
             {
-                "electric_demand_all-day_2024-07-10_2024-07-10_0": np.ones(96) * 5,
-                "electric_demand_on-peak_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
@@ -284,15 +284,15 @@ def test_create_charge_array(
             input_dir + "billing_demand_daily.csv",
             "15m",
             {
-                "electric_demand_all-day_2024-07-10_2024-07-11_0": np.ones(192) * 5,
-                "electric_demand_on-peak_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_demand_all-day_20240710_20240711_0": np.ones(192) * 5,
+                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
                         np.zeros(108),
                     ]
                 ),
-                "electric_demand_on-peak_2024-07-11_2024-07-11_0": np.concatenate(
+                "electric_demand_on-peak_20240711_20240711_0": np.concatenate(
                     [
                         np.zeros(160),
                         np.ones(20) * 20,
@@ -308,7 +308,7 @@ def test_create_charge_array(
             input_dir + "billing_export.csv",
             "15m",
             {
-                "electric_export_0_2024-07-10_2024-07-11_0": np.ones(192) * 0.025,
+                "electric_export_0_20240710_20240711_0": np.ones(192) * 0.025,
             },
         ),
         # customer payments for any number of days
@@ -318,7 +318,7 @@ def test_create_charge_array(
             input_dir + "billing_customer.csv",
             "15m",
             {
-                "electric_customer_0_2024-07-10_2024-07-31_0": np.array([1000]),
+                "electric_customer_0_20240710_20240731_0": np.array([1000]),
             },
         ),
         # effective start/end dates
@@ -328,13 +328,13 @@ def test_create_charge_array(
             input_dir + "billing_effective.csv",
             "1h",
             {
-                "electric_energy_0_2024-01-01_2024-07-20_0": np.concatenate(
+                "electric_energy_0_20240101_20240720_0": np.concatenate(
                     [
                         np.ones(264) * 0.05,
                         np.zeros(264),
                     ]
                 ),
-                "electric_energy_0_2024-07-21_2024-12-31_0": np.concatenate(
+                "electric_energy_0_20240721_20241231_0": np.concatenate(
                     [
                         np.zeros(264),
                         np.ones(264) * 0.075,
@@ -349,25 +349,25 @@ def test_create_charge_array(
             input_dir + "billing.csv",
             "1h",
             {
-                "electric_customer_0_2024-05-31_2024-06-01_0": np.array([300]),
-                "electric_energy_0_2024-05-31_2024-06-01_0": np.concatenate(
+                "electric_customer_0_20240531_20240601_0": np.array([300]),
+                "electric_energy_0_20240531_20240601_0": np.concatenate(
                     [np.ones(24) * 0.019934, np.zeros(24)]
                 ),
-                "electric_energy_1_2024-05-31_2024-06-01_0": np.zeros(48),
-                "electric_energy_2_2024-05-31_2024-06-01_0": np.zeros(48),
-                "electric_energy_3_2024-05-31_2024-06-01_0": np.zeros(48),
-                "electric_energy_4_2024-05-31_2024-06-01_0": np.concatenate(
+                "electric_energy_1_20240531_20240601_0": np.zeros(48),
+                "electric_energy_2_20240531_20240601_0": np.zeros(48),
+                "electric_energy_3_20240531_20240601_0": np.zeros(48),
+                "electric_energy_4_20240531_20240601_0": np.concatenate(
                     [
                         np.zeros(24),
                         np.ones(24) * 0.021062,
                     ]
                 ),
-                "electric_energy_5_2024-05-31_2024-06-01_0": np.zeros(48),
-                "electric_energy_6_2024-05-31_2024-06-01_0": np.zeros(48),
-                "electric_demand_maximum_2024-05-31_2024-06-01_0": np.ones(48) * 7.128,
-                "gas_customer_0_2024-05-31_2024-06-01_0": np.array([93.14]),
-                "gas_energy_0_2024-05-31_2024-06-01_0": np.ones(48) * 0.2837,
-                "gas_energy_1_2024-05-31_2024-06-01_0": np.zeros(48),
+                "electric_energy_5_20240531_20240601_0": np.zeros(48),
+                "electric_energy_6_20240531_20240601_0": np.zeros(48),
+                "electric_demand_maximum_20240531_20240601_0": np.ones(48) * 7.128,
+                "gas_customer_0_20240531_20240601_0": np.array([93.14]),
+                "gas_energy_0_20240531_20240601_0": np.ones(48) * 0.2837,
+                "gas_energy_1_20240531_20240601_0": np.zeros(48),
             },
         ),
         # switch between years
@@ -377,30 +377,30 @@ def test_create_charge_array(
             input_dir + "billing.csv",
             "1h",
             {
-                "electric_customer_0_2023-12-31_2024-01-01_0": np.array([300]),
-                "electric_energy_0_2023-12-31_2024-01-01_0": np.concatenate(
+                "electric_customer_0_20231231_20240101_0": np.array([300]),
+                "electric_energy_0_20231231_20240101_0": np.concatenate(
                     [
                         np.zeros(24),
                         np.ones(24) * 0.019934,
                     ]
                 ),
-                "electric_energy_1_2023-12-31_2024-01-01_0": np.zeros(48),
-                "electric_energy_2_2023-12-31_2024-01-01_0": np.zeros(48),
-                "electric_energy_3_2023-12-31_2024-01-01_0": np.zeros(48),
-                "electric_energy_4_2023-12-31_2024-01-01_0": np.zeros(48),
-                "electric_energy_5_2023-12-31_2024-01-01_0": np.zeros(48),
-                "electric_energy_6_2023-12-31_2024-01-01_0": np.concatenate(
+                "electric_energy_1_20231231_20240101_0": np.zeros(48),
+                "electric_energy_2_20231231_20240101_0": np.zeros(48),
+                "electric_energy_3_20231231_20240101_0": np.zeros(48),
+                "electric_energy_4_20231231_20240101_0": np.zeros(48),
+                "electric_energy_5_20231231_20240101_0": np.zeros(48),
+                "electric_energy_6_20231231_20240101_0": np.concatenate(
                     [np.ones(24) * 0.022552, np.zeros(24)]
                 ),
-                "electric_demand_maximum_2023-12-31_2024-01-01_0": np.ones(48) * 7.128,
-                "gas_customer_0_2023-12-31_2024-01-01_0": np.array([93.14]),
-                "gas_energy_0_2023-12-31_2024-01-01_0": np.concatenate(
+                "electric_demand_maximum_20231231_20240101_0": np.ones(48) * 7.128,
+                "gas_customer_0_20231231_20240101_0": np.array([93.14]),
+                "gas_energy_0_20231231_20240101_0": np.concatenate(
                     [
                         np.zeros(24),
                         np.ones(24) * 0.2837,
                     ]
                 ),
-                "gas_energy_1_2023-12-31_2024-01-01_0": np.concatenate(
+                "gas_energy_1_20231231_20240101_0": np.concatenate(
                     [
                         np.ones(24) * 0.454,
                         np.zeros(24),
@@ -415,39 +415,39 @@ def test_create_charge_array(
             input_dir + "billing_energy_3_charge_limit.csv",
             "15m",
             {
-                "electric_energy_0_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_energy_0_20240710_20240710_0": np.concatenate(
                     [
                         np.ones(64) * 0.05,
                         np.zeros(32),
                     ]
                 ),
-                "electric_energy_0_2024-07-10_2024-07-10_100": np.concatenate(
+                "electric_energy_0_20240710_20240710_100": np.concatenate(
                     [
                         np.ones(64) * 0.1,
                         np.zeros(32),
                     ]
                 ),
-                "electric_energy_1_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_energy_1_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 0.1,
                         np.zeros(12),
                     ]
                 ),
-                "electric_energy_1_2024-07-10_2024-07-10_100": np.concatenate(
+                "electric_energy_1_20240710_20240710_100": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 0.15,
                         np.zeros(12),
                     ]
                 ),
-                "electric_energy_2_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_energy_2_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(84),
                         np.ones(12) * 0.05,
                     ]
                 ),
-                "electric_energy_2_2024-07-10_2024-07-10_100": np.concatenate(
+                "electric_energy_2_20240710_20240710_100": np.concatenate(
                     [
                         np.zeros(84),
                         np.ones(12) * 0.1,
@@ -462,14 +462,14 @@ def test_create_charge_array(
             input_dir + "billing_energy_combine_charge_limit.csv",
             "15m",
             {
-                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_energy_all-day_20240710_20240710_0": np.concatenate(
                     [
                         np.ones(64) * 0.05,
                         np.ones(20) * 0.1,
                         np.ones(12) * 0.05,
                     ]
                 ),
-                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                "electric_energy_all-day_20240710_20240710_100": np.concatenate(
                     [
                         np.ones(64) * 0.1,
                         np.ones(20) * 0.15,
@@ -485,16 +485,16 @@ def test_create_charge_array(
             input_dir + "billing_demand_2_charge_limit.csv",
             "15m",
             {
-                "electric_demand_all-day_2024-07-10_2024-07-10_0": np.ones(96) * 5,
-                "electric_demand_all-day_2024-07-10_2024-07-10_100": np.ones(96) * 10,
-                "electric_demand_on-peak_2024-07-10_2024-07-10_0": np.concatenate(
+                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand_all-day_20240710_20240710_100": np.ones(96) * 10,
+                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
                         np.zeros(12),
                     ]
                 ),
-                "electric_demand_on-peak_2024-07-10_2024-07-10_100": np.concatenate(
+                "electric_demand_on-peak_20240710_20240710_100": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 30,
@@ -793,7 +793,7 @@ def test_calculate_cost_pyo(
     pyo_vars = {}
     for key, val in consumption_data_dict.items():
         var = pyo.Var(range(len(val)), initialize=np.zeros(len(val)), bounds=(0, None))
-        setattr(model, key, var)
+        model.add_component(key, var)
         pyo_vars[key] = var
 
     @model.Constraint(model.t)
@@ -863,23 +863,23 @@ def test_calculate_cost_pyo(
             "electric",
             {"electric": np.arange(96), "gas": np.arange(96)},
             {
-                "electric_demand_peak-summer_2024-03-09_2024-03-09_0": {
+                "electric_demand_peak-summer_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-summer_2024-03-09_2024-03-09_0": {
+                "electric_demand_half-peak-summer_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_off-peak_2024-03-09_2024-03-09_0": {
+                "electric_demand_off-peak_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-winter1_2024-03-09_2024-03-09_0": {
+                "electric_demand_half-peak-winter1_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-winter2_2024-03-09_2024-03-09_0": {
+                "electric_demand_half-peak-winter2_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
@@ -894,23 +894,23 @@ def test_calculate_cost_pyo(
             "electric",
             {"electric": np.arange(96), "gas": np.arange(96)},
             {
-                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": {
+                "electric_demand_peak-summer_20240710_20240710_0": {
                     "demand": 7.078810759792355,
                     "cost": 150,
                 },
-                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": {
+                "electric_demand_half-peak-summer_20240710_20240710_0": {
                     "demand": 13.605442176870748,
                     "cost": 80,
                 },
-                "electric_demand_off-peak_2024-07-10_2024-07-10_0": {
+                "electric_demand_off-peak_20240710_20240710_0": {
                     "demand": 42.253521126760563,
                     "cost": 900,
                 },
-                "electric_demand_half-peak-winter1_2024-07-10_2024-07-10_0": {
+                "electric_demand_half-peak-winter1_20240710_20240710_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-winter2_2024-07-10_2024-07-10_0": {
+                "electric_demand_half-peak-winter2_20240710_20240710_0": {
                     "demand": 0,
                     "cost": 0,
                 },
@@ -970,23 +970,23 @@ def test_calculate_demand_costs(
             "electric",
             {"electric": np.arange(96), "gas": np.arange(96)},
             {
-                "gas_energy_0_2024-07-10_2024-07-10_0": 0,
-                "gas_energy_0_2024-07-10_2024-07-10_5000": 0,
-                "electric_customer_0_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_0_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_1_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_2_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_3_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_4_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_5_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_6_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_7_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_8_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_9_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_10_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_11_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_12_2024-07-10_2024-07-10_0": 0,
-                "electric_energy_13_2024-07-10_2024-07-10_0": 0,
+                "gas_energy_0_20240710_20240710_0": 0,
+                "gas_energy_0_20240710_20240710_5000": 0,
+                "electric_customer_0_20240710_20240710_0": 0,
+                "electric_energy_0_20240710_20240710_0": 0,
+                "electric_energy_1_20240710_20240710_0": 0,
+                "electric_energy_2_20240710_20240710_0": 0,
+                "electric_energy_3_20240710_20240710_0": 0,
+                "electric_energy_4_20240710_20240710_0": 0,
+                "electric_energy_5_20240710_20240710_0": 0,
+                "electric_energy_6_20240710_20240710_0": 0,
+                "electric_energy_7_20240710_20240710_0": 0,
+                "electric_energy_8_20240710_20240710_0": 0,
+                "electric_energy_9_20240710_20240710_0": 0,
+                "electric_energy_10_20240710_20240710_0": 0,
+                "electric_energy_11_20240710_20240710_0": 0,
+                "electric_energy_12_20240710_20240710_0": 0,
+                "electric_energy_13_20240710_20240710_0": 0,
             },
             0,
             pytest.approx(140.916195),
