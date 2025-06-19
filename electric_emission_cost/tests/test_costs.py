@@ -969,7 +969,25 @@ def test_calculate_demand_costs(
             input_dir + "billing_pge.csv",
             "electric",
             {"electric": np.arange(96), "gas": np.arange(96)},
-            None,
+            {
+                "gas_energy_0_20240710_20240710_0": 0,
+                "gas_energy_0_20240710_20240710_5000": 0,
+                "electric_customer_0_20240710_20240710_0": 0,
+                "electric_energy_0_20240710_20240710_0": 0,
+                "electric_energy_1_20240710_20240710_0": 0,
+                "electric_energy_2_20240710_20240710_0": 0,
+                "electric_energy_3_20240710_20240710_0": 0,
+                "electric_energy_4_20240710_20240710_0": 0,
+                "electric_energy_5_20240710_20240710_0": 0,
+                "electric_energy_6_20240710_20240710_0": 0,
+                "electric_energy_7_20240710_20240710_0": 0,
+                "electric_energy_8_20240710_20240710_0": 0,
+                "electric_energy_9_20240710_20240710_0": 0,
+                "electric_energy_10_20240710_20240710_0": 0,
+                "electric_energy_11_20240710_20240710_0": 0,
+                "electric_energy_12_20240710_20240710_0": 0,
+                "electric_energy_13_20240710_20240710_0": 0,
+            },
             0,
             pytest.approx(140.916195),
         ),
@@ -1325,3 +1343,5 @@ def test_parametrize_charge_dict():
     
     # Check that double_peak has doubled charges where they apply
     assert np.any(double_peak_charge != original_charge), "Double peak variant should have different charges"
+
+# TODO: write test_calculate_itemized_cost
