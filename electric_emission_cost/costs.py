@@ -1041,7 +1041,8 @@ def parametrize_rate_data(rate_data, peak_demand_ratio=1.0, peak_energy_ratio=1.
     window_expand_hours = round(peak_window_expand_hours, 0) / 2
 
     # Get unique combinations of months and weekdays in the rate data and loop through them
-    month_combos = variant_data[['month_start', 'month_end']].drop_duplicates().values
+    month_combos = (variant_data[['month_start', 'month_end']]
+                   .drop_duplicates().values)
     for month_start, month_end in month_combos:
         month_combo_mask = ((variant_data['month_start'] == month_start) &
                            (variant_data['month_end'] == month_end))
@@ -1075,7 +1076,9 @@ def parametrize_rate_data(rate_data, peak_demand_ratio=1.0, peak_energy_ratio=1.
                 if len(type_data) == 1:
                     # Only one charge of this type - treat as average
                     for charge_col in charge_cols:
-                        variant_data.loc[type_data.index, charge_col] *= average_ratios[type]
+                        variant_data.loc[type_data.index, charge_col] *= (
+                            average_ratios[type]
+                        )
                     continue
 
                 # Multiple charges of this type
@@ -1088,11 +1091,15 @@ def parametrize_rate_data(rate_data, peak_demand_ratio=1.0, peak_energy_ratio=1.
                 if not full_day_charges.empty:  # There is a 24-hour charge that we consider as average
                     for charge_col in charge_cols:
                         # Scale 24-hour charge by average ratio
-                        variant_data.loc[full_day_charges.index, charge_col] *= average_ratios[type]
+                        variant_data.loc[full_day_charges.index, charge_col] *= (
+                            average_ratios[type]
+                        )
 
                         # Scale non-24-hour charges by peak ratio
                         non_full_day_charges = type_data[~full_day_mask_aligned]
-                        variant_data.loc[non_full_day_charges.index, charge_col] *= peak_ratios[type]
+                        variant_data.loc[non_full_day_charges.index, charge_col] *= (
+                            peak_ratios[type]
+                        )
 
                 else:  # No 24-hour charge. Define average charge as a monthly full-day charge if it exists, else the minimum daily charge. Scale the difference between peak and average charge
                     for charge_col in charge_cols:
@@ -1103,20 +1110,27 @@ def parametrize_rate_data(rate_data, peak_demand_ratio=1.0, peak_energy_ratio=1.
                             for idx in type_data.index:
                                 charge = variant_data.loc[idx, charge_col]
                                 diff = charge - avg_charge
-                                variant_data.loc[idx, charge_col] = avg_charge + (diff * peak_ratios[type])
-                            variant_data.loc[type_data.index, charge_col] *= average_ratios[type]
+                                variant_data.loc[idx, charge_col] = (
+                                    avg_charge + (diff * peak_ratios[type])
+                                )
+                            variant_data.loc[type_data.index, charge_col] *= (
+                                average_ratios[type]
+                            )
                         else:  # No monthly full-day charge exists Use minimum charge for the weekday-month combo as the average
                             min_charge = type_data[charge_col].min()
                             min_idxs = type_data[type_data[charge_col] == min_charge].index
                             peak_idxs = type_data[type_data[charge_col] != min_charge].index
                             # Scale minimum periods by average ratio only
                             for idx in min_idxs:
-                                variant_data.loc[idx, charge_col] = min_charge * average_ratios[type]
+                                variant_data.loc[idx, charge_col] = (
+                                    min_charge * average_ratios[type]
+                                )
                             # Scale peak periods by: min_charge * average_ratio + (diff * peak_ratio)
                             for idx in peak_idxs:
                                 charge = variant_data.loc[idx, charge_col]
                                 diff = charge - min_charge
-                                new_val = min_charge * average_ratios[type] + (diff * peak_ratios[type])
+                                new_val = (min_charge * average_ratios[type] +
+                                          (diff * peak_ratios[type]))
                                 variant_data.loc[idx, charge_col] = new_val
 
                 # SHIFT WINDOWS
