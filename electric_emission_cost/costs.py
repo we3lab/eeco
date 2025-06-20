@@ -812,7 +812,8 @@ def calculate_cost(
             f_no_dates=lambda utility,
             charge_type, name,
             start_date, end_date,
-            charge_limit: f"{utility}_{charge_type}_{name}_{charge_limit}"
+            charge_limit:
+            f"{utility}_{charge_type}_{name}_{charge_limit}"
 
 
     Raises
