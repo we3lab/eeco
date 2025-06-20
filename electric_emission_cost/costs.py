@@ -808,8 +808,11 @@ def calculate_cost(
         - charge_limit: str
 
         Examples of functions:
-            f_no_dates=lambda utility, charge_type, name, start_date, end_date, charge_limit: f"{utility}_{charge_type}_{name}_{charge_limit}"
-            f_default=lambda utility, charge_type, name, start_date, end_date, charge_limit: f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
+            f_no_dates=lambda utility,
+            charge_type, name,
+            start_date, end_date,
+            charge_limit: f"{utility}_{charge_type}_{name}_{charge_limit}"
+
 
     Raises
     ------
@@ -827,9 +830,14 @@ def calculate_cost(
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
     n_per_day = n_per_hour * 24
     if varstr_alias_func is None:
-        varstr_alias_func = lambda utility, charge_type, name, start_date, end_date, charge_limit: f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}".replace(
-            "-", "_"
-        )
+
+        def varstr_alias_func(
+            utility, charge_type, name, start_date, end_date, charge_limit
+        ):
+            return f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}".replace(
+                "-", "_"
+            )
+
     for key, charge_array in charge_dict.items():
         utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
         var_str = ut.sanitize_varstr(

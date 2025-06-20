@@ -502,7 +502,8 @@ def convert_utc_to_timezone(utc_hour, timezone_str):
 
 
 def sanitize_varstr(varstr):
-    """Sanitizes a variable string by removing non-alphanumeric characters and replacing spaces with underscores.
+    """Sanitizes a variable string by removing non-alphanumeric
+    characters and replacing spaces with underscores.
 
     Parameters
     ----------
