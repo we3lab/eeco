@@ -798,7 +798,8 @@ def calculate_cost(
         Only used in the case of Pyomo, so `None` by default.
 
     varstr_alias_func: function
-        Function to generate variable name for pyomo, should take in a 6 inputs and generate a string output.
+        Function to generate variable name for pyomo,
+        should take in a 6 inputs and generate a string output.
         The function will receive following six inputs:
         - utility: str
         - charge_type: str
