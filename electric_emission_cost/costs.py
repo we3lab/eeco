@@ -834,8 +834,8 @@ def calculate_cost(
         def varstr_alias_func(
             utility, charge_type, name, start_date, end_date, charge_limit
         ):
-            return f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}".replace(
-                "-", "_"
+            return (
+                f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
             )
 
     for key, charge_array in charge_dict.items():
