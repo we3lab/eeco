@@ -586,6 +586,23 @@
     <span class="n">local_time</span> <span class="o">=</span> <span class="n">utc_time</span><span class="o">.</span><span class="n">astimezone</span><span class="p">(</span><span class="n">target_timezone</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">local_time</span><span class="o">.</span><span class="n">hour</span></div>
+
+
+<div class="viewcode-block" id="sanitize_varstr"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.sanitize_varstr">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sanitize_varstr</span><span class="p">(</span><span class="n">varstr</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sanitizes a variable string by removing non-alphanumeric</span>
+<span class="sd">    characters and replacing spaces with underscores.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    varstr : str</span>
+<span class="sd">        The variable string to sanitize.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        The sanitized variable string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[^a-zA-Z0-9_]&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="n">varstr</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span></div>
 </pre></div>
 
            </div>

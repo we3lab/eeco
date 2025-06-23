@@ -66,6 +66,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.max_pos"><code class="docutils literal notranslate"><span class="pre">max_pos()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.multiply"><code class="docutils literal notranslate"><span class="pre">multiply()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.parse_freq"><code class="docutils literal notranslate"><span class="pre">parse_freq()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.sanitize_varstr"><code class="docutils literal notranslate"><span class="pre">sanitize_varstr()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.sum"><code class="docutils literal notranslate"><span class="pre">sum()</span></code></a></li>
 </ul>
 </li>
@@ -288,6 +289,24 @@ of increments of <cite>type</cite> of one binned increment of our time variable
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.utils.sanitize_varstr">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.utils.</span></span><span class="sig-name descname"><span class="pre">sanitize_varstr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">varstr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/utils.html#sanitize_varstr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.utils.sanitize_varstr" title="Permalink to this definition"></a></dt>
+<dd><p>Sanitizes a variable string by removing non-alphanumeric
+characters and replacing spaces with underscores.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>varstr</strong> (<em>str</em>) – The variable string to sanitize.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The sanitized variable string.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)">str</a></p>
 </dd>
 </dl>
 </dd></dl>
