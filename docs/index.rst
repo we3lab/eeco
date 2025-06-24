@@ -20,6 +20,7 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
 
    costs
    emissions
+   metrics
    units
    utils
 
