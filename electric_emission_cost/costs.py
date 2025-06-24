@@ -79,7 +79,7 @@ def create_charge_array(charge, datetime, effective_start_date, effective_end_da
 
 
 def add_to_charge_array(charge_dict, key_str, charge_array):
-    """Add to an existing charge array, or an arrya of all zeros if this charge
+    """Add to an existing charge array, or an array of all zeros if this charge
     array does not exist.
 
     This functionality is useful for noncontiguous charges that should be saved
@@ -383,6 +383,44 @@ def get_charge_df(
     # remove all zero columns
     charge_df = charge_df.loc[:, (charge_df != 0).any(axis=0)]
     return charge_df
+
+
+def default_varstr_alias_func(
+    utility, charge_type, name, start_date, end_date, charge_limit
+):
+    """Default function for creating the variable name strings for each charge 
+    in the tariff sheet. Can be overwritten in the function call to `calculate_cost`
+    to customize variable names.
+
+    Parameters
+    ----------
+    utility : str
+        Name of the utility ('electric' or 'gas')
+    
+    charge_type : str
+        Name of the `charge_type` ('demand', 'energy', or 'customer')
+
+    name : str
+        The name of the period for this charge (e.g., 'all-day' or 'on-peak')
+    
+    start_date
+        The inclusive start date for this charge
+    
+    end_date : str
+        The exclusive end date for this charge
+    
+    charge_limit : str
+        The consumption limit for this tier of charges converted to a string
+
+    Returns
+    -------
+    str
+        Variable name of the form 
+        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
+    """
+    return (
+        f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
+    )
 
 
 def get_next_limit(key_substr, current_limit, keys):
@@ -736,7 +774,7 @@ def calculate_cost(
     desired_charge_type=None,
     demand_scale_factor=1,
     model=None,
-    varstr_alias_func=None,
+    varstr_alias_func=default_varstr_alias_func,
 ):
     """Calculates the cost of given charges (demand or energy) for the given
     billing rate structure, utility, and consumption information as a
@@ -815,7 +853,6 @@ def calculate_cost(
             charge_limit:
             f"{utility}_{charge_type}_{name}_{charge_limit}"
 
-
     Raises
     ------
     ValueError
@@ -831,14 +868,6 @@ def calculate_cost(
     cost = 0
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
     n_per_day = n_per_hour * 24
-    if varstr_alias_func is None:
-
-        def varstr_alias_func(
-            utility, charge_type, name, start_date, end_date, charge_limit
-        ):
-            return (
-                f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
-            )
 
     for key, charge_array in charge_dict.items():
         utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
