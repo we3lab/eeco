@@ -547,7 +547,8 @@ def calculate_demand_cost(
         )
     if model is None:
         result, _ = ut.max(demand_charged)
-        return ut.max_pos(result - prev_demand_cost) * scale_factor
+        max_pos_val, max_pos_model = ut.max_pos(result - prev_demand_cost)
+        return max_pos_val * scale_factor, max_pos_model
     else:
         max_var, model = ut.max(demand_charged, model=model, varstr=varstr + "_max")
         return (
