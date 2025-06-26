@@ -2,7 +2,7 @@
 
 .. _LICENSE:
 
-LICENSE
-=======
+MIT License
+===========
 
 .. include:: ../LICENSE

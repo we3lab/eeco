@@ -21,7 +21,7 @@ def create_charge_array(charge, datetime, effective_start_date, effective_end_da
         `weekday_start`, `weekday_end`, `hour_start`, `hour_end`, and `charge`
 
     datetime : pandas.DataFrame, pandas.Series, or numpy.ndarray
-        If a pandas Series, it must be of type datetime
+        If a pandas Series, it must be of type datetime.
         If a DataFrame it must have a column "DateTime" and row for each timestep
 
     effective_start_date : datetime.datetime
@@ -814,8 +814,8 @@ def calculate_cost(
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
         Only used when `consumption_data` is cvxpy.Expression for convex relaxation
-         of tiered charges, while numpy.ndarray `consumption_data` will use actual
-         consumption and ignore the estimate.
+        of tiered charges, while numpy.ndarray `consumption_data` will use actual
+        consumption and ignore the estimate.
 
     desired_charge_type : str
         Name of desired charge type for itemized costs.
@@ -839,6 +839,7 @@ def calculate_cost(
         Function to generate variable name for pyomo,
         should take in a 6 inputs and generate a string output.
         The function will receive following six inputs:
+        
         - utility: str
         - charge_type: str
         - name: str

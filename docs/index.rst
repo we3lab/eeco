@@ -7,6 +7,7 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
    :maxdepth: 1
    :caption: Overview
 
+   Table of Contents <self>
    hello
    purpose
    why_metrics
@@ -29,7 +30,7 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
 
    data_format
    how_to_calculate
-   advanced
+   how_to_advanced
 
 .. toctree::
    :maxdepth: 1
@@ -40,8 +41,6 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
    metrics
    units
    utils
-
-.. include:: ../README.rst
 
 Indices and tables
 ==================

@@ -12,8 +12,8 @@ Moving horizon
 
 .. _prevconsumption:
 
-How to Use `prev_demand_dict` and `prev_demand_dict`?
-====================================================
+How to Use `prev_demand_dict` and `prev_consumption_dict`?
+==========================================================
 
 By default, `prev_demand_dict=None` and `prev_consumption_dict=None`. 
 However, a user may want to ...
@@ -31,7 +31,7 @@ How to Use `consumption_estimate`?
 ==================================
 
 
-.. _whyscaledemand:
+.. _scaledemand:
 
 How to Use `demand_scale_factor`?
 =================================

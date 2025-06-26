@@ -1,6 +1,6 @@
 .. contents::
 
-.. _whyneutral:
+.. _whyadvanced:
 
 ***********************************
 Why Do the Advanced Features Exist?
