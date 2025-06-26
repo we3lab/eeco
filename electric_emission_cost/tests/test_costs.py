@@ -1314,7 +1314,7 @@ def test_parametrize_charge_dict():
             "avg_demand_ratio": 1.0,
             "avg_energy_ratio": 1.0,
             "peak_window_expand_hours": 0.0,
-            "name": "double_peak",
+            "variant_name": "double_peak",
         },
         # Expand peak window by 2 hours
         {
@@ -1323,7 +1323,7 @@ def test_parametrize_charge_dict():
             "avg_demand_ratio": 1.0,
             "avg_energy_ratio": 1.0,
             "peak_window_expand_hours": 2.0,
-            "name": "expanded_window",
+            "variant_name": "expanded_window",
         },
     ]
 
