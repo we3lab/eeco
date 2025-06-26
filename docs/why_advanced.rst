@@ -1,24 +1,24 @@
 .. contents::
 
-.. _whyadvanced:
+.. _why-advanced:
 
 ***********************************
 Why Do the Advanced Features Exist?
 ***********************************
 
-.. _whyprevconsumption:
+.. _why-prev-consumption:
 
 What Is the Purpose of `prev_demand_dict` and `prev_demand_dict`?
 =================================================================
 
 
-.. _whyconsumptionest:
+.. _why-consumption-est:
 
 What Is the Purpose of `consumption_estimate`?
 ==============================================
 
 
-.. _whyscaledemand:
+.. _why-scale-demand:
 
 What Is the Purpose of `demand_scale_factor`?
 =============================================

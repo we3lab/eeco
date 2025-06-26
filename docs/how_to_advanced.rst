@@ -18,7 +18,7 @@ How to Use `prev_demand_dict` and `prev_consumption_dict`?
 By default, `prev_demand_dict=None` and `prev_consumption_dict=None`. 
 However, a user may want to ...
 
-TODO: reference purpose description _whyprevconsumption
+TODO: :ref:`why-prev-consumption`
 
 .. code-block:: python
 

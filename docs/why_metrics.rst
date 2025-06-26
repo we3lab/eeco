@@ -1,6 +1,6 @@
 .. contents::
 
-.. _whymetrics:
+.. _why-metrics:
 
 ****************************
 Why Use Flexibility Metrics?

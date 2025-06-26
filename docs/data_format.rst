@@ -1,17 +1,17 @@
 .. contents::
 
-.. _dataformat:
+.. _data-format:
 
 *******************
 How to Format Data?
 *******************
 
-.. _dataformattariff:
+.. _data-format-tariff:
 
 Electricity Tariffs
 ===================
 
-.. _dataformatemissions:
+.. _data-format-emissions:
 
 Scope 2 Emissions
 =================
