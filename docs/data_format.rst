@@ -2,9 +2,9 @@
 
 .. _dataformat:
 
-************
-Data Formats
-************
+*******************
+How to Format Data?
+*******************
 
 .. _dataformattariff:
 
