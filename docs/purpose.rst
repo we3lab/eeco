@@ -23,5 +23,5 @@ Some regions offer flat prices, whereas others have up to four different time-of
 We designed a machine-readable format for encoding all relevant tariff data, 
 including TOU periods, tiered charges, daily demand charges, and unit conversions [`Chapin 𝑁𝑎𝑡. 𝑆𝑐𝑖. 𝐷𝑎𝑡𝑎 (2024) <https://doi.org/10.1038/s41597-023-02886-6>`_].
 
-While our research focuses on investigating the benefits of flexible operation of water systems, 
-we hope that this package will be useful to the wider community for seamlessly optimizing industrial consumers' electricity-related costs and emissions.
+Our research focuses on investigating the benefits of flexible operation of water systems, but we hope that this package 
+will be useful to the wider community for seamlessly optimizing industrial consumers' electricity-related costs and emissions!

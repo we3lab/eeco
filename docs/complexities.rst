@@ -17,11 +17,23 @@ To quote our paper, "Electricity and natural gas tariffs at United States wastew
     More complex tariffs may also have tiered energy and demand charges based on cumulative monthly demand, seasonal (i.e., monthly) and 
     time-of-use (i.e., daily and/or hourly) variation in marginal energy and demand charges, and bundled or decoupled generation and delivery charges.
 
+    Within each component of the tariff, there is tremendous variability across both the underlying tariff structure 
+    and the charge per unit of energy delivered. As alluded to above, 
+    some utilities establish tariffs with flat rate energy and demand charges, 
+    where the price of energy is constant throughout the day. 
+    Other utilities establish tariffs with a time-of-use (TOU) component, 
+    where a peak hour surcharge is applied to each kWh (or therm) of energy delivered and kW (or therm/hr) of demand. 
+    TOU periods can vary from weekend to weekday in addition to hour-to-hour. 
+    Prices may also change seasonally (i.e., month-to-month) based on climate, 
+    with the highest prices depending on whether heating or air conditioning drive the maximum load on the grid. 
+    Finally, prices often vary based on total monthly consumption. 
+    For example, Con Edison charges almost $33/therm for the first 3 therms delivered and less than $1/therm thereafter.
+
 Demand charges are particularly problematic for optimization problems since taking a maximum is not a matrix operation.
 Tiered charges provide another challenge since assumptions will have to be made about what tier a customer will fall into before the optimization problem is solved,
 but that assumption could be influenced by the results of the optimization problem (:ref:`why-consumption-est`).
 
-We standardized a machine-readable format for storing tariff data that address the complexities of tarrif structure found across the United States (:ref:`data-format-tariff`).
+We standardized a machine-readable format for storing tariff data that address the complexities of tarrif structure found across the United States (:ref:`data-format`).
 
 .. _categorize-tariffs:
 

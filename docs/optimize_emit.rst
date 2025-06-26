@@ -1,6 +1,6 @@
 .. contents::
 
-.. _optimizeemit:
+.. _tutorial-emit:
 
 **************************
 Optimize Scope 2 Emissions

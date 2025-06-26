@@ -24,6 +24,7 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
    optimize_cost
    optimize_emit
    cooptimize
+   tutorial_metrics
 
 .. toctree::
    :maxdepth: 1

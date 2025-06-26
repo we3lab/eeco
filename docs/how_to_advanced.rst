@@ -6,9 +6,9 @@
 How to Use Advanced Features
 ****************************
 
-There are a few advanced features that can be used via flags in `calculate_cost`
+There are a few advanced features that can be used via flags in `calculate_cost`.
 These features are particularly useful for moving horizon optimization. 
-Moving horizon 
+Check out :ref:`why-advanced` for more background as to why we recommend moving horizon optimization.
 
 .. _prev-consumption:
 

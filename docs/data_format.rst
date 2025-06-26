@@ -2,9 +2,9 @@
 
 .. _data-format:
 
-*******************
-How to Format Data?
-*******************
+******************
+How to Format Data
+******************
 
 .. _data-format-tariff:
 
