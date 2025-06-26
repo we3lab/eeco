@@ -20,10 +20,11 @@ For most users, the first step to using EEC will be to pip install the Python pa
 Core Functionality
 ==================
 
-The EEC package has two main functions: 
+The EEC package has three main functions: 
 
 (1) calculate the electricity bill of a facility given a tariff and user consumption data. 
 (2) calculate the Scope 2 emissions implications given grid emissions and user consumption data.
+(3) incorporate flexibility metrics (e.g., round-trip efficiency) as a constraint or objective.
 
 These functions can be performed in three different modes:
 

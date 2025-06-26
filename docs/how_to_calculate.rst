@@ -2,6 +2,6 @@
 
 .. _calculatehowto:
 
-*************************************
-How to Calculate Costs and Emissions?
-*************************************
+************************************
+How to Calculate Costs and Emissions
+************************************

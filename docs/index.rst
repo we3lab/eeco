@@ -31,6 +31,7 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
 
    data_format
    how_to_calculate
+   how_to_metrics
    how_to_advanced
 
 .. toctree::

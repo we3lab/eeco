@@ -39,10 +39,10 @@ Temporality
 
 We categorize monthly electricity energy and demand charges into Flat, Seasonal-TOU, Nonseasonal-TOU, or Seasonal-NonTOU charges:
   
-  1. Flat Charges: Charges are constant throughout the year.
-  2. Seasonal-TOU Charges: Charges vary monthly (Seasonal) and daily and/or hourly (TOU).
-  3. Nonseasonal-TOU Charges: Charges are consistent from month to month, but vary daily and/or hourly.
-  4. Seasonal-NonTOU Charges: Charges vary monthly, but are constant from day to day and hour to hour.
+  - **Flat Charges**: Charges are constant throughout the year.
+  - **Seasonal-TOU Charges**: Charges vary monthly (Seasonal) and daily and/or hourly (TOU).
+  - **Nonseasonal-TOU Charges**: Charges are consistent from month to month, but vary daily and/or hourly.
+  - **Seasonal-NonTOU Charges**: Charges vary monthly, but are constant from day to day and hour to hour.
 
 .. figure:: _static/img/categorize-tariff.png
     
@@ -56,8 +56,8 @@ For example, in much of the Texas interconnection, delivery and generation servi
 
 We developed a second categorization scheme for electricity tariffs based on the extent to which generation and delivery charges are bundled:
 
-  1. Class 1: Fully bundled generation (supply) and delivery (transmission and distribution) charges.
-  2. Class 2: Bundled generation and delivery charges with fuel cost adjustment based on the market price of fossil fuels.
-  3. Class 3: Generation and delivery service from the same provider with pre-defined charges.
-  4. Class 4: Generation and delivery service from the same provider with pre-defined delivery charges and variable generation charges that reflect real-time or day-ahead electricity prices set by the live market.
-  5. Class 5: Generation and delivery service providers are legally required to be separate, and delivery charges are directly negotiated between customers and utilities. As a result, delivery charges are not published in tariff books, but can be obtained through public information requests.
+  - Class 1: Fully bundled generation (supply) and delivery (transmission and distribution) charges.
+  - Class 2: Bundled generation and delivery charges with fuel cost adjustment based on the market price of fossil fuels.
+  - Class 3: Generation and delivery service from the same provider with pre-defined charges.
+  - Class 4: Generation and delivery service from the same provider with pre-defined delivery charges and variable generation charges that reflect real-time or day-ahead electricity prices set by the live market.
+  - Class 5: Generation and delivery service providers are legally required to be separate, and delivery charges are directly negotiated between customers and utilities. As a result, delivery charges are not published in tariff books, but can be obtained through public information requests.
