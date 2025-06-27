@@ -466,7 +466,7 @@ def calculate_demand_cost(
     scale_factor : float
         Optional factor for scaling demand charges relative to energy charges
         when the optimization/simulation period is not a full billing cycle.
-        Applied to monthly charges where end_date - start_date > 1 day).
+        Applied to monthly charges where end_date - start_date > 1 day.
         Default is 1
 
     model : pyomo.Model
@@ -834,7 +834,7 @@ def calculate_cost(
     demand_scale_factor : float
         Optional factor for scaling demand charges relative to energy charges
         when the optimization/simulation period is not a full billing cycle.
-        Applied to monthly charges where end_date - start_date > 1 day).
+        Applied to monthly charges where end_date - start_date > 1 day.
         Default is 1
 
     model : pyomo.Model
