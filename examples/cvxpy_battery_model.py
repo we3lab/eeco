@@ -3,8 +3,6 @@ import numpy as np
 import cvxpy as cp
 import pandas as pd
 
-# TODO: this model is from Ram's class, so I should cite the source
-
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # load historical consumption data

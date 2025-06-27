@@ -27,7 +27,7 @@ In CVXPY:
 
 # TODO: insert code snippet
 
-However, many data sources report emissions factors as monthly/hourly averages (:ref:`_data-format-emissions`).
+However, many data sources report emissions factors as monthly/hourly averages (:ref:`data-format-emissions`).
 Our package is designed to unpack data in that format into a timeseries the same length as the consumption variable.
 
 # TODO: example of using `calculate_grid_emissions`, `calculate_grid_emissions_cvx`, and `calculate_grid_emissions_pyo`
