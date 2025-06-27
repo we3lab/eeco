@@ -112,6 +112,7 @@ def calculate_grid_emissions_cvx(
     emissions = cp.sum(cp.multiply(consumption_data, carbon_intensity)) / n_per_hour
     return emissions * conversion_factor
 
+# TODO: need to write calculate_grid_emissions_pyo
 
 def get_carbon_intensity(
     start_dt,
