@@ -499,3 +499,20 @@ def convert_utc_to_timezone(utc_hour, timezone_str):
     local_time = utc_time.astimezone(target_timezone)
 
     return local_time.hour
+
+
+def sanitize_varstr(varstr):
+    """Sanitizes a variable string by removing non-alphanumeric
+    characters and replacing spaces with underscores.
+
+    Parameters
+    ----------
+    varstr : str
+        The variable string to sanitize.
+
+    Returns
+    -------
+    str
+        The sanitized variable string.
+    """
+    return re.sub(r"[^a-zA-Z0-9_]", "_", varstr).replace(" ", "_")

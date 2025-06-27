@@ -737,6 +737,7 @@ def calculate_cost(
     desired_charge_type=None,
     demand_scale_factor=1,
     model=None,
+    varstr_alias_func=None,
 ):
     """Calculates the cost of given charges (demand or energy) for the given
     billing rate structure, utility, and consumption information as a
@@ -797,6 +798,25 @@ def calculate_cost(
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
 
+    varstr_alias_func: function
+        Function to generate variable name for pyomo,
+        should take in a 6 inputs and generate a string output.
+        The function will receive following six inputs:
+        - utility: str
+        - charge_type: str
+        - name: str
+        - start_date: str
+        - end_date: str
+        - charge_limit: str
+
+        Examples of functions:
+            f_no_dates=lambda utility,
+            charge_type, name,
+            start_date, end_date,
+            charge_limit:
+            f"{utility}_{charge_type}_{name}_{charge_limit}"
+
+
     Raises
     ------
     ValueError
@@ -812,9 +832,21 @@ def calculate_cost(
     cost = 0
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
     n_per_day = n_per_hour * 24
+    if varstr_alias_func is None:
+
+        def varstr_alias_func(
+            utility, charge_type, name, start_date, end_date, charge_limit
+        ):
+            return (
+                f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
+            )
 
     for key, charge_array in charge_dict.items():
         utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
+        var_str = ut.sanitize_varstr(
+            varstr_alias_func(utility, charge_type, name, eff_start, eff_end, limit_str)
+        )
+
         # if we want itemized costs skip irrelvant portions of the bill
         if (desired_utility and utility != desired_utility) or (
             desired_charge_type and charge_type != desired_charge_type
@@ -851,7 +883,7 @@ def calculate_cost(
                 consumption_estimate=consumption_estimate,
                 scale_factor=demand_scale_factor,
                 model=model,
-                varstr=key,
+                varstr=var_str,
             )
             cost += new_cost
         elif charge_type == "energy":
@@ -868,12 +900,12 @@ def calculate_cost(
                 prev_consumption=prev_consumption,
                 consumption_estimate=consumption_estimate,
                 model=model,
-                varstr=key,
+                varstr=var_str,
             )
             cost += new_cost
         elif charge_type == "export":
             new_cost, model = calculate_export_revenues(
-                charge_array, consumption_data, divisor, model=model, varstr=key
+                charge_array, consumption_data, divisor, model=model, varstr=var_str
             )
             cost -= new_cost
         elif charge_type == "customer":
