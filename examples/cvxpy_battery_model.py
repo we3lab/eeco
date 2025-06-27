@@ -1,7 +1,8 @@
 import os
-import timedelta
+import datetime
 import cvxpy as cp
 import pandas as pd
+from electric_emission_cost import costs 
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -11,7 +12,7 @@ rate_df = pd.read_csv(path_to_tariffsheet, sep=",")
    
 # get the charge dictionary
 charge_dict = costs.get_charge_dict(
-    battery.start_dt, battery.end_dt, rate_df, resolution="15m"
+    datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11), rate_df, resolution="1m"
 )
 
 # load historical consumption data
@@ -26,7 +27,8 @@ init_soc = 0.5
 fin_soc = 0.5
 max_discharge = 5 # kW
 max_charge = 5 # kW
-delta_t = ((df.iloc[-1]["Datetime"] - df.iloc[0]["Datetime"]) / T) / timedelta(hours=1)
+T = len(load_df["Datetime"])
+delta_t = ((load_df.iloc[-1]["Datetime"] - load_df.iloc[0]["Datetime"]) / T) / datetime.timedelta(hours=1)
 
 # initialize variables
 battery_output_kW = cp.Variable(T)
@@ -49,27 +51,27 @@ for t in range(T):
         grid_demand_kW[t] == load_df.iloc[t]["Load [kW]"] + battery_output_kW[t]
     ]
 
+# requires a consumption dictionary in case there is natural gas in addition to electricity
 consumption_data_dict = {"electric": grid_demand_kW}
+# NOTE: second entry of the tuple can be ignored since it's for Pyomo
 obj, _ = costs.calculate_cost(
     charge_dict,
-    ,
-    resolution="15m",
-    prev_demand_dict=None,
-    consumption_estimate=sum(grid_demand_kW),
+    consumption_data_dict,
+    resolution="1m",
+    consumption_estimate=load_df["Load [kW]"].sum(),
     desired_utility="electric",
-    desired_charge_type=None,
 )
     
 # solve the CVX problem (objective variable should be named obj)
 prob = cp.Problem(cp.Minimize(obj), constraints)
 prob.solve()
 
+# requires a consumption dictionary in case there is natural gas in addition to electricity
+consumption_data_dict = {"electric": grid_demand_kW.value}
+# NOTE: second entry of the tuple can be ignored since it's for Pyomo
 result, _ = costs.calculate_cost(
     charge_dict,
     consumption_data_dict,
-    resolution=resolution,
-    prev_demand_dict=prev_demand_dict,
-    consumption_estimate=consumption_estimate,
-    desired_utility=desired_utility,
-    desired_charge_type=desired_charge_type,
+    resolution="1m",
+    desired_utility="electric",
 )

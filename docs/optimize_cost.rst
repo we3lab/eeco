@@ -33,8 +33,8 @@ CVXPY
 
 .. code-block:: python
    
-    import os
-    import timedelta
+    import datetime
+    import cvxpy as cp
     import pandas as pd
     from electric_emission_cost import costs 
 
@@ -47,10 +47,13 @@ CVXPY
    
     # get the charge dictionary
     charge_dict = costs.get_charge_dict(
-        battery.start_dt, battery.end_dt, rate_df, resolution="15m"
+        datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11), rate_df, resolution="1m"
     )
 
-If you print the dictionary, then you should get the following:
+We are going to evaluate the electricity consumption from only April 9th to April 10th since that is where our 
+synthetic data comes from (https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/consumption.csv).
+You will also see that it is in 1-minute intervals, hence `resolution="1m"`.
+If you print `charge_dict`, then you should get the following:
 
 .. code-block:: python
 
@@ -95,7 +98,8 @@ If you print the dictionary, then you should get the following:
     fin_soc = 0.5
     max_discharge = 5 # kW
     max_charge = 5 # kW
-    delta_t = ((df.iloc[-1]["Datetime"] - df.iloc[0]["Datetime"]) / T) / timedelta(hours=1)
+    T = len(load_df["Datetime"])
+    delta_t = ((load_df.iloc[-1]["Datetime"] - load_df.iloc[0]["Datetime"]) / T) / datetime.timedelta(hours=1)
 
     # initialize variables
     battery_output_kW = cp.Variable(T)
@@ -128,19 +132,29 @@ but that's fine for these demonstration purposes.
 
     # requires a consumption dictionary in case there is natural gas in addition to electricity
     consumption_data_dict = {"electric": grid_demand_kW}
+    # NOTE: second entry of the tuple can be ignored since it's for Pyomo
     obj, _ = costs.calculate_cost(
         charge_dict,
         {"electric": grid_demand_kW},
-        resolution="15m",
-        prev_demand_dict=None,
-        consumption_estimate=sum(grid_demand_kW),
+        resolution="1m",
+        consumption_estimate=load_df["Load [kW]"].sum(),
         desired_utility="electric",
-        desired_charge_type=None,
     )
 
-# TODO: explain the purpose of each flag, and refer to how-tos for unused flags
-# TODO: explain that the second return is for Pyomo, so ignore the second entry of the tuple for CVXPY
-# TODO: if naturla gas, include an entry with key "gas"
+The charge and consumption dictionaries are relatively straightforward: 
+`charge_dict` comes from the EEC package and `consumption_data_dict` is either an optimization variable or
+numpy array (in the case of historical analysis).
+The only caveat would be that an entry with key "gas" must be included to analzye natural gas consumption.
+
+Carefully note that the function `calculate_cost` returns a tuple. 
+The second entry of the tuple is for Pyomo, so it can be ignored since we are using CVXPY.
+
+The `resolution` argument represents the temporal granularity of the data in string format. 
+The default value is "15m" for 15-minute intervals, but our consumption data is on 1-minute intervals,
+so we use `resolution="1m"` (just like with `charge_dict`).
+
+For this simple example the `prev_demand_dict`, `prev_consumption_dict`, `demand_scale_factor`, `desired_charge_type`, 
+and `varstr_alias_func` have not been used. More information on how to use those flags is available in :ref:`how-to-advanced`.
 
 4. Minimize the electriciy costs of this consumer given the system constraints and base load consumption
 
@@ -156,15 +170,19 @@ Always compute the ex-post cost using numpy due to the convex relaxations that w
 
 .. code-block:: python
 
+    # requires a consumption dictionary in case there is natural gas in addition to electricity
+    consumption_data_dict = {"electric": grid_demand_kW.value}
+    # NOTE: second entry of the tuple can be ignored since it's for Pyomo
     result, _ = costs.calculate_cost(
         charge_dict,
         consumption_data_dict,
-        resolution=resolution,
-        prev_demand_dict=prev_demand_dict,
-        consumption_estimate=consumption_estimate,
-        desired_utility=desired_utility,
-        desired_charge_type=desired_charge_type,
+        resolution="1m",
+        desired_utility="electric",
     )
+
+Note that the `consumption_estimate` optional argument is not needed because the electricity consumption is a numpy array instead of an optimization variable.
+
+Below are a few simple plots to validate our results
 
 # TODO: plot results
 
