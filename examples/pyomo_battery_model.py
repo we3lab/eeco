@@ -1,33 +1,34 @@
 ############################################################
 #
 # This file contains an example of a time-discretized
-# Pyomo model for a battery energy storage system 
+# Pyomo model for a battery energy storage system
 # operating on the site of an industrial power consumer.
 #
 ############################################################
 
 # Import necessary libraries
-import numpy as np 
-import pandas as pd 
+import numpy as np
+import pandas as pd
 import calendar, math
 from datetime import datetime, timedelta
 from pyomo.environ import (
-    SolverFactory, 
+    SolverFactory,
     ConcreteModel,
     Block,
-    Var, 
-    Param, 
+    Var,
+    Param,
     Set,
     Objective,
-    Constraint, 
-    Expression, 
-    exp, 
+    Constraint,
+    Expression,
+    exp,
     units as pyunits,
-    value, 
+    value,
     minimize,
 )
 
-# create a class for the battery optimization model 
+
+# create a class for the battery optimization model
 class BatteryPyomo:
     """
     A Pyomo-based model for simulating and optimizing the operation of a battery energy storage system.
@@ -42,29 +43,30 @@ class BatteryPyomo:
             - 'end_date' (str): The end date of the simulation in ISO format.
             - 'timestep' (float): The time step for the simulation in hours.
             (Additional keys may be required depending on the specific model configuration.)
-    
+
     baseload (array-like): The baseline load profile for the site, provided as a time series.
-    
+
     baseload_repeat (bool, optional): If True, the baseline load profile is repeated to match the simulation period.
             Defaults to False.
     """
+
     def __init__(self, params, baseload, baseload_repeat=False):
-        
+
         # assign all items in params to attributes of the class
         for key, value in params.items():
             setattr(self, key, value)
-        
+
         # set the parameters for the battery model
         self.baseload = baseload
         self.baseload_repeat = baseload_repeat
 
-        # set up timing for the model 
+        # set up timing for the model
         self.start_dt = datetime.fromisoformat(self.start_date)
         self.end_dt = datetime.fromisoformat(self.end_date)
         self.time_delta = timedelta(hours=self.timestep)
-        self.datetimerange = datetime.fromisoformat(self.end_date) - datetime.fromisoformat(
-            self.start_date
-        )
+        self.datetimerange = datetime.fromisoformat(
+            self.end_date
+        ) - datetime.fromisoformat(self.start_date)
 
         self.t = np.arange(
             self.start_dt, self.end_dt, timedelta(hours=self.timestep)
@@ -98,10 +100,10 @@ class BatteryPyomo:
             self.baseload = np.tile(baseload, math.ceil(self.days))[
                 : self.num_steps
             ]  # repeat pattern over simulation
-        return 
+        return
 
     def create_model(self):
-        # create a concrete model 
+        # create a concrete model
 
         model = ConcreteModel()
 
@@ -118,50 +120,82 @@ class BatteryPyomo:
         model.e_capacity = Param(initialize=self.energycapacity)
         model.p_capacity = Param(initialize=self.powercapacity)
 
-        # add the baseload to the model 
+        # add the baseload to the model
         def init_baseload(model, t, data=self.baseload):
             return data[t]
+
         model.baseload = Param(model.t, initialize=init_baseload)
 
-        # add battery dynamics 
-            # create variables
-        model.soc = Var(model.t, bounds=(self.soc_min, self.soc_max), initialize=self.soc_init, doc="State of charge")
-        model.energy = Var(model.t, bounds=(0, self.energycapacity), initialize=self.soc_init*self.energycapacity, doc="Energy stored")
-        model.power = Var(model.t, bounds=(-self.powercapacity, self.powercapacity), initialize=0, doc="Power into the battery")
-        model.power_C = Var(model.t, bounds=(0, self.powercapacity), initialize=0, doc="Charging power")
-        model.power_D = Var(model.t, bounds=(0, self.powercapacity), initialize=0, doc="Discharging power")
+        # add battery dynamics
+        # create variables
+        model.soc = Var(
+            model.t,
+            bounds=(self.soc_min, self.soc_max),
+            initialize=self.soc_init,
+            doc="State of charge",
+        )
+        model.energy = Var(
+            model.t,
+            bounds=(0, self.energycapacity),
+            initialize=self.soc_init * self.energycapacity,
+            doc="Energy stored",
+        )
+        model.power = Var(
+            model.t,
+            bounds=(-self.powercapacity, self.powercapacity),
+            initialize=0,
+            doc="Power into the battery",
+        )
+        model.power_C = Var(
+            model.t, bounds=(0, self.powercapacity), initialize=0, doc="Charging power"
+        )
+        model.power_D = Var(
+            model.t,
+            bounds=(0, self.powercapacity),
+            initialize=0,
+            doc="Discharging power",
+        )
 
-        model.net_facility_load = Var(model.t, bounds=(None, None), initialize=0, doc="Net facility load including battery")
+        model.net_facility_load = Var(
+            model.t,
+            bounds=(None, None),
+            initialize=0,
+            doc="Net facility load including battery",
+        )
 
-            # create model constraints
+        # create model constraints
         @model.Constraint(model.t)
         def state_of_charge_constraint(b, t):
             return b.soc[t] == b.energy[t] / b.e_capacity
-        
+
         @model.Constraint(model.t)
         def energy_balance_constraint(b, t):
             if t == 0:
                 return Constraint.Skip
             else:
-                return b.energy[t] == b.energy[t-1] + b.power[t-1] * b.dt
-        
+                return b.energy[t] == b.energy[t - 1] + b.power[t - 1] * b.dt
+
         @model.Constraint(model.t)
         def power_balance_constraint(b, t):
-            return b.power[t] == b.power_C[t] * b.eta_charging - b.power_D[t] * b.eta_discharging
-        
+            return (
+                b.power[t]
+                == b.power_C[t] * b.eta_charging - b.power_D[t] * b.eta_discharging
+            )
+
         @model.Constraint(model.t)
         def net_facility_load_constraint(b, t):
             return b.net_facility_load[t] == b.baseload[t] + b.power[t]
 
-            # set boundary conditions 
+            # set boundary conditions
+
         @model.Constraint()
         def initial_soc_constraint(b):
             return b.soc[0] == self.soc_init
-        
+
         @model.Constraint()
         def final_soc_constraint(b):
-            return b.soc[self.num_steps-1] == self.soc_init
+            return b.soc[self.num_steps - 1] == self.soc_init
 
         # assign the model as an attribute of the class
         self.model = model
-        return model 
+        return model

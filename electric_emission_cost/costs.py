@@ -388,7 +388,7 @@ def get_charge_df(
 def default_varstr_alias_func(
     utility, charge_type, name, start_date, end_date, charge_limit
 ):
-    """Default function for creating the variable name strings for each charge 
+    """Default function for creating the variable name strings for each charge
     in the tariff sheet. Can be overwritten in the function call to `calculate_cost`
     to customize variable names.
 
@@ -396,31 +396,29 @@ def default_varstr_alias_func(
     ----------
     utility : str
         Name of the utility ('electric' or 'gas')
-    
+
     charge_type : str
         Name of the `charge_type` ('demand', 'energy', or 'customer')
 
     name : str
         The name of the period for this charge (e.g., 'all-day' or 'on-peak')
-    
+
     start_date
         The inclusive start date for this charge
-    
+
     end_date : str
         The exclusive end date for this charge
-    
+
     charge_limit : str
         The consumption limit for this tier of charges converted to a string
 
     Returns
     -------
     str
-        Variable name of the form 
+        Variable name of the form
         `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
     """
-    return (
-        f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
-    )
+    return f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
 
 
 def get_next_limit(key_substr, current_limit, keys):
@@ -839,7 +837,7 @@ def calculate_cost(
         Function to generate variable name for pyomo,
         should take in a 6 inputs and generate a string output.
         The function will receive following six inputs:
-        
+
         - utility: str
         - charge_type: str
         - name: str
