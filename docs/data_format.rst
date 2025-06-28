@@ -1,17 +1,22 @@
 .. contents::
 
-.. _dataformat:
+.. WARNING::
 
-************
-Data Formats
-************
+  Site under construction!    
+  Documentation incomplete :( 
 
-.. _dataformattariff:
+.. _data-format:
+
+******************
+How to Format Data
+******************
+
+.. _data-format-tariff:
 
 Electricity Tariffs
 ===================
 
-.. _dataformatemissions:
+.. _data-format-emissions:
 
 Scope 2 Emissions
 =================

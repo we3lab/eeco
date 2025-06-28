@@ -7,12 +7,33 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
    :maxdepth: 1
    :caption: Overview
 
-   README <self>
+   Table of Contents <self>
    hello
-   data_format
-   advanced
+   purpose
+   complexities
+   why_metrics
+   why_neutral
+   why_advanced
    CONTRIBUTING
    LICENSE
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Tutorials
+
+   optimize_cost
+   optimize_emit
+   cooptimize
+   tutorial_metrics
+
+.. toctree::
+   :maxdepth: 1
+   :caption: How-to Guides
+
+   data_format
+   how_to_calculate
+   how_to_metrics
+   how_to_advanced
 
 .. toctree::
    :maxdepth: 1
@@ -20,10 +41,9 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
 
    costs
    emissions
+   metrics
    units
    utils
-
-.. include:: ../README.rst
 
 Indices and tables
 ==================

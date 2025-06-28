@@ -113,6 +113,9 @@ def calculate_grid_emissions_cvx(
     return emissions * conversion_factor
 
 
+# TODO: need to write calculate_grid_emissions_pyo
+
+
 def get_carbon_intensity(
     start_dt,
     end_dt,
@@ -135,7 +138,7 @@ def get_carbon_intensity(
         Electric grid emissions information.
         Only one of `datetime_local` and `month`/`day`/`hour` are required.
 
-        ==================  =================================================
+        ==================  ==================================================
         datetime_local      local datetime to estimate the marginal emissions
         month               month for which the emissions data was averaged
         day                 day for which the emissions data was averaged
