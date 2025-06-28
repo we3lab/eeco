@@ -58,7 +58,10 @@ We categorize monthly electricity energy and demand charges into Flat, Seasonal-
 
 .. figure:: _static/img/categorize-tariff.png
     
-    Representative flat, time-of-use (TOU), and seasonal price profiles. (a) Winter prices and (b) summer prices representing Flat, Seasonal-TOU, Nonseasonal-TOU, and Seasonal-NonTOU tariffs. Cost would be calculated in $/kW, $/(therm/hr), $/kWh, or $/therm for electricity demand charges, natural gas demand charges, electricity energy charges, and natural gas energy charges, respectively. A therm is defined as 105.5 MJ, or approximately the heat content of 100 cubic feet of natural gas.
+    Representative flat, time-of-use (TOU), and seasonal price profiles. 
+    (a) Winter prices and (b) summer prices representing Flat, Seasonal-TOU, Nonseasonal-TOU, and Seasonal-NonTOU tariffs. 
+    Cost would be calculated in $/kW, $/(therm/hr), $/kWh, or $/therm for electricity demand charges, natural gas demand charges, electricity energy charges, and natural gas energy charges, respectively. 
+    A therm is defined as 105.5 MJ, or approximately the heat content of 100 cubic feet of natural gas.
 
 Bundling
 ********

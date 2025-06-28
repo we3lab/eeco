@@ -66,12 +66,20 @@ obj, _ = costs.calculate_cost(
 prob = cp.Problem(cp.Minimize(obj), constraints)
 prob.solve()
 
-# requires a consumption dictionary in case there is natural gas in addition to electricity
-consumption_data_dict = {"electric": grid_demand_kW.value}
 # NOTE: second entry of the tuple can be ignored since it's for Pyomo
-result, _ = costs.calculate_cost(
+baseline_electricity_cost, _ = costs.calculate_cost(
     charge_dict,
-    consumption_data_dict,
+    {"electric": load_df["Load [kW]"].values},
     resolution="1m",
     desired_utility="electric",
 )
+# NOTE: second entry of the tuple can be ignored since it's for Pyomo
+optimized_electricity_cost, _ = costs.calculate_cost(
+    charge_dict,
+    {"electric": grid_demand_kW.value},
+    resolution="1m",
+    desired_utility="electric",
+)
+
+print(f"Baseline Electricity Cost: ${baseline_electricity_cost:.2f}")
+print(f"Optimized Electricity Cost: ${optimized_electricity_cost:.2f}")
