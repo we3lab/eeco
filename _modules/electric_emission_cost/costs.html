@@ -553,6 +553,7 @@
 <span class="sd">    scale_factor : float</span>
 <span class="sd">        Optional factor for scaling demand charges relative to energy charges</span>
 <span class="sd">        when the optimization/simulation period is not a full billing cycle.</span>
+<span class="sd">        Applied to monthly charges where end_date - start_date &gt; 1 day.</span>
 <span class="sd">        Default is 1</span>
 
 <span class="sd">    model : pyomo.Model</span>
@@ -633,16 +634,15 @@
             <span class="s2">&quot;consumption_data must be of type numpy.ndarray or cvxpy.Expression&quot;</span>
         <span class="p">)</span>
     <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">result</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">demand_charged</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span><span class="n">result</span> <span class="o">-</span> <span class="n">prev_demand_cost</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale_factor</span>
+        <span class="n">max_var</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">demand_charged</span><span class="p">)</span>
+        <span class="n">max_pos_val</span><span class="p">,</span> <span class="n">max_pos_model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span><span class="n">max_var</span> <span class="o">-</span> <span class="n">prev_demand_cost</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">max_pos_val</span> <span class="o">*</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">max_pos_model</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">max_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_max&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">(</span>
-            <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span>
-                <span class="n">max_var</span> <span class="o">-</span> <span class="n">prev_demand_cost</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_max_pos&quot;</span>
-            <span class="p">)</span>
-            <span class="o">*</span> <span class="n">scale_factor</span>
-        <span class="p">)</span></div>
+        <span class="n">max_pos_val</span><span class="p">,</span> <span class="n">max_pos_model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span>
+            <span class="n">max_var</span> <span class="o">-</span> <span class="n">prev_demand_cost</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_max_pos&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">max_pos_val</span> <span class="o">*</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">max_pos_model</span></div>
 
 
 <div class="viewcode-block" id="calculate_energy_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_energy_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_energy_cost</span><span class="p">(</span>
@@ -812,6 +812,49 @@
     <span class="k">return</span> <span class="n">revenues</span> <span class="o">/</span> <span class="n">divisor</span><span class="p">,</span> <span class="n">model</span></div>
 
 
+<div class="viewcode-block" id="get_charge_array_duration"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_charge_array_duration">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_array_duration</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse a charge array key to determine the duration of the charge period.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    key : str</span>
+<span class="sd">        Charge key of form `utility_charge_type_name_start_date_end_date_charge_limit`</span>
+<span class="sd">        where start_date and end_date are in YYYYMMDD or YYYY-MM-DD format</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    int</span>
+<span class="sd">        Duration of the charge period in days</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the key format is invalid or dates cannot be parsed</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid charge key format: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">start_date_str</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+    <span class="n">end_date_str</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="c1"># Allow 2 date formats</span>
+    <span class="n">date_formats</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">date_format</span> <span class="ow">in</span> <span class="n">date_formats</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">start_date</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">start_date_str</span><span class="p">,</span> <span class="n">date_format</span><span class="p">)</span>
+            <span class="n">end_date</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">end_date_str</span><span class="p">,</span> <span class="n">date_format</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">end_date</span> <span class="o">-</span> <span class="n">start_date</span><span class="p">)</span><span class="o">.</span><span class="n">days</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Invalid date format in charge key </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">:&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;cannot parse dates &#39;</span><span class="si">{</span><span class="n">start_date_str</span><span class="si">}</span><span class="s2">&#39; and &#39;</span><span class="si">{</span><span class="n">end_date_str</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+    <span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="calculate_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_cost</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
     <span class="n">consumption_data_dict</span><span class="p">,</span>
@@ -878,6 +921,7 @@
 <span class="sd">    demand_scale_factor : float</span>
 <span class="sd">        Optional factor for scaling demand charges relative to energy charges</span>
 <span class="sd">        when the optimization/simulation period is not a full billing cycle.</span>
+<span class="sd">        Applied to monthly charges where end_date - start_date &gt; 1 day.</span>
 <span class="sd">        Default is 1</span>
 
 <span class="sd">    model : pyomo.Model</span>
@@ -944,6 +988,10 @@
         <span class="n">next_limit</span> <span class="o">=</span> <span class="n">get_next_limit</span><span class="p">(</span><span class="n">key_substr</span><span class="p">,</span> <span class="n">charge_limit</span><span class="p">,</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
         <span class="n">consumption_data</span> <span class="o">=</span> <span class="n">consumption_data_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">]</span>
 
+        <span class="c1"># Only apply demand_scale_factor if charge spans more than one day</span>
+        <span class="n">charge_duration_days</span> <span class="o">=</span> <span class="n">get_charge_array_duration</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="n">effective_scale_factor</span> <span class="o">=</span> <span class="n">demand_scale_factor</span> <span class="k">if</span> <span class="n">charge_duration_days</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mi">1</span>
+
         <span class="c1"># TODO: this assumes units of kW for electricity and meters cubed for gas</span>
         <span class="k">if</span> <span class="n">utility</span> <span class="o">==</span> <span class="s2">&quot;electric&quot;</span><span class="p">:</span>
             <span class="n">divisor</span> <span class="o">=</span> <span class="n">n_per_hour</span>
@@ -967,7 +1015,7 @@
                 <span class="n">prev_demand</span><span class="o">=</span><span class="n">prev_demand</span><span class="p">,</span>
                 <span class="n">prev_demand_cost</span><span class="o">=</span><span class="n">prev_demand_cost</span><span class="p">,</span>
                 <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
-                <span class="n">scale_factor</span><span class="o">=</span><span class="n">demand_scale_factor</span><span class="p">,</span>
+                <span class="n">scale_factor</span><span class="o">=</span><span class="n">effective_scale_factor</span><span class="p">,</span>
                 <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
                 <span class="n">varstr</span><span class="o">=</span><span class="n">var_str</span><span class="p">,</span>
             <span class="p">)</span>
