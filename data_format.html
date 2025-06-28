@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Data Formats &mdash; EEC 0.0.3 documentation</title>
+  <title>How to Format Data &mdash; EEC 0.0.3 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
@@ -22,8 +22,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Advanced Features" href="advanced.html" />
-    <link rel="prev" title="Getting Started" href="hello.html" /> 
+    <link rel="next" title="How to Calculate Costs and Emissions" href="how_to_calculate.html" />
+    <link rel="prev" title="Flexibility Metrics as Constraints" href="tutorial_metrics.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -46,22 +46,40 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="index.html">README</a></li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Data Formats</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_advanced.html">Why Do the Advanced Features Exist?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">MIT License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_metrics.html">Flexibility Metrics as Constraints</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">How to Format Data</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#electricity-tariffs">Electricity Tariffs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#scope-2-emissions">Scope 2 Emissions</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contribution Agreement</a></li>
-<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">LICENSE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_advanced.html">How to Use Advanced Features</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Code</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
 </ul>
@@ -80,7 +98,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Data Formats</li>
+      <li class="breadcrumb-item active">How to Format Data</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/data_format.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -93,7 +111,7 @@
   <nav class="contents" id="contents" role="doc-toc">
 <p class="topic-title">Contents</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="#data-formats" id="id1">Data Formats</a></p>
+<li><p><a class="reference internal" href="#how-to-format-data" id="id1">How to Format Data</a></p>
 <ul>
 <li><p><a class="reference internal" href="#electricity-tariffs" id="id2">Electricity Tariffs</a></p></li>
 <li><p><a class="reference internal" href="#scope-2-emissions" id="id3">Scope 2 Emissions</a></p></li>
@@ -101,13 +119,18 @@
 </li>
 </ul>
 </nav>
-<section id="data-formats">
-<span id="dataformat"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">Data Formats</a><a class="headerlink" href="#data-formats" title="Permalink to this heading"></a></h1>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Site under construction!
+Documentation incomplete :(</p>
+</div>
+<section id="how-to-format-data">
+<span id="data-format"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">How to Format Data</a><a class="headerlink" href="#how-to-format-data" title="Permalink to this heading"></a></h1>
 <section id="electricity-tariffs">
-<span id="dataformattariff"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">Electricity Tariffs</a><a class="headerlink" href="#electricity-tariffs" title="Permalink to this heading"></a></h2>
+<span id="data-format-tariff"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">Electricity Tariffs</a><a class="headerlink" href="#electricity-tariffs" title="Permalink to this heading"></a></h2>
 </section>
 <section id="scope-2-emissions">
-<span id="dataformatemissions"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">Scope 2 Emissions</a><a class="headerlink" href="#scope-2-emissions" title="Permalink to this heading"></a></h2>
+<span id="data-format-emissions"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">Scope 2 Emissions</a><a class="headerlink" href="#scope-2-emissions" title="Permalink to this heading"></a></h2>
 </section>
 </section>
 
@@ -115,8 +138,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="hello.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="advanced.html" class="btn btn-neutral float-right" title="Advanced Features" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="tutorial_metrics.html" class="btn btn-neutral float-left" title="Flexibility Metrics as Constraints" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="how_to_calculate.html" class="btn btn-neutral float-right" title="How to Calculate Costs and Emissions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

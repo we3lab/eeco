@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flexibility Metrics as Constraints &mdash; EEC 0.0.3 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="How to Format Data" href="data_format.html" />
+    <link rel="prev" title="Co-optimize Costs and Emissions" href="cooptimize.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            EEC
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_advanced.html">Why Do the Advanced Features Exist?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">MIT License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Flexibility Metrics as Constraints</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_advanced.html">How to Use Advanced Features</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">EEC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Flexibility Metrics as Constraints</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/tutorial_metrics.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <nav class="contents" id="contents" role="doc-toc">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#flexibility-metrics-as-constraints" id="id1">Flexibility Metrics as Constraints</a></p></li>
+</ul>
+</nav>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Site under construction!
+Documentation incomplete :(</p>
+</div>
+<section id="flexibility-metrics-as-constraints">
+<span id="tutorial-metrics"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">Flexibility Metrics as Constraints</a><a class="headerlink" href="#flexibility-metrics-as-constraints" title="Permalink to this heading"></a></h1>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cooptimize.html" class="btn btn-neutral float-left" title="Co-optimize Costs and Emissions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="data_format.html" class="btn btn-neutral float-right" title="How to Format Data" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3 Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

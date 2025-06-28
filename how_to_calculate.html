@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Calculate Costs and Emissions &mdash; EEC 0.0.3 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="How to Use Flexibility Metrics" href="how_to_metrics.html" />
+    <link rel="prev" title="How to Format Data" href="data_format.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            EEC
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_advanced.html">Why Do the Advanced Features Exist?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">MIT License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_metrics.html">Flexibility Metrics as Constraints</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">How to Calculate Costs and Emissions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#electricity-tariffs">Electricity Tariffs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scope-2-emissions">Scope 2 Emissions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#units">Units</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_advanced.html">How to Use Advanced Features</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">EEC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">How to Calculate Costs and Emissions</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/how_to_calculate.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <nav class="contents" id="contents" role="doc-toc">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#how-to-calculate-costs-and-emissions" id="id1">How to Calculate Costs and Emissions</a></p>
+<ul>
+<li><p><a class="reference internal" href="#electricity-tariffs" id="id2">Electricity Tariffs</a></p></li>
+<li><p><a class="reference internal" href="#scope-2-emissions" id="id3">Scope 2 Emissions</a></p>
+<ul>
+<li><p><a class="reference internal" href="#units" id="id4">Units</a></p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Site under construction!
+Documentation incomplete :(</p>
+</div>
+<section id="how-to-calculate-costs-and-emissions">
+<span id="calculatehowto"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">How to Calculate Costs and Emissions</a><a class="headerlink" href="#how-to-calculate-costs-and-emissions" title="Permalink to this heading"></a></h1>
+<section id="electricity-tariffs">
+<span id="calculate-tariff"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">Electricity Tariffs</a><a class="headerlink" href="#electricity-tariffs" title="Permalink to this heading"></a></h2>
+</section>
+<section id="scope-2-emissions">
+<span id="calculate-emissions"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">Scope 2 Emissions</a><a class="headerlink" href="#scope-2-emissions" title="Permalink to this heading"></a></h2>
+<p>This package is not designed to calculate Scope 2 emissions that are a complete timeseries.
+We feel that is simple enough that it does not warrant a function.</p>
+<p>In Pyomo:</p>
+<p># TODO: insert code snippet</p>
+<p>In CVXPY:</p>
+<p># TODO: insert code snippet</p>
+<p>However, many data sources report emissions factors as monthly/hourly averages (<a class="reference internal" href="data_format.html#data-format-emissions"><span class="std std-ref">Scope 2 Emissions</span></a>).
+Our package is designed to unpack data in that format into a timeseries the same length as the consumption variable.</p>
+<p># TODO: example of using <cite>calculate_grid_emissions</cite>, <cite>calculate_grid_emissions_cvx</cite>, and <cite>calculate_grid_emissions_pyo</cite></p>
+<p>The <cite>get_carbon_intensity</cite> function can be used for those interested in getting the timeseries directly:</p>
+<p># TODO: example of using <cite>get_carbon_intensity</cite></p>
+<section id="units">
+<h3><a class="toc-backref" href="#id4" role="doc-backlink">Units</a><a class="headerlink" href="#units" title="Permalink to this heading"></a></h3>
+<p>Unit conversions will be handled by the EEC package as long as the proper <cite>emissions_units</cite> and
+<cite>consumption_units</cite> arguments are provided.
+Based on the most common data sources we have used, the consumption units are in kW
+and emissions units in kg / MWh, so <cite>consumption_units=u.kW</cite> and <cite>emissions_units=u.kg / u.MWh</cite>.
+This defaults to a 0.001 conversion factor.</p>
+<p>The temporal resolution of the consumption data should be provided as a string.
+The default is 15-minute intervals, so <cite>resolution=”15m”</cite>.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="data_format.html" class="btn btn-neutral float-left" title="How to Format Data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="how_to_metrics.html" class="btn btn-neutral float-right" title="How to Use Flexibility Metrics" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3 Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

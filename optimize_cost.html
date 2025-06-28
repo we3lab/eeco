@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Optimize Electricity Costs &mdash; EEC 0.0.3 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Optimize Scope 2 Emissions" href="optimize_emit.html" />
+    <link rel="prev" title="MIT License" href="LICENSE.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            EEC
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_advanced.html">Why Do the Advanced Features Exist?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">MIT License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Optimize Electricity Costs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#cvxpy">CVXPY</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pyomo">Pyomo</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_metrics.html">Flexibility Metrics as Constraints</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_advanced.html">How to Use Advanced Features</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">EEC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Optimize Electricity Costs</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/optimize_cost.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <nav class="contents" id="contents" role="doc-toc">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#optimize-electricity-costs" id="id8">Optimize Electricity Costs</a></p>
+<ul>
+<li><p><a class="reference internal" href="#cvxpy" id="id9">CVXPY</a></p></li>
+<li><p><a class="reference internal" href="#pyomo" id="id10">Pyomo</a></p></li>
+</ul>
+</li>
+</ul>
+</nav>
+<section id="optimize-electricity-costs">
+<span id="tutorial-cost"></span><h1><a class="toc-backref" href="#id8" role="doc-backlink">Optimize Electricity Costs</a><a class="headerlink" href="#optimize-electricity-costs" title="Permalink to this heading"></a></h1>
+<p>This tutorial will walkthrough how to optimize electricity bill savings for a simple battery model in either <a class="reference internal" href="#cvx-cost"><span class="std std-ref">CVXPY</span></a> or <a class="reference internal" href="#pyo-cost"><span class="std std-ref">Pyomo</span></a> by going through the following steps:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Load an electricity tariff spreadsheet</p>
+<ul class="simple">
+<li><p>We publish a nationwide tariff dataset: <a class="reference external" href="https://github.com/we3lab/industrial-electricity-tariffs">https://github.com/we3lab/industrial-electricity-tariffs</a></p></li>
+<li><p>In this case, we use <a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/tariff.csv">tariff.csv</a> from the EEC <cite>data</cite> folder</p></li>
+</ul>
+</li>
+<li><p>Configure an optimization model of the electricity consumer with system constraints</p>
+<ul class="simple">
+<li><p>Consider using flexibility metrics to encode system constraints (<a class="reference internal" href="tutorial_metrics.html#tutorial-metrics"><span class="std std-ref">Flexibility Metrics as Constraints</span></a>)!</p></li>
+<li><p>The models are presented step-by-step to demonstrate the model building process,
+but the complete models are available in the <cite>examples</cite> folder:</p>
+<ul>
+<li><p><a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py">pyomo_battery_model.py</a></p></li>
+<li><p><a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/examples/cvxpy_battery_model.py">cvxpy_battery_model.py</a></p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Create an objective function of electricity costs based on this tariff sheet</p></li>
+<li><p>Minimize the electriciy costs of this consumer given the system constraints and base load consumption</p></li>
+<li><p>Display the results to validate that the optimization is correct</p></li>
+</ol>
+</div></blockquote>
+<section id="cvxpy">
+<span id="cvx-cost"></span><h2><a class="toc-backref" href="#id9" role="doc-backlink">CVXPY</a><a class="headerlink" href="#cvxpy" title="Permalink to this heading"></a></h2>
+<ol class="arabic simple" start="0">
+<li><p>Import dependencies</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
+</pre></div>
+</div>
+<ol class="arabic simple">
+<li><p>Load an electricity tariff spreadsheet</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path_to_tariffsheet</span> <span class="o">=</span> <span class="s2">&quot;electric_emission_cost/data/tariff.csv&quot;</span>
+<span class="n">tariff_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_to_tariffsheet</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+
+<span class="c1"># get the charge dictionary</span>
+<span class="n">charge_dict</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_dict</span><span class="p">(</span>
+    <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span> <span class="n">tariff_df</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>We are going to evaluate the electricity consumption from only April 9th to April 10th since that is where our
+synthetic data comes from (<a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/consumption.csv">https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/consumption.csv</a>).
+You will also see that it is in 1-minute intervals, hence <cite>resolution=”1m”</cite>.
+If you print <cite>charge_dict</cite>, then you should get the following:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s1">&#39;electric_customer_0_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">666.65</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_0_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_1_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_2_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_3_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_4_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span> <span class="p">,</span> <span class="mf">0.</span> <span class="p">,</span> <span class="mf">0.</span> <span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.0189944</span><span class="p">,</span> <span class="mf">0.0189944</span><span class="p">,</span> <span class="mf">0.0189944</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_5_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_6_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_7_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_8_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_9_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_10_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_11_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_12_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_13_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_14_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.0189944</span><span class="p">,</span> <span class="mf">0.0189944</span><span class="p">,</span> <span class="mf">0.0189944</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span> <span class="p">,</span> <span class="mf">0.</span> <span class="p">,</span> <span class="mf">0.</span> <span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_15_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_16_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_demand_0_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_demand_1_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_demand_2_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span> <span class="mf">0.</span>  <span class="p">,</span>  <span class="mf">0.</span>  <span class="p">,</span>  <span class="mf">0.</span>  <span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">19.79</span><span class="p">,</span> <span class="mf">19.79</span><span class="p">,</span> <span class="mf">19.79</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_demand_3_20230409_20230410_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">19.79</span><span class="p">,</span> <span class="mf">19.79</span><span class="p">,</span> <span class="mf">19.79</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span>  <span class="mf">0.</span>  <span class="p">,</span>  <span class="mf">0.</span>  <span class="p">,</span>  <span class="mf">0.</span>  <span class="p">])</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Configure an optimization model of the electricity consumer with system constraints</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># load historical consumption data</span>
+<span class="n">load_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;electric_emission_cost/data/consumption.csv&quot;</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Datetime&quot;</span><span class="p">])</span>
+
+<span class="c1"># set battery parameters</span>
+<span class="c1"># create variables for battery total energy, max charge and discharge power, and SOC limits</span>
+<span class="n">total_capacity</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># kWh</span>
+<span class="n">min_soc</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">max_soc</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">init_soc</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">fin_soc</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">max_discharge</span> <span class="o">=</span> <span class="mi">5</span> <span class="c1"># kW</span>
+<span class="n">max_charge</span> <span class="o">=</span> <span class="mi">5</span> <span class="c1"># kW</span>
+<span class="n">T</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">load_df</span><span class="p">[</span><span class="s2">&quot;Datetime&quot;</span><span class="p">])</span>
+<span class="n">delta_t</span> <span class="o">=</span> <span class="p">((</span><span class="n">load_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;Datetime&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">load_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;Datetime&quot;</span><span class="p">])</span> <span class="o">/</span> <span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># initialize variables</span>
+<span class="n">battery_output_kW</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+<span class="n">battery_soc</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">T</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">grid_demand_kW</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+
+<span class="c1"># set constraints</span>
+<span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">battery_output_kW</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="n">max_discharge</span><span class="p">,</span>
+    <span class="n">battery_output_kW</span> <span class="o">&lt;=</span> <span class="n">max_charge</span><span class="p">,</span>
+    <span class="n">battery_soc</span> <span class="o">&gt;=</span> <span class="n">min_soc</span><span class="p">,</span>
+    <span class="n">battery_soc</span> <span class="o">&lt;=</span> <span class="n">max_soc</span><span class="p">,</span>
+    <span class="n">battery_soc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">init_soc</span><span class="p">,</span>
+    <span class="n">battery_soc</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">==</span> <span class="n">fin_soc</span><span class="p">,</span>
+    <span class="n">grid_demand_kW</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+<span class="p">]</span>
+<span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">T</span><span class="p">):</span>
+    <span class="n">constraints</span> <span class="o">+=</span> <span class="p">[</span>
+        <span class="n">battery_soc</span><span class="p">[</span><span class="n">t</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">battery_soc</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">battery_output_kW</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_t</span><span class="p">)</span> <span class="o">/</span> <span class="n">total_capacity</span><span class="p">,</span>
+        <span class="n">grid_demand_kW</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">load_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">t</span><span class="p">][</span><span class="s2">&quot;Load [kW]&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">battery_output_kW</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+    <span class="p">]</span>
+</pre></div>
+</div>
+<p>This is a standard battery model with energy (i.e., total charge) and power (i.e., discharge/charge rate) constraints.
+The round-trip efficiency is 1.0 since there is no penalty applied when discharging the battery,
+but that’s fine for these demonstration purposes.</p>
+<ol class="arabic simple" start="3">
+<li><p>Create an objective function of electricity costs based on this tariff sheet</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># requires a consumption dictionary in case there is natural gas in addition to electricity</span>
+<span class="n">consumption_data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">grid_demand_kW</span><span class="p">}</span>
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">obj</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">grid_demand_kW</span><span class="p">},</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">,</span>
+    <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">load_df</span><span class="p">[</span><span class="s2">&quot;Load [kW]&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The charge and consumption dictionaries are relatively straightforward:
+<cite>charge_dict</cite> comes from the EEC package and <cite>consumption_data_dict</cite> is either an optimization variable or
+numpy array (in the case of historical analysis).
+The only caveat would be that an entry with key “gas” must be included to analzye natural gas consumption.</p>
+<p>Carefully note that the function <cite>calculate_cost</cite> returns a tuple.
+The second entry of the tuple is for Pyomo, so it can be ignored since we are using CVXPY.</p>
+<p>The <cite>resolution</cite> argument represents the temporal granularity of the data in string format.
+The default value is “15m” for 15-minute intervals, but our consumption data is on 1-minute intervals,
+so we use <cite>resolution=”1m”</cite> (just like with <cite>charge_dict</cite>).</p>
+<p>For this simple example the <cite>prev_demand_dict</cite>, <cite>prev_consumption_dict</cite>, <cite>demand_scale_factor</cite>, <cite>desired_charge_type</cite>,
+and <cite>varstr_alias_func</cite> have not been used. More information on how to use those flags is available in <a class="reference internal" href="how_to_advanced.html#how-to-advanced"><span class="std std-ref">How to Use Advanced Features</span></a>.</p>
+<ol class="arabic simple" start="4">
+<li><p>Minimize the electriciy costs of this consumer given the system constraints and base load consumption</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># solve the CVX problem (objective variable should be named obj)</span>
+<span class="n">prob</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">Minimize</span><span class="p">(</span><span class="n">obj</span><span class="p">),</span> <span class="n">constraints</span><span class="p">)</span>
+<span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>Display the results to validate that the optimization is correct</p></li>
+</ol>
+<p>Always compute the ex-post cost using numpy due to the convex relaxations that we apply in our optimization code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">baseline_electricity_cost</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">load_df</span><span class="p">[</span><span class="s2">&quot;Load [kW]&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">},</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">optimized_electricity_cost</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">grid_demand_kW</span><span class="o">.</span><span class="n">value</span><span class="p">},</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that the <cite>consumption_estimate</cite> optional argument is not needed because the electricity consumption is a numpy array instead of an optimization variable.
+If we print our results, we confirm that the optimal electricity profile has a bill of
+$703.81, $61.48 less than the baseline bill of $765.29.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="go">&gt;&gt;&gt;print(f&quot;Baseline Electricity Cost: ${baseline_electricity_cost:.2f}&quot;)</span>
+<span class="go">Baseline Electricity Cost: $765.29</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Optimized Electricity Cost: ${optimized_electricity_cost:.2f}&quot;)</span>
+<span class="go">Optimized Electricity Cost: $703.81</span>
+</pre></div>
+</div>
+<p>Below are a few simple plots to validate our results.</p>
+<p>First, we visualize the energy and demand charges:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># this can also be done in a dataframe format that drops all the unnecessary columns</span>
+<span class="n">charge_df</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_df</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span> <span class="n">tariff_df</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">)</span>
+<span class="n">charge_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+
+<span class="c1"># create a subset of the charge_df for energy and demand charges</span>
+<span class="n">energy_charge_df</span> <span class="o">=</span> <span class="n">charge_df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">like</span><span class="o">=</span><span class="s2">&quot;energy&quot;</span><span class="p">)</span>
+<span class="n">demand_charge_df</span> <span class="o">=</span> <span class="n">charge_df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">like</span><span class="o">=</span><span class="s2">&quot;demand&quot;</span><span class="p">)</span>
+
+<span class="c1"># sum across all energy charges</span>
+<span class="n">total_energy_charge</span> <span class="o">=</span> <span class="n">energy_charge_df</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+<span class="c1"># plot the energy charges</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">total_energy_charge</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;DateTime&quot;</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Energy Charge ($/kWh)&quot;</span><span class="p">,</span>
+    <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">11</span><span class="p">))</span>
+<span class="p">)</span>
+
+<span class="c1"># plot the demand charges</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">demand_charge_df</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;DateTime&quot;</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Demand Charge ($/kWh)&quot;</span><span class="p">,</span>
+    <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span>
+    <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">11</span><span class="p">)),</span>
+    <span class="n">ylim</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="kc">None</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="n">fig</span><span class="o">.</span><span class="n">align_ylabels</span><span class="p">()</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Electricity Charges&quot;</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">1.02</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<figure class="align-default" id="id2">
+<img alt="_images/cvx-tariff-structure.png" src="_images/cvx-tariff-structure.png" />
+<figcaption>
+<p><span class="caption-text">Structure of time-of-use (TOU) energy and demand charges for our modeling period (April 9-10, 2022).
+Different colors indicate different demand charge periods.
+Note that because April 9th is a Sunday, there are no TOU charges until Monday (April 10th).</span><a class="headerlink" href="#id2" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+<p>Next, we plot the baseline and optimal electricity consumption profiles.
+This helps us to visualize how the model responds to the cost incentives of the tariff.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># plot the model outputs</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">grid_demand_kW</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;C0&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Net Load&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">load_df</span><span class="p">[</span><span class="s2">&quot;Load [kW]&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Baseload&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;DateTime&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Power (kW)&quot;</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">11</span><span class="p">)))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+<figure class="align-default" id="id3">
+<img alt="_images/cvx-model-out.png" src="_images/cvx-model-out.png" />
+<figcaption>
+<p><span class="caption-text">Output of our electricity bill optimization using the virtual battery model.
+The dotted line is baseline electricity purchases, and the blue line is the optimized profile.
+Note how the optimized electricity profile shaves peaks to readuce time-of-use (TOU) charges</span><a class="headerlink" href="#id3" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+<p>Finally, let’s plot the battery state of charge (SOC) to confirm that the constraints were respected:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># plot the battery charge</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">battery_soc</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;C1&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Battery SOC&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Time&quot;</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Battery SOC&quot;</span><span class="p">,</span>
+    <span class="n">ylim</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+    <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">11</span><span class="p">))</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+<figure class="align-default" id="id4">
+<img alt="_images/cvx-battery-soc.png" src="_images/cvx-battery-soc.png" />
+<figcaption>
+<p><span class="caption-text">Battery state of charge (SOC) as a percentage during our modeling period (April 9-10, 2022).</span><a class="headerlink" href="#id4" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+<section id="pyomo">
+<span id="pyo-cost"></span><h2><a class="toc-backref" href="#id10" role="doc-backlink">Pyomo</a><a class="headerlink" href="#pyomo" title="Permalink to this heading"></a></h2>
+<ol class="arabic simple" start="0">
+<li><p>Import dependencies</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">examples.pyomo_battery_model</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+</pre></div>
+</div>
+<ol class="arabic simple">
+<li><p>Load an electricity tariff spreadsheet</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path_to_tariffsheet</span> <span class="o">=</span> <span class="s2">&quot;electric_emission_cost/data/tariff.csv&quot;</span>
+<span class="n">tariff_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_to_tariffsheet</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+
+<span class="c1"># get the charge dictionary</span>
+<span class="n">charge_dict</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_dict</span><span class="p">(</span>
+    <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">tariff_df</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>We are going to evaluate the electricity consumption for the entire month of July 2022.
+Below we will create synthetic <cite>baseload</cite> data for this month with 15-minute resolution, so <cite>resolution=”15m”</cite>
+If you print <cite>charge_dict</cite>, then you should get the following:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s1">&#39;electric_customer_0_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">666.65</span><span class="p">]),</span>
+    <span class="s1">&#39;electric_energy_0_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_1_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_2_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_3_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_4_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_5_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.0254538</span><span class="p">,</span> <span class="mf">0.0254538</span><span class="p">,</span> <span class="mf">0.0254538</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span> <span class="p">,</span> <span class="mf">0.</span> <span class="p">,</span> <span class="mf">0.</span> <span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_6_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_7_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_8_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_9_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_10_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_11_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_12_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_13_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_14_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_15_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span> <span class="p">,</span> <span class="mf">0.</span> <span class="p">,</span> <span class="mf">0.</span> <span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.0254538</span><span class="p">,</span> <span class="mf">0.0254538</span><span class="p">,</span> <span class="mf">0.0254538</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_energy_16_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_demand_0_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">19.79</span><span class="p">,</span> <span class="mf">19.79</span><span class="p">,</span> <span class="mf">19.79</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span>  <span class="mf">0.</span>  <span class="p">,</span>  <span class="mf">0.</span>  <span class="p">,</span>  <span class="mf">0.</span>  <span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_demand_1_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_demand_2_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,)),</span>
+    <span class="s1">&#39;electric_demand_3_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span> <span class="mf">0.</span>  <span class="p">,</span>  <span class="mf">0.</span>  <span class="p">,</span>  <span class="mf">0.</span>  <span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">19.79</span><span class="p">,</span> <span class="mf">19.79</span><span class="p">,</span> <span class="mf">19.79</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2976</span><span class="p">,))</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Configure an optimization model of the electricity consumer with system constraints</p></li>
+</ol>
+<p>We rely on the virtual battery model in <a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py">pyomo_battery_model.py</a>.
+We’re going to stick to the electricity cost calculation details, but we encourage you to go check out the code to better understand the model.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define the parameters for the battery model</span>
+<span class="n">battery_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;start_date&quot;</span><span class="p">:</span> <span class="s2">&quot;2022-07-01 00:00:00&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;end_date&quot;</span><span class="p">:</span> <span class="s2">&quot;2022-08-01 00:00:00&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timestep&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span>   <span class="c1"># 15 minutes defined in hours</span>
+    <span class="s2">&quot;rte&quot;</span><span class="p">:</span> <span class="mf">0.86</span><span class="p">,</span>
+    <span class="s2">&quot;energycapacity&quot;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+    <span class="s2">&quot;powercapacity&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="s2">&quot;soc_min&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="s2">&quot;soc_max&quot;</span><span class="p">:</span> <span class="mf">0.95</span><span class="p">,</span>
+    <span class="s2">&quot;soc_init&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># Create a sample baseload profile based on a sine wave</span>
+<span class="n">baseload</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">96</span><span class="p">))</span><span class="o">*</span><span class="mi">100</span> <span class="o">+</span> <span class="mi">1000</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">96</span><span class="p">)</span>
+<span class="c1"># baseload = np.random.normal(1000, 20, size=96)</span>
+
+<span class="c1"># Create an instance of the BatteryOpt class</span>
+<span class="n">battery</span> <span class="o">=</span> <span class="n">BatteryPyomo</span><span class="p">(</span><span class="n">battery_params</span><span class="p">,</span> <span class="n">baseload</span><span class="p">,</span> <span class="n">baseload_repeat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># create the model on the instance battery</span>
+<span class="n">battery</span><span class="o">.</span><span class="n">create_model</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The above code initializes the battery model with flexibility metrics like round-trip efficiency (RTE),
+power capacity, and energy capacity.</p>
+<ol class="arabic simple" start="3">
+<li><p>Create an objective function of electricity costs based on this tariff sheet</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># monthly total consumption - divided by 4 because of 15-min resolution</span>
+<span class="n">consumption_estimate</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">baseload</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+<span class="c1"># this example tariff only has electric utility types so we do not pass the gas key</span>
+<span class="n">consumption_data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">net_facility_load</span><span class="p">}</span>
+<span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">electricity_cost</span><span class="p">,</span> <span class="n">battery</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="n">consumption_data_dict</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># create an attribute objective based on the electricity cost</span>
+<span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objective</span> <span class="o">=</span> <span class="n">Objective</span><span class="p">(</span>
+    <span class="n">expr</span><span class="o">=</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">electricity_cost</span><span class="p">,</span>
+    <span class="n">sense</span><span class="o">=</span><span class="n">minimize</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Minimize the electriciy costs of this consumer given the system constraints and base load consumption</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># use the glpk solver to solve the model - (any pyomo-supported LP solver will work here)</span>
+<span class="n">solver</span> <span class="o">=</span> <span class="n">SolverFactory</span><span class="p">(</span><span class="s2">&quot;glpk&quot;</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">tee</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># turn tee=True to see solver output</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>Display the results to validate that the optimization is correct</p></li>
+</ol>
+<p>Always compute the ex-post cost using numpy due to the convex relaxations that we apply in our optimization code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># retrieve outputs from Pyomo model</span>
+<span class="n">net_load</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">net_facility_load</span><span class="p">[</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">])</span>
+<span class="n">baseload</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">baseload</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">])</span>
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">baseline_electricity_cost</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">baseload</span><span class="p">},</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">optimized_electricity_cost</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">net_load</span><span class="p">},</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that the <cite>consumption_estimate</cite> optional argument is not needed because the electricity consumption is a numpy array instead of an optimization variable.
+If we print our results, we confirm that the optimal electricity profile has a bill of
+$113384.23, $2182.47 less than the baseline bill of $115566.70.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="go">&gt;&gt;&gt;print(f&quot;Baseline Electricity Cost: ${baseline_electricity_cost:.2f}&quot;)</span>
+<span class="go">Baseline Electricity Cost: $115566.70</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Optimized Electricity Cost: ${optimized_electricity_cost:.2f}&quot;)</span>
+<span class="go">Optimized Electricity Cost: $113384.23</span>
+</pre></div>
+</div>
+<p>Below are a few simple plots to validate our results.</p>
+<p>First, we visualize the energy and demand charges:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># this can also be done in a dataframe format that drops all the unnecessary columns</span>
+<span class="n">charge_df</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_df</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">battery</span><span class="o">.</span><span class="n">end_dt</span><span class="p">,</span> <span class="n">tariff_df</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">)</span>
+<span class="n">charge_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+
+<span class="c1"># create a subset of the charge_df for energy and demand charges</span>
+<span class="n">energy_charge_df</span> <span class="o">=</span> <span class="n">charge_df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">like</span><span class="o">=</span><span class="s2">&quot;energy&quot;</span><span class="p">)</span>
+<span class="n">demand_charge_df</span> <span class="o">=</span> <span class="n">charge_df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">like</span><span class="o">=</span><span class="s2">&quot;demand&quot;</span><span class="p">)</span>
+
+<span class="c1"># sum across all energy charges</span>
+<span class="n">total_energy_charge</span> <span class="o">=</span> <span class="n">energy_charge_df</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+<span class="c1"># plot the energy charges</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">total_energy_charge</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;DateTime&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Energy Charge ($/kWh)&quot;</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">battery</span><span class="o">.</span><span class="n">end_dt</span><span class="p">))</span>
+
+<span class="c1"># plot the demand charges</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">demand_charge_df</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;DateTime&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Demand Charge ($/kWh)&quot;</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">battery</span><span class="o">.</span><span class="n">end_dt</span><span class="p">),</span> <span class="n">ylim</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="kc">None</span><span class="p">])</span>
+
+<span class="n">fig</span><span class="o">.</span><span class="n">align_ylabels</span><span class="p">()</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Electricity Charges&quot;</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">1.02</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<figure class="align-default" id="id5">
+<img alt="_images/pyo-tariff-structure.png" src="_images/pyo-tariff-structure.png" />
+<figcaption>
+<p><span class="caption-text">Structure of time-of-use (TOU) energy and demand charges for our modeling period (July 2022).</span><a class="headerlink" href="#id5" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+<p>Next, we plot the baseline and optimal electricity consumption profiles.
+This helps us to visualize how the model responds to the cost incentives of the tariff.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># plot the model outputs</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">net_load</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;C0&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Net Load&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">baseload</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Baseload&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;DateTime&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Power (kW)&quot;</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">battery</span><span class="o">.</span><span class="n">end_dt</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+<figure class="align-default" id="id6">
+<img alt="_images/pyo-model-out.png" src="_images/pyo-model-out.png" />
+<figcaption>
+<p><span class="caption-text">Output of our electricity bill optimization using the virtual battery model.
+The dotted line is baseline electricity purchases, and the blue line is the optimized profile.
+Note how the optimized electricity profile shaves peaks to readuce time-of-use (TOU) charges</span><a class="headerlink" href="#id6" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+<p>Finally, let’s plot the battery state of charge (SOC) to confirm that the constraints were respected:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># plot the battery charge</span>
+<span class="n">battery_charge</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">soc</span><span class="p">[</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">])</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">battery_charge</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;C1&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Battery SOC&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Time&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Battery SOC&quot;</span><span class="p">,</span> <span class="n">ylim</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">battery</span><span class="o">.</span><span class="n">end_dt</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+<figure class="align-default" id="id7">
+<img alt="_images/pyo-battery-soc.png" src="_images/pyo-battery-soc.png" />
+<figcaption>
+<p><span class="caption-text">Battery state of charge (SOC) as a percentage during our modeling period (July 2022).</span><a class="headerlink" href="#id7" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="LICENSE.html" class="btn btn-neutral float-left" title="MIT License" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="optimize_emit.html" class="btn btn-neutral float-right" title="Optimize Scope 2 Emissions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3 Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

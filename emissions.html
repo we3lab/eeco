@@ -22,7 +22,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="units" href="units.html" />
+    <link rel="next" title="metrics" href="metrics.html" />
     <link rel="prev" title="costs" href="costs.html" /> 
 </head>
 
@@ -47,12 +47,29 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">README</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contribution Agreement</a></li>
-<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">LICENSE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_advanced.html">Why Do the Advanced Features Exist?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">MIT License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_metrics.html">Flexibility Metrics as Constraints</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_advanced.html">How to Use Advanced Features</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Code</span></p>
 <ul class="current">
@@ -63,6 +80,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.emissions.get_carbon_intensity"><code class="docutils literal notranslate"><span class="pre">get_carbon_intensity()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
 </ul>
@@ -154,13 +172,33 @@ carbon intensity of electricity generation structure as a DataFrame.</p>
 <dt class="sig sig-object py" id="electric_emission_cost.emissions.get_carbon_intensity">
 <span class="sig-prename descclassname"><span class="pre">electric_emission_cost.emissions.</span></span><span class="sig-name descname"><span class="pre">get_carbon_intensity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissions_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissions_units=&lt;Unit('kilogram</span> <span class="pre">/</span> <span class="pre">megawatt_hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ei_varname='co2_eq_kg_per_MWh'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/emissions.html#get_carbon_intensity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.emissions.get_carbon_intensity" title="Permalink to this definition"></a></dt>
 <dd><p>Computes the emissions (as kilograms of CO2) of a horizon of data</p>
-<dl class="field-list simple">
+<dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
+<dd class="field-odd"><ul>
 <li><p><strong>start_dt</strong> (<em>datetime.datetime or numpy.datetime64</em>) – Start datetime to gather rate information</p></li>
 <li><p><strong>end_dt</strong> (<em>datetime.datetime or numpy.datetime64</em>) – End datetime to gather rate information</p></li>
 <li><p><strong>emissions_data</strong> (<em>DataFrame</em>) – Electric grid emissions information.
-Only one of <cite>datetime_local</cite> and <cite>month</cite>/<cite>day</cite>/<cite>hour</cite> are required.</p></li>
+Only one of <cite>datetime_local</cite> and <cite>month</cite>/<cite>day</cite>/<cite>hour</cite> are required.</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>datetime_local</p></td>
+<td><p>local datetime to estimate the marginal emissions</p></td>
+</tr>
+<tr class="row-even"><td><p>month</p></td>
+<td><p>month for which the emissions data was averaged</p></td>
+</tr>
+<tr class="row-odd"><td><p>day</p></td>
+<td><p>day for which the emissions data was averaged</p></td>
+</tr>
+<tr class="row-even"><td><p>hour</p></td>
+<td><p>hour for which the emissions data was averaged</p></td>
+</tr>
+<tr class="row-odd"><td><p>co2_eq_kg_per_MWh</p></td>
+<td><p>emissions in kg of CO2 per MWh of grid electricity</p></td>
+</tr>
+</tbody>
+</table>
+</li>
 <li><p><strong>emissions_units</strong> (<em>pint.Unit</em>) – Units for the emissions data. Default is kg / MWh</p></li>
 <li><p><strong>resolution</strong> (<em>str</em>) – a string of the form <cite>[int][str]</cite> giving the temporal resolution
 on which charges are assessed. The <cite>str</cite> portion corresponds to numpy
@@ -184,7 +222,7 @@ that are applied to 15-minute intervals of electricity consumption</p></li>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="costs.html" class="btn btn-neutral float-left" title="costs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="units.html" class="btn btn-neutral float-right" title="units" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="metrics.html" class="btn btn-neutral float-right" title="metrics" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

@@ -46,17 +46,35 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">README</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Table of Contents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contribution Agreement</a></li>
-<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">LICENSE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_advanced.html">Why Do the Advanced Features Exist?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">MIT License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_metrics.html">Flexibility Metrics as Constraints</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_advanced.html">How to Use Advanced Features</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Code</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
 </ul>
@@ -88,15 +106,8 @@
   <nav class="contents" id="contents" role="doc-toc">
 <p class="topic-title">Contents</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="#welcome-to-the-electric-emissions-cost-eec-documentation" id="id1">Welcome to the Electric Emissions &amp; Cost (EEC) documentation!</a></p>
-<ul>
-<li><p><a class="reference internal" href="#electric-emission-cost-eec" id="id2">Electric Emission &amp; Cost (EEC)</a></p></li>
-</ul>
-</li>
-<li><p><a class="reference internal" href="#useful-commands" id="id3">Useful Commands</a></p></li>
-<li><p><a class="reference internal" href="#documentation" id="id4">Documentation</a></p></li>
-<li><p><a class="reference internal" href="#legal-documents" id="id5">Legal Documents</a></p></li>
-<li><p><a class="reference internal" href="#indices-and-tables" id="id6">Indices and tables</a></p></li>
+<li><p><a class="reference internal" href="#welcome-to-the-electric-emissions-cost-eec-documentation" id="id1">Welcome to the Electric Emissions &amp; Cost (EEC) documentation!</a></p></li>
+<li><p><a class="reference internal" href="#indices-and-tables" id="id2">Indices and tables</a></p></li>
 </ul>
 </nav>
 <section id="welcome-to-the-electric-emissions-cost-eec-documentation">
@@ -104,12 +115,33 @@
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">README</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Table of Contents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contribution Agreement</a></li>
-<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">LICENSE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_advanced.html">Why Do the Advanced Features Exist?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">MIT License</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_metrics.html">Flexibility Metrics as Constraints</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_advanced.html">How to Use Advanced Features</a></li>
 </ul>
 </div>
 <div class="toctree-wrapper compound">
@@ -117,68 +149,14 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
 </ul>
 </div>
-<section id="electric-emission-cost-eec">
-<h2><a class="toc-backref" href="#id2" role="doc-backlink">Electric Emission &amp; Cost (EEC)</a><a class="headerlink" href="#electric-emission-cost-eec" title="Permalink to this heading"></a></h2>
-<a class="reference external image-reference" href="https://github.com/we3lab/electric-emission-cost/actions"><img alt="Build Status" height="30" src="https://github.com/we3lab/electric-emission-cost/workflows/Build%20Main/badge.svg" /></a>
-<a class="reference external image-reference" href="https://we3lab.github.io/electric-emission-cost"><img alt="Documentation" height="30" src="https://github.com/we3lab/electric-emission-cost/workflows/Documentation/badge.svg" /></a>
-<a class="reference external image-reference" href="https://codecov.io/gh/we3lab/electric-emission-cost"><img alt="Code Coverage" height="30" src="https://codecov.io/gh/we3lab/electric-emission-cost/branch/main/graph/badge.svg" /></a>
-<p>A package for calculating electricity-related emissions and costs for optimization problem formulation and other computational analyses.</p>
-</section>
-</section>
-<section id="useful-commands">
-<h1><a class="toc-backref" href="#id3" role="doc-backlink">Useful Commands</a><a class="headerlink" href="#useful-commands" title="Permalink to this heading"></a></h1>
-<ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">.</span></code></p></li>
-</ol>
-<blockquote>
-<div><p>This will install your package in editable mode.</p>
-</div></blockquote>
-<ol class="arabic simple" start="2">
-<li><p><code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">electric_emission_cost/tests</span> <span class="pre">--cov=electric_emission_cost</span> <span class="pre">--cov-report=html</span></code></p></li>
-</ol>
-<blockquote>
-<div><p>Produces an HTML test coverage report for the entire project which can
-be found at <code class="docutils literal notranslate"><span class="pre">htmlcov/index.html</span></code>.</p>
-</div></blockquote>
-<ol class="arabic simple" start="3">
-<li><p><code class="docutils literal notranslate"><span class="pre">docs/make</span> <span class="pre">html</span></code></p></li>
-</ol>
-<blockquote>
-<div><p>This will generate an HTML version of the documentation which can be found
-at <code class="docutils literal notranslate"><span class="pre">_build/html/index.html</span></code>.</p>
-</div></blockquote>
-<ol class="arabic simple" start="4">
-<li><p><code class="docutils literal notranslate"><span class="pre">flake8</span> <span class="pre">electric_emission_cost</span> <span class="pre">--count</span> <span class="pre">--verbose</span> <span class="pre">--show-source</span> <span class="pre">--statistics</span></code></p></li>
-</ol>
-<blockquote>
-<div><p>This will lint the code and share all the style errors it finds.</p>
-</div></blockquote>
-<ol class="arabic simple" start="5">
-<li><p><code class="docutils literal notranslate"><span class="pre">black</span> <span class="pre">electric_emission_cost</span></code></p></li>
-</ol>
-<blockquote>
-<div><p>This will reformat the code according to strict style guidelines.</p>
-</div></blockquote>
-</section>
-<section id="documentation">
-<h1><a class="toc-backref" href="#id4" role="doc-backlink">Documentation</a><a class="headerlink" href="#documentation" title="Permalink to this heading"></a></h1>
-<p>The documentation for this package is hosted on <a class="reference external" href="https://we3lab.github.io/electric-emission-cost">GitHub Pages</a>.</p>
-</section>
-<section id="legal-documents">
-<h1><a class="toc-backref" href="#id5" role="doc-backlink">Legal Documents</a><a class="headerlink" href="#legal-documents" title="Permalink to this heading"></a></h1>
-<p>This work was funded by the National Alliance for Water Innovation (NAWI, grant number UBJQH - MSM), the Office of Energy Efficiency and Renewable Energy (EERE, grant number 0009499 - MSM), and the Office of Energy Efficiency and Renewable Energy, Advanced Manufacturing Office (grant number DE-EE0009499).
-The views and opinions of authors expressed herein do not necessarily state or reflect those of the United States Government or any agency thereof. Neither the United States Government nor any agency thereof, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, apparatus, product, or process disclosed, or represents that its use would not infringe privately owned rights.</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/LICENSE/">LICENSE</a></p></li>
-<li><p><a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/CONTRIBUTING.rst/">CONTRIBUTING</a></p></li>
-</ul>
 </section>
 <section id="indices-and-tables">
-<h1><a class="toc-backref" href="#id6" role="doc-backlink">Indices and tables</a><a class="headerlink" href="#indices-and-tables" title="Permalink to this heading"></a></h1>
+<h1><a class="toc-backref" href="#id2" role="doc-backlink">Indices and tables</a><a class="headerlink" href="#indices-and-tables" title="Permalink to this heading"></a></h1>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>

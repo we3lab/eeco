@@ -22,7 +22,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Data Formats" href="data_format.html" />
+    <link rel="next" title="What is the Purpose of this Package?" href="purpose.html" />
     <link rel="prev" title="Welcome to the Electric Emissions &amp; Cost (EEC) documentation!" href="index.html" /> 
 </head>
 
@@ -47,22 +47,40 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="index.html">README</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#installing-electric-emissions-costs-eec">Installing Electric Emissions &amp; Costs (EEC)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#core-functionality">Core Functionality</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#sample-model-battery-optimization">Sample Model: Battery Optimization</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contribution Agreement</a></li>
-<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">LICENSE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_advanced.html">Why Do the Advanced Features Exist?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">MIT License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_metrics.html">Flexibility Metrics as Constraints</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_advanced.html">How to Use Advanced Features</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Code</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
 </ul>
@@ -114,10 +132,11 @@
 </section>
 <section id="core-functionality">
 <h2><a class="toc-backref" href="#id3" role="doc-backlink">Core Functionality</a><a class="headerlink" href="#core-functionality" title="Permalink to this heading"></a></h2>
-<p>The EEC package has two main functions:</p>
+<p>The EEC package has three main functions:</p>
 <ol class="arabic simple">
 <li><p>calculate the electricity bill of a facility given a tariff and user consumption data.</p></li>
 <li><p>calculate the Scope 2 emissions implications given grid emissions and user consumption data.</p></li>
+<li><p>incorporate flexibility metrics (e.g., round-trip efficiency) as a constraint or objective.</p></li>
 </ol>
 <p>These functions can be performed in three different modes:</p>
 <ol class="arabic simple">
@@ -125,7 +144,7 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">CVXPY</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Pyomo</span></code></p></li>
 </ol>
-<p>More information about how to correctly format data inputs can be found in <a class="reference internal" href="data_format.html#dataformat"><span class="std std-ref">Data Formats</span></a>.</p>
+<p>More information about how to correctly format data inputs can be found in <a class="reference internal" href="data_format.html#data-format"><span class="std std-ref">How to Format Data</span></a>.</p>
 </section>
 <section id="sample-model-battery-optimization">
 <span id="batteryoptimization"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">Sample Model: Battery Optimization</a><a class="headerlink" href="#sample-model-battery-optimization" title="Permalink to this heading"></a></h2>
@@ -146,7 +165,7 @@ This example is not intended to be a comprehensive model of battery dynamics, bu
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="index.html" class="btn btn-neutral float-left" title="Welcome to the Electric Emissions &amp; Cost (EEC) documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="data_format.html" class="btn btn-neutral float-right" title="Data Formats" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="purpose.html" class="btn btn-neutral float-right" title="What is the Purpose of this Package?" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

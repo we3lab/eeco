@@ -44,17 +44,35 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../index.html">README</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Table of Contents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../hello.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../data_format.html">Data Formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../advanced.html">Advanced Features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING.html">Contribution Agreement</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../LICENSE.html">LICENSE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../why_metrics.html">Why Use Flexibility Metrics?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../why_advanced.html">Why Do the Advanced Features Exist?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../LICENSE.html">MIT License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../optimize_cost.html">Optimize Electricity Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../optimize_emit.html">Optimize Scope 2 Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cooptimize.html">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorial_metrics.html">Flexibility Metrics as Constraints</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../data_format.html">How to Format Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../how_to_metrics.html">How to Use Flexibility Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../how_to_advanced.html">How to Use Advanced Features</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Code</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../costs.html">costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../metrics.html">metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../units.html">units</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../utils.html">utils</a></li>
 </ul>
@@ -108,7 +126,7 @@
 <span class="sd">        `weekday_start`, `weekday_end`, `hour_start`, `hour_end`, and `charge`</span>
 
 <span class="sd">    datetime : pandas.DataFrame, pandas.Series, or numpy.ndarray</span>
-<span class="sd">        If a pandas Series, it must be of type datetime</span>
+<span class="sd">        If a pandas Series, it must be of type datetime.</span>
 <span class="sd">        If a DataFrame it must have a column &quot;DateTime&quot; and row for each timestep</span>
 
 <span class="sd">    effective_start_date : datetime.datetime</span>
@@ -166,7 +184,7 @@
 
 
 <div class="viewcode-block" id="add_to_charge_array"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.add_to_charge_array">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">add_to_charge_array</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add to an existing charge array, or an arrya of all zeros if this charge</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add to an existing charge array, or an array of all zeros if this charge</span>
 <span class="sd">    array does not exist.</span>
 
 <span class="sd">    This functionality is useful for noncontiguous charges that should be saved</span>
@@ -470,6 +488,42 @@
     <span class="c1"># remove all zero columns</span>
     <span class="n">charge_df</span> <span class="o">=</span> <span class="n">charge_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">(</span><span class="n">charge_df</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)]</span>
     <span class="k">return</span> <span class="n">charge_df</span></div>
+
+
+<div class="viewcode-block" id="default_varstr_alias_func"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.default_varstr_alias_func">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">default_varstr_alias_func</span><span class="p">(</span>
+    <span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">charge_limit</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Default function for creating the variable name strings for each charge</span>
+<span class="sd">    in the tariff sheet. Can be overwritten in the function call to `calculate_cost`</span>
+<span class="sd">    to customize variable names.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    utility : str</span>
+<span class="sd">        Name of the utility (&#39;electric&#39; or &#39;gas&#39;)</span>
+
+<span class="sd">    charge_type : str</span>
+<span class="sd">        Name of the `charge_type` (&#39;demand&#39;, &#39;energy&#39;, or &#39;customer&#39;)</span>
+
+<span class="sd">    name : str</span>
+<span class="sd">        The name of the period for this charge (e.g., &#39;all-day&#39; or &#39;on-peak&#39;)</span>
+
+<span class="sd">    start_date</span>
+<span class="sd">        The inclusive start date for this charge</span>
+
+<span class="sd">    end_date : str</span>
+<span class="sd">        The exclusive end date for this charge</span>
+
+<span class="sd">    charge_limit : str</span>
+<span class="sd">        The consumption limit for this tier of charges converted to a string</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        Variable name of the form</span>
+<span class="sd">        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_limit</span><span class="si">}</span><span class="s2">&quot;</span></div>
 
 
 <div class="viewcode-block" id="get_next_limit"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_next_limit">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_next_limit</span><span class="p">(</span><span class="n">key_substr</span><span class="p">,</span> <span class="n">current_limit</span><span class="p">,</span> <span class="n">keys</span><span class="p">):</span>
@@ -866,7 +920,7 @@
     <span class="n">desired_charge_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">demand_scale_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">varstr_alias_func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">default_varstr_alias_func</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the cost of given charges (demand or energy) for the given</span>
 <span class="sd">    billing rate structure, utility, and consumption information as a</span>
@@ -906,8 +960,8 @@
 <span class="sd">    consumption_estimate : float</span>
 <span class="sd">        Estimate of the total monthly demand or energy consumption from baseline data.</span>
 <span class="sd">        Only used when `consumption_data` is cvxpy.Expression for convex relaxation</span>
-<span class="sd">         of tiered charges, while numpy.ndarray `consumption_data` will use actual</span>
-<span class="sd">         consumption and ignore the estimate.</span>
+<span class="sd">        of tiered charges, while numpy.ndarray `consumption_data` will use actual</span>
+<span class="sd">        consumption and ignore the estimate.</span>
 
 <span class="sd">    desired_charge_type : str</span>
 <span class="sd">        Name of desired charge type for itemized costs.</span>
@@ -932,6 +986,7 @@
 <span class="sd">        Function to generate variable name for pyomo,</span>
 <span class="sd">        should take in a 6 inputs and generate a string output.</span>
 <span class="sd">        The function will receive following six inputs:</span>
+
 <span class="sd">        - utility: str</span>
 <span class="sd">        - charge_type: str</span>
 <span class="sd">        - name: str</span>
@@ -945,7 +1000,6 @@
 <span class="sd">            start_date, end_date,</span>
 <span class="sd">            charge_limit:</span>
 <span class="sd">            f&quot;{utility}_{charge_type}_{name}_{charge_limit}&quot;</span>
-
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -962,14 +1016,6 @@
     <span class="n">cost</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">n_per_hour</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">60</span> <span class="o">/</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">))</span>
     <span class="n">n_per_day</span> <span class="o">=</span> <span class="n">n_per_hour</span> <span class="o">*</span> <span class="mi">24</span>
-    <span class="k">if</span> <span class="n">varstr_alias_func</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-
-        <span class="k">def</span><span class="w"> </span><span class="nf">varstr_alias_func</span><span class="p">(</span>
-            <span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">charge_limit</span>
-        <span class="p">):</span>
-            <span class="k">return</span> <span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_limit</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
 
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">charge_array</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">,</span> <span class="n">limit_str</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What Makes Electricity Tariffs so Complex? &mdash; EEC 0.0.3 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Why Use Flexibility Metrics?" href="why_metrics.html" />
+    <link rel="prev" title="What is the Purpose of this Package?" href="purpose.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            EEC
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">What Makes Electricity Tariffs so Complex?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#categorizing-electricity-tariffs">Categorizing Electricity Tariffs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#temporality">Temporality</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bundling">Bundling</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_advanced.html">Why Do the Advanced Features Exist?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">MIT License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_metrics.html">Flexibility Metrics as Constraints</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_advanced.html">How to Use Advanced Features</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">EEC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">What Makes Electricity Tariffs so Complex?</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/complexities.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <nav class="contents" id="contents" role="doc-toc">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#what-makes-electricity-tariffs-so-complex" id="id2">What Makes Electricity Tariffs so Complex?</a></p>
+<ul>
+<li><p><a class="reference internal" href="#categorizing-electricity-tariffs" id="id3">Categorizing Electricity Tariffs</a></p>
+<ul>
+<li><p><a class="reference internal" href="#temporality" id="id4">Temporality</a></p></li>
+<li><p><a class="reference internal" href="#bundling" id="id5">Bundling</a></p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+<section id="what-makes-electricity-tariffs-so-complex">
+<span id="complexities"></span><h1><a class="toc-backref" href="#id2" role="doc-backlink">What Makes Electricity Tariffs so Complex?</a><a class="headerlink" href="#what-makes-electricity-tariffs-so-complex" title="Permalink to this heading"></a></h1>
+<p>To quote our paper, “Electricity and natural gas tariffs at United States wastewater treatment plants” [<a class="reference external" href="https://doi.org/10.1038/s41597-023-02886-6">Chapin 𝑁𝑎𝑡. 𝑆𝑐𝑖. 𝐷𝑎𝑡𝑎 (2024)</a>]:</p>
+<blockquote>
+<div><p>Tariffs typically have three components:
+(1) customer charges, or monthly minimum payments regardless of quantity of energy delivered,
+which vary by type of customer (e.g., residential, commercial);
+(2) energy charges billed by energy consumption in kWh or therms for electricity and natural gas, respectively; and
+(3) demand charges billed by monthly maximum electricity or natural gas usage in kW and therms/hr, respectively, and averaged over 5-15 minute increments.
+A therm is defined as 105.5 MJ, or the heat content of 100 cubic feet of methane at standard temperature and pressure.
+More complex tariffs may also have tiered energy and demand charges based on cumulative monthly demand, seasonal (i.e., monthly) and
+time-of-use (i.e., daily and/or hourly) variation in marginal energy and demand charges, and bundled or decoupled generation and delivery charges.</p>
+<p>Within each component of the tariff, there is tremendous variability across both the underlying tariff structure
+and the charge per unit of energy delivered. As alluded to above,
+some utilities establish tariffs with flat rate energy and demand charges,
+where the price of energy is constant throughout the day.
+Other utilities establish tariffs with a time-of-use (TOU) component,
+where a peak hour surcharge is applied to each kWh (or therm) of energy delivered and kW (or therm/hr) of demand.
+TOU periods can vary from weekend to weekday in addition to hour-to-hour.
+Prices may also change seasonally (i.e., month-to-month) based on climate,
+with the highest prices depending on whether heating or air conditioning drive the maximum load on the grid.
+Finally, prices often vary based on total monthly consumption.
+For example, Con Edison charges almost $33/therm for the first 3 therms delivered and less than $1/therm thereafter.</p>
+</div></blockquote>
+<p>Demand charges are particularly problematic for optimization problems since taking a maximum is not a matrix operation.
+Tiered charges provide another challenge since assumptions will have to be made about what tier a customer will fall into before the optimization problem is solved,
+but that assumption could be influenced by the results of the optimization problem (<a class="reference internal" href="why_advanced.html#why-consumption-est"><span class="std std-ref">What Is the Purpose of consumption_estimate?</span></a>).</p>
+<p>We standardized a machine-readable format for storing tariff data that address the complexities of tarrif structure found across the United States (<a class="reference internal" href="data_format.html#data-format"><span class="std std-ref">How to Format Data</span></a>).</p>
+<section id="categorizing-electricity-tariffs">
+<span id="categorize-tariffs"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">Categorizing Electricity Tariffs</a><a class="headerlink" href="#categorizing-electricity-tariffs" title="Permalink to this heading"></a></h2>
+<p>We also developed a categorization for the wide range of tariff structures present nationwide.
+To summarize their attributes, we descriptively categorized tariffs on two dimensions:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>the hourly, daily, and monthly variability of energy and demand charges (“temporality”), and</p></li>
+<li><p>whether electric power generation and delivery charges are bundled (“bundling”).</p></li>
+</ol>
+</div></blockquote>
+<section id="temporality">
+<h3><a class="toc-backref" href="#id4" role="doc-backlink">Temporality</a><a class="headerlink" href="#temporality" title="Permalink to this heading"></a></h3>
+<p>We categorize monthly electricity energy and demand charges into Flat, Seasonal-TOU, Nonseasonal-TOU, or Seasonal-NonTOU charges:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>Flat Charges</strong>: Charges are constant throughout the year.</p></li>
+<li><p><strong>Seasonal-TOU Charges</strong>: Charges vary monthly (Seasonal) and daily and/or hourly (TOU).</p></li>
+<li><p><strong>Nonseasonal-TOU Charges</strong>: Charges are consistent from month to month, but vary daily and/or hourly.</p></li>
+<li><p><strong>Seasonal-NonTOU Charges</strong>: Charges vary monthly, but are constant from day to day and hour to hour.</p></li>
+</ul>
+</div></blockquote>
+<figure class="align-default" id="id1">
+<img alt="_images/categorize-tariff.png" src="_images/categorize-tariff.png" />
+<figcaption>
+<p><span class="caption-text">Representative flat, time-of-use (TOU), and seasonal price profiles.
+(a) Winter prices and (b) summer prices representing Flat, Seasonal-TOU, Nonseasonal-TOU, and Seasonal-NonTOU tariffs.
+Cost would be calculated in $/kW, $/(therm/hr), $/kWh, or $/therm for electricity demand charges, natural gas demand charges, electricity energy charges, and natural gas energy charges, respectively.
+A therm is defined as 105.5 MJ, or approximately the heat content of 100 cubic feet of natural gas.</span><a class="headerlink" href="#id1" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+<section id="bundling">
+<h3><a class="toc-backref" href="#id5" role="doc-backlink">Bundling</a><a class="headerlink" href="#bundling" title="Permalink to this heading"></a></h3>
+<p>In the United States, generation, transmission, and distribution charges are commonly bundled into a single electricity energy charge.
+However, in some cases facilities pay separate generation (or supply) and delivery (or transmission and distribution) charges to a single provider or to generation and delivery providers separately.
+For example, in much of the Texas interconnection, delivery and generation service providers are distinct.</p>
+<p>We developed a second categorization scheme for electricity tariffs based on the extent to which generation and delivery charges are bundled:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Class 1: Fully bundled generation (supply) and delivery (transmission and distribution) charges.</p></li>
+<li><p>Class 2: Bundled generation and delivery charges with fuel cost adjustment based on the market price of fossil fuels.</p></li>
+<li><p>Class 3: Generation and delivery service from the same provider with pre-defined charges.</p></li>
+<li><p>Class 4: Generation and delivery service from the same provider with pre-defined delivery charges and variable generation charges that reflect real-time or day-ahead electricity prices set by the live market.</p></li>
+<li><p>Class 5: Generation and delivery service providers are legally required to be separate, and delivery charges are directly negotiated between customers and utilities. As a result, delivery charges are not published in tariff books, but can be obtained through public information requests.</p></li>
+</ul>
+</div></blockquote>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="purpose.html" class="btn btn-neutral float-left" title="What is the Purpose of this Package?" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="why_metrics.html" class="btn btn-neutral float-right" title="Why Use Flexibility Metrics?" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3 Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
