@@ -466,6 +466,7 @@ def calculate_demand_cost(
     scale_factor : float
         Optional factor for scaling demand charges relative to energy charges
         when the optimization/simulation period is not a full billing cycle.
+        Applied to monthly charges where end_date - start_date > 1 day.
         Default is 1
 
     model : pyomo.Model
@@ -546,16 +547,15 @@ def calculate_demand_cost(
             "consumption_data must be of type numpy.ndarray or cvxpy.Expression"
         )
     if model is None:
-        result, _ = ut.max(demand_charged)
-        return ut.max_pos(result - prev_demand_cost) * scale_factor
+        max_var, _ = ut.max(demand_charged)
+        max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
+        return max_pos_val * scale_factor, max_pos_model
     else:
         max_var, model = ut.max(demand_charged, model=model, varstr=varstr + "_max")
-        return (
-            ut.max_pos(
-                max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
-            )
-            * scale_factor
+        max_pos_val, max_pos_model = ut.max_pos(
+            max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
         )
+        return max_pos_val * scale_factor, max_pos_model
 
 
 def calculate_energy_cost(
@@ -725,6 +725,49 @@ def calculate_export_revenues(
     return revenues / divisor, model
 
 
+def get_charge_array_duration(key):
+    """Parse a charge array key to determine the duration of the charge period.
+
+    Parameters
+    ----------
+    key : str
+        Charge key of form `utility_charge_type_name_start_date_end_date_charge_limit`
+        where start_date and end_date are in YYYYMMDD or YYYY-MM-DD format
+
+    Returns
+    -------
+    int
+        Duration of the charge period in days
+
+    Raises
+    ------
+    ValueError
+        If the key format is invalid or dates cannot be parsed
+    """
+    parts = key.split("_")
+    if len(parts) < 6:
+        raise ValueError(f"Invalid charge key format: {key}")
+
+    start_date_str = parts[-3]
+    end_date_str = parts[-2]
+
+    # Allow 2 date formats
+    date_formats = ["%Y%m%d", "%Y-%m-%d"]
+
+    for date_format in date_formats:
+        try:
+            start_date = dt.datetime.strptime(start_date_str, date_format)
+            end_date = dt.datetime.strptime(end_date_str, date_format)
+            return (end_date - start_date).days
+        except ValueError:
+            continue
+
+    raise ValueError(
+        f"Invalid date format in charge key {key}:"
+        f"cannot parse dates '{start_date_str}' and '{end_date_str}'"
+    )
+
+
 def calculate_cost(
     charge_dict,
     consumption_data_dict,
@@ -791,6 +834,7 @@ def calculate_cost(
     demand_scale_factor : float
         Optional factor for scaling demand charges relative to energy charges
         when the optimization/simulation period is not a full billing cycle.
+        Applied to monthly charges where end_date - start_date > 1 day.
         Default is 1
 
     model : pyomo.Model
@@ -857,6 +901,10 @@ def calculate_cost(
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
         consumption_data = consumption_data_dict[utility]
 
+        # Only apply demand_scale_factor if charge spans more than one day
+        charge_duration_days = get_charge_array_duration(key)
+        effective_scale_factor = demand_scale_factor if charge_duration_days > 1 else 1
+
         # TODO: this assumes units of kW for electricity and meters cubed for gas
         if utility == "electric":
             divisor = n_per_hour
@@ -880,7 +928,7 @@ def calculate_cost(
                 prev_demand=prev_demand,
                 prev_demand_cost=prev_demand_cost,
                 consumption_estimate=consumption_estimate,
-                scale_factor=demand_scale_factor,
+                scale_factor=effective_scale_factor,
                 model=model,
                 varstr=var_str,
             )
