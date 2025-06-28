@@ -1,18 +1,20 @@
 import os
 import datetime
+import numpy as np
 import cvxpy as cp
 import pandas as pd
+import matplotlib.pyplot as plt
 from electric_emission_cost import costs 
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # load tariff data
 path_to_tariffsheet = "electric_emission_cost/data/tariff.csv"
-rate_df = pd.read_csv(path_to_tariffsheet, sep=",")
+tariff_df = pd.read_csv(path_to_tariffsheet, sep=",")
    
 # get the charge dictionary
 charge_dict = costs.get_charge_dict(
-    datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11), rate_df, resolution="1m"
+    datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11), tariff_df, resolution="1m"
 )
 
 # load historical consumption data
@@ -83,3 +85,31 @@ optimized_electricity_cost, _ = costs.calculate_cost(
 
 print(f"Baseline Electricity Cost: ${baseline_electricity_cost:.2f}")
 print(f"Optimized Electricity Cost: ${optimized_electricity_cost:.2f}")
+
+# create a subset of the charge_df for energy and demand charges
+charge_df = costs.get_charge_df(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11), tariff_df, resolution="1m")
+charge_df.head()
+
+energy_charge_df = charge_df.filter(like="energy")
+demand_charge_df = charge_df.filter(like="demand")
+
+# sum across all energy charges
+total_energy_charge = energy_charge_df.sum(axis=1)
+
+# plot the model outputs
+fig, ax= plt.subplots()
+ax.step(charge_df["DateTime"], grid_demand_kW.value, color="C0", lw=2, label="Net Load")
+ax.step(charge_df["DateTime"], load_df["Load [kW]"].values, color="k", lw=1, ls='--', label="Baseload")
+ax.set(xlabel="DateTime", ylabel="Power (kW)", xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11)))
+plt.xticks(rotation=45)
+fig.tight_layout()
+plt.legend()
+plt.savefig("cvx-model-out.png")
+
+# plot the battery charge
+fig, ax = plt.subplots()
+ax.step(charge_df["DateTime"], battery_soc.value[1:], color="C1", lw=2, label="Battery SOC")
+ax.set(xlabel="Time", ylabel="Battery SOC", ylim=[0,1], xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11)))
+plt.xticks(rotation=45)
+fig.tight_layout()
+plt.savefig("cvx-battery-soc.png")

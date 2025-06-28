@@ -506,8 +506,8 @@ def test_create_charge_array(
     ],
 )
 def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
-    rate_df = pd.read_csv(billing_path)
-    result = costs.get_charge_dict(start_dt, end_dt, rate_df, resolution=resolution)
+    tariff_df = pd.read_csv(billing_path)
+    result = costs.get_charge_dict(start_dt, end_dt, tariff_df, resolution=resolution)
     assert result.keys() == expected.keys()
     for key, val in result.items():
         assert (result[key] == expected[key]).all()

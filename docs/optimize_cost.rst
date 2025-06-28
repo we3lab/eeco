@@ -44,11 +44,11 @@ CVXPY
 .. code-block:: python
    
     path_to_tariffsheet = "electric_emission_cost/data/tariff.csv"
-    rate_df = pd.read_csv(path_to_tariffsheet, sep=",")
+    tariff_df = pd.read_csv(path_to_tariffsheet, sep=",")
    
     # get the charge dictionary
     charge_dict = costs.get_charge_dict(
-        datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11), rate_df, resolution="1m"
+        datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11), tariff_df, resolution="1m"
     )
 
 We are going to evaluate the electricity consumption from only April 9th to April 10th since that is where our 
@@ -202,9 +202,88 @@ Below are a few simple plots to validate our results.
 
 First, we visualize the energy and demand charges:
 
+.. code-block:: python
 
+    # this can also be done in a dataframe format that drops all the unnecessary columns
+    charge_df = costs.get_charge_df(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11), tariff_df, resolution="1m")
+    charge_df.head()
+    
+    # create a subset of the charge_df for energy and demand charges
+    energy_charge_df = charge_df.filter(like="energy")
+    demand_charge_df = charge_df.filter(like="demand")
+
+    # sum across all energy charges
+    total_energy_charge = energy_charge_df.sum(axis=1)
+
+    fig, ax= plt.subplots(2, 1, figsize=(10, 8))
+    # plot the energy charges
+    ax[0].plot(charge_df["DateTime"], total_energy_charge)
+    ax[0].set(
+        xlabel="DateTime", 
+        ylabel="Energy Charge ($/kWh)", 
+        xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11))
+    )
+
+    # plot the demand charges
+    ax[1].plot(charge_df["DateTime"], demand_charge_df)
+    ax[1].set(
+        xlabel="DateTime", 
+        ylabel="Demand Charge ($/kWh)", 
+        xlim=(datetime.datetime(2023, 4, 9), 
+        datetime.datetime(2023, 4, 11)), 
+        ylim=[0,None]
+    )
+
+    fig.align_ylabels()
+    fig.tight_layout()
+    fig.suptitle("Electricity Charges",y=1.02, fontsize=16)
+    plt.show()
+
+.. figure:: _static/img/cvx-tariff-structure.png
+    
+    Structure of time-of-use (TOU) energy and demand charges for our modeling period (April 9-10, 2022).
+    Different colors indicate different demand charge periods.
+    Note that because April 9th is a Sunday, there are no TOU charges until Monday (April 10th).
+
+Next, we plot the baseline and optimal electricity consumption profiles.
+This helps us to visualize how the model responds to the cost incentives of the tariff.
+
+.. code-block:: python
+
+    # plot the model outputs
+    fig, ax= plt.subplots()
+    ax.step(charge_df["DateTime"], grid_demand_kW.value, color="C0", lw=2, label="Net Load")
+    ax.step(charge_df["DateTime"], load_df["Load [kW]"].values, color="k", lw=1, ls='--', label="Baseload")
+    ax.set(xlabel="DateTime", ylabel="Power (kW)", xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11)))
+    plt.xticks(rotation=45)
+    fig.tight_layout()
+    plt.legend()
+
+.. figure:: _static/img/cvx-model-out.png
+    
+    Output of our electricity bill optimization using the virtual battery model.
+    The dotted line is baseline electricity purchases, and the blue line is the optimized profile.
+    Note how the optimized electricity profile shaves peaks to readuce time-of-use (TOU) charges
 
 Finally, let's plot the battery state of charge (SOC) to confirm that the constraints were respected:
+
+.. code-block:: python
+
+    # plot the battery charge
+    fig, ax = plt.subplots()
+    ax.step(charge_df["DateTime"], battery_soc.value[1:], color="C1", lw=2, label="Battery SOC")
+    ax.set(
+        xlabel="Time", 
+        ylabel="Battery SOC", 
+        ylim=[0,1], 
+        xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11))
+    )
+    plt.xticks(rotation=45)
+    fig.tight_layout()
+
+.. figure:: _static/img/cvx-battery-soc.png
+    
+    Battery state of charge (SOC) as a percentage during our modeling period (April 9-10, 2022).
 
 .. _pyo-cost:
 
@@ -226,11 +305,11 @@ Pyomo
 .. code-block:: python
    
     path_to_tariffsheet = "electric_emission_cost/data/tariff.csv"
-    rate_df = pd.read_csv(path_to_tariffsheet, sep=",")
+    tariff_df = pd.read_csv(path_to_tariffsheet, sep=",")
    
     # get the charge dictionary
     charge_dict = costs.get_charge_dict(
-        datetime.datetime(2022, 7, 1), datetime.datetime(2022, 8, 1), rate_df, resolution="15m"
+        datetime.datetime(2022, 7, 1), datetime.datetime(2022, 8, 1), tariff_df, resolution="15m"
     )
 
 We are going to evaluate the electricity consumption for the entire month of July 2022.
@@ -370,8 +449,15 @@ First, we visualize the energy and demand charges:
 .. code-block:: python
 
     # this can also be done in a dataframe format that drops all the unnecessary columns
-    charge_df = costs.get_charge_df(battery.start_dt, battery.end_dt, rate_df)
+    charge_df = costs.get_charge_df(battery.start_dt, battery.end_dt, tariff_df, resolution="15m")
     charge_df.head()
+
+    # create a subset of the charge_df for energy and demand charges
+    energy_charge_df = charge_df.filter(like="energy")
+    demand_charge_df = charge_df.filter(like="demand")
+
+    # sum across all energy charges
+    total_energy_charge = energy_charge_df.sum(axis=1)
 
     fig, ax= plt.subplots(2, 1, figsize=(10, 8))
     # plot the energy charges
@@ -403,6 +489,7 @@ This helps us to visualize how the model responds to the cost incentives of the 
     ax.set(xlabel="DateTime", ylabel="Power (kW)", xlim=(battery.start_dt, battery.end_dt))
     plt.xticks(rotation=45)
     fig.tight_layout()
+    plt.legend()
 
 .. figure:: _static/img/pyo-model-out.png
     
