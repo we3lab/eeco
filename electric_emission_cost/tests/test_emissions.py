@@ -34,7 +34,6 @@ def test_calculate_grid_emissions(
     result = emissions.calculate_grid_emissions(
         emissions_data, consumption_df, net_demand_varname
     )
-    print(result.magnitude)
     assert result == expected
 
 
@@ -66,5 +65,4 @@ def test_get_carbon_intensity(
     result = emissions.get_carbon_intensity(
         start_dt, end_dt, emissions_df, resolution=resolution
     )
-    print(result)
     assert np.allclose(result.magnitude, expected["co2_eq_kg_per_kWh"].values)

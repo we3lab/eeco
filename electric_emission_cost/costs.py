@@ -933,7 +933,7 @@ def calculate_cost(
         charge_duration_days = get_charge_array_duration(key)
         effective_scale_factor = demand_scale_factor if charge_duration_days > 1 else 1
 
-        # TODO: this assumes units of kW for electricity and meters cubed for gas
+        # TODO: this assumes units of kW for electricity and meters cubed per day for gas
         if utility == "electric":
             divisor = n_per_hour
         elif utility == "gas":
@@ -992,11 +992,15 @@ def calculate_cost(
 
 def calculate_itemized_cost(
     charge_dict,
-    consumption_data,
+    consumption_data_dict,
     resolution="15m",
     prev_demand_dict=None,
+    prev_consumption_dict=None,
     consumption_estimate=0,
+    desired_utility=None,
+    demand_scale_factor=1,
     model=None,
+    varstr_alias_func=default_varstr_alias_func,
 ):
     """Calculates itemized costs as a nested dictionary
 
@@ -1009,19 +1013,39 @@ def calculate_itemized_cost(
         cubic meter / day (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
-    consumption_data : numpy.ndarray or cvxpy.Expression
-        Baseline electrical or gas usage data as an optimization variable object
+    consumption_data_dict : dict of numpy.ndarray or cvxpy.Expression
+        Baseline electrical and gas usage data as an optimization variable object
+        with keys "electric" and "gas"
 
     resolution : str
-        granularity of each timestep in string form with default value of "15m"
+        String of the form `[int][str]` giving the temporal resolution
+        on which charges are assessed, the `str` portion corresponds to
+        numpy.timedelta64 types for example '15m' specifying demand charges
+        that are applied to 15-minute intervals of electricity consumption
+    
+    prev_demand_dict : dict
+        Nested dictionary previous maximmum demand charges with an entry of the form
+        {"cost" : float, "demand" : float} for each charge.
+        Default is None, which results in an a prev_demand and prev_demand_cost
+        of zero for all charges.
 
-     prev_demand_dict : dict
-        Dictionary previous maximmum demand charges with a key for each charge.
-        Default is None, which results in an a prev_demand of zero for all charges.
+    prev_consumption_dict : dict
+        Dictionary of previous total energy consumption with a key for each charge
+        to be used when starting the cost calculation partway into a billing period
+        (e.g., while using a moving horizon that is shorter than a month).
+        Default is None, resulting in an a prev_consumption of zero for all charges.
 
     consumption_estimate : float
-        estimated total consumption up to this point in the bililng period to determine
-        correct tier based on charge limits
+        Estimate of the total monthly demand or energy consumption from baseline data.
+        Only used when `consumption_data` is cvxpy.Expression for convex relaxation
+        of tiered charges, while numpy.ndarray `consumption_data` will use actual
+        consumption and ignore the estimate.
+
+    demand_scale_factor : float
+        Optional factor for scaling demand charges relative to energy charges
+        when the optimization/simulation period is not a full billing cycle.
+        Applied to monthly charges where end_date - start_date > 1 day.
+        Default is 1
 
     model : pyomo.Model
         The model object associated with the problem.
@@ -1067,24 +1091,51 @@ def calculate_itemized_cost(
     """
     total_cost = 0
     results_dict = {}
-    for utility in ["electric", "gas"]:
-        results_dict[utility] = {}
+    if desired_utility is None:
+        for utility in ["electric", "gas"]:
+            results_dict[utility] = {}
+            total_utility_cost = 0
+            for charge_type in ["customer", "energy", "demand", "export"]:
+                cost, model = calculate_cost(
+                    charge_dict,
+                    consumption_data_dict,
+                    resolution=resolution,
+                    prev_demand_dict=prev_demand_dict,
+                    consumption_estimate=consumption_estimate,
+                    desired_utility=utility,
+                    desired_charge_type=charge_type,
+                    demand_scale_factor=demand_scale_factor,
+                    model=model,
+                    varstr_alias_func=varstr_alias_func
+                )
+
+                results_dict[utility][charge_type] = cost
+                total_utility_cost += cost
+
+            results_dict[utility]["total"] = total_utility_cost
+            total_cost += total_utility_cost
+    else:
+        results_dict[desired_utility] = {}
         total_utility_cost = 0
         for charge_type in ["customer", "energy", "demand", "export"]:
             cost, model = calculate_cost(
                 charge_dict,
-                consumption_data,
+                consumption_data_dict,
                 resolution=resolution,
                 prev_demand_dict=prev_demand_dict,
-                desired_utility=utility,
+                prev_consumption_dict=prev_consumption_dict,
+                consumption_estimate=consumption_estimate,
+                desired_utility=desired_utility,
                 desired_charge_type=charge_type,
+                demand_scale_factor=demand_scale_factor,
                 model=model,
+                varstr_alias_func=varstr_alias_func
             )
 
-            results_dict[utility][charge_type] = cost
+            results_dict[desired_utility][charge_type] = cost
             total_utility_cost += cost
 
-        results_dict[utility]["total"] = total_utility_cost
+        results_dict[desired_utility]["total"] = total_utility_cost
         total_cost += total_utility_cost
 
     results_dict["total"] = total_cost

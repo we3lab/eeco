@@ -31,7 +31,8 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
    :caption: How-to Guides
 
    data_format
-   how_to_calculate
+   how_to_cost
+   how_to_emit
    how_to_metrics
    how_to_advanced
 
