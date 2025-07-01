@@ -82,7 +82,6 @@ CVXPY
 
 .. code-block:: python
 
-    # this is synthetic consumption data, but a user could provide real historical meter data
     consumption_data_dict = {"electric": cp.Variable(num_timesteps), "gas": cp.Variable(num_timesteps)}
     total_monthly_bill, _ = costs.calculate_cost(
         charge_dict, consumption_data_dict, consumption_estimate=sum(np.ones(num_timesteps) * 100)
@@ -92,7 +91,6 @@ CVXPY
 
   You must use the `consumption_estimate` argument when using an optimization variable for consumption
   in order to determine the appropriate charge tier of the customer.
-
   For `numpy`, the charge tiers can be calculated directly from the data so the `consumption_estimate` is ignored.
 
 Note that we ignore the second value of the tuple returned by `calculate_cost`.
@@ -107,7 +105,6 @@ Pyomo
 
 .. code-block:: python
 
-    # this is synthetic consumption data, but a user could provide real historical meter data
     consumption_data_dict = {
         "electric": pyo.Var(range(num_timesteps), initialize=np.zeros(num_timesteps), bounds=(0, None))
         "gas": pyo.Var(range(num_timesteps), initialize=np.zeros(num_timesteps), bounds=(0, None))
@@ -119,12 +116,17 @@ Pyomo
 .. TIP::
 
   You must use the `consumption_estimate` argument when using an optimization variable for consumption
-  in order to determine the appropriate charge tier of the customer.
-
+  in order to determine the appropriate charge tier of the customer. 
   For `numpy`, the charge tiers can be calculated directly from the data so the `consumption_estimate` is ignored.
 
 We must pass in and retrieve the `Pyomo` model object for the eletricity bill to be calculated correctly.
 The tutorial on :ref:`pyo-cost` cost optimization has more examples of how to use the model object with the functions
+
+.. WARNING::
+
+  For the `Pyomo` code to work properly, we require the `model` object has an attribute `t` that is the range of the time period.
+  
+  We usually set `model.t = range(model.T)` where `model.T = len(consumption_data_dict["electric"])`.
 
 Specify Resolution
 ******************
