@@ -124,7 +124,7 @@ Pyomo
   For `numpy`, the charge tiers can be calculated directly from the data so the `consumption_estimate` is ignored.
 
 We must pass in and retrieve the `Pyomo` model object for the eletricity bill to be calculated correctly.
-The tutorial on :ref:`pyo-costs` cost optimization has more examples of how to use the model object with the functions
+The tutorial on :ref:`pyo-cost` cost optimization has more examples of how to use the model object with the functions
 
 Specify Resolution
 ******************
