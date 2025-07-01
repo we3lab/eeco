@@ -8,7 +8,7 @@ How to Calculate Costs
 
 The EEC package supports computing the electricity bill of a consumer with the following data:
 
-  - Consumption data: `numpy` array, `CVXPY` variable, or `Pyomo` parameter/variable
+  - Consumption data: `NumPy` array, `CVXPY` variable, or `Pyomo` parameter/variable
   - Tariff sheet: `Pandas` dataframe that can be loaded from our CSV format
 
 This how-to guide assumes that you have already loaded the tariff sheet into a `Pandas.DataFrame` called `tariff_df`.
@@ -53,7 +53,7 @@ Calculate Electricity Bill
 ==========================
 
 Next, we will calculate the cost for the given period (from `start_date` to `end_date`, *exclusively*). 
-We show an example in `numpy`, `CVXPY`, and `Pyomo` since the EEC package supports all three libraries.
+We show an example in `NumPy`, `CVXPY`, and `Pyomo` since the EEC package supports all three libraries.
 
 The below examples exclude some more advanced features available via optional arguments and flags, which are particularly useful for moving horizon optimization.
 :ref:`how-to-advanced` offers a more complete overview of those advanced features.
@@ -91,7 +91,7 @@ CVXPY
 
   You must use the `consumption_estimate` argument when using an optimization variable for consumption
   in order to determine the appropriate charge tier of the customer.
-  For `numpy`, the charge tiers can be calculated directly from the data so the `consumption_estimate` is ignored.
+  For `NumPy`, the charge tiers can be calculated directly from the data so the `consumption_estimate` is ignored.
 
 Note that we ignore the second value of the tuple returned by `calculate_cost`.
 This entry in the tuple is reserved for the `Pyomo` model object.
@@ -117,7 +117,7 @@ Pyomo
 
   You must use the `consumption_estimate` argument when using an optimization variable for consumption
   in order to determine the appropriate charge tier of the customer. 
-  For `numpy`, the charge tiers can be calculated directly from the data so the `consumption_estimate` is ignored.
+  For `NumPy`, the charge tiers can be calculated directly from the data so the `consumption_estimate` is ignored.
 
 We must pass in and retrieve the `Pyomo` model object for the eletricity bill to be calculated correctly.
 The tutorial on :ref:`pyo-cost` cost optimization has more examples of how to use the model object with the functions

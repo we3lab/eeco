@@ -14,8 +14,8 @@ How to Calculate Emissions
 This package is not designed to calculate Scope 2 emissions that are a complete timeseries.
 We feel that is simple enough that it does not warrant its own function.
 
-As an example, if you assume that `emission_arr` is a `numpy` array of Scope 2 emissions factors (in tons CO_2 / MWh)  
-and `consumption_arr` is a `numpy` array of electricity consumption (in MWh), 
+As an example, if you assume that `emission_arr` is a `NumPy` array of Scope 2 emissions factors (in tons CO_2 / MWh)  
+and `consumption_arr` is a `NumPy` array of electricity consumption (in MWh), 
 you would simply dot product the two arrays to find the total emissions (i.e., multiply and sum):
 
 .. code-block:: python
