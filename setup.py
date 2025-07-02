@@ -44,7 +44,7 @@ extra_requirements = {
 }
 
 setup(
-    author="WE3 Lab",
+    author="WE3Lab",
     author_email="fchapin@stanford.edu",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
