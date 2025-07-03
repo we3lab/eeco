@@ -82,7 +82,7 @@ The development of `costs.py` was the culmination of two papers from the WE3Lab.
 
 The convex formulation of tariff costs for optimizing flexible loads was originally developed for a case study of flexible wastewater treatment plant operation published in Environmental Science & Technology:
 
-&nbsp; Bolorinos, J., Mauter, M. S., & Rajagopal, R. Integrated energy flexibility management at wastewater treatment facilities. *Environ. Sci. Technol.* **57**, 18362-18371. (2023). DOI: `10.1021/acs.est.3c00365 <https://doi.org/10.1021/acs.est.3c00365>`_
+    Bolorinos, J., Mauter, M. S., & Rajagopal, R. Integrated energy flexibility management at wastewater treatment facilities. *Environ. Sci. Technol.* **57**, 18362-18371. (2023). DOI: `10.1021/acs.est.3c00365 <https://doi.org/10.1021/acs.est.3c00365>`_
 
 In `BibTeX` format:
 
@@ -102,7 +102,7 @@ In `BibTeX` format:
 
 The tariff data format was published in the following data descriptor in Nature Scientific Data:
 
-&nbsp; Chapin, F.T., Bolorinos, J. & Mauter, M.S. Electricity and natural gas tariffs at United States wastewater treatment plants. *Sci Data* **11**, 113 (2024). DOI: `10.1038/s41597-023-02886-6 <https://doi.org/10.1038/s41597-023-02886-6>`_
+    Chapin, F.T., Bolorinos, J. & Mauter, M.S. Electricity and natural gas tariffs at United States wastewater treatment plants. *Sci Data* **11**, 113 (2024). DOI: `10.1038/s41597-023-02886-6 <https://doi.org/10.1038/s41597-023-02886-6>`_
 
 In `BibTeX` format:
 
@@ -128,7 +128,7 @@ Citing `emissions.py`
 
 The emissions optimization code was originally developed for co-optimizing costs and emissions at a wastewater treatment plant and published in Environmental Science & Technology:
 
-&nbsp; Chapin, F.T., Wettermark, D., Bolorinos, J. & Mauter, M.S. Load-shifting strategies for cost-effective emission reductions at wastewater facilities *Environ. Sci. Technol.* **59**, 2285-2294 (2025). DOI: `10.1021/acs.est.4c09773 <https://doi.org/10.1021/acs.est.4c09773>`_
+    Chapin, F.T., Wettermark, D., Bolorinos, J. & Mauter, M.S. Load-shifting strategies for cost-effective emission reductions at wastewater facilities *Environ. Sci. Technol.* **59**, 2285-2294 (2025). DOI: `10.1021/acs.est.4c09773 <https://doi.org/10.1021/acs.est.4c09773>`_
 
 In `BibTeX` format:
 
@@ -151,7 +151,7 @@ Citing `metrics.py`
 
 The flexibility metrics come from the following Nature Water paper:
 
-&nbsp; Rao, A. K., Bolorinos, J., Musabandesu, E., Chapin, F. T., & Mauter, M. S. Valuing energy flexibility from water systems. *Nat. Water* **2**, 1028-1037 (2024). DOI: `10.1038/s44221-024-00316-4 <https://doi.org/10.1038/s44221-024-00316-4>`_
+    Rao, A. K., Bolorinos, J., Musabandesu, E., Chapin, F. T., & Mauter, M. S. Valuing energy flexibility from water systems. *Nat. Water* **2**, 1028-1037 (2024). DOI: `10.1038/s44221-024-00316-4 <https://doi.org/10.1038/s44221-024-00316-4>`_
 
 In `BibTeX` format:
 
