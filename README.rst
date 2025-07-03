@@ -57,13 +57,13 @@ Legal Documents
 
 This work was supported by the following grants and programs:
 
-- [National Alliance for Water Innovation (NAWI)](https://www.nawihub.org/) (grant number UBJQH - MSM)
-- [Department of Energy, the Office of Energy Efficiency and Renewable Energy, Advanced Manufacturing Office](https://www.energy.gov/eere/ammto/advanced-materials-and-manufacturing-technologies-office) (grant number DE-EE0009499)
-- [California Energy Commission (CEC)](https://www.energy.ca.gov/)
-- [Equitable, Affordable & Resilient Nationwide Energy System Transition (EARNEST) Consortium](https://earnest.stanford.edu/)
-- [Bits & Watts Initiative](https://bitsandwatts.stanford.edu/)
-- Stanford Woods Institute's [Mentoring Undergraduate in Interdisciplinary Research (MUIR) Program](https://woods.stanford.edu/educating-leaders/education-leadership-programs/mentoring-undergraduates-interdisciplinary-research)
-- Stanford University's [Sustainability Undergraduate Research in Geoscience and Engineering (SURGE) Program](https://sustainability.stanford.edu/our-community/access-belonging-community/surge)
+- `National Alliance for Water Innovation (NAWI) <https://www.nawihub.org/>`_ (grant number UBJQH - MSM)
+- `Department of Energy, the Office of Energy Efficiency and Renewable Energy, Advanced Manufacturing Office <https://www.energy.gov/eere/ammto/advanced-materials-and-manufacturing-technologies-office>`_ (grant number DE-EE0009499)
+- `California Energy Commission (CEC) <https://www.energy.ca.gov/>`_ (grant number GFO-23-316)
+- `Equitable, Affordable & Resilient Nationwide Energy System Transition (EARNEST) Consortium <https://earnest.stanford.edu/>`_
+- `Bits & Watts Initiative <https://bitsandwatts.stanford.edu/>`_
+- Stanford Woods Institute's `Mentoring Undergraduate in Interdisciplinary Research (MUIR) Program <https://woods.stanford.edu/educating-leaders/education-leadership-programs/mentoring-undergraduates-interdisciplinary-research>`_
+- Stanford University's `Sustainability Undergraduate Research in Geoscience and Engineering (SURGE) Program <https://sustainability.stanford.edu/our-community/access-belonging-community/surge>`_
 
 The views and opinions of authors expressed herein do not necessarily state or reflect those of the United States Government or any agency thereof. Neither the United States Government nor any agency thereof, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, apparatus, product, or process disclosed, or represents that its use would not infringe privately owned rights.
 
@@ -82,7 +82,7 @@ The development of `costs.py` was the culmination of two papers from the WE3Lab.
 
 The convex formulation of tariff costs for optimizing flexible loads was originally developed for a case study of flexible wastewater treatment plant operation published in Environmental Science & Technology:
 
-&nbsp; Bolorinos, J., Mauter, M. S., & Rajagopal, R. Integrated energy flexibility management at wastewater treatment facilities. *Environ. Sci. Technol.* **57**, 18362-18371. (2023). DOI: [10.1021/acs.est.3c00365](https://doi.org/10.1021/acs.est.3c00365)
+&nbsp; Bolorinos, J., Mauter, M. S., & Rajagopal, R. Integrated energy flexibility management at wastewater treatment facilities. *Environ. Sci. Technol.* **57**, 18362-18371. (2023). DOI: `10.1021/acs.est.3c00365 <https://doi.org/10.1021/acs.est.3c00365>`_
 
 In `BibTeX` format:
 
@@ -102,7 +102,7 @@ In `BibTeX` format:
 
 The tariff data format was published in the following data descriptor in Nature Scientific Data:
 
-&nbsp; Chapin, F.T., Bolorinos, J. & Mauter, M.S. Electricity and natural gas tariffs at United States wastewater treatment plants. *Sci Data* **11**, 113 (2024). DOI: [10.1038/s41597-023-02886-6](https://doi.org/10.1038/s41597-023-02886-6)
+&nbsp; Chapin, F.T., Bolorinos, J. & Mauter, M.S. Electricity and natural gas tariffs at United States wastewater treatment plants. *Sci Data* **11**, 113 (2024). DOI: `10.1038/s41597-023-02886-6 <https://doi.org/10.1038/s41597-023-02886-6>`_
 
 In `BibTeX` format:
 
@@ -128,7 +128,7 @@ Citing `emissions.py`
 
 The emissions optimization code was originally developed for co-optimizing costs and emissions at a wastewater treatment plant and published in Environmental Science & Technology:
 
-&nbsp; Chapin, F.T., Wettermark, D., Bolorinos, J. & Mauter, M.S. Load-shifting strategies for cost-effective emission reductions at wastewater facilities *Environ. Sci. Technol.* **59**, 2285-2294 (2025). DOI: [10.1021/acs.est.4c09773](https://doi.org/10.1021/acs.est.4c09773)
+&nbsp; Chapin, F.T., Wettermark, D., Bolorinos, J. & Mauter, M.S. Load-shifting strategies for cost-effective emission reductions at wastewater facilities *Environ. Sci. Technol.* **59**, 2285-2294 (2025). DOI: `10.1021/acs.est.4c09773 <https://doi.org/10.1021/acs.est.4c09773>`_
 
 In `BibTeX` format:
 
@@ -151,7 +151,7 @@ Citing `metrics.py`
 
 The flexibility metrics come from the following Nature Water paper:
 
-&nbsp; Rao, A. K., Bolorinos, J., Musabandesu, E., Chapin, F. T., & Mauter, M. S. Valuing energy flexibility from water systems. *Nat. Water* **2**, 1028-1037 (2024). DOI: [10.1038/s44221-024-00316-4](https://doi.org/10.1038/s44221-024-00316-4)
+&nbsp; Rao, A. K., Bolorinos, J., Musabandesu, E., Chapin, F. T., & Mauter, M. S. Valuing energy flexibility from water systems. *Nat. Water* **2**, 1028-1037 (2024). DOI: `10.1038/s44221-024-00316-4 <https://doi.org/10.1038/s44221-024-00316-4>`_
 
 In `BibTeX` format:
 
