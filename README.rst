@@ -86,19 +86,20 @@ The convex formulation of tariff costs for optimizing flexible loads was origina
 
 In `BibTeX` format:
 
-```
-@article{bolorinos2023integrated,
-  title={Integrated energy flexibility management at wastewater treatment facilities},
-  author={Bolorinos, Jose and Mauter, Meagan S and Rajagopal, Ram},
-  journal={Environmental Science \& Technology},
-  volume={57},
-  number={46},
-  pages={18362--18371},
-  year={2023},
-  publisher={ACS Publications},
-  url={https://doi.org/10.1021/acs.est.3c00365}
-}
-```
+.. code-block:: 
+
+  @article{bolorinos2023integrated,
+    title={Integrated energy flexibility management at wastewater treatment facilities},
+    author={Bolorinos, Jose and Mauter, Meagan S and Rajagopal, Ram},
+    journal={Environmental Science \& Technology},
+    volume={57},
+    number={46},
+    pages={18362--18371},
+    year={2023},
+    publisher={ACS Publications},
+    url={https://doi.org/10.1021/acs.est.3c00365}
+  }
+
 
 The tariff data format was published in the following data descriptor in Nature Scientific Data:
 
@@ -106,22 +107,22 @@ The tariff data format was published in the following data descriptor in Nature 
 
 In `BibTeX` format:
 
-```
-@Article{Chapin2024,
-author={Chapin, Fletcher T and Bolorinos, Jose and Mauter, Meagan S.},
-title={Electricity and natural gas tariffs at United States wastewater treatment plants},
-journal={Scientific Data},
-year={2024},
-month={Jan},
-day={23},
-volume={11},
-number={1},
-pages={113},
-issn={2052-4463},
-doi={10.1038/s41597-023-02886-6},
-url={https://doi.org/10.1038/s41597-023-02886-6}
-}
-```
+.. code-block:: 
+  
+  @Article{Chapin2024,
+  author={Chapin, Fletcher T and Bolorinos, Jose and Mauter, Meagan S.},
+  title={Electricity and natural gas tariffs at United States wastewater treatment plants},
+  journal={Scientific Data},
+  year={2024},
+  month={Jan},
+  day={23},
+  volume={11},
+  number={1},
+  pages={113},
+  issn={2052-4463},
+  doi={10.1038/s41597-023-02886-6},
+  url={https://doi.org/10.1038/s41597-023-02886-6}
+  }
 
 Citing `emissions.py`
 *********************
@@ -132,19 +133,19 @@ The emissions optimization code was originally developed for co-optimizing costs
 
 In `BibTeX` format:
 
-```
-@article{chapin2025load,
-  title={Load-Shifting Strategies for Cost-Effective Emission Reductions at Wastewater Facilities},
-  author={Chapin, Fletcher T and Wettermark, Daly and Bolorinos, Jose and Mauter, Meagan S},
-  journal={Environmental Science \& Technology},
-  volume={59},
-  number={4},
-  pages={2285--2294},
-  year={2025},
-  publisher={ACS Publications},
-  url={https://pubs.acs.org/doi/10.1021/acs.est.4c09773}
-}
-```
+.. code-block:: 
+  
+  @article{chapin2025load,
+    title={Load-Shifting Strategies for Cost-Effective Emission Reductions at Wastewater Facilities},
+    author={Chapin, Fletcher T and Wettermark, Daly and Bolorinos, Jose and Mauter, Meagan S},
+    journal={Environmental Science \& Technology},
+    volume={59},
+    number={4},
+    pages={2285--2294},
+    year={2025},
+    publisher={ACS Publications},
+    url={https://pubs.acs.org/doi/10.1021/acs.est.4c09773}
+  }
 
 Citing `metrics.py`
 *******************
@@ -155,16 +156,16 @@ The flexibility metrics come from the following Nature Water paper:
 
 In `BibTeX` format:
 
-```
-@article{rao2024valuing,
-  title={Valuing energy flexibility from water systems},
-  author={Rao, Akshay K and Bolorinos, Jose and Musabandesu, Erin and Chapin, Fletcher T and Mauter, Meagan S},
-  journal={Nature Water},
-  volume={2},
-  number={10},
-  pages={1028--1037},
-  year={2024},
-  publisher={Nature Publishing Group UK London},
-  url={https://doi.org/10.1038/s44221-024-00316-4}
-}
-```
+.. code-block:: 
+  
+  @article{rao2024valuing,
+    title={Valuing energy flexibility from water systems},
+    author={Rao, Akshay K and Bolorinos, Jose and Musabandesu, Erin and Chapin, Fletcher T and Mauter, Meagan S},
+    journal={Nature Water},
+    volume={2},
+    number={10},
+    pages={1028--1037},
+    year={2024},
+    publisher={Nature Publishing Group UK London},
+    url={https://doi.org/10.1038/s44221-024-00316-4}
+  }
