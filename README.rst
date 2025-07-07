@@ -61,9 +61,10 @@ This work was supported by the following grants and programs:
 - `Department of Energy, the Office of Energy Efficiency and Renewable Energy, Advanced Manufacturing Office <https://www.energy.gov/eere/ammto/advanced-materials-and-manufacturing-technologies-office>`_ (grant number DE-EE0009499)
 - `California Energy Commission (CEC) <https://www.energy.ca.gov/>`_ (grant number GFO-23-316)
 - `Equitable, Affordable & Resilient Nationwide Energy System Transition (EARNEST) Consortium <https://earnest.stanford.edu/>`_
-- `Bits & Watts Initiative <https://bitsandwatts.stanford.edu/>`_
-- Stanford Woods Institute's `Mentoring Undergraduate in Interdisciplinary Research (MUIR) Program <https://woods.stanford.edu/educating-leaders/education-leadership-programs/mentoring-undergraduates-interdisciplinary-research>`_
-- Stanford University's `Sustainability Undergraduate Research in Geoscience and Engineering (SURGE) Program <https://sustainability.stanford.edu/our-community/access-belonging-community/surge>`_
+- `Stanford University Bits & Watts Initiative <https://bitsandwatts.stanford.edu/>`_
+- `Stanford Woods Institute Realizing Environmental Innovation Program (REIP) <https://woods.stanford.edu/research/funding-opportunities/realizing-environmental-innovation-program>`_
+- `Stanford Woods Institute Mentoring Undergraduate in Interdisciplinary Research (MUIR) Program <https://woods.stanford.edu/educating-leaders/education-leadership-programs/mentoring-undergraduates-interdisciplinary-research>`_
+- `Stanford University Sustainability Undergraduate Research in Geoscience and Engineering (SURGE) Program <https://sustainability.stanford.edu/our-community/access-belonging-community/surge>`_
 
 The views and opinions of authors expressed herein do not necessarily state or reflect those of the United States Government or any agency thereof. Neither the United States Government nor any agency thereof, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, apparatus, product, or process disclosed, or represents that its use would not infringe privately owned rights.
 

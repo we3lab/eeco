@@ -21,62 +21,11 @@ EI_VARNAME = "co2_eq_kg_per_MWh"
 def calculate_grid_emissions(
     carbon_intensity,
     consumption_data,
-    net_demand_varname,
     emission_units=u.kg / u.MWh,
     consumption_units=u.kW,
     resolution="15m",
-    ei_varname=EI_VARNAME,
-):
-    """Calculates the emissions for the given consumption information and
-    carbon intensity of electricity generation structure as DataFrames.
-
-    Parameters
-    ----------
-    carbon_intensity : DataFrame
-        Pandas DataFrame with kg of CO2 per kWh by hour and month
-
-    consumption_data : DataFrame
-        Baseline electrical or gas usage data as a Pandas DataFrame
-
-    emissions_units : pint.Unit
-        Units for the emissions data. Default is kg / kWh
-
-    consumption_units : pint.Unit
-        Units for the electricity consumption data. Default is kW
-
-    resolution : str
-        granularity of each timestep in string form with default value of "15m"
-
-    Returns
-    -------
-    pint.Quantity
-        total emissions due to grid electricity generation in kilograms CO2
-    """
-    df = consumption_data.copy()
-    df[MONTH_VARNAME] = df[DT_VARNAME].dt.month
-    df[HOUR_VARNAME] = df[DT_VARNAME].dt.hour
-    # convert the resolution to hourly
-    n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
-    if isinstance(carbon_intensity, pint.Quantity):
-        emission_units = carbon_intensity.units
-        carbon_intensity = carbon_intensity.magnitude
-    df = df.merge(carbon_intensity, on=[MONTH_VARNAME, HOUR_VARNAME])
-    emissions = (
-        np.sum(df[net_demand_varname] * df[ei_varname])
-        * consumption_units
-        * emission_units
-        * u.hour
-        / n_per_hour
-    )
-    return emissions.to(u.kg)
-
-
-def calculate_grid_emissions_cvx(
-    carbon_intensity,
-    consumption_data,
-    emission_units=u.kg / u.MWh,
-    consumption_units=u.kW,
-    resolution="15m",
+    model=None,
+    varstr="",
 ):
     """Calculates the emissions for the given consumption information as a cvxpy object
     carbon intensity of electricity generation structure as a DataFrame.
@@ -86,8 +35,8 @@ def calculate_grid_emissions_cvx(
     carbon_intensity : array
         numpy array with kg of CO2 per kWh
 
-    consumption_data : Variable
-        Baseline electrical or gas usage data as a CVXPY Variable
+    consumption_data : numpy.Array, cvxpy.Variable, pyomo.environ.Var, or pyomo.environ.Param
+        Baseline electrical or gas usage data as a Pyomo Var
 
     emissions_units : pint.Unit
         Units for the emissions data. Default is kg / kWh
@@ -98,22 +47,49 @@ def calculate_grid_emissions_cvx(
     resolution : str
         granularity of each timestep in string form with default value of "15m"
 
+    model : pyomo.Model
+        The model object associated with the problem.
+        Only used in the case of Pyomo, so `None` by default.
+
+    varstr : str
+        Name of the variable to be created if using a Pyomo `model`
+
     Returns
     -------
-    Expression
-        cvxpy Expression representing emissions in kg of CO2 for the given
-        `consumption_data` and `carbon_intensity`
+    (pint.Quantity, cvxpy.Expression, or pyomo.environ.Var), pyomo.Model
+        tuple of pyomo Var representing emissions in kg of CO2 for the given
+        `consumption_data` and `carbon_intensity` and the accompanying model object.
+        The `model` object is only used for Pyomo, so by default it is `None`
     """
-    n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
-    if isinstance(carbon_intensity, pint.Quantity):
-        emission_units = carbon_intensity.units
-        carbon_intensity = carbon_intensity.magnitude
-    conversion_factor = (consumption_units * emission_units / u.hour).magnitude
-    emissions = cp.sum(cp.multiply(consumption_data, carbon_intensity)) / n_per_hour
-    return emissions * conversion_factor
-
-
-# TODO: need to write calculate_grid_emissions_pyo
+    if isinstance(consumption_data, np.ndarray):
+        # convert the resolution to hourly
+        n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
+        if isinstance(carbon_intensity, pint.Quantity):
+            emission_units = carbon_intensity.units
+            carbon_intensity = carbon_intensity.magnitude
+        total_emissions = (
+            np.sum(consumption_data * carbon_intensity) 
+            * consumption_units
+            * emission_units
+            * u.hour
+            / n_per_hour
+        )
+        return total_emissions.to(u.kg), None
+    elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
+        n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
+        if isinstance(carbon_intensity, pint.Quantity):
+            emission_units = carbon_intensity.units
+            carbon_intensity = carbon_intensity.magnitude
+        conversion_factor = (consumption_units * emission_units / u.hour).magnitude
+        emissions_timeseries, model = ut.multiply(
+            consumption_data, carbon_intensity, model=model, varstr=varstr + "_multiply"
+        )
+        total_emissions, model = ut.sum(emissions_timeseries, model=model, varstr=varstr+"_sum") / n_per_hour
+        return total_emissions * conversion_factor, model
+    else:
+        raise ValueError(
+            "consumption_data must be of type numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var"
+        )
 
 
 def get_carbon_intensity(
@@ -154,6 +130,10 @@ def get_carbon_intensity(
         on which charges are assessed. The `str` portion corresponds to numpy
         timedelta64 types. For example '15m' specifying demand charges
         that are applied to 15-minute intervals of electricity consumption
+
+    ei_varname : str
+        column name for the Scope 2 emissions factor.
+        Default is `EI_VARNAME="co2_eq_kg_per_MWh"`
 
     Returns
     -------

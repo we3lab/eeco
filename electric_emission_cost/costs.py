@@ -462,7 +462,7 @@ def calculate_demand_cost(
     consumption_estimate=0,
     scale_factor=1,
     model=None,
-    varstr=None,
+    varstr="",
 ):
     """Calculates the cost of given demand charges for the given billing rate structure,
     utility, and consumption information
@@ -472,7 +472,7 @@ def calculate_demand_cost(
     charge_array : array
         Array of charge cost (in $/kW)
 
-    consumption_data : numpy.ndarray or cvxpy.Expression
+    consumption_data : numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
         Baseline electrical or gas usage data as an optimization variable object
 
     limit : float
@@ -495,9 +495,9 @@ def calculate_demand_cost(
 
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
-        Only used when `consumption_data` is cvxpy.Expression for convex relaxation
-        of tiered charges, while numpy.ndarray `consumption_data` will use actual
-        consumption and ignore the estimate.
+        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var 
+        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data` 
+        will use actual consumption and ignore the estimate.
 
     scale_factor : float
         Optional factor for scaling demand charges relative to energy charges
@@ -514,9 +514,11 @@ def calculate_demand_cost(
 
     Returns
     -------
-    cvxpy.Expression or float
-        float or cvxpy Expression representing cost in USD for the given
-        `charge_array` and `consumption_data`
+    (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model
+        tuple with the first entry being a float,
+        cvxpy Expression, or pyomo Var representing demand charge costs 
+        in USD for the given `charge_array` and `consumption_data`
+        and the second entry being the pyomo model object (or None)
     """
     if isinstance(consumption_data, np.ndarray):
         if (np.max(consumption_data) >= limit) or (
@@ -580,7 +582,7 @@ def calculate_demand_cost(
             demand_charged = np.array([0])
     else:
         raise ValueError(
-            "consumption_data must be of type numpy.ndarray or cvxpy.Expression"
+            "consumption_data must be of type numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var"
         )
     if model is None:
         max_var, _ = ut.max(demand_charged)
@@ -603,7 +605,7 @@ def calculate_energy_cost(
     prev_consumption=0,
     consumption_estimate=0,
     model=None,
-    varstr=None,
+    varstr="",
 ):
     """Calculates the cost of given energy charges for the given billing rate
     structure, utility, and consumption information.
@@ -613,7 +615,7 @@ def calculate_energy_cost(
     charge_array : numpy.ndarray
         Array of the charges in $/kWh for electric and $/cubic meter for gas
 
-    consumption_data : numpy.ndarray or cvxpy.Expression
+    consumption_data : numpy.ndarray cvxpy.Expression, or pyomo.environ.Var
         Baseline electrical or gas usage data as an optimization variable object
 
     divisor : int
@@ -629,9 +631,9 @@ def calculate_energy_cost(
 
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
-        Only used when `consumption_data` is cvxpy.Expression for convex relaxation
-        of tiered charges, while numpy.ndarray `consumption_data` will use actual
-        consumption and ignore the estimate.
+        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var 
+        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
+        will use actual consumption and ignore the estimate.
 
     model : pyomo.Model
         The model object associated with the problem.
@@ -648,9 +650,11 @@ def calculate_energy_cost(
 
     Returns
     -------
-    cvxpy.Expression, pyomo.Model, or float
-        float or cvxpy Expression representing cost in USD for the given
-        `charge_array` and `consumption_data`
+    (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model
+        tuple with the first entry being a float,
+        cvxpy Expression, or pyomo Var representing energy charge costs 
+        in USD for the given `charge_array` and `consumption_data`
+        and the second entry being the pyomo model object (or None)
     """
     cost = 0
     if model is None:
@@ -714,14 +718,14 @@ def calculate_energy_cost(
                 )
     else:
         raise ValueError(
-            "consumption_data must be of type numpy.ndarray or cvxpy.Expression"
+            "consumption_data must be of type numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var"
         )
 
     return cost, model
 
 
 def calculate_export_revenues(
-    charge_array, export_data, divisor, model=None, varstr=None
+    charge_array, export_data, divisor, model=None, varstr=""
 ):
     """Calculates the export revenues for the given billing rate structure,
     utility, and consumption information.
@@ -733,7 +737,7 @@ def calculate_export_revenues(
     charge_array : numpy.ndarray
         array with price per kWh sold back to the grid
 
-    consumption_data : numpy.ndarray or cvxpy.Expression
+    consumption_data : numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
         Baseline electrical or gas usage data as an optimization variable object
 
     divisor : int
@@ -748,9 +752,11 @@ def calculate_export_revenues(
 
     Returns
     -------
-    cvxpy.Expression or float
-        float or cvxpy Expression representing revenue in USD for the given
-        `charge_array` and `export_data`
+    (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model
+        tuple with the first entry being a float,
+        cvxpy Expression, or pyomo Var representing export revenues 
+        in USD for the given `charge_array` and `consumption_data`
+        and the second entry being the pyomo model object (or None)
     """
     varstr_mul = varstr + "_multiply" if varstr is not None else None
     varstr_sum = varstr + "_sum" if varstr is not None else None
@@ -830,7 +836,7 @@ def calculate_cost(
         cubic meter / day (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
-    consumption_data_dict : dict of numpy.ndarray or cvxpy.Expression
+    consumption_data_dict : dict of numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
         Baseline electrical and gas usage data as an optimization variable object
         with keys "electric" and "gas"
 
@@ -854,9 +860,9 @@ def calculate_cost(
 
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
-        Only used when `consumption_data` is cvxpy.Expression for convex relaxation
-        of tiered charges, while numpy.ndarray `consumption_data` will use actual
-        consumption and ignore the estimate.
+        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var 
+        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data` 
+        will use actual consumption and ignore the estimate.
 
     desired_charge_type : str
         Name of desired charge type for itemized costs.
@@ -904,9 +910,11 @@ def calculate_cost(
 
     Returns
     -------
-    numpy.Array, cvxpy.Expression, or pyomo.Model
-        numpy array, cvxpy Expression representing cost in USD for the given
-        `consumption_data`, `charge_type`, and `utility`
+    (numpy.Array, cvxpy.Expression, or pyomo.Var),  pyomo.Model
+        tuple with the first entry being a float,
+        cvxpy Expression, or pyomo Var representing energy charge costs 
+        in USD for the given `charge_array` and `consumption_data`
+        and the second entry being the pyomo model object (or None)
     """
     cost = 0
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
