@@ -2,9 +2,13 @@ import os
 import pytest
 import numpy as np
 import pandas as pd
+from datetime import timedelta
 
-from electric_emission_cost import emissions
 from electric_emission_cost.units import u
+from electric_emission_cost import emissions
+from electric_emission_cost import utils as ut
+
+
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False
@@ -26,13 +30,20 @@ output_dir = "tests/data/output/"
         ),
     ],
 )
-def test_calculate_grid_emissions(
+def test_calculate_grid_emissions_pd(
     emissions_path, consumption_path, net_demand_varname, resolution, expected
 ):
     emissions_data = pd.read_csv(emissions_path)
     consumption_df = pd.read_csv(consumption_path, parse_dates=[emissions.DT_VARNAME])
-    result = emissions.calculate_grid_emissions(
-        emissions_data, consumption_df, net_demand_varname
+    emissions_factors = emissions.get_carbon_intensity(
+        consumption_df[emissions.DT_VARNAME].iloc[0], 
+        consumption_df[emissions.DT_VARNAME].iloc[-1] 
+        + timedelta(minutes=ut.get_freq_binsize_minutes(resolution)), 
+        emissions_data, 
+        resolution=resolution
+    )
+    result, _ = emissions.calculate_grid_emissions(
+        emissions_factors, consumption_df[net_demand_varname].values
     )
     assert result == expected
 

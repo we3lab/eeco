@@ -105,10 +105,11 @@ def get_carbon_intensity(
     Parameters
     ----------
     start_dt : datetime.datetime or numpy.datetime64
-        Start datetime to gather rate information
+        Start datetime to gather rate information.
 
     end_dt : datetime.datetime or numpy.datetime64
-        End datetime to gather rate information
+        End datetime to gather rate information. 
+        This `end_dt` is excluded to be consistent with Python syntax.
 
     emissions_data : DataFrame
         Electric grid emissions information.
