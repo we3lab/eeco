@@ -21,7 +21,7 @@ EI_VARNAME = "co2_eq_kg_per_MWh"
 def calculate_grid_emissions(
     carbon_intensity,
     consumption_data,
-    emission_units=u.kg / u.MWh,
+    emission_units=u.kg / u.kWh,
     consumption_units=u.kW,
     resolution="15m",
     model=None,
@@ -61,12 +61,13 @@ def calculate_grid_emissions(
         `consumption_data` and `carbon_intensity` and the accompanying model object.
         The `model` object is only used for Pyomo, so by default it is `None`
     """
+    # get the emission factor units if they were provided as pint.Quantity
+    n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
+    if isinstance(carbon_intensity, pint.Quantity):
+        emission_units = carbon_intensity.units
+        carbon_intensity = carbon_intensity.magnitude
+
     if isinstance(consumption_data, np.ndarray):
-        # convert the resolution to hourly
-        n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
-        if isinstance(carbon_intensity, pint.Quantity):
-            emission_units = carbon_intensity.units
-            carbon_intensity = carbon_intensity.magnitude
         total_emissions = (
             np.sum(consumption_data * carbon_intensity) 
             * consumption_units
@@ -76,11 +77,7 @@ def calculate_grid_emissions(
         )
         return total_emissions.to(u.kg), None
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
-        n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
-        if isinstance(carbon_intensity, pint.Quantity):
-            emission_units = carbon_intensity.units
-            carbon_intensity = carbon_intensity.magnitude
-        conversion_factor = (consumption_units * emission_units / u.hour).magnitude
+        conversion_factor = (1 * consumption_units * emission_units * u.hour).to(u.kg).magnitude
         emissions_timeseries, model = ut.multiply(
             consumption_data, carbon_intensity, model=model, varstr=varstr + "_multiply"
         )

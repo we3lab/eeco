@@ -741,7 +741,7 @@ def calculate_export_revenues(
         Baseline electrical or gas usage data as an optimization variable object
 
     divisor : int
-        Divisor for the energy charges
+        Divisor for the export revenue
 
     model : pyomo.Model
         The model object associated with the problem.
@@ -813,6 +813,7 @@ def get_charge_array_duration(key):
 def calculate_cost(
     charge_dict,
     consumption_data_dict,
+    consumption_units=u.kW,
     resolution="15m",
     prev_demand_dict=None,
     prev_consumption_dict=None,
@@ -839,6 +840,9 @@ def calculate_cost(
     consumption_data_dict : dict of numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
         Baseline electrical and gas usage data as an optimization variable object
         with keys "electric" and "gas"
+
+    consumption_units : pint.Unit
+        Units for the electricity consumption data. Default is kW
 
     resolution : str
         String of the form `[int][str]` giving the temporal resolution
@@ -932,22 +936,23 @@ def calculate_cost(
         ):
             continue
 
+        if utility == "electric":
+            conversion_factor = (1 * consumption_units).to(u.kW).magnitude
+            divisor = n_per_hour
+        elif utility == "gas":
+            conversion_factor = (1 * consumption_units).to(u.meter ** 3 / u.day).magnitude
+            divisor = n_per_day / conversion_factor
+        else:
+            raise ValueError("Invalid utility: " + utility)
+
         charge_limit = int(limit_str)
         key_substr = "_".join([utility, charge_type, name, eff_start, eff_end])
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
-        consumption_data = consumption_data_dict[utility]
+        converted_data = consumption_data_dict[utility] * conversion_factor
 
         # Only apply demand_scale_factor if charge spans more than one day
         charge_duration_days = get_charge_array_duration(key)
         effective_scale_factor = demand_scale_factor if charge_duration_days > 1 else 1
-
-        # TODO: this assumes units of kW for electricity and meters cubed per day for gas
-        if utility == "electric":
-            divisor = n_per_hour
-        elif utility == "gas":
-            divisor = n_per_day
-        else:
-            raise ValueError("Invalid utility: " + utility)
 
         if charge_type == "demand":
             if prev_demand_dict is not None:
@@ -958,7 +963,7 @@ def calculate_cost(
                 prev_demand_cost = 0
             new_cost, model = calculate_demand_cost(
                 charge_array,
-                consumption_data,
+                converted_data,
                 limit=charge_limit,
                 next_limit=next_limit,
                 prev_demand=prev_demand,
@@ -976,7 +981,7 @@ def calculate_cost(
                 prev_consumption = 0
             new_cost, model = calculate_energy_cost(
                 charge_array,
-                consumption_data,
+                converted_data,
                 divisor,
                 limit=charge_limit,
                 next_limit=next_limit,
@@ -988,7 +993,7 @@ def calculate_cost(
             cost += new_cost
         elif charge_type == "export":
             new_cost, model = calculate_export_revenues(
-                charge_array, consumption_data, divisor, model=model, varstr=var_str
+                charge_array, converted_data, divisor, model=model, varstr=var_str
             )
             cost -= new_cost
         elif charge_type == "customer":
@@ -1001,6 +1006,7 @@ def calculate_cost(
 def calculate_itemized_cost(
     charge_dict,
     consumption_data_dict,
+    consumption_units=u.kW,
     resolution="15m",
     prev_demand_dict=None,
     prev_consumption_dict=None,
@@ -1024,6 +1030,9 @@ def calculate_itemized_cost(
     consumption_data_dict : dict of numpy.ndarray or cvxpy.Expression
         Baseline electrical and gas usage data as an optimization variable object
         with keys "electric" and "gas"
+
+    consumption_units : pint.Unit
+        Units for the electricity consumption data. Default is kW
 
     resolution : str
         String of the form `[int][str]` giving the temporal resolution
@@ -1107,6 +1116,7 @@ def calculate_itemized_cost(
                 cost, model = calculate_cost(
                     charge_dict,
                     consumption_data_dict,
+                    consumption_units=consumption_units,
                     resolution=resolution,
                     prev_demand_dict=prev_demand_dict,
                     consumption_estimate=consumption_estimate,
@@ -1129,6 +1139,7 @@ def calculate_itemized_cost(
             cost, model = calculate_cost(
                 charge_dict,
                 consumption_data_dict,
+                consumption_units=consumption_units,
                 resolution=resolution,
                 prev_demand_dict=prev_demand_dict,
                 prev_consumption_dict=prev_consumption_dict,

@@ -19,19 +19,28 @@ output_dir = "tests/data/output/"
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "emissions_path, consumption_path, net_demand_varname, resolution, expected",
+    "emissions_path, consumption_path, net_demand_varname, emissions_units, resolution, expected",
     [
         (
             "data/emissions.csv",
             input_dir + "flat_load.csv",
             "VirtualDemand_Electricity_InFlow",
+            u.kg / u.kWh,
             "15m",
             276375.87356000004 * u.kg,
         ),
+        (
+            "data/emissions.csv",
+            input_dir + "flat_load.csv",
+            "VirtualDemand_Electricity_InFlow",
+            u.kg / u.MWh,
+            "15m",
+            276375.8735600001 * u.kg,
+        ),
     ],
 )
-def test_calculate_grid_emissions_pd(
-    emissions_path, consumption_path, net_demand_varname, resolution, expected
+def test_calculate_grid_emissions(
+    emissions_path, consumption_path, net_demand_varname, emissions_units, resolution, expected
 ):
     emissions_data = pd.read_csv(emissions_path)
     consumption_df = pd.read_csv(consumption_path, parse_dates=[emissions.DT_VARNAME])
@@ -42,9 +51,13 @@ def test_calculate_grid_emissions_pd(
         emissions_data, 
         resolution=resolution
     )
+    emissions_factors = emissions_factors.to(emissions_units)
     result, _ = emissions.calculate_grid_emissions(
-        emissions_factors, consumption_df[net_demand_varname].values
+        emissions_factors.magnitude, 
+        consumption_df[net_demand_varname].values, 
+        emission_units=emissions_units
     )
+    print(result.magnitude)
     assert result == expected
 
 
