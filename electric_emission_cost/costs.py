@@ -495,8 +495,8 @@ def calculate_demand_cost(
 
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
-        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var 
-        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data` 
+        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
+        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
         will use actual consumption and ignore the estimate.
 
     scale_factor : float
@@ -516,7 +516,7 @@ def calculate_demand_cost(
     -------
     (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model
         tuple with the first entry being a float,
-        cvxpy Expression, or pyomo Var representing demand charge costs 
+        cvxpy Expression, or pyomo Var representing demand charge costs
         in USD for the given `charge_array` and `consumption_data`
         and the second entry being the pyomo model object (or None)
     """
@@ -631,7 +631,7 @@ def calculate_energy_cost(
 
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
-        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var 
+        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
         for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
         will use actual consumption and ignore the estimate.
 
@@ -652,7 +652,7 @@ def calculate_energy_cost(
     -------
     (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model
         tuple with the first entry being a float,
-        cvxpy Expression, or pyomo Var representing energy charge costs 
+        cvxpy Expression, or pyomo Var representing energy charge costs
         in USD for the given `charge_array` and `consumption_data`
         and the second entry being the pyomo model object (or None)
     """
@@ -754,7 +754,7 @@ def calculate_export_revenues(
     -------
     (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model
         tuple with the first entry being a float,
-        cvxpy Expression, or pyomo Var representing export revenues 
+        cvxpy Expression, or pyomo Var representing export revenues
         in USD for the given `charge_array` and `consumption_data`
         and the second entry being the pyomo model object (or None)
     """
@@ -813,7 +813,8 @@ def get_charge_array_duration(key):
 def calculate_cost(
     charge_dict,
     consumption_data_dict,
-    consumption_units=u.kW,
+    electric_consumption_units=u.kW,
+    gas_consumption_units=u.meters**3 / u.day,
     resolution="15m",
     prev_demand_dict=None,
     prev_consumption_dict=None,
@@ -841,8 +842,11 @@ def calculate_cost(
         Baseline electrical and gas usage data as an optimization variable object
         with keys "electric" and "gas"
 
-    consumption_units : pint.Unit
+    electric_consumption_units : pint.Unit
         Units for the electricity consumption data. Default is kW
+
+    gas_consumption_units : pint.Unit
+        Units for the natural gas consumption data. Default is cubic meters / day
 
     resolution : str
         String of the form `[int][str]` giving the temporal resolution
@@ -864,8 +868,8 @@ def calculate_cost(
 
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
-        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var 
-        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data` 
+        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
+        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
         will use actual consumption and ignore the estimate.
 
     desired_charge_type : str
@@ -916,7 +920,7 @@ def calculate_cost(
     -------
     (numpy.Array, cvxpy.Expression, or pyomo.Var),  pyomo.Model
         tuple with the first entry being a float,
-        cvxpy Expression, or pyomo Var representing energy charge costs 
+        cvxpy Expression, or pyomo Var representing energy charge costs
         in USD for the given `charge_array` and `consumption_data`
         and the second entry being the pyomo model object (or None)
     """
@@ -937,10 +941,12 @@ def calculate_cost(
             continue
 
         if utility == "electric":
-            conversion_factor = (1 * consumption_units).to(u.kW).magnitude
+            conversion_factor = (1 * electric_consumption_units).to(u.kW).magnitude
             divisor = n_per_hour
         elif utility == "gas":
-            conversion_factor = (1 * consumption_units).to(u.meter ** 3 / u.day).magnitude
+            conversion_factor = (
+                (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
+            )
             divisor = n_per_day / conversion_factor
         else:
             raise ValueError("Invalid utility: " + utility)
@@ -1006,7 +1012,8 @@ def calculate_cost(
 def calculate_itemized_cost(
     charge_dict,
     consumption_data_dict,
-    consumption_units=u.kW,
+    electric_consumption_units=u.kW,
+    gas_consumption_units=u.meters**3 / u.day,
     resolution="15m",
     prev_demand_dict=None,
     prev_consumption_dict=None,
@@ -1031,15 +1038,18 @@ def calculate_itemized_cost(
         Baseline electrical and gas usage data as an optimization variable object
         with keys "electric" and "gas"
 
-    consumption_units : pint.Unit
+    electric_consumption_units : pint.Unit
         Units for the electricity consumption data. Default is kW
+
+    gas_consumption_units : pint.Unit
+        Units for the natura gas consumption data. Default is cubic meters / day
 
     resolution : str
         String of the form `[int][str]` giving the temporal resolution
         on which charges are assessed, the `str` portion corresponds to
         numpy.timedelta64 types for example '15m' specifying demand charges
         that are applied to 15-minute intervals of electricity consumption
-    
+
     prev_demand_dict : dict
         Nested dictionary previous maximmum demand charges with an entry of the form
         {"cost" : float, "demand" : float} for each charge.
@@ -1116,7 +1126,8 @@ def calculate_itemized_cost(
                 cost, model = calculate_cost(
                     charge_dict,
                     consumption_data_dict,
-                    consumption_units=consumption_units,
+                    electric_consumption_units=electric_consumption_units,
+                    gas_consumption_units=gas_consumption_units,
                     resolution=resolution,
                     prev_demand_dict=prev_demand_dict,
                     consumption_estimate=consumption_estimate,
@@ -1124,7 +1135,7 @@ def calculate_itemized_cost(
                     desired_charge_type=charge_type,
                     demand_scale_factor=demand_scale_factor,
                     model=model,
-                    varstr_alias_func=varstr_alias_func
+                    varstr_alias_func=varstr_alias_func,
                 )
 
                 results_dict[utility][charge_type] = cost
@@ -1139,7 +1150,8 @@ def calculate_itemized_cost(
             cost, model = calculate_cost(
                 charge_dict,
                 consumption_data_dict,
-                consumption_units=consumption_units,
+                electric_consumption_units=electric_consumption_units,
+                gas_consumption_units=gas_consumption_units,
                 resolution=resolution,
                 prev_demand_dict=prev_demand_dict,
                 prev_consumption_dict=prev_consumption_dict,
@@ -1148,7 +1160,7 @@ def calculate_itemized_cost(
                 desired_charge_type=charge_type,
                 demand_scale_factor=demand_scale_factor,
                 model=model,
-                varstr_alias_func=varstr_alias_func
+                varstr_alias_func=varstr_alias_func,
             )
 
             results_dict[desired_utility][charge_type] = cost

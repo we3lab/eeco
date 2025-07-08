@@ -70,7 +70,7 @@ def calculate_grid_emissions(
 
     if isinstance(consumption_data, np.ndarray):
         total_emissions = (
-            np.sum(consumption_data * carbon_intensity) 
+            np.sum(consumption_data * carbon_intensity)
             * consumption_units
             * emission_units
             * u.hour
@@ -78,11 +78,15 @@ def calculate_grid_emissions(
         )
         return total_emissions.to(u.kg), None
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
-        conversion_factor = (1 * consumption_units * emission_units * u.hour).to(u.kg).magnitude
+        conversion_factor = (
+            (1 * consumption_units * emission_units * u.hour).to(u.kg).magnitude
+        )
         emissions_timeseries, model = ut.multiply(
             consumption_data, carbon_intensity, model=model, varstr=varstr + "_multiply"
         )
-        total_emissions, model = ut.sum(emissions_timeseries, model=model, varstr=varstr+"_sum")
+        total_emissions, model = ut.sum(
+            emissions_timeseries, model=model, varstr=varstr + "_sum"
+        )
         return total_emissions * conversion_factor / n_per_hour, model
     else:
         raise ValueError(
@@ -106,7 +110,7 @@ def get_carbon_intensity(
         Start datetime to gather rate information.
 
     end_dt : datetime.datetime or numpy.datetime64
-        End datetime to gather rate information. 
+        End datetime to gather rate information.
         This `end_dt` is excluded to be consistent with Python syntax.
 
     emissions_data : DataFrame
