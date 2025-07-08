@@ -1,7 +1,9 @@
 import os
 import pytest
+import cvxpy as cp
 import numpy as np
 import pandas as pd
+import pyomo.environ as pyo
 from datetime import timedelta
 
 from electric_emission_cost.units import u
@@ -39,7 +41,7 @@ output_dir = "tests/data/output/"
         ),
     ],
 )
-def test_calculate_grid_emissions(
+def test_calculate_grid_emissions_pd(
     emissions_path, consumption_path, net_demand_varname, emissions_units, resolution, expected
 ):
     emissions_data = pd.read_csv(emissions_path)
@@ -52,13 +54,114 @@ def test_calculate_grid_emissions(
         resolution=resolution
     )
     emissions_factors = emissions_factors.to(emissions_units)
-    result, _ = emissions.calculate_grid_emissions(
+    result, model = emissions.calculate_grid_emissions(
         emissions_factors.magnitude, 
         consumption_df[net_demand_varname].values, 
         emission_units=emissions_units
     )
     print(result.magnitude)
     assert result == expected
+    assert model is None
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "emissions_path, consumption_path, net_demand_varname, emissions_units, resolution, expected",
+    [
+        (
+            "data/emissions.csv",
+            input_dir + "flat_load.csv",
+            "VirtualDemand_Electricity_InFlow",
+            u.kg / u.kWh,
+            "15m",
+            276375.8735600001,
+        ),
+    ],
+)
+def test_calculate_grid_emissions_cvx(
+    emissions_path, consumption_path, net_demand_varname, emissions_units, resolution, expected
+):
+    emissions_data = pd.read_csv(emissions_path)
+    consumption_df = pd.read_csv(consumption_path, parse_dates=[emissions.DT_VARNAME])
+    emissions_factors = emissions.get_carbon_intensity(
+        consumption_df[emissions.DT_VARNAME].iloc[0], 
+        consumption_df[emissions.DT_VARNAME].iloc[-1] 
+        + timedelta(minutes=ut.get_freq_binsize_minutes(resolution)), 
+        emissions_data,
+        resolution=resolution
+    )
+    emissions_factors = emissions_factors.to(emissions_units)
+
+    constraints = []
+    electric_consumption = cp.Variable(len(consumption_df[net_demand_varname].values))
+    constraints.append(electric_consumption == consumption_df[net_demand_varname].values)
+    result, model = emissions.calculate_grid_emissions(
+        emissions_factors.magnitude, 
+        electric_consumption, 
+        emission_units=emissions_units
+    )
+    prob = cp.Problem(cp.Minimize(result), constraints)
+    prob.solve()
+    assert result.value == expected
+    assert model is None
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "emissions_path, consumption_path, net_demand_varname, emissions_units, resolution, expected",
+    [
+        (
+            "data/emissions.csv",
+            input_dir + "flat_load.csv",
+            "VirtualDemand_Electricity_InFlow",
+            u.kg / u.kWh,
+            "15m",
+            276375.8735600004,
+        ),
+    ],
+)
+def test_calculate_grid_emissions_pyo(
+    emissions_path, consumption_path, net_demand_varname, emissions_units, resolution, expected
+):
+    emissions_data = pd.read_csv(emissions_path)
+    consumption_df = pd.read_csv(consumption_path, parse_dates=[emissions.DT_VARNAME])
+    emissions_factors = emissions.get_carbon_intensity(
+        consumption_df[emissions.DT_VARNAME].iloc[0], 
+        consumption_df[emissions.DT_VARNAME].iloc[-1] 
+        + timedelta(minutes=ut.get_freq_binsize_minutes(resolution)), 
+        emissions_data,
+        resolution=resolution
+    )
+    emissions_factors = emissions_factors.to(emissions_units)
+
+    model = pyo.ConcreteModel()
+    model.T = len(consumption_df[net_demand_varname])
+    model.t = range(model.T)
+    pyo_vars = {}
+    for col_name in consumption_df.columns:
+        var = pyo.Var(
+            range(len(consumption_df[col_name])), 
+            initialize=np.zeros(len(consumption_df[col_name])), 
+            bounds=(0, None)
+        )
+        model.add_component(col_name, var)
+        pyo_vars[col_name] = var
+
+    @model.Constraint(model.t)
+    def electric_constraint(m, t):
+        return consumption_df[net_demand_varname][t] == getattr(m, net_demand_varname)[t]
+    
+    result, model = emissions.calculate_grid_emissions(
+        emissions_factors.magnitude, 
+        getattr(model, net_demand_varname), 
+        emission_units=emissions_units,
+        model=model
+    )
+    model.obj = pyo.Objective(expr=result)
+    solver = pyo.SolverFactory("gurobi")
+    solver.solve(model)
+    assert pyo.value(result) == expected
+    assert model is not None
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")

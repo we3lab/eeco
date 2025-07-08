@@ -1,11 +1,12 @@
 """Functions to calculate emissions from electricity consumption data."""
 
+import pint
 import datetime
 import calendar
+import cvxpy as cp
 import numpy as np
 import pandas as pd
-import cvxpy as cp
-import pint
+import pyomo.environ as pyo
 
 from .units import u
 from . import utils as ut
@@ -81,8 +82,8 @@ def calculate_grid_emissions(
         emissions_timeseries, model = ut.multiply(
             consumption_data, carbon_intensity, model=model, varstr=varstr + "_multiply"
         )
-        total_emissions, model = ut.sum(emissions_timeseries, model=model, varstr=varstr+"_sum") / n_per_hour
-        return total_emissions * conversion_factor, model
+        total_emissions, model = ut.sum(emissions_timeseries, model=model, varstr=varstr+"_sum")
+        return total_emissions * conversion_factor / n_per_hour, model
     else:
         raise ValueError(
             "consumption_data must be of type numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var"
