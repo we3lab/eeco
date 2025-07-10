@@ -83,8 +83,8 @@ In `bibtex` format:
 Scope 2 Emissions
 =================
 
-The emissions dataset includes hourly average CO2e emissions intensity values for each calendar month. 
-The hourly CO2e emissions are calculated by aggregating values for electric-generating units in the continental U.S. that are metered by balancing authorities and used to serve required demand. 
+The emissions dataset includes hourly average CO\ :sub:`2`\ e emissions intensity values for each calendar month. 
+The hourly CO\ :sub:`2`\ e emissions are calculated by aggregating values for electric-generating units in the continental U.S. that are metered by balancing authorities and used to serve required demand. 
 The data may represent Scope 2 emissions at the level of balancing authority, U.S. region, or state.
 
 
@@ -92,7 +92,7 @@ The columns are:
 
 - **month**: The calendar month for which this grid emissions value is relevant (1–12).
 - **hour**: The hour for which this grid emissions value is relevant (0–23).
-- **co2_eq_kg_per_MWh**: The average grid emissions intensity for a given hour during a given calendar month, given in kg CO2e per MWh.
+- **co2_eq_kg_per_MWh**: The average grid emissions intensity for a given hour during a given calendar month, given in kg CO\ :sub:`2`\ e per MWh.
 
 Each row in the emmissions data corresponds to a different hourly average emissions intensity. 
 For example, There are 24 rows for January. The row with month "1" and hour "0" represents the average emissions intensity from 00:00 - 00:59 across all days in January.
