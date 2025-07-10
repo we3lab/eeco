@@ -506,8 +506,8 @@ def test_create_charge_array(
     ],
 )
 def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
-    rate_df = pd.read_csv(billing_path)
-    result = costs.get_charge_dict(start_dt, end_dt, rate_df, resolution=resolution)
+    tariff_df = pd.read_csv(billing_path)
+    result = costs.get_charge_dict(start_dt, end_dt, tariff_df, resolution=resolution)
     assert result.keys() == expected.keys()
     for key, val in result.items():
         assert (result[key] == expected[key]).all()
@@ -824,7 +824,7 @@ def test_calculate_cost_pyo(
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "start_dt, end_dt, billing_data, utility, consumption_data_dict, "
-    "prev_demand_dict, consumption_estimate, expected",
+    "prev_demand_dict, consumption_estimate, scale_factor, expected",
     [
         (
             np.datetime64("2024-07-10"),  # Summer weekday
@@ -834,7 +834,19 @@ def test_calculate_cost_pyo(
             {"electric": np.arange(96), "gas": np.arange(96)},
             None,
             0,
+            1,  # default scale factor
             np.float64(4027.79),
+        ),
+        (
+            np.datetime64("2024-07-10"),  # Summer weekday
+            np.datetime64("2024-07-11"),  # Summer weekday
+            input_dir + "billing_pge.csv",
+            "electric",
+            {"electric": np.arange(96), "gas": np.arange(96)},
+            None,
+            0,
+            1.1,  # non-default scale factor
+            np.float64(4027.79),  # daily demand charge unscaled
         ),
         (
             np.datetime64("2024-07-13"),  # Summer weekend
@@ -844,6 +856,7 @@ def test_calculate_cost_pyo(
             {"electric": np.arange(96), "gas": np.arange(96)},
             None,
             0,
+            1,  # default scale factor
             np.float64(2023.5),
         ),
         (
@@ -854,6 +867,7 @@ def test_calculate_cost_pyo(
             {"electric": np.arange(96), "gas": np.arange(96)},
             None,
             0,
+            1,  # default scale factor
             np.float64(2028.6),
         ),
         (
@@ -885,6 +899,7 @@ def test_calculate_cost_pyo(
                 },
             },
             0,
+            1,  # default scale factor
             np.float64(2023.5),
         ),
         (
@@ -916,6 +931,7 @@ def test_calculate_cost_pyo(
                 },
             },
             0,
+            1,  # default scale factor
             np.float64(2897.79),
         ),
         (
@@ -926,7 +942,22 @@ def test_calculate_cost_pyo(
             {"electric": np.arange(96), "gas": np.arange(96)},
             None,
             0,
+            1,  # default scale factor
             np.float64(0),
+        ),
+        (
+            np.datetime64("2024-07-10"),  # Summer weekday
+            np.datetime64("2024-07-13"),  # Summer weekday (3 days)
+            input_dir + "billing_pge.csv",
+            "electric",
+            {
+                "electric": np.arange(288),
+                "gas": np.arange(288),
+            },  # 3 days * 96 timesteps
+            None,
+            0,
+            1.1,  # non-default scale factor
+            pytest.approx(14646.313),  # 13314.83 * 1.1
         ),
     ],
 )
@@ -938,6 +969,7 @@ def test_calculate_demand_costs(
     consumption_data_dict,
     prev_demand_dict,
     consumption_estimate,
+    scale_factor,
     expected,
 ):
     billing_data = pd.read_csv(billing_data)
@@ -953,6 +985,7 @@ def test_calculate_demand_costs(
         consumption_estimate=consumption_estimate,
         desired_utility=utility,
         desired_charge_type="demand",
+        demand_scale_factor=scale_factor,
     )
     assert result == expected
     assert model is None
@@ -1094,6 +1127,7 @@ def test_calculate_export_revenues(charge_array, export_data, divisor, expected)
     assert model is None
 
 
+<<<<<<< HEAD
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "billing_file, variant_params, expected_checks",
@@ -1363,6 +1397,23 @@ def test_parametrize_charge_dict():
     assert np.any(
         double_peak_charge != original_charge
     ), "Double peak variant should have different charges"
+=======
+@pytest.mark.parametrize(
+    "key, expected",
+    [
+        # YYYYMMDD format
+        ("electric_demand_peak_20240710_20240710_100", 0),
+        ("electric_demand_peak_20240710_20240731_100", 21),
+        # YYYY-MM-DD format
+        ("electric_energy_0_2024-07-10_2024-07-10_0", 0),
+        ("electric_energy_0_2024-07-10_2024-07-31_0", 21),
+    ],
+)
+def test_get_charge_array_duration(key, expected):
+    from electric_emission_cost.costs import get_charge_array_duration
+
+    assert get_charge_array_duration(key) == expected
+>>>>>>> main
 
 
 # TODO: write test_calculate_itemized_cost

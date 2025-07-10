@@ -53,7 +53,7 @@ def create_charge_array(charge, datetime, effective_start_date, effective_end_da
         `weekday_start`, `weekday_end`, `hour_start`, `hour_end`, and `charge`
 
     datetime : pandas.DataFrame, pandas.Series, or numpy.ndarray
-        If a pandas Series, it must be of type datetime
+        If a pandas Series, it must be of type datetime.
         If a DataFrame it must have a column "DateTime" and row for each timestep
 
     effective_start_date : datetime.datetime
@@ -111,7 +111,7 @@ def create_charge_array(charge, datetime, effective_start_date, effective_end_da
 
 
 def add_to_charge_array(charge_dict, key_str, charge_array):
-    """Add to an existing charge array, or an arrya of all zeros if this charge
+    """Add to an existing charge array, or an array of all zeros if this charge
     array does not exist.
 
     This functionality is useful for noncontiguous charges that should be saved
@@ -419,6 +419,42 @@ def get_charge_df(
     return charge_df
 
 
+def default_varstr_alias_func(
+    utility, charge_type, name, start_date, end_date, charge_limit
+):
+    """Default function for creating the variable name strings for each charge
+    in the tariff sheet. Can be overwritten in the function call to `calculate_cost`
+    to customize variable names.
+
+    Parameters
+    ----------
+    utility : str
+        Name of the utility ('electric' or 'gas')
+
+    charge_type : str
+        Name of the `charge_type` ('demand', 'energy', or 'customer')
+
+    name : str
+        The name of the period for this charge (e.g., 'all-day' or 'on-peak')
+
+    start_date
+        The inclusive start date for this charge
+
+    end_date : str
+        The exclusive end date for this charge
+
+    charge_limit : str
+        The consumption limit for this tier of charges converted to a string
+
+    Returns
+    -------
+    str
+        Variable name of the form
+        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
+    """
+    return f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
+
+
 def get_next_limit(key_substr, current_limit, keys):
     """Finds the next charge limit for the charge represented by `key`
 
@@ -500,6 +536,7 @@ def calculate_demand_cost(
     scale_factor : float
         Optional factor for scaling demand charges relative to energy charges
         when the optimization/simulation period is not a full billing cycle.
+        Applied to monthly charges where end_date - start_date > 1 day.
         Default is 1
 
     model : pyomo.Model
@@ -580,16 +617,15 @@ def calculate_demand_cost(
             "consumption_data must be of type numpy.ndarray or cvxpy.Expression"
         )
     if model is None:
-        result, _ = ut.max(demand_charged)
-        return ut.max_pos(result - prev_demand_cost) * scale_factor
+        max_var, _ = ut.max(demand_charged)
+        max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
+        return max_pos_val * scale_factor, max_pos_model
     else:
         max_var, model = ut.max(demand_charged, model=model, varstr=varstr + "_max")
-        return (
-            ut.max_pos(
-                max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
-            )
-            * scale_factor
+        max_pos_val, max_pos_model = ut.max_pos(
+            max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
         )
+        return max_pos_val * scale_factor, max_pos_model
 
 
 def calculate_energy_cost(
@@ -759,6 +795,49 @@ def calculate_export_revenues(
     return revenues / divisor, model
 
 
+def get_charge_array_duration(key):
+    """Parse a charge array key to determine the duration of the charge period.
+
+    Parameters
+    ----------
+    key : str
+        Charge key of form `utility_charge_type_name_start_date_end_date_charge_limit`
+        where start_date and end_date are in YYYYMMDD or YYYY-MM-DD format
+
+    Returns
+    -------
+    int
+        Duration of the charge period in days
+
+    Raises
+    ------
+    ValueError
+        If the key format is invalid or dates cannot be parsed
+    """
+    parts = key.split("_")
+    if len(parts) < 6:
+        raise ValueError(f"Invalid charge key format: {key}")
+
+    start_date_str = parts[-3]
+    end_date_str = parts[-2]
+
+    # Allow 2 date formats
+    date_formats = ["%Y%m%d", "%Y-%m-%d"]
+
+    for date_format in date_formats:
+        try:
+            start_date = dt.datetime.strptime(start_date_str, date_format)
+            end_date = dt.datetime.strptime(end_date_str, date_format)
+            return (end_date - start_date).days
+        except ValueError:
+            continue
+
+    raise ValueError(
+        f"Invalid date format in charge key {key}:"
+        f"cannot parse dates '{start_date_str}' and '{end_date_str}'"
+    )
+
+
 def calculate_cost(
     charge_dict,
     consumption_data_dict,
@@ -770,6 +849,7 @@ def calculate_cost(
     desired_charge_type=None,
     demand_scale_factor=1,
     model=None,
+    varstr_alias_func=default_varstr_alias_func,
 ):
     """Calculates the cost of given charges (demand or energy) for the given
     billing rate structure, utility, and consumption information as a
@@ -809,8 +889,8 @@ def calculate_cost(
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
         Only used when `consumption_data` is cvxpy.Expression for convex relaxation
-         of tiered charges, while numpy.ndarray `consumption_data` will use actual
-         consumption and ignore the estimate.
+        of tiered charges, while numpy.ndarray `consumption_data` will use actual
+        consumption and ignore the estimate.
 
     desired_charge_type : str
         Name of desired charge type for itemized costs.
@@ -824,11 +904,31 @@ def calculate_cost(
     demand_scale_factor : float
         Optional factor for scaling demand charges relative to energy charges
         when the optimization/simulation period is not a full billing cycle.
+        Applied to monthly charges where end_date - start_date > 1 day.
         Default is 1
 
     model : pyomo.Model
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
+
+    varstr_alias_func: function
+        Function to generate variable name for pyomo,
+        should take in a 6 inputs and generate a string output.
+        The function will receive following six inputs:
+
+        - utility: str
+        - charge_type: str
+        - name: str
+        - start_date: str
+        - end_date: str
+        - charge_limit: str
+
+        Examples of functions:
+            f_no_dates=lambda utility,
+            charge_type, name,
+            start_date, end_date,
+            charge_limit:
+            f"{utility}_{charge_type}_{name}_{charge_limit}"
 
     Raises
     ------
@@ -848,6 +948,10 @@ def calculate_cost(
 
     for key, charge_array in charge_dict.items():
         utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
+        var_str = ut.sanitize_varstr(
+            varstr_alias_func(utility, charge_type, name, eff_start, eff_end, limit_str)
+        )
+
         # if we want itemized costs skip irrelvant portions of the bill
         if (desired_utility and utility != desired_utility) or (
             desired_charge_type and charge_type != desired_charge_type
@@ -858,6 +962,10 @@ def calculate_cost(
         key_substr = "_".join([utility, charge_type, name, eff_start, eff_end])
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
         consumption_data = consumption_data_dict[utility]
+
+        # Only apply demand_scale_factor if charge spans more than one day
+        charge_duration_days = get_charge_array_duration(key)
+        effective_scale_factor = demand_scale_factor if charge_duration_days > 1 else 1
 
         # TODO: this assumes units of kW for electricity and meters cubed for gas
         if utility == ELECTRIC:
@@ -882,9 +990,9 @@ def calculate_cost(
                 prev_demand=prev_demand,
                 prev_demand_cost=prev_demand_cost,
                 consumption_estimate=consumption_estimate,
-                scale_factor=demand_scale_factor,
+                scale_factor=effective_scale_factor,
                 model=model,
-                varstr=key,
+                varstr=var_str,
             )
             cost += new_cost
         elif charge_type == ENERGY:
@@ -901,12 +1009,12 @@ def calculate_cost(
                 prev_consumption=prev_consumption,
                 consumption_estimate=consumption_estimate,
                 model=model,
-                varstr=key,
+                varstr=var_str,
             )
             cost += new_cost
         elif charge_type == EXPORT:
             new_cost, model = calculate_export_revenues(
-                charge_array, consumption_data, divisor, model=model, varstr=key
+                charge_array, consumption_data, divisor, model=model, varstr=var_str
             )
             cost -= new_cost
         elif charge_type == CUSTOMER:
