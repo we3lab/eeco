@@ -6,6 +6,23 @@ import pandas as pd
 import pyomo.environ as pyo
 
 from electric_emission_cost import costs
+from electric_emission_cost.costs import (
+    CHARGE,
+    MONTH_START,
+    MONTH_END,
+    WEEKDAY_START,
+    WEEKDAY_END,
+    HOUR_START,
+    HOUR_END,
+    ELECTRIC,
+    GAS,
+    DEMAND,
+    ENERGY,
+    PEAK,
+    HALF_PEAK,
+    OFF_PEAK,
+    SUPER_OFF_PEAK,
+)
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False
@@ -22,13 +39,13 @@ output_dir = "tests/data/output/"
         # all hours constant charge for only 1-day
         (
             {
-                "charge": 0.05,
-                "month_start": 1,
-                "month_end": 12,
-                "weekday_start": 0,
-                "weekday_end": 6,
-                "hour_start": 0,
-                "hour_end": 24,
+                CHARGE: 0.05,
+                MONTH_START: 1,
+                MONTH_END: 12,
+                WEEKDAY_START: 0,
+                WEEKDAY_END: 6,
+                HOUR_START: 0,
+                HOUR_END: 24,
             },
             np.datetime64("2024-07-10"),  # Summer weekday
             np.datetime64("2024-07-11"),  # Summer weekday
@@ -40,13 +57,13 @@ output_dir = "tests/data/output/"
         # outside of effective start date
         (
             {
-                "charge": 0.05,
-                "month_start": 1,
-                "month_end": 12,
-                "weekday_start": 0,
-                "weekday_end": 6,
-                "hour_start": 0,
-                "hour_end": 24,
+                CHARGE: 0.05,
+                MONTH_START: 1,
+                MONTH_END: 12,
+                WEEKDAY_START: 0,
+                WEEKDAY_END: 6,
+                HOUR_START: 0,
+                HOUR_END: 24,
             },
             np.datetime64("2024-07-10"),  # Summer weekday
             np.datetime64("2024-07-11"),  # Summer weekday
@@ -58,13 +75,13 @@ output_dir = "tests/data/output/"
         # one day with then one day without effective start date
         (
             {
-                "charge": 0.05,
-                "month_start": 1,
-                "month_end": 12,
-                "weekday_start": 0,
-                "weekday_end": 6,
-                "hour_start": 0,
-                "hour_end": 24,
+                CHARGE: 0.05,
+                MONTH_START: 1,
+                MONTH_END: 12,
+                WEEKDAY_START: 0,
+                WEEKDAY_END: 6,
+                HOUR_START: 0,
+                HOUR_END: 24,
             },
             np.datetime64("2024-07-10"),  # Summer weekday
             np.datetime64("2024-07-12"),  # Summer weekday
@@ -76,13 +93,13 @@ output_dir = "tests/data/output/"
         # one day without then one day with effective start date
         (
             {
-                "charge": 0.05,
-                "month_start": 1,
-                "month_end": 12,
-                "weekday_start": 0,
-                "weekday_end": 6,
-                "hour_start": 0,
-                "hour_end": 24,
+                CHARGE: 0.05,
+                MONTH_START: 1,
+                MONTH_END: 12,
+                WEEKDAY_START: 0,
+                WEEKDAY_END: 6,
+                HOUR_START: 0,
+                HOUR_END: 24,
             },
             np.datetime64("2024-07-10"),  # Summer weekdays
             np.datetime64("2024-07-12"),  # Summer weekdays
@@ -521,7 +538,7 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
         # single energy charge with flat consumption
         (
             {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
-            {"electric": np.ones(96), "gas": np.ones(96)},
+            {ELECTRIC: np.ones(96), GAS: np.ones(96)},
             "15m",
             None,
             0,
@@ -532,7 +549,7 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
         # single energy charge with increasing consumption
         (
             {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
-            {"electric": np.arange(96), "gas": np.ones(96)},
+            {ELECTRIC: np.arange(96), GAS: np.ones(96)},
             "15m",
             None,
             0,
@@ -558,7 +575,7 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
                     ]
                 ),
             },
-            {"electric": np.ones(96) * 100, "gas": np.ones(96)},
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
             "15m",
             None,
             2400,
@@ -614,7 +631,7 @@ def test_calculate_cost_np(
                     ]
                 ),
             },
-            {"electric": np.ones(96) * 100, "gas": np.ones(96)},
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
             "15m",
             None,
             2400,
@@ -678,7 +695,7 @@ def test_calculate_cost_cvx(
                     ]
                 ),
             },
-            {"electric": np.ones(96) * 100, "gas": np.ones(96)},
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
             "15m",
             None,
             2400,
@@ -711,7 +728,7 @@ def test_calculate_cost_cvx(
                 ),
                 "electric_demand_off-peak_2024-07-10_2024-07-10_0": np.ones(96) * 10,
             },
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             "15m",
             {
                 "electric_demand_peak-summer_2024-07-10_2024-07-10_0": {
@@ -754,7 +771,7 @@ def test_calculate_cost_cvx(
                 ),
                 "electric_demand_off-peak_2024-07-10_2024-07-10_0": np.ones(96) * 10,
             },
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             "15m",
             {
                 "electric_demand_peak-summer_2024-07-10_2024-07-10_0": {
@@ -788,7 +805,7 @@ def test_calculate_cost_pyo(
     expected_cost,
 ):
     model = pyo.ConcreteModel()
-    model.T = len(consumption_data_dict["electric"])
+    model.T = len(consumption_data_dict[ELECTRIC])
     model.t = range(model.T)
     pyo_vars = {}
     for key, val in consumption_data_dict.items():
@@ -798,11 +815,11 @@ def test_calculate_cost_pyo(
 
     @model.Constraint(model.t)
     def electric_constraint(m, t):
-        return consumption_data_dict["electric"][t] == m.electric[t]
+        return consumption_data_dict[ELECTRIC][t] == m.electric[t]
 
     @model.Constraint(model.t)
     def gas_constraint(m, t):
-        return consumption_data_dict["gas"][t] == m.gas[t]
+        return consumption_data_dict[GAS][t] == m.gas[t]
 
     result, model = costs.calculate_cost(
         charge_dict,
@@ -830,8 +847,8 @@ def test_calculate_cost_pyo(
             np.datetime64("2024-07-10"),  # Summer weekday
             np.datetime64("2024-07-11"),  # Summer weekday
             input_dir + "billing_pge.csv",
-            "electric",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            ELECTRIC,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             None,
             0,
             1,  # default scale factor
@@ -841,8 +858,8 @@ def test_calculate_cost_pyo(
             np.datetime64("2024-07-10"),  # Summer weekday
             np.datetime64("2024-07-11"),  # Summer weekday
             input_dir + "billing_pge.csv",
-            "electric",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            ELECTRIC,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             None,
             0,
             1.1,  # non-default scale factor
@@ -852,8 +869,8 @@ def test_calculate_cost_pyo(
             np.datetime64("2024-07-13"),  # Summer weekend
             np.datetime64("2024-07-14"),  # Summer weekend
             input_dir + "billing_pge.csv",
-            "electric",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            ELECTRIC,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             None,
             0,
             1,  # default scale factor
@@ -863,8 +880,8 @@ def test_calculate_cost_pyo(
             np.datetime64("2024-03-07"),  # Winter weekday
             np.datetime64("2024-03-08"),  # Winter weekday
             input_dir + "billing_pge.csv",
-            "electric",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            ELECTRIC,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             None,
             0,
             1,  # default scale factor
@@ -874,8 +891,8 @@ def test_calculate_cost_pyo(
             np.datetime64("2024-03-09"),  # Winter weekend
             np.datetime64("2024-03-10"),  # Winter weekend
             input_dir + "billing_pge.csv",
-            "electric",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            ELECTRIC,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             {
                 "electric_demand_peak-summer_20240309_20240309_0": {
                     "demand": 0,
@@ -906,8 +923,8 @@ def test_calculate_cost_pyo(
             np.datetime64("2024-07-10"),  # Summer weekday
             np.datetime64("2024-07-11"),  # Summer weekday
             input_dir + "billing_pge.csv",
-            "electric",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            ELECTRIC,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             {
                 "electric_demand_peak-summer_20240710_20240710_0": {
                     "demand": 7.078810759792355,
@@ -938,8 +955,8 @@ def test_calculate_cost_pyo(
             np.datetime64("2024-07-10"),  # Summer weekday
             np.datetime64("2024-07-11"),  # Summer weekday
             input_dir + "billing_pge.csv",
-            "gas",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            GAS,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             None,
             0,
             1,  # default scale factor
@@ -949,10 +966,10 @@ def test_calculate_cost_pyo(
             np.datetime64("2024-07-10"),  # Summer weekday
             np.datetime64("2024-07-13"),  # Summer weekday (3 days)
             input_dir + "billing_pge.csv",
-            "electric",
+            ELECTRIC,
             {
-                "electric": np.arange(288),
-                "gas": np.arange(288),
+                ELECTRIC: np.arange(288),
+                GAS: np.arange(288),
             },  # 3 days * 96 timesteps
             None,
             0,
@@ -1000,8 +1017,8 @@ def test_calculate_demand_costs(
             np.datetime64("2024-07-10"),  # Summer weekday
             np.datetime64("2024-07-11"),  # Summer weekday
             input_dir + "billing_pge.csv",
-            "electric",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            ELECTRIC,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             {
                 "gas_energy_0_20240710_20240710_0": 0,
                 "gas_energy_0_20240710_20240710_5000": 0,
@@ -1028,8 +1045,8 @@ def test_calculate_demand_costs(
             np.datetime64("2024-07-13"),  # Summer weekend
             np.datetime64("2024-07-14"),  # Summer weekend
             input_dir + "billing_pge.csv",
-            "electric",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            ELECTRIC,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             None,
             0,
             pytest.approx(102.3834),
@@ -1038,8 +1055,8 @@ def test_calculate_demand_costs(
             np.datetime64("2024-03-07"),  # Winter weekday
             np.datetime64("2024-03-08"),  # Winter weekday
             input_dir + "billing_pge.csv",
-            "electric",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            ELECTRIC,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             None,
             0,
             pytest.approx(123.24669),
@@ -1048,8 +1065,8 @@ def test_calculate_demand_costs(
             np.datetime64("2024-03-09"),  # Winter weekend
             np.datetime64("2024-03-10"),  # Winter weekend
             input_dir + "billing_pge.csv",
-            "electric",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            ELECTRIC,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             None,
             0,
             pytest.approx(110.7624),
@@ -1058,8 +1075,8 @@ def test_calculate_demand_costs(
             np.datetime64("2024-03-09"),  # Winter weekend
             np.datetime64("2024-03-10"),  # Winter weekend
             input_dir + "billing_pge.csv",
-            "gas",
-            {"electric": np.arange(96), "gas": np.arange(96)},
+            GAS,
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             None,
             0,
             pytest.approx(0),
@@ -1068,8 +1085,8 @@ def test_calculate_demand_costs(
             np.datetime64("2024-03-09"),  # Winter weekend
             np.datetime64("2024-03-10"),  # Winter weekend
             input_dir + "billing_pge.csv",
-            "gas",
-            {"electric": np.arange(96), "gas": np.repeat(np.array([5100]), 96)},
+            GAS,
+            {ELECTRIC: np.arange(96), GAS: np.repeat(np.array([5100]), 96)},
             None,
             0,
             pytest.approx(59.1),
@@ -1078,8 +1095,8 @@ def test_calculate_demand_costs(
             np.datetime64("2024-03-09"),  # Winter weekend
             np.datetime64("2024-03-10"),  # Winter weekend
             input_dir + "billing_pge.csv",
-            "gas",
-            {"electric": np.arange(96), "gas": np.ones(96)},
+            GAS,
+            {ELECTRIC: np.arange(96), GAS: np.ones(96)},
             None,
             5100,
             pytest.approx(0),
@@ -1127,277 +1144,7 @@ def test_calculate_export_revenues(charge_array, export_data, divisor, expected)
     assert model is None
 
 
-<<<<<<< HEAD
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-@pytest.mark.parametrize(
-    "billing_file, variant_params, expected_checks",
-    [
-        # Test 1: billing_pge.csv with double peak charges
-        (
-            "billing_pge.csv",
-            {
-                "peak_demand_ratio": 2.0,
-                "peak_energy_ratio": 2.0,
-                "avg_demand_ratio": 1.0,
-                "avg_energy_ratio": 1.0,
-                "peak_window_expand_hours": 0.0,
-            },
-            {
-                "peak_demand_charge": 42.38,  # 21.19 * 2
-                "half_peak_demand_charge": 11.76,  # 5.88 * 2
-                "off_peak_demand_charge": 21.3,  # unchanged
-                "peak_energy_charge": 0.23617,  # 0.08981 + (0.16299 - 0.08981) * 2
-                "half_peak_energy_charge": 0.14939,  # 0.08981 + (0.1196 - 0.08981) * 2
-                "off_peak_energy_rates": [0.08981, 0.09716, 0.591, 0.0],  # unchanged
-            },
-        ),
-        # Test 2: billing_pge.csv with 2-hour peak window expansion
-        (
-            "billing_pge.csv",
-            {
-                "peak_demand_ratio": 1.0,
-                "peak_energy_ratio": 1.0,
-                "avg_demand_ratio": 1.0,
-                "avg_energy_ratio": 1.0,
-                "peak_window_expand_hours": 2.0,
-            },
-            {
-                "peak_energy_window": (11, 19),  # expanded from 12-18
-                "morning_half_peak_window": (7.5, 11),  # shifted from 8.5-12
-                "evening_half_peak_window": (19, 22.5),  # shifted from 18-21.5
-                "peak_demand_window": (11, 19),  # expanded from 12-18
-                "peak_energy_charge": 0.16299,  # unchanged
-                "half_peak_energy_charge": 0.1196,  # unchanged
-            },
-        ),
-        # Test 3: billing_demand_2.csv with tripled peak demand
-        (
-            "billing_demand_2.csv",
-            {
-                "peak_demand_ratio": 3.0,
-                "peak_energy_ratio": 1.0,
-                "avg_demand_ratio": 1.0,
-                "avg_energy_ratio": 1.0,
-                "peak_window_expand_hours": 0.0,
-            },
-            {
-                "on_peak_demand_charge": 60.0,  # 20 * 3
-                "all_day_demand_charge": 5.0,  # unchanged
-            },
-        ),
-        # Test 4: billing_demand_2.csv with 1-hour peak window expansion
-        (
-            "billing_demand_2.csv",
-            {
-                "peak_demand_ratio": 1.0,
-                "peak_energy_ratio": 1.0,
-                "avg_demand_ratio": 1.0,
-                "avg_energy_ratio": 1.0,
-                "peak_window_expand_hours": 1.0,
-            },
-            {
-                "on_peak_demand_window": (15.5, 21.5),  # expanded from 15 and 21
-                "on_peak_demand_charge": 20.0,  # unchanged
-                "all_day_demand_charge": 5.0,  # unchanged
-            },
-        ),
-    ],
-)
-def test_parametrize_rate_data(billing_file, variant_params, expected_checks):
-    """Test the parametrize_rate_data function with different files and variants."""
-
-    rate_data = pd.read_csv(input_dir + billing_file)
-    variant_data = costs.parametrize_rate_data(rate_data, **variant_params)
-
-    # Test demand charges
-    if "peak_demand_charge" in expected_checks:
-        peak_demand = variant_data[
-            (variant_data["type"] == "demand") & (variant_data["name"] == "peak-summer")
-        ]
-        assert np.allclose(
-            peak_demand["charge"].values, expected_checks["peak_demand_charge"]
-        )
-
-    if "half_peak_demand_charge" in expected_checks:
-        half_peak_demand = variant_data[
-            (variant_data["type"] == "demand")
-            & (variant_data["name"] == "half-peak-summer")
-        ]
-        assert np.allclose(
-            half_peak_demand["charge"].values,
-            expected_checks["half_peak_demand_charge"],
-        )
-
-    if "off_peak_demand_charge" in expected_checks:
-        off_peak_demand = variant_data[
-            (variant_data["type"] == "demand") & (variant_data["name"] == "off-peak")
-        ]
-        assert np.allclose(
-            off_peak_demand["charge"].values, expected_checks["off_peak_demand_charge"]
-        )
-
-    if "on_peak_demand_charge" in expected_checks:
-        on_peak_demand = variant_data[
-            (variant_data["type"] == "demand") & (variant_data["name"] == "on-peak")
-        ]
-        assert np.isclose(
-            on_peak_demand["charge"].values[0], expected_checks["on_peak_demand_charge"]
-        )
-
-    if "all_day_demand_charge" in expected_checks:
-        all_day_demand = variant_data[
-            (variant_data["type"] == "demand") & (variant_data["name"] == "all-day")
-        ]
-        assert np.isclose(
-            all_day_demand["charge"].values[0], expected_checks["all_day_demand_charge"]
-        )
-
-    # Test energy charges
-    if "peak_energy_charge" in expected_checks:
-        if "peak_energy_window" in expected_checks:
-            # Window expansion test
-            start_hour, end_hour = expected_checks["peak_energy_window"]
-            peak_energy = variant_data[
-                (variant_data["type"] == "energy")
-                & (variant_data["hour_start"] == start_hour)
-                & (variant_data["hour_end"] == end_hour)
-                & (variant_data["month_start"] == 5)
-                & (variant_data["weekday_start"] == 0)
-            ]
-            assert (
-                not peak_energy.empty
-            ), f"Peak energy window should be {start_hour}-{end_hour}"
-        else:
-            # Charge scaling test
-            peak_energy = variant_data[
-                (variant_data["type"] == "energy")
-                & (variant_data["hour_start"] == 12)
-                & (variant_data["hour_end"] == 18)
-            ]
-        assert np.isclose(
-            peak_energy["charge"].values[0], expected_checks["peak_energy_charge"]
-        )
-
-    if "half_peak_energy_charge" in expected_checks:
-        # Charge scaling test
-        half_peak_energy = variant_data[
-            (variant_data["type"] == "energy")
-            & (variant_data["hour_start"] == 8.5)
-            & (variant_data["hour_end"] == 12)
-            & (variant_data["month_start"] == 5)
-            & (variant_data["weekday_start"] == 0)
-        ]
-        assert np.allclose(
-            half_peak_energy["charge"], expected_checks["half_peak_energy_charge"]
-        )
-
-    if "off_peak_energy_rates" in expected_checks:
-        off_peak_energy = variant_data[
-            (variant_data["type"] == "energy")
-            & ((variant_data["hour_start"] == 0) | (variant_data["hour_start"] == 21.5))
-            & ((variant_data["hour_end"] == 8.5) | (variant_data["hour_end"] == 24))
-        ]
-        unique_off_peak_rates = off_peak_energy["charge"].unique()
-        for rate in unique_off_peak_rates:
-            assert rate in expected_checks["off_peak_energy_rates"]
-
-    # Test window expansions for demand charges
-    if "peak_demand_window" in expected_checks:
-        start_hour, end_hour = expected_checks["peak_demand_window"]
-        peak_demand = variant_data[
-            (variant_data["type"] == "demand") & (variant_data["name"] == "peak-summer")
-        ]
-        assert not peak_demand.empty, "Peak demand should exist"
-        peak_demand_row = peak_demand.iloc[0]
-        assert (
-            peak_demand_row["hour_start"] == start_hour
-        ), f"Peak demand should start at {start_hour}"
-        assert (
-            peak_demand_row["hour_end"] == end_hour
-        ), f"Peak demand should end at {end_hour}"
-
-    if "on_peak_demand_window" in expected_checks:
-        start_hour, end_hour = expected_checks["on_peak_demand_window"]
-        on_peak_demand = variant_data[
-            (variant_data["type"] == "demand") & (variant_data["name"] == "on-peak")
-        ]
-        assert not on_peak_demand.empty, "On-peak demand should exist"
-        on_peak_demand_row = on_peak_demand.iloc[0]
-        assert (
-            on_peak_demand_row["hour_start"] == start_hour
-        ), f"On-peak demand should start at {start_hour}"
-        assert (
-            on_peak_demand_row["hour_end"] == end_hour
-        ), f"On-peak demand should end at {end_hour}"
-
-
-@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_parametrize_charge_dict():
-    """Test the parametrize_charge_dict function with multiple variants."""
-
-    rate_data = pd.read_csv(input_dir + "billing_pge.csv")
-    start_dt = np.datetime64("2024-07-10")
-    end_dt = np.datetime64("2024-07-11")
-
-    # Define test variants
-    variants = [
-        # Double peak charges
-        {
-            "peak_demand_ratio": 2.0,
-            "peak_energy_ratio": 2.0,
-            "avg_demand_ratio": 1.0,
-            "avg_energy_ratio": 1.0,
-            "peak_window_expand_hours": 0.0,
-            "variant_name": "double_peak",
-        },
-        # Expand peak window by 2 hours
-        {
-            "peak_demand_ratio": 1.0,
-            "peak_energy_ratio": 1.0,
-            "avg_demand_ratio": 1.0,
-            "avg_energy_ratio": 1.0,
-            "peak_window_expand_hours": 2.0,
-            "variant_name": "expanded_window",
-        },
-    ]
-
-    # Get parametrized charge dicts
-    charge_dicts = costs.parametrize_charge_dict(start_dt, end_dt, rate_data, variants)
-
-    # Test that we have original + 2 variants
-    assert "original" in charge_dicts
-    assert "double_peak" in charge_dicts
-    assert "expanded_window" in charge_dicts
-
-    # Test that charge dicts have different structures
-    original_keys = set(charge_dicts["original"].keys())
-    double_peak_keys = set(charge_dicts["double_peak"].keys())
-    expanded_window_keys = set(charge_dicts["expanded_window"].keys())
-
-    # All should have the same keys (same time periods)
-    assert original_keys == double_peak_keys
-    assert original_keys == expanded_window_keys
-
-    # Test that charges are different between variants
-    # Find a peak demand charge key
-    peak_demand_key = None
-    for key in original_keys:
-        if "peak-summer" in key and "demand" in key:
-            peak_demand_key = key
-            break
-
-    assert peak_demand_key is not None, "Should find peak demand charge"
-
-    # Original and expanded_window should have same charge values
-    # Double_peak should have doubled charge values
-    original_charge = charge_dicts["original"][peak_demand_key]
-    double_peak_charge = charge_dicts["double_peak"][peak_demand_key]
-
-    # Check that double_peak has doubled charges where they apply
-    assert np.any(
-        double_peak_charge != original_charge
-    ), "Double peak variant should have different charges"
-=======
 @pytest.mark.parametrize(
     "key, expected",
     [
@@ -1413,7 +1160,336 @@ def test_get_charge_array_duration(key, expected):
     from electric_emission_cost.costs import get_charge_array_duration
 
     assert get_charge_array_duration(key) == expected
->>>>>>> main
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_detect_charge_periods():
+    """Test the detect_charge_periods function."""
+
+    # Use csv that has names like "peak" in the columns
+    rate_data = pd.read_csv(input_dir + "billing_pge.csv")
+
+    # Test the expected energy period types for July weekday
+    energy_periods = costs.detect_charge_periods(rate_data, costs.ENERGY, 7, 0)
+    period_types = set(energy_periods.values())
+    assert costs.PEAK in period_types
+    assert costs.HALF_PEAK in period_types
+    assert costs.OFF_PEAK in period_types
+
+    # Test the expected demand period types for July weekday
+    demand_periods = costs.detect_charge_periods(rate_data, costs.DEMAND, 7, 0)
+    period_types = set(demand_periods.values())
+    assert costs.PEAK in period_types
+    assert costs.HALF_PEAK in period_types
+    assert costs.OFF_PEAK in period_types
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "billing_file, variant_params, expected_checks",
+    [
+        # Test 1: billing_pge.csv with double peak charges
+        (
+            "billing_pge.csv",
+            {
+                "individual_ratios": {
+                    DEMAND: {
+                        PEAK: 2.0,
+                        HALF_PEAK: 2.0,
+                        OFF_PEAK: 1.0,
+                        SUPER_OFF_PEAK: 1.0,
+                    },
+                    ENERGY: {
+                        PEAK: 2.0,
+                        HALF_PEAK: 2.0,
+                        OFF_PEAK: 1.0,
+                        SUPER_OFF_PEAK: 1.0,
+                    },
+                }
+            },
+            {
+                "peak_demand_charge": 42.38,  # 21.19 * 2
+                "half_peak_demand_charge": 11.76,  # 5.88 * 2
+                "off_peak_demand_charge": 21.3,  # unchanged
+                "peak_energy_charge": 0.23617,  # 0.08981 + (0.16299 - 0.08981) * 2
+                "half_peak_energy_charge": 0.14939,  # 0.08981 + (0.1196 - 0.08981) * 2
+                "off_peak_energy_rates": [0.08981, 0.09716, 0.1133, 0.591, 0.0],
+            },
+        ),
+        # Test 2: billing_pge.csv with scale all demand
+        (
+            "billing_pge.csv",
+            {
+                "scale_all_demand": 1.5,
+                "scale_all_energy": 1.0,
+            },
+            {
+                "peak_demand_charge": 31.785,  # 21.19 * 1.5
+                "half_peak_demand_charge": 8.82,  # 5.88 * 1.5
+                "off_peak_demand_charge": 31.95,  # 21.3 * 1.5
+                "peak_energy_charge": 0.16299,  # unchanged
+                "half_peak_energy_charge": 0.1196,  # unchanged
+            },
+        ),
+        # Test 3: billing_demand_2.csv with tripled peak demand
+        (
+            "billing_demand_2.csv",
+            {
+                "individual_ratios": {
+                    DEMAND: {
+                        PEAK: 3.0,
+                        HALF_PEAK: 1.0,
+                        OFF_PEAK: 1.0,
+                        SUPER_OFF_PEAK: 1.0,
+                    },
+                    ENERGY: {
+                        PEAK: 1.0,
+                        HALF_PEAK: 1.0,
+                        OFF_PEAK: 1.0,
+                        SUPER_OFF_PEAK: 1.0,
+                    },
+                }
+            },
+            {
+                "on_peak_demand_charge": 60.0,  # 20 * 3
+                "all_day_demand_charge": 5.0,  # unchanged
+            },
+        ),
+        # Test 4: billing_demand_2.csv with scale all energy
+        (
+            "billing_demand_2.csv",
+            {
+                "scale_all_demand": 1.0,
+                "scale_all_energy": 2.0,
+            },
+            {
+                "on_peak_demand_charge": 20.0,  # unchanged
+                "all_day_demand_charge": 5.0,  # unchanged
+            },
+        ),
+        # Test 5: billing_pge.csv with peak window expansion
+        (
+            "billing_pge.csv",
+            {
+                "individual_ratios": {
+                    DEMAND: {
+                        PEAK: 1.0,
+                        HALF_PEAK: 1.0,
+                        OFF_PEAK: 1.0,
+                        SUPER_OFF_PEAK: 1.0,
+                    },
+                    ENERGY: {
+                        PEAK: 1.0,
+                        HALF_PEAK: 1.0,
+                        OFF_PEAK: 1.0,
+                        SUPER_OFF_PEAK: 1.0,
+                    },
+                },
+                "shift_peak_hours_before": -1.0,  # negative = earlier start
+                "shift_peak_hours_after": 1.0,  # positive = later end
+            },
+            {
+                "peak_energy_window": (11, 19),  # expanded from 12-18
+                "peak_demand_window": (11, 19),  # expanded from 12-18
+                "peak_energy_charge": 0.16299,  # unchanged
+                "half_peak_energy_charge": 0.1196,  # unchanged
+            },
+        ),
+    ],
+)
+def test_parametrize_rate_data(billing_file, variant_params, expected_checks):
+    """Test the parametrize_rate_data function with different files and variants."""
+
+    rate_data = pd.read_csv(input_dir + billing_file)
+    variant_data = costs.parametrize_rate_data(rate_data, **variant_params)
+
+    # Test demand charges
+    if "peak_demand_charge" in expected_checks:
+        peak_demand = variant_data[
+            (variant_data["type"] == costs.DEMAND)
+            & (variant_data["name"] == "peak-summer")
+        ]
+        assert np.allclose(
+            peak_demand[CHARGE].values, expected_checks["peak_demand_charge"]
+        )
+
+    if "half_peak_demand_charge" in expected_checks:
+        half_peak_demand = variant_data[
+            (variant_data["type"] == costs.DEMAND)
+            & (variant_data["name"] == "half-peak-summer")
+        ]
+        assert np.allclose(
+            half_peak_demand[CHARGE].values,
+            expected_checks["half_peak_demand_charge"],
+        )
+
+    if "off_peak_demand_charge" in expected_checks:
+        off_peak_demand = variant_data[
+            (variant_data["type"] == costs.DEMAND)
+            & (variant_data["name"] == "off-peak")
+        ]
+        assert np.allclose(
+            off_peak_demand[CHARGE].values, expected_checks["off_peak_demand_charge"]
+        )
+
+    if "on_peak_demand_charge" in expected_checks:
+        on_peak_demand = variant_data[
+            (variant_data["type"] == costs.DEMAND) & (variant_data["name"] == "on-peak")
+        ]
+        assert np.isclose(
+            on_peak_demand[CHARGE].values[0], expected_checks["on_peak_demand_charge"]
+        )
+
+    if "all_day_demand_charge" in expected_checks:
+        all_day_demand = variant_data[
+            (variant_data["type"] == costs.DEMAND) & (variant_data["name"] == "all-day")
+        ]
+        assert np.isclose(
+            all_day_demand[CHARGE].values[0], expected_checks["all_day_demand_charge"]
+        )
+
+    # Test energy charges
+    if "peak_energy_charge" in expected_checks:
+        if "peak_energy_window" in expected_checks:
+            # Window expansion test
+            start_hour, end_hour = expected_checks["peak_energy_window"]
+            peak_energy = variant_data[
+                (variant_data["type"] == costs.ENERGY)
+                & (variant_data[HOUR_START] == start_hour)
+                & (variant_data[HOUR_END] == end_hour)
+            ]
+        else:
+            # Charge scaling test
+            peak_energy = variant_data[
+                (variant_data["type"] == costs.ENERGY)
+                & (variant_data[HOUR_START] == 12)
+                & (variant_data[HOUR_END] == 18)
+            ]
+        assert np.isclose(
+            peak_energy[CHARGE].values[0], expected_checks["peak_energy_charge"]
+        )
+
+    if "half_peak_energy_charge" in expected_checks:
+        # Charge scaling test
+        half_peak_energy = variant_data[
+            (variant_data["type"] == costs.ENERGY)
+            & (variant_data[HOUR_START] == 8.5)
+            & (variant_data[HOUR_END] == 12)
+            & (variant_data[MONTH_START] == 5)
+            & (variant_data[WEEKDAY_START] == 0)
+        ]
+        assert np.allclose(
+            half_peak_energy[CHARGE], expected_checks["half_peak_energy_charge"]
+        )
+
+    if "off_peak_energy_rates" in expected_checks:
+        off_peak_energy = variant_data[
+            (variant_data["type"] == costs.ENERGY)
+            & ((variant_data[HOUR_START] == 0) | (variant_data[HOUR_START] == 21.5))
+            & ((variant_data[HOUR_END] == 8.5) | (variant_data[HOUR_END] == 24))
+        ]
+        unique_off_peak_rates = off_peak_energy[CHARGE].unique()
+        for rate in unique_off_peak_rates:
+            assert rate in expected_checks["off_peak_energy_rates"]
+
+    # Test window expansions for energy charges
+    if "peak_energy_window" in expected_checks:
+        start_hour, end_hour = expected_checks["peak_energy_window"]
+        peak_energy = variant_data[
+            (variant_data["type"] == costs.ENERGY)
+            & (variant_data[HOUR_START] == start_hour)
+            & (variant_data[HOUR_END] == end_hour)
+            & (variant_data[MONTH_START] == 5)
+            & (variant_data[WEEKDAY_START] == 0)
+        ]
+        assert (
+            not peak_energy.empty
+        ), f"Peak energy window should be {start_hour}-{end_hour}"
+
+    # Test window expansions for demand charges
+    if "peak_demand_window" in expected_checks:
+        start_hour, end_hour = expected_checks["peak_demand_window"]
+        peak_demand = variant_data[
+            (variant_data["type"] == costs.DEMAND)
+            & (variant_data["name"] == "peak-summer")
+        ]
+        assert not peak_demand.empty, "Peak demand should exist"
+        peak_demand_row = peak_demand.iloc[0]
+        assert (
+            peak_demand_row[HOUR_START] == start_hour
+        ), f"Peak demand should start at {start_hour}"
+        assert (
+            peak_demand_row[HOUR_END] == end_hour
+        ), f"Peak demand should end at {end_hour}"
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_parametrize_charge_dict():
+    """Test the parametrize_charge_dict function with multiple variants."""
+
+    rate_data = pd.read_csv(input_dir + "billing_pge.csv")
+    start_dt = np.datetime64("2024-07-10")
+    end_dt = np.datetime64("2024-07-11")
+
+    # Define test variants
+    variants = [
+        # Double peak charges
+        {
+            "individual_ratios": {
+                DEMAND: {PEAK: 2.0, HALF_PEAK: 2.0, OFF_PEAK: 1.0, SUPER_OFF_PEAK: 1.0},
+                ENERGY: {PEAK: 2.0, HALF_PEAK: 2.0, OFF_PEAK: 1.0, SUPER_OFF_PEAK: 1.0},
+            },
+            "variant_name": "double_peak",
+        },
+        # Scale all demand by 1.5
+        {
+            "scale_all_demand": 1.5,
+            "scale_all_energy": 1.0,
+            "variant_name": "scale_demand",
+        },
+    ]
+
+    # Get parametrized charge dicts
+    charge_dicts = costs.parametrize_charge_dict(start_dt, end_dt, rate_data, variants)
+
+    # Test that we have original + 2 variants
+    assert "original" in charge_dicts
+    assert "double_peak" in charge_dicts
+    assert "scale_demand" in charge_dicts
+
+    # Test that charge dicts have different structures
+    original_keys = set(charge_dicts["original"].keys())
+    double_peak_keys = set(charge_dicts["double_peak"].keys())
+    scale_demand_keys = set(charge_dicts["scale_demand"].keys())
+
+    # All should have the same keys (same time periods)
+    assert original_keys == double_peak_keys
+    assert original_keys == scale_demand_keys
+
+    # Test that charges are different between variants
+    # Find a peak demand charge key
+    peak_demand_key = None
+    for key in original_keys:
+        if "peak-summer" in key and "demand" in key:
+            peak_demand_key = key
+            break
+
+    assert peak_demand_key is not None, "Should find peak demand charge"
+
+    # Original and scale_demand should have different charge values
+    # Double_peak should have doubled charge values
+    original_charge = charge_dicts["original"][peak_demand_key]
+    double_peak_charge = charge_dicts["double_peak"][peak_demand_key]
+    scale_demand_charge = charge_dicts["scale_demand"][peak_demand_key]
+
+    # Check that variants have different charges where they apply
+    assert np.any(
+        double_peak_charge != original_charge
+    ), "Double peak variant should have different charges"
+
+    assert np.any(
+        scale_demand_charge != original_charge
+    ), "Scale demand variant should have different charges"
 
 
 # TODO: write test_calculate_itemized_cost
