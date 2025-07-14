@@ -302,7 +302,12 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
 
 
 def get_charge_df(
-    start_dt, end_dt, rate_data, resolution="15m", keep_fixed_charges=True, scale_charges=True
+    start_dt,
+    end_dt,
+    rate_data,
+    resolution="15m",
+    keep_fixed_charges=True,
+    scale_charges=True,
 ):
     """Creates a dictionary where the values are charge arrays and keys are of the form
     `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
@@ -327,7 +332,7 @@ def get_charge_df(
     keep_fixed_charges : bool
         If True, fixed charges will included in the first time step.
         If False, fixed charges will be dropped from the output. Default is False.
-    
+
     scale_charges : bool
         If True, customer and demand charges will be scaled by the number of timesteps in the month.
         If False, they will not be scaled. Default is True.
@@ -343,7 +348,9 @@ def get_charge_df(
     # find the number of days in the month associated with the first timestep
     month = start_dt.month
     year = end_dt.year
-    mins_in_month = (dt.date(year, month+1, 1) - dt.date(year, month, 1)).days * 24 * 60
+    mins_in_month = (
+        (dt.date(year, month + 1, 1) - dt.date(year, month, 1)).days * 24 * 60
+    )
     bins_in_month = mins_in_month / res_binsize_minutes
     scale_factor = ntsteps / bins_in_month
 
@@ -373,7 +380,6 @@ def get_charge_df(
             columns=["DateTime"],
         )
 
-
     # first find the value of the fixed charge
     fixed_charge_dict = {
         key: value
@@ -396,7 +402,6 @@ def get_charge_df(
         # remove fixed charges from the charge_dict
         for key in fixed_charge_dict.keys():
             del charge_dict[key]
-
 
     charge_df = pd.DataFrame(charge_dict)
 
