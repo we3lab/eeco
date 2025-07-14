@@ -334,7 +334,7 @@ def get_charge_df(
         If False, fixed charges will be dropped from the output. Default is False.
 
     scale_charges : bool
-        If True, customer and demand charges will be scaled by the number of timesteps in the month.
+        If True, customer and demand charges will be scaled by timesteps in the month.
         If False, they will not be scaled. Default is True.
 
     Returns
