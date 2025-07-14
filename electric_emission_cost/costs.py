@@ -345,15 +345,6 @@ def get_charge_df(
     # get the number of timesteps in a day (according to charge resolution)
     res_binsize_minutes = ut.get_freq_binsize_minutes(resolution)
 
-    # find the number of days in the month associated with the first timestep
-    month = start_dt.month
-    year = end_dt.year
-    mins_in_month = (
-        (dt.date(year, month + 1, 1) - dt.date(year, month, 1)).days * 24 * 60
-    )
-    bins_in_month = mins_in_month / res_binsize_minutes
-    scale_factor = ntsteps / bins_in_month
-
     # get the charge dictionary
     charge_dict = get_charge_dict(start_dt, end_dt, rate_data, resolution=resolution)
 
@@ -388,6 +379,14 @@ def get_charge_df(
     }
     if scale_charges:
         # scale the fixed charges by the number of timesteps in the month
+        month = start_dt.month
+        year = end_dt.year
+        mins_in_month = (
+            (dt.date(year, month + 1, 1) - dt.date(year, month, 1)).days * 24 * 60
+        )
+        bins_in_month = mins_in_month / res_binsize_minutes
+        scale_factor = ntsteps / bins_in_month
+
         for key, value in charge_dict.items():
             if any(k in key.split("_") for k in ["customer", "demand"]):
                 charge_dict[key] = value * scale_factor
