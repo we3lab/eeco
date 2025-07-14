@@ -325,7 +325,7 @@ def get_charge_df(
         granularity of each timestep in string form with default value of "15m"
 
     keep_fixed_charges : bool
-        If True, fixed charges will be divided amongst all time steps and included.
+        If True, fixed charges will included in the first time step.
         If False, fixed charges will be dropped from the output. Default is False.
 
     Returns
@@ -369,7 +369,9 @@ def get_charge_df(
     if keep_fixed_charges:
         # replace the fixed charge in charge_dict with its time-averaged value
         for key, value in fixed_charge_dict.items():
-            charge_dict[key] = np.ones(ntsteps) * value / ntsteps
+            arr = np.zeros(ntsteps)
+            arr[0] = value
+            charge_dict[key] = arr
 
     else:
         # remove fixed charges from the charge_dict
