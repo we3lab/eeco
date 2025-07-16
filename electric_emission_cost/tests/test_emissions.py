@@ -40,7 +40,7 @@ output_dir = "tests/data/output/"
         ),
     ],
 )
-def test_calculate_grid_emissions_pd(
+def test_calculate_grid_emissions_np(
     emissions_path,
     consumption_path,
     net_demand_varname,
@@ -63,7 +63,6 @@ def test_calculate_grid_emissions_pd(
         consumption_df[net_demand_varname].values,
         emission_units=emissions_units,
     )
-    print(result.magnitude)
     assert result == expected
     assert model is None
 

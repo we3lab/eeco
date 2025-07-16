@@ -25,6 +25,23 @@ you would simply dot product the two arrays to find the total emissions (i.e., m
 However, many data sources report emissions factors as monthly/hourly averages (:ref:`data-format-emissions`).
 Our package is designed to unpack data in that format into a timeseries the same length as the consumption variable.
 
+=================
+Import Statements
+=================
+
+To make this how-to guide clear, below are the import statements used throughout:
+
+.. code-block:: python
+
+    import datetime
+    import cvxpy as cp
+    import numpy as np
+    import pandas as pd
+    import pyomo.environ as pyo
+    from electric_emission_cost.units as u
+    from electric_emission_cost import emissions
+
+====================
 Get Carbon Intensity
 ====================
 
@@ -43,20 +60,75 @@ as a string in the from `<binsize><unit>`,
 where units are either `'m'` for minutes, `'h'` for hours, or `'d'` / `'D'` for days.
 The default is `"15m"`, so the timeseries will be on 15-minute intervals if not otherwise specified.
 
+===========================
 Calculate Scope 2 Emissions
 ===========================
 
-# TODO: example of using `calculate_grid_emissions`, `calculate_grid_emissions_cvx`, and `calculate_grid_emissions_pyo`
+It is straightforward to compute Scope 2 emissions after retrieving the carbon intensity array. 
+As with electricity bill calculations, 
+we show an example in `NumPy`, `CVXPY`, and `Pyomo` since the EEC package supports all three libraries.
 
-numpy
+NumPy
 *****
+
+Given a historical electricity consumption as a `NumPy` array:
+
+.. code-block:: python
+
+    # one month of 15-min intervals
+    num_timesteps = len(carbon_intensity)
+    # this is synthetic consumption data, but a user could provide real historical meter data
+    consumption_arr = np.ones(num_timesteps)
+    total_monthly_emissions, _ = emissions.calculate_grid_emissions(carbon_intensity, consumption_arr)
+
+Note that we ignore the second value of the tuple returned by `calculate_grid_emissions`.
+This entry in the tuple is reserved for the `Pyomo` model object.
+
+Units will be handled automatically since `get_carbon_intensity` returns a `pint.Quantity`. 
+However, a user could also explicitly define the units if using unitless arrays:
+
+.. code-block:: python
+  
+    total_monthly_emissions, _ = emissions.calculate_grid_emissions(
+          carbon_intensity.magnitude,
+          consumption_arr,
+          emission_units=carbon_intensity.units
+    )
+
 
 CVXPY
 *****
 
+If instead we want to optimize electricity consumption to minimize Scope 2 emissions, we can use a `CVXPY` variable:
+
+.. code-block:: python
+
+    consumption_var = cp.Variable(num_timesteps)
+    total_monthly_emissions, _ = emissions.calculate_grid_emissions(
+          carbon_intensity, consumption_var
+    )
+
+Note that we ignore the second value of the tuple returned by `calculate_grid_emissions`.
+This entry in the tuple is reserved for the `Pyomo` model object.
+
+
 Pyomo
 *****
 
+This optimization problem could be solved in `Pyomo` instead of `CVXPY`:
+
+.. code-block:: python
+
+    consumption_var = pyo.Var(
+        range(num_timesteps), 
+        initialize=np.zeros(num_timesteps), 
+        bounds=(0, None)
+    )
+    total_monthly_emissions, model = costs.calculate_grid_emissions(
+        carbon_intensity, consumption_var, model=model
+    )
+
+=====
 Units
 =====
 

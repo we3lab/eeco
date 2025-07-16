@@ -23,8 +23,10 @@ To make this how-to guide clear, below are the import statements used throughout
 .. code-block:: python
 
     import datetime
+    import cvxpy as cp
     import numpy as np
     import pandas as pd
+    import pyomo.environ as pyo
     from electric_emission_cost.units as u
     from electric_emission_cost import costs
 
@@ -63,7 +65,7 @@ The below examples exclude some more advanced features available via optional ar
 Basic Usage
 ***********
 
-numpy
+NumPy
 =====
 
 .. code-block:: python
