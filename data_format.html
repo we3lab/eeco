@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>How to Format Data &mdash; EEC 0.0.4 documentation</title>
+  <title>Data Formats &mdash; EEC 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
@@ -66,7 +66,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">How to Format Data</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Data Formats</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#electricity-tariffs">Electricity Tariffs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#scope-2-emissions">Scope 2 Emissions</a></li>
 </ul>
@@ -98,7 +98,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">How to Format Data</li>
+      <li class="breadcrumb-item active">Data Formats</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/data_format.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -111,7 +111,7 @@
   <nav class="contents" id="contents" role="doc-toc">
 <p class="topic-title">Contents</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="#how-to-format-data" id="id1">How to Format Data</a></p>
+<li><p><a class="reference internal" href="#data-formats" id="id1">Data Formats</a></p>
 <ul>
 <li><p><a class="reference internal" href="#electricity-tariffs" id="id2">Electricity Tariffs</a></p></li>
 <li><p><a class="reference internal" href="#scope-2-emissions" id="id3">Scope 2 Emissions</a></p></li>
@@ -119,18 +119,103 @@
 </li>
 </ul>
 </nav>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Site under construction!
-Documentation incomplete :(</p>
-</div>
-<section id="how-to-format-data">
-<span id="data-format"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">How to Format Data</a><a class="headerlink" href="#how-to-format-data" title="Permalink to this heading"></a></h1>
+<section id="data-formats">
+<span id="dataformat"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">Data Formats</a><a class="headerlink" href="#data-formats" title="Permalink to this heading"></a></h1>
 <section id="electricity-tariffs">
-<span id="data-format-tariff"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">Electricity Tariffs</a><a class="headerlink" href="#electricity-tariffs" title="Permalink to this heading"></a></h2>
+<span id="dataformattariff"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">Electricity Tariffs</a><a class="headerlink" href="#electricity-tariffs" title="Permalink to this heading"></a></h2>
+<p>The electricity tariff data in tariff.csv represents the industrial tariff structure for one facility.</p>
+<p>The columns are:</p>
+<ul class="simple">
+<li><p><strong>utility</strong>: Type of utility, i.e., “electric” or “gas”.</p></li>
+<li><p><strong>type</strong>: Type of charge. Options are “customer”, “demand”, and “energy”.</p></li>
+<li><p><strong>period</strong>: Name for the charge period. Only relevant for demand charges, since there can be multiple concurrent demand charges. E.g., a charge named “maximum” that is in effect 24 hours a day vs. a charge named “on-peak” that is only in effect during afternoon hours.</p></li>
+<li><p><strong>basic_charge_limit (imperial)</strong>: Consumption limit above which the charge takes effect in imperial units (i.e., kWh of electricity and therms of natural gas). Default is 0. A limit is in effect until another limit supersedes it.</p></li>
+<li><p><strong>basic_charge_limit (metric)</strong>: Consumption limit above which the charge takes effect in metric units (i.e., kWh of electricity and m3 of natural gas). Default is 0. A limit is in effect until another limit supersedes it.</p></li>
+<li><p><strong>month_start</strong>: First month during which this charge occurs (1–12).</p></li>
+<li><p><strong>month_end</strong>: Last month during which this charge occurs (1–12).</p></li>
+<li><p><strong>hour_start</strong>: Hour at which this charge starts (0–24).</p></li>
+<li><p><strong>hour_end</strong>: Hour at which this charge ends (0–24).</p></li>
+<li><p><strong>weekday_start</strong>: First weekday on which this charge occurs (0 = Monday to 6 = Sunday).</p></li>
+<li><p><strong>weekday_end</strong>: Last weekday on which this charge occurs (0 = Monday to 6 = Sunday).</p></li>
+<li><p><strong>charge (imperial)</strong>: Cost represented as a float in imperial units. I.e., “$/month”, “$/kWh”, “$/kW”, “$/therm”, and “$/therm/hr” for customer charges, electricity energy charges, electric demand charges, natural gas energy charges, and natural gas demand charges, respectively.</p></li>
+<li><p><strong>charge (metric)</strong>: Cost represented as a float in metric units. I.e., “$/month”, “$/kWh”, “$/kW”, “$/m3”, and “$/m3/hr” for customer charges, electricity energy charges, electricity demand charges, natural gas energy charges, and natural gas demand charges, respectively. A conversion factor of 2.83168 cubic meters to 1 therm was used.</p></li>
+<li><p><strong>units</strong>: Units of the charge, e.g. “$/kWh”. If units are different between imperial and metric then imperial is listed followed by metric. E.g., “$/therm or $/m3”.</p></li>
+<li><p><strong>Notes</strong>: Any comments the authors felt would help explain unintuitive decisions in data collection or formatting.</p></li>
+</ul>
+<p>Each row in the tariff data corresponds to a different charge.
+For example, a municipality with a flat electricity tariff would have only one charge and therefore one row. A municipality with a complex tariff would have many rows corresponding to many charges.</p>
+<p>The electricity and natural gas tariff data format used in this project is based on the following reference.
+Additional industrial tariff examples are available in the same reference.</p>
+<p>&amp;nbsp; Chapin, F.T., Bolorinos, J. &amp; Mauter, M.S. Electricity and natural gas tariffs at United States wastewater treatment plants. <em>Sci Data</em> <strong>11</strong>, 113 (2024). DOI: [10.1038/s41597-023-02886-6](<a class="reference external" href="https://doi.org/10.1038/s41597-023-02886-6">https://doi.org/10.1038/s41597-023-02886-6</a>)</p>
+<p>The raw data can also be cited directly from Figshare:</p>
+<p>&amp;nbsp; Chapin, F.T., Bolorinos, J., &amp; Mauter, M. S. Electricity and natural gas tariffs at United States wastewater treatment plants. <em>figshare</em> <a class="reference external" href="https://doi.org/10.6084/m9.figshare.c.6435578.v1">https://doi.org/10.6084/m9.figshare.c.6435578.v1</a> (2024).</p>
+<p>In <cite>bibtex</cite> format:</p>
+<div class="highlight-bibtex notranslate"><div class="highlight"><pre><span></span><span class="nc">@Article</span><span class="p">{</span><span class="nl">Chapin2024</span><span class="p">,</span>
+<span class="na">author</span><span class="p">=</span><span class="s">{Chapin, Fletcher T.</span>
+<span class="s">and Bolorinos, Jose</span>
+<span class="s">and Mauter, Meagan S.}</span><span class="p">,</span>
+<span class="na">title</span><span class="p">=</span><span class="s">{Electricity and natural gas tariffs at United States wastewater treatment plants}</span><span class="p">,</span>
+<span class="na">journal</span><span class="p">=</span><span class="s">{Scientific Data}</span><span class="p">,</span>
+<span class="na">year</span><span class="p">=</span><span class="s">{2024}</span><span class="p">,</span>
+<span class="na">month</span><span class="p">=</span><span class="s">{Jan}</span><span class="p">,</span>
+<span class="na">day</span><span class="p">=</span><span class="s">{23}</span><span class="p">,</span>
+<span class="na">volume</span><span class="p">=</span><span class="s">{11}</span><span class="p">,</span>
+<span class="na">number</span><span class="p">=</span><span class="s">{1}</span><span class="p">,</span>
+<span class="na">pages</span><span class="p">=</span><span class="s">{113}</span><span class="p">,</span>
+<span class="na">abstract</span><span class="p">=</span><span class="s">{Wastewater treatment plants (WWTPs) are large electricity and natural gas consumers with untapped potential to recover carbon-neutral biogas and provide energy services for the grid. Techno-economic analysis of emerging energy recovery and management technologies is critical to understanding their commercial viability, but quantifying their energy cost savings potential is stymied by a lack of well curated, nationally representative electricity and natural gas tariff data. We present a dataset of electricity tariffs for the 100 largest WWTPs in the Clean Watershed Needs Survey (CWNS) and natural gas tariffs for the 54 of 100 WWTPs with on-site cogeneration. We manually collected tariffs from each utility&#39;s website and implemented data checks to ensure their validity. The dataset includes facility metadata, electricity tariffs, and natural gas tariffs (where cogeneration is present). Tariffs are current as of November 2021. We provide code for technical validation along with a sample simulation.}</span><span class="p">,</span>
+<span class="na">issn</span><span class="p">=</span><span class="s">{2052-4463}</span><span class="p">,</span>
+<span class="na">doi</span><span class="p">=</span><span class="s">{10.1038/s41597-023-02886-6}</span><span class="p">,</span>
+<span class="na">url</span><span class="p">=</span><span class="s">{https://doi.org/10.1038/s41597-023-02886-6}</span>
+<span class="p">}</span>
+
+<span class="nc">@misc</span><span class="p">{</span><span class="nl">chapin_bolorinos_mauter_2024</span><span class="p">,</span>
+<span class="na">author</span><span class="p">=</span><span class="s">{Chapin, Fletcher T.</span>
+<span class="s">and Bolorinos, Jose</span>
+<span class="s">and Mauter, Meagan S.}</span><span class="p">,</span>
+<span class="na">title</span><span class="p">=</span><span class="s">{Electricity and natural gas rate schedules at U.S. wastewater treatment plants}</span><span class="p">,</span>
+<span class="na">url</span><span class="p">=</span><span class="s">{https://springernature.figshare.com/collections/Electricity_and_natural_gas_rate_schedules_at_U_S_wastewater_treatment_plants/6435578/1}</span><span class="p">,</span>
+<span class="na">DOI</span><span class="p">=</span><span class="s">{10.6084/m9.figshare.c.6435578.v1}</span><span class="p">,</span>
+<span class="na">abstractNote</span><span class="p">=</span><span class="s">{Electricity and natural gas tariffs of the 100 largest wastewater treatment plants in the United States}</span><span class="p">,</span>
+<span class="na">publisher</span><span class="p">=</span><span class="s">{figshare}</span><span class="p">,</span>
+<span class="na">year</span><span class="p">=</span><span class="s">{2024}</span><span class="p">,</span>
+<span class="na">month</span><span class="p">=</span><span class="s">{Jan}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
 </section>
 <section id="scope-2-emissions">
-<span id="data-format-emissions"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">Scope 2 Emissions</a><a class="headerlink" href="#scope-2-emissions" title="Permalink to this heading"></a></h2>
+<span id="dataformatemissions"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">Scope 2 Emissions</a><a class="headerlink" href="#scope-2-emissions" title="Permalink to this heading"></a></h2>
+<p>The emissions dataset includes hourly average CO<sub>2</sub>e emissions intensity values for each calendar month.
+The hourly CO<sub>2</sub>e emissions are calculated by aggregating values for electric-generating units in the continental U.S. that are metered by balancing authorities and used to serve required demand.
+The data may represent Scope 2 emissions at the level of balancing authority, U.S. region, or state.</p>
+<p>The columns are:</p>
+<ul class="simple">
+<li><p><strong>month</strong>: The calendar month for which this grid emissions value is relevant (1–12).</p></li>
+<li><p><strong>hour</strong>: The hour for which this grid emissions value is relevant (0–23).</p></li>
+<li><p><strong>co2_eq_kg_per_MWh</strong>: The average grid emissions intensity for a given hour during a given calendar month, given in kg CO<sub>2</sub>e per MWh.</p></li>
+</ul>
+<p>Each row in the emmissions data corresponds to a different hourly average emissions intensity.
+For example, There are 24 rows for January. The row with month “1” and hour “0” represents the average emissions intensity from 00:00 - 00:59 across all days in January.</p>
+<p>The Scope 2 emissions data format used in this project is based on the following reference.</p>
+<p>&amp;nbsp; de Chalendar, J.A., Taggart, J. &amp; Benson, S.M. Tracking emissions in the US electricity system. <em>Proc Natl Acad Sci USA</em> <strong>116</strong>, 25497-25502 (2019). DOI: [10.1073/pnas.1912950116](<a class="reference external" href="https://doi.org/10.1073/pnas.1912950116">https://doi.org/10.1073/pnas.1912950116</a>)</p>
+<p>In <cite>bibtex</cite> format:</p>
+<div class="highlight-bibtex notranslate"><div class="highlight"><pre><span></span><span class="nc">@Article</span><span class="p">{</span><span class="nl">deChalendar2019</span><span class="p">,</span>
+<span class="na">author</span><span class="p">=</span><span class="s">{de Chalendar, Jacques A.</span>
+<span class="s">and Taggart, John</span>
+<span class="s">and Benson, Sally M.}</span><span class="p">,</span>
+<span class="na">title</span><span class="p">=</span><span class="s">{Tracking emissions in the US electricity system}</span><span class="p">,</span>
+<span class="na">journal</span><span class="p">=</span><span class="s">{Proceedings of the National Academy of Sciences}</span><span class="p">,</span>
+<span class="na">year</span><span class="p">=</span><span class="s">{2019}</span><span class="p">,</span>
+<span class="na">month</span><span class="p">=</span><span class="s">{Dec}</span><span class="p">,</span>
+<span class="na">volume</span><span class="p">=</span><span class="s">{116}</span><span class="p">,</span>
+<span class="na">number</span><span class="p">=</span><span class="s">{51}</span><span class="p">,</span>
+<span class="na">pages</span><span class="p">=</span><span class="s">{25497-25502}</span><span class="p">,</span>
+<span class="na">doi</span><span class="p">=</span><span class="s">{10.1073/pnas.1912950116}</span><span class="p">,</span>
+<span class="na">url</span><span class="p">=</span><span class="s">{https://doi.org/10.1073/pnas.1912950116}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Additional historical Scope 2 emissions data examples are available from de Chalendar 2019. Ongoing updates to the grid emissions data, as well as region and balancing authority definitions, are made available from the <a class="reference external" href="https://www.eia.gov/electricity/gridmonitor/dashboard/electric_overview/US48/US48">EIA Hourly Electric Grid Monitor</a>.</p>
 </section>
 </section>
 
