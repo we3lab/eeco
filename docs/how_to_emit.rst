@@ -1,10 +1,5 @@
 .. contents::
 
-.. WARNING::
-
-  Site under construction!    
-  Documentation incomplete :( 
-
 .. _how-to-emissions:
 
 **************************
