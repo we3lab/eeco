@@ -123,6 +123,15 @@ This optimization problem could be solved in `Pyomo` instead of `CVXPY`:
         carbon_intensity, consumption_var, model=model
     )
 
+We must pass in and retrieve the `Pyomo` model object for the eletricity bill to be calculated correctly.
+
+.. WARNING::
+
+  For the `Pyomo` code to work properly, we require the `model` object has an attribute `t` that is the range of the time period.
+  
+  We usually set `model.t = range(model.T)` where `model.T = len(consumption_data_dict["electric"])`.
+
+
 =====
 Units
 =====

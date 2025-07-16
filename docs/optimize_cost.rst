@@ -43,8 +43,8 @@ CVXPY
 
 .. code-block:: python
    
-    path_to_tariffsheet = "electric_emission_cost/data/tariff.csv"
-    tariff_df = pd.read_csv(path_to_tariffsheet, sep=",")
+    path_to_tariff_sheet = "electric_emission_cost/data/tariff.csv"
+    tariff_df = pd.read_csv(path_to_tariff_sheet, sep=",")
    
     # get the charge dictionary
     charge_dict = costs.get_charge_dict(
@@ -198,8 +198,7 @@ $703.81, $61.48 less than the baseline bill of $765.29.
     >>>print(f"Optimized Electricity Cost: ${optimized_electricity_cost:.2f}")
     Optimized Electricity Cost: $703.81
 
-Below are a few simple plots to validate our results.
-
+Below are a few simple plots to validate our results. 
 First, we visualize the energy and demand charges:
 
 .. code-block:: python
@@ -215,7 +214,7 @@ First, we visualize the energy and demand charges:
     # sum across all energy charges
     total_energy_charge = energy_charge_df.sum(axis=1)
 
-    fig, ax= plt.subplots(2, 1, figsize=(10, 8))
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     # plot the energy charges
     ax[0].plot(charge_df["DateTime"], total_energy_charge)
     ax[0].set(
@@ -251,7 +250,7 @@ This helps us to visualize how the model responds to the cost incentives of the 
 .. code-block:: python
 
     # plot the model outputs
-    fig, ax= plt.subplots()
+    fig, ax = plt.subplots()
     ax.step(charge_df["DateTime"], grid_demand_kW.value, color="C0", lw=2, label="Net Load")
     ax.step(charge_df["DateTime"], load_df["Load [kW]"].values, color="k", lw=1, ls='--', label="Baseload")
     ax.set(xlabel="DateTime", ylabel="Power (kW)", xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11)))
@@ -259,7 +258,7 @@ This helps us to visualize how the model responds to the cost incentives of the 
     fig.tight_layout()
     plt.legend()
 
-.. figure:: _static/img/cvx-model-out.png
+.. figure:: _static/img/cvx-cost-model-out.png
     
     Output of our electricity bill optimization using the virtual battery model.
     The dotted line is baseline electricity purchases, and the blue line is the optimized profile.
@@ -281,7 +280,7 @@ Finally, let's plot the battery state of charge (SOC) to confirm that the constr
     plt.xticks(rotation=45)
     fig.tight_layout()
 
-.. figure:: _static/img/cvx-battery-soc.png
+.. figure:: _static/img/cvx-cost-battery-soc.png
     
     Battery state of charge (SOC) as a percentage during our modeling period (April 9-10, 2022).
 
@@ -459,7 +458,7 @@ First, we visualize the energy and demand charges:
     # sum across all energy charges
     total_energy_charge = energy_charge_df.sum(axis=1)
 
-    fig, ax= plt.subplots(2, 1, figsize=(10, 8))
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     # plot the energy charges
     ax[0].plot(charge_df["DateTime"], total_energy_charge)
     ax[0].set(xlabel="DateTime", ylabel="Energy Charge ($/kWh)", xlim=(battery.start_dt, battery.end_dt))
@@ -483,7 +482,7 @@ This helps us to visualize how the model responds to the cost incentives of the 
 .. code-block:: python
 
     # plot the model outputs
-    fig, ax= plt.subplots()
+    fig, ax = plt.subplots()
     ax.step(charge_df["DateTime"], net_load, color="C0", lw=2, label="Net Load")
     ax.step(charge_df["DateTime"], baseload, color="k", lw=1, ls='--', label="Baseload")
     ax.set(xlabel="DateTime", ylabel="Power (kW)", xlim=(battery.start_dt, battery.end_dt))
@@ -491,7 +490,7 @@ This helps us to visualize how the model responds to the cost incentives of the 
     fig.tight_layout()
     plt.legend()
 
-.. figure:: _static/img/pyo-model-out.png
+.. figure:: _static/img/pyo-cost-model-out.png
     
     Output of our electricity bill optimization using the virtual battery model.
     The dotted line is baseline electricity purchases, and the blue line is the optimized profile.
@@ -509,6 +508,6 @@ Finally, let's plot the battery state of charge (SOC) to confirm that the constr
     plt.xticks(rotation=45)
     fig.tight_layout()
 
-.. figure:: _static/img/pyo-battery-soc.png
+.. figure:: _static/img/pyo-cost-battery-soc.png
     
     Battery state of charge (SOC) as a percentage during our modeling period (July 2022).
