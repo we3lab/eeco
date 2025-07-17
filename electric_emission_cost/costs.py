@@ -308,7 +308,7 @@ def get_charge_df(
     resolution="15m",
     keep_fixed_charges=True,
     scale_fixed_charges=True,
-    scale_demand_charges=False
+    scale_demand_charges=False,
 ):
     """Creates a dictionary where the values are charge arrays and keys are of the form
     `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
@@ -393,7 +393,7 @@ def get_charge_df(
         bins_in_month = mins_in_month / res_binsize_minutes
         scale_factor = ntsteps / bins_in_month
     else:
-        scale_factor = 1.
+        scale_factor = 1.0
 
     if keep_fixed_charges:
         # replace the fixed charge in charge_dict with its time-averaged value
@@ -408,9 +408,7 @@ def get_charge_df(
 
     if scale_demand_charges:
         demand_charge_dict = {
-            key: value
-            for key, value in charge_dict.items()
-            if "demand" in key
+            key: value for key, value in charge_dict.items() if "demand" in key
         }
         for key, value in demand_charge_dict.items():
             charge_dict[key] = value * scale_factor
