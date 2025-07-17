@@ -20,7 +20,8 @@ output_dir = "tests/data/output/"
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "emissions_path, consumption_path, net_demand_varname, emissions_units, resolution, expected",
+    "emissions_path, consumption_path, net_demand_varname, "
+    "emissions_units, resolution, expected",
     [
         (
             "data/emissions.csv",
@@ -69,7 +70,8 @@ def test_calculate_grid_emissions_np(
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "emissions_path, consumption_path, net_demand_varname, emissions_units, resolution, expected",
+    "emissions_path, consumption_path, net_demand_varname, "
+    "emissions_units, resolution, expected",
     [
         (
             "data/emissions.csv",
@@ -118,7 +120,8 @@ def test_calculate_grid_emissions_cvx(
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "emissions_path, consumption_path, net_demand_varname, emissions_units, resolution, expected",
+    "emissions_path, consumption_path, net_demand_varname, "
+    "emissions_units, resolution, expected",
     [
         (
             "data/emissions.csv",

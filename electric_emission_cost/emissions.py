@@ -36,7 +36,7 @@ def calculate_grid_emissions(
     carbon_intensity : array
         numpy array with kg of CO2 per kWh
 
-    consumption_data : numpy.Array, cvxpy.Variable, pyomo.environ.Var, or pyomo.environ.Param
+    consumption_data : numpy.Array, cvxpy.Variable, or pyomo.environ.Var
         Baseline electrical or gas usage data as a Pyomo Var
 
     emissions_units : pint.Unit
@@ -90,7 +90,8 @@ def calculate_grid_emissions(
         return total_emissions * conversion_factor / n_per_hour, model
     else:
         raise ValueError(
-            "consumption_data must be of type numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var"
+            "consumption_data must be of type numpy.ndarray, "
+            "cvxpy.Expression, or pyomo.environ.Var"
         )
 
 

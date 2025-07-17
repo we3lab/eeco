@@ -172,7 +172,7 @@ First, we visualize the emissions factors:
 
 .. figure:: _static/img/cvx-carbon-intensity.png
     
-    Average Scope 2 emissions factors for our modeling period (April 9-10, 2022).
+    Average Scope 2 emissions factors for our modeling period (April 9-10, 2023).
 
 Next, we plot the baseline and optimal electricity consumption profiles.
 This helps us to visualize how the model responds to the cost incentives of the tariff.
@@ -213,9 +213,123 @@ Finally, let's plot the battery state of charge (SOC) to confirm that the constr
 
 .. figure:: _static/img/cvx-emit-battery-soc.png
     
-    Battery state of charge (SOC) as a percentage during our modeling period (April 9-10, 2022).
+    Battery state of charge (SOC) as a percentage during our modeling period (April 9-10, 2023).
 
 .. _pyo-emit:
 
 Pyomo
 =====
+
+0. Import dependencies
+
+.. code-block:: python
+   
+    import datetime
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from electric_emission_cost.units import u
+    from electric_emission_cost import emissions
+
+1. Load a Scope 2 emissions spreadsheet
+
+.. code-block:: python
+
+    path_to_emissions_sheet = "electric_emission_cost/data/emissions.csv"
+    emission_df = pd.read_csv(path_to_emissions_sheet, sep=",")
+   
+    # get the charge dictionary
+    carbon_intensity = emissions.get_carbon_intensity(
+        datetime.datetime(2022, 7, 1), datetime.datetime(2022, 8, 1), emission_df, resolution="15m"
+    )
+
+We are going to evaluate the electricity consumption for the entire month of July 2022.
+Below we will create synthetic `baseload` data for this month with 15-minute resolution, so `resolution="15m"`.
+
+2. Configure an optimization model of the electricity consumer with system constraints
+
+We rely on the virtual battery model in `pyomo_battery_model.py <https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py>`_.
+We're going to stick to the electricity cost calculation details, but we encourage you to go check out the code to better understand the model.
+
+.. code-block:: python
+
+    # Define the parameters for the battery model
+    battery_params = {
+        "start_date": "2022-07-01 00:00:00",
+        "end_date": "2022-08-01 00:00:00",
+        "timestep": 0.25,   # 15 minutes defined in hours
+        "rte": 0.86,
+        "energycapacity": 100,
+        "powercapacity": 50,
+        "soc_min": 0.05,
+        "soc_max": 0.95,
+        "soc_init": 0.5,
+    }
+
+    # Create a sample baseload profile based on a sine wave
+    baseload = np.sin(np.linspace(0, 4 * np.pi, 96))*100 + 1000 + np.random.normal(0, 10, 96)
+    # baseload = np.random.normal(1000, 20, size=96)
+
+    # Create an instance of the BatteryOpt class
+    battery = BatteryPyomo(battery_params, baseload, baseload_repeat=True)
+
+    # create the model on the instance battery
+    battery.create_model()
+
+The above code initializes the battery model with flexibility metrics like round-trip efficiency (RTE), 
+power capacity, and energy capacity.
+
+3. Create an objective function of Scope 2 emissions using the emissions factors
+
+.. code-block:: python
+
+    # compute Scope 2 emissions using Pyomo variable
+    battery.model.emissions, battery.model = emissions.calculate_grid_emissions(
+        carbon_intensity,
+        battery.model.net_facility_load,
+        resolution="15m",
+        consumption_units=u.kW,
+        model=battery.model
+    )
+    # create an attribute objective based on the emissions
+    battery.model.objective = Objective(
+        expr=battery.model.emissions,
+        sense=minimize,
+    )
+
+4. Minimize the Scope 2 emissions of this consumer given the system constraints and base load consumption
+
+.. code-block:: python
+
+    # use the glpk solver to solve the model - (any pyomo-supported LP solver will work here)
+    solver = SolverFactory("glpk")
+    results = solver.solve(battery.model, tee=False) # turn tee=True to see solver output
+
+5. Display the results to validate that the optimization is correct
+
+We will compare baseline to optimized emissions. 
+Unlike :ref:`tutorial-cost`, there are no convex relaxations during problem formulation, so the objective function can be used directly to quantify emissions.
+
+.. code-block:: python
+
+    # NOTE: second entry of the tuple can be ignored since it's for Pyomo
+    baseline_emissions, _ = emissions.calculate_grid_emissions(
+        carbon_intensity,
+        load_df["Load [kW]"].values,
+        resolution="1m",
+        consumption_units=u.kW
+    )
+    # NOTE: second entry of the tuple can be ignored since it's for Pyomo
+    optimized_emissions = obj.value
+
+If we print our results, we confirm that the optimal electricity profile has emissions of
+9.74 kg CO:sub:`2`-eq, 0.95 kg CO:sub:`2`-eq less than the baseline emissions of 10.69 kg CO:sub:`2`-eq.
+
+.. code-block:: python
+
+    >>>print(f"Baseline Scope 2 Emissions: {baseline_emissions:.2f} kg CO_2-eq")
+    Baseline Scope 2 Emissions: 10.69 kilogram kg CO_2-eq
+    >>>print(f"Optimized Scope 2 Emissions: {optimized_emissions:.2f} kg CO_2-eq")
+    Optimized Scope 2 Emissions: 9.74 kilogram kg CO_2-eq
+
+Below are a few simple plots to validate our results. 
+First, we visualize the emissions factors:

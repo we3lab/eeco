@@ -8,6 +8,7 @@ import datetime as dt
 import pyomo.environ as pyo
 from itertools import compress
 
+from .units import u
 from . import utils as ut
 
 
@@ -582,7 +583,8 @@ def calculate_demand_cost(
             demand_charged = np.array([0])
     else:
         raise ValueError(
-            "consumption_data must be of type numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var"
+            "consumption_data must be of type numpy.ndarray, "
+            "cvxpy.Expression, or pyomo.environ.Var"
         )
     if model is None:
         max_var, _ = ut.max(demand_charged)
@@ -718,7 +720,8 @@ def calculate_energy_cost(
                 )
     else:
         raise ValueError(
-            "consumption_data must be of type numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var"
+            "consumption_data must be of type numpy.ndarray, "
+            "cvxpy.Expression, or pyomo.environ.Var"
         )
 
     return cost, model
@@ -838,9 +841,10 @@ def calculate_cost(
         cubic meter / day (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
-    consumption_data_dict : dict of numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
+    consumption_data_dict : dict
         Baseline electrical and gas usage data as an optimization variable object
-        with keys "electric" and "gas"
+        with keys "electric" and "gas". Values of the dictionary must be of type
+        numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
 
     electric_consumption_units : pint.Unit
         Units for the electricity consumption data. Default is kW
@@ -918,7 +922,7 @@ def calculate_cost(
 
     Returns
     -------
-    (numpy.Array, cvxpy.Expression, or pyomo.Var),  pyomo.Model
+    (numpy.Array, cvxpy.Expression, or pyomo.environ.Var),  pyomo.Model
         tuple with the first entry being a float,
         cvxpy Expression, or pyomo Var representing energy charge costs
         in USD for the given `charge_array` and `consumption_data`
@@ -1034,9 +1038,10 @@ def calculate_itemized_cost(
         cubic meter / day (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
-    consumption_data_dict : dict of numpy.ndarray or cvxpy.Expression
+    consumption_data_dict : dict
         Baseline electrical and gas usage data as an optimization variable object
-        with keys "electric" and "gas"
+        with keys "electric" and "gas". Values of the dictionary must be of type
+        numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
 
     electric_consumption_units : pint.Unit
         Units for the electricity consumption data. Default is kW

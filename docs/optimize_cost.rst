@@ -240,7 +240,7 @@ First, we visualize the energy and demand charges:
 
 .. figure:: _static/img/cvx-tariff-structure.png
     
-    Structure of time-of-use (TOU) energy and demand charges for our modeling period (April 9-10, 2022).
+    Structure of time-of-use (TOU) energy and demand charges for our modeling period (April 9-10, 2023).
     Different colors indicate different demand charge periods.
     Note that because April 9th is a Sunday, there are no TOU charges until Monday (April 10th).
 
@@ -282,7 +282,7 @@ Finally, let's plot the battery state of charge (SOC) to confirm that the constr
 
 .. figure:: _static/img/cvx-cost-battery-soc.png
     
-    Battery state of charge (SOC) as a percentage during our modeling period (April 9-10, 2022).
+    Battery state of charge (SOC) as a percentage during our modeling period (April 9-10, 2023).
 
 .. _pyo-cost:
 
@@ -312,7 +312,7 @@ Pyomo
     )
 
 We are going to evaluate the electricity consumption for the entire month of July 2022.
-Below we will create synthetic `baseload` data for this month with 15-minute resolution, so `resolution="15m"`
+Below we will create synthetic `baseload` data for this month with 15-minute resolution, so `resolution="15m"`.
 If you print `charge_dict`, then you should get the following:
 
 .. code-block:: python
@@ -442,7 +442,6 @@ $113384.23, $2182.47 less than the baseline bill of $115566.70.
 
 
 Below are a few simple plots to validate our results.
-
 First, we visualize the energy and demand charges:
 
 .. code-block:: python
