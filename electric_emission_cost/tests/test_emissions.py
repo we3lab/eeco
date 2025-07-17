@@ -178,7 +178,7 @@ def test_calculate_grid_emissions_pyo(
         model=model,
     )
     model.obj = pyo.Objective(expr=result)
-    solver = pyo.SolverFactory("gurobi")
+    solver = pyo.SolverFactory("ipopt")
     solver.solve(model)
     assert pyo.value(result) == expected
     assert model is not None
