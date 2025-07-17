@@ -960,7 +960,10 @@ def calculate_cost(
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
         varstr_converted = varstr + "_converted" if varstr is not None else None
         converted_data, model = ut.multiply(
-            consumption_data_dict[utility], conversion_factor, model=model, varstr=varstr_converted
+            consumption_data_dict[utility],
+            conversion_factor,
+            model=model,
+            varstr=varstr_converted,
         )
 
         # Only apply demand_scale_factor if charge spans more than one day
