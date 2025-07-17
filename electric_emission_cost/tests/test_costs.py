@@ -4,6 +4,7 @@ import numpy as np
 import cvxpy as cp
 import pandas as pd
 import pyomo.environ as pyo
+import datetime
 
 from electric_emission_cost import costs
 
@@ -1143,5 +1144,31 @@ def test_get_charge_array_duration(key, expected):
 
     assert get_charge_array_duration(key) == expected
 
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_get_charge_df():
+    # load tariff
+    path_to_tariff = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), 
+        "data", "input", "billing_customer.csv")
+    tariff_df = pd.read_csv(path_to_tariff, sep=",")
+
+    # get charge dataframe
+    df = costs.get_charge_df(
+            datetime.datetime(2023, 4, 9),
+            datetime.datetime(2023, 4, 11),
+            tariff_df,
+            resolution="15m",
+            keep_fixed_charges=True,
+            scale_fixed_charges=True,
+    )
+
+    # load expected output
+    path_to_output = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), 
+        "data", "output", "billingcustomer_apr9_res15m.csv")
+    df_expected = pd.read_csv(path_to_output, parse_dates=["DateTime"])
+
+    # compare dataframes
+    pd.testing.assert_frame_equal(df, df_expected)
 
 # TODO: write test_calculate_itemized_cost
