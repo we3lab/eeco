@@ -6,7 +6,7 @@
 What is the Purpose of this Package?
 ************************************
 
-This package was created by researchers from the `WE3 Lab <https://we3lab.stanford.edu/>`_ at Stanford University to assist in their energy-water nexus research. 
+This package was created by researchers from the `WE3Lab <https://we3lab.stanford.edu/>`_ at Stanford University to assist in their energy-water nexus research. 
 Our goal is to address the complexity of computing the electricity bill of an industrial consumer.
 We originally developed these methods while evaluating the cost-minimizing energy management strategies for water systems, 
 such as wastewater treatment plants [`Musabendesu 𝐽. 𝐶𝑙𝑒𝑎𝑛. 𝑃𝑟𝑜𝑑. (2021) <https://doi.org/10.1016/j.jclepro.2020.124454>`_; `Bolorinos 𝐸𝑛𝑣𝑖𝑟𝑜𝑛. 𝑆𝑐𝑖. 𝑇𝑒𝑐ℎ𝑛𝑜𝑙. (2023) <https://doi.org/10.1021/acs.est.3c00365>`_; `Chapin 𝐸𝑛𝑣𝑖𝑟𝑜𝑛. 𝑆𝑐𝑖. 𝑇𝑒𝑐ℎ𝑛𝑜𝑙. (2025) <https://doi.org/10.1021/acs.est.4c09773>`_],

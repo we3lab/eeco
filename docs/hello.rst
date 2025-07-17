@@ -28,7 +28,7 @@ The EEC package has three main functions:
 
 These functions can be performed in three different modes:
 
-(1) ``numpy``
+(1) ``NumPy``
 (2) ``CVXPY``
 (3) ``Pyomo``
 
