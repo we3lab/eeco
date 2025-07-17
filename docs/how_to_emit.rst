@@ -6,6 +6,9 @@
 How to Calculate Emissions
 **************************
 
+Many data sources report emissions factors as monthly/hourly averages (:ref:`data-format-emissions`).
+Our package is designed to unpack data in that format into a timeseries the same length as the consumption variable.
+
 This package is not designed to calculate Scope 2 emissions that are a complete timeseries.
 We feel that is simple enough that it does not warrant its own function.
 
@@ -16,9 +19,6 @@ you would simply dot product the two arrays to find the total emissions (i.e., m
 .. code-block:: python
 
     total_emissions = np.dot(emission_arr, consumption_arr)
-
-However, many data sources report emissions factors as monthly/hourly averages (:ref:`data-format-emissions`).
-Our package is designed to unpack data in that format into a timeseries the same length as the consumption variable.
 
 =================
 Import Statements
