@@ -934,7 +934,7 @@ def calculate_cost(
 
     for key, charge_array in charge_dict.items():
         utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
-        var_str = ut.sanitize_varstr(
+        varstr = ut.sanitize_varstr(
             varstr_alias_func(utility, charge_type, name, eff_start, eff_end, limit_str)
         )
 
@@ -958,7 +958,10 @@ def calculate_cost(
         charge_limit = int(limit_str)
         key_substr = "_".join([utility, charge_type, name, eff_start, eff_end])
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
-        converted_data = consumption_data_dict[utility] * conversion_factor
+        varstr_converted = varstr + "_converted" if varstr is not None else None
+        converted_data, model = ut.multiply(
+            consumption_data_dict[utility], conversion_factor, model=model, varstr=varstr_converted
+        )
 
         # Only apply demand_scale_factor if charge spans more than one day
         charge_duration_days = get_charge_array_duration(key)
@@ -981,7 +984,7 @@ def calculate_cost(
                 consumption_estimate=consumption_estimate,
                 scale_factor=effective_scale_factor,
                 model=model,
-                varstr=var_str,
+                varstr=varstr,
             )
             cost += new_cost
         elif charge_type == "energy":
@@ -998,12 +1001,12 @@ def calculate_cost(
                 prev_consumption=prev_consumption,
                 consumption_estimate=consumption_estimate,
                 model=model,
-                varstr=var_str,
+                varstr=varstr,
             )
             cost += new_cost
         elif charge_type == "export":
             new_cost, model = calculate_export_revenues(
-                charge_array, converted_data, divisor, model=model, varstr=var_str
+                charge_array, converted_data, divisor, model=model, varstr=varstr
             )
             cost -= new_cost
         elif charge_type == "customer":
