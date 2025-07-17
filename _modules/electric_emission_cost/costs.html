@@ -64,7 +64,8 @@
 <p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../data_format.html">Data Formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../how_to_cost.html">How to Calculate Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../how_to_emit.html">How to Calculate Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../how_to_metrics.html">How to Use Flexibility Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../how_to_advanced.html">How to Use Advanced Features</a></li>
 </ul>
@@ -113,6 +114,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">itertools</span><span class="w"> </span><span class="kn">import</span> <span class="n">compress</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">ut</span>
 
 
@@ -567,7 +569,7 @@
     <span class="n">consumption_estimate</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">scale_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">varstr</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the cost of given demand charges for the given billing rate structure,</span>
 <span class="sd">    utility, and consumption information</span>
@@ -577,7 +579,7 @@
 <span class="sd">    charge_array : array</span>
 <span class="sd">        Array of charge cost (in $/kW)</span>
 
-<span class="sd">    consumption_data : numpy.ndarray or cvxpy.Expression</span>
+<span class="sd">    consumption_data : numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</span>
 <span class="sd">        Baseline electrical or gas usage data as an optimization variable object</span>
 
 <span class="sd">    limit : float</span>
@@ -600,9 +602,9 @@
 
 <span class="sd">    consumption_estimate : float</span>
 <span class="sd">        Estimate of the total monthly demand or energy consumption from baseline data.</span>
-<span class="sd">        Only used when `consumption_data` is cvxpy.Expression for convex relaxation</span>
-<span class="sd">        of tiered charges, while numpy.ndarray `consumption_data` will use actual</span>
-<span class="sd">        consumption and ignore the estimate.</span>
+<span class="sd">        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var</span>
+<span class="sd">        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`</span>
+<span class="sd">        will use actual consumption and ignore the estimate.</span>
 
 <span class="sd">    scale_factor : float</span>
 <span class="sd">        Optional factor for scaling demand charges relative to energy charges</span>
@@ -619,9 +621,11 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    cvxpy.Expression or float</span>
-<span class="sd">        float or cvxpy Expression representing cost in USD for the given</span>
-<span class="sd">        `charge_array` and `consumption_data`</span>
+<span class="sd">    (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model</span>
+<span class="sd">        tuple with the first entry being a float,</span>
+<span class="sd">        cvxpy Expression, or pyomo Var representing demand charge costs</span>
+<span class="sd">        in USD for the given `charge_array` and `consumption_data`</span>
+<span class="sd">        and the second entry being the pyomo model object (or None)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">limit</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
@@ -685,7 +689,8 @@
             <span class="n">demand_charged</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;consumption_data must be of type numpy.ndarray or cvxpy.Expression&quot;</span>
+            <span class="s2">&quot;consumption_data must be of type numpy.ndarray, &quot;</span>
+            <span class="s2">&quot;cvxpy.Expression, or pyomo.environ.Var&quot;</span>
         <span class="p">)</span>
     <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">max_var</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">demand_charged</span><span class="p">)</span>
@@ -708,7 +713,7 @@
     <span class="n">prev_consumption</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">consumption_estimate</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">varstr</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the cost of given energy charges for the given billing rate</span>
 <span class="sd">    structure, utility, and consumption information.</span>
@@ -718,7 +723,7 @@
 <span class="sd">    charge_array : numpy.ndarray</span>
 <span class="sd">        Array of the charges in $/kWh for electric and $/cubic meter for gas</span>
 
-<span class="sd">    consumption_data : numpy.ndarray or cvxpy.Expression</span>
+<span class="sd">    consumption_data : numpy.ndarray cvxpy.Expression, or pyomo.environ.Var</span>
 <span class="sd">        Baseline electrical or gas usage data as an optimization variable object</span>
 
 <span class="sd">    divisor : int</span>
@@ -734,9 +739,9 @@
 
 <span class="sd">    consumption_estimate : float</span>
 <span class="sd">        Estimate of the total monthly demand or energy consumption from baseline data.</span>
-<span class="sd">        Only used when `consumption_data` is cvxpy.Expression for convex relaxation</span>
-<span class="sd">        of tiered charges, while numpy.ndarray `consumption_data` will use actual</span>
-<span class="sd">        consumption and ignore the estimate.</span>
+<span class="sd">        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var</span>
+<span class="sd">        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`</span>
+<span class="sd">        will use actual consumption and ignore the estimate.</span>
 
 <span class="sd">    model : pyomo.Model</span>
 <span class="sd">        The model object associated with the problem.</span>
@@ -753,9 +758,11 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    cvxpy.Expression, pyomo.Model, or float</span>
-<span class="sd">        float or cvxpy Expression representing cost in USD for the given</span>
-<span class="sd">        `charge_array` and `consumption_data`</span>
+<span class="sd">    (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model</span>
+<span class="sd">        tuple with the first entry being a float,</span>
+<span class="sd">        cvxpy Expression, or pyomo Var representing energy charge costs</span>
+<span class="sd">        in USD for the given `charge_array` and `consumption_data`</span>
+<span class="sd">        and the second entry being the pyomo model object (or None)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">cost</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -819,14 +826,15 @@
                 <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;consumption_data must be of type numpy.ndarray or cvxpy.Expression&quot;</span>
+            <span class="s2">&quot;consumption_data must be of type numpy.ndarray, &quot;</span>
+            <span class="s2">&quot;cvxpy.Expression, or pyomo.environ.Var&quot;</span>
         <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">cost</span><span class="p">,</span> <span class="n">model</span></div>
 
 
 <div class="viewcode-block" id="calculate_export_revenues"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_export_revenues">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_export_revenues</span><span class="p">(</span>
-    <span class="n">charge_array</span><span class="p">,</span> <span class="n">export_data</span><span class="p">,</span> <span class="n">divisor</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span>
+    <span class="n">charge_array</span><span class="p">,</span> <span class="n">export_data</span><span class="p">,</span> <span class="n">divisor</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the export revenues for the given billing rate structure,</span>
 <span class="sd">    utility, and consumption information.</span>
@@ -838,11 +846,11 @@
 <span class="sd">    charge_array : numpy.ndarray</span>
 <span class="sd">        array with price per kWh sold back to the grid</span>
 
-<span class="sd">    consumption_data : numpy.ndarray or cvxpy.Expression</span>
+<span class="sd">    consumption_data : numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</span>
 <span class="sd">        Baseline electrical or gas usage data as an optimization variable object</span>
 
 <span class="sd">    divisor : int</span>
-<span class="sd">        Divisor for the energy charges</span>
+<span class="sd">        Divisor for the export revenue</span>
 
 <span class="sd">    model : pyomo.Model</span>
 <span class="sd">        The model object associated with the problem.</span>
@@ -853,9 +861,11 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    cvxpy.Expression or float</span>
-<span class="sd">        float or cvxpy Expression representing revenue in USD for the given</span>
-<span class="sd">        `charge_array` and `export_data`</span>
+<span class="sd">    (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model</span>
+<span class="sd">        tuple with the first entry being a float,</span>
+<span class="sd">        cvxpy Expression, or pyomo Var representing export revenues</span>
+<span class="sd">        in USD for the given `charge_array` and `consumption_data`</span>
+<span class="sd">        and the second entry being the pyomo model object (or None)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">varstr_mul</span> <span class="o">=</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_multiply&quot;</span> <span class="k">if</span> <span class="n">varstr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
     <span class="n">varstr_sum</span> <span class="o">=</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_sum&quot;</span> <span class="k">if</span> <span class="n">varstr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
@@ -912,6 +922,8 @@
 <div class="viewcode-block" id="calculate_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_cost</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
     <span class="n">consumption_data_dict</span><span class="p">,</span>
+    <span class="n">electric_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">,</span>
+    <span class="n">gas_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">meters</span><span class="o">**</span><span class="mi">3</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">day</span><span class="p">,</span>
     <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
     <span class="n">prev_demand_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">prev_consumption_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -935,9 +947,16 @@
 <span class="sd">        cubic meter / day (gas demand), cubic meter (gas energy),</span>
 <span class="sd">        or $ / month (customer)</span>
 
-<span class="sd">    consumption_data_dict : dict of numpy.ndarray or cvxpy.Expression</span>
+<span class="sd">    consumption_data_dict : dict</span>
 <span class="sd">        Baseline electrical and gas usage data as an optimization variable object</span>
-<span class="sd">        with keys &quot;electric&quot; and &quot;gas&quot;</span>
+<span class="sd">        with keys &quot;electric&quot; and &quot;gas&quot;. Values of the dictionary must be of type</span>
+<span class="sd">        numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</span>
+
+<span class="sd">    electric_consumption_units : pint.Unit</span>
+<span class="sd">        Units for the electricity consumption data. Default is kW</span>
+
+<span class="sd">    gas_consumption_units : pint.Unit</span>
+<span class="sd">        Units for the natural gas consumption data. Default is cubic meters / day</span>
 
 <span class="sd">    resolution : str</span>
 <span class="sd">        String of the form `[int][str]` giving the temporal resolution</span>
@@ -959,9 +978,9 @@
 
 <span class="sd">    consumption_estimate : float</span>
 <span class="sd">        Estimate of the total monthly demand or energy consumption from baseline data.</span>
-<span class="sd">        Only used when `consumption_data` is cvxpy.Expression for convex relaxation</span>
-<span class="sd">        of tiered charges, while numpy.ndarray `consumption_data` will use actual</span>
-<span class="sd">        consumption and ignore the estimate.</span>
+<span class="sd">        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var</span>
+<span class="sd">        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`</span>
+<span class="sd">        will use actual consumption and ignore the estimate.</span>
 
 <span class="sd">    desired_charge_type : str</span>
 <span class="sd">        Name of desired charge type for itemized costs.</span>
@@ -1009,9 +1028,11 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    numpy.Array, cvxpy.Expression, or pyomo.Model</span>
-<span class="sd">        numpy array, cvxpy Expression representing cost in USD for the given</span>
-<span class="sd">        `consumption_data`, `charge_type`, and `utility`</span>
+<span class="sd">    (numpy.Array, cvxpy.Expression, or pyomo.environ.Var),  pyomo.Model</span>
+<span class="sd">        tuple with the first entry being a float,</span>
+<span class="sd">        cvxpy Expression, or pyomo Var representing energy charge costs</span>
+<span class="sd">        in USD for the given `charge_array` and `consumption_data`</span>
+<span class="sd">        and the second entry being the pyomo model object (or None)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">cost</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">n_per_hour</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">60</span> <span class="o">/</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">))</span>
@@ -1019,7 +1040,7 @@
 
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">charge_array</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">,</span> <span class="n">limit_str</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
-        <span class="n">var_str</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sanitize_varstr</span><span class="p">(</span>
+        <span class="n">varstr</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sanitize_varstr</span><span class="p">(</span>
             <span class="n">varstr_alias_func</span><span class="p">(</span><span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">,</span> <span class="n">limit_str</span><span class="p">)</span>
         <span class="p">)</span>
 
@@ -1029,22 +1050,31 @@
         <span class="p">):</span>
             <span class="k">continue</span>
 
+        <span class="k">if</span> <span class="n">utility</span> <span class="o">==</span> <span class="s2">&quot;electric&quot;</span><span class="p">:</span>
+            <span class="n">conversion_factor</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="n">electric_consumption_units</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">)</span><span class="o">.</span><span class="n">magnitude</span>
+            <span class="n">divisor</span> <span class="o">=</span> <span class="n">n_per_hour</span>
+        <span class="k">elif</span> <span class="n">utility</span> <span class="o">==</span> <span class="s2">&quot;gas&quot;</span><span class="p">:</span>
+            <span class="n">conversion_factor</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="n">gas_consumption_units</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">meter</span><span class="o">**</span><span class="mi">3</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">day</span><span class="p">)</span><span class="o">.</span><span class="n">magnitude</span>
+            <span class="p">)</span>
+            <span class="n">divisor</span> <span class="o">=</span> <span class="n">n_per_day</span> <span class="o">/</span> <span class="n">conversion_factor</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid utility: &quot;</span> <span class="o">+</span> <span class="n">utility</span><span class="p">)</span>
+
         <span class="n">charge_limit</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">limit_str</span><span class="p">)</span>
         <span class="n">key_substr</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">])</span>
         <span class="n">next_limit</span> <span class="o">=</span> <span class="n">get_next_limit</span><span class="p">(</span><span class="n">key_substr</span><span class="p">,</span> <span class="n">charge_limit</span><span class="p">,</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-        <span class="n">consumption_data</span> <span class="o">=</span> <span class="n">consumption_data_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">]</span>
+        <span class="n">varstr_converted</span> <span class="o">=</span> <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_converted&quot;</span> <span class="k">if</span> <span class="n">varstr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">converted_data</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
+            <span class="n">consumption_data_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">],</span>
+            <span class="n">conversion_factor</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">varstr</span><span class="o">=</span><span class="n">varstr_converted</span><span class="p">,</span>
+        <span class="p">)</span>
 
         <span class="c1"># Only apply demand_scale_factor if charge spans more than one day</span>
         <span class="n">charge_duration_days</span> <span class="o">=</span> <span class="n">get_charge_array_duration</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
         <span class="n">effective_scale_factor</span> <span class="o">=</span> <span class="n">demand_scale_factor</span> <span class="k">if</span> <span class="n">charge_duration_days</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mi">1</span>
-
-        <span class="c1"># TODO: this assumes units of kW for electricity and meters cubed for gas</span>
-        <span class="k">if</span> <span class="n">utility</span> <span class="o">==</span> <span class="s2">&quot;electric&quot;</span><span class="p">:</span>
-            <span class="n">divisor</span> <span class="o">=</span> <span class="n">n_per_hour</span>
-        <span class="k">elif</span> <span class="n">utility</span> <span class="o">==</span> <span class="s2">&quot;gas&quot;</span><span class="p">:</span>
-            <span class="n">divisor</span> <span class="o">=</span> <span class="n">n_per_day</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid utility: &quot;</span> <span class="o">+</span> <span class="n">utility</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="s2">&quot;demand&quot;</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">prev_demand_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1055,7 +1085,7 @@
                 <span class="n">prev_demand_cost</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="n">new_cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_demand_cost</span><span class="p">(</span>
                 <span class="n">charge_array</span><span class="p">,</span>
-                <span class="n">consumption_data</span><span class="p">,</span>
+                <span class="n">converted_data</span><span class="p">,</span>
                 <span class="n">limit</span><span class="o">=</span><span class="n">charge_limit</span><span class="p">,</span>
                 <span class="n">next_limit</span><span class="o">=</span><span class="n">next_limit</span><span class="p">,</span>
                 <span class="n">prev_demand</span><span class="o">=</span><span class="n">prev_demand</span><span class="p">,</span>
@@ -1063,7 +1093,7 @@
                 <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
                 <span class="n">scale_factor</span><span class="o">=</span><span class="n">effective_scale_factor</span><span class="p">,</span>
                 <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-                <span class="n">varstr</span><span class="o">=</span><span class="n">var_str</span><span class="p">,</span>
+                <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">cost</span> <span class="o">+=</span> <span class="n">new_cost</span>
         <span class="k">elif</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="s2">&quot;energy&quot;</span><span class="p">:</span>
@@ -1073,19 +1103,19 @@
                 <span class="n">prev_consumption</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="n">new_cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_energy_cost</span><span class="p">(</span>
                 <span class="n">charge_array</span><span class="p">,</span>
-                <span class="n">consumption_data</span><span class="p">,</span>
+                <span class="n">converted_data</span><span class="p">,</span>
                 <span class="n">divisor</span><span class="p">,</span>
                 <span class="n">limit</span><span class="o">=</span><span class="n">charge_limit</span><span class="p">,</span>
                 <span class="n">next_limit</span><span class="o">=</span><span class="n">next_limit</span><span class="p">,</span>
                 <span class="n">prev_consumption</span><span class="o">=</span><span class="n">prev_consumption</span><span class="p">,</span>
                 <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
                 <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-                <span class="n">varstr</span><span class="o">=</span><span class="n">var_str</span><span class="p">,</span>
+                <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">cost</span> <span class="o">+=</span> <span class="n">new_cost</span>
         <span class="k">elif</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="s2">&quot;export&quot;</span><span class="p">:</span>
             <span class="n">new_cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_export_revenues</span><span class="p">(</span>
-                <span class="n">charge_array</span><span class="p">,</span> <span class="n">consumption_data</span><span class="p">,</span> <span class="n">divisor</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">var_str</span>
+                <span class="n">charge_array</span><span class="p">,</span> <span class="n">converted_data</span><span class="p">,</span> <span class="n">divisor</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span>
             <span class="p">)</span>
             <span class="n">cost</span> <span class="o">-=</span> <span class="n">new_cost</span>
         <span class="k">elif</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="s2">&quot;customer&quot;</span><span class="p">:</span>
@@ -1097,11 +1127,17 @@
 
 <div class="viewcode-block" id="calculate_itemized_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_itemized_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_itemized_cost</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
-    <span class="n">consumption_data</span><span class="p">,</span>
+    <span class="n">consumption_data_dict</span><span class="p">,</span>
+    <span class="n">electric_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">,</span>
+    <span class="n">gas_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">meters</span><span class="o">**</span><span class="mi">3</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">day</span><span class="p">,</span>
     <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
     <span class="n">prev_demand_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">prev_consumption_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">consumption_estimate</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">demand_scale_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">default_varstr_alias_func</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates itemized costs as a nested dictionary</span>
 
@@ -1114,19 +1150,46 @@
 <span class="sd">        cubic meter / day (gas demand), cubic meter (gas energy),</span>
 <span class="sd">        or $ / month (customer)</span>
 
-<span class="sd">    consumption_data : numpy.ndarray or cvxpy.Expression</span>
-<span class="sd">        Baseline electrical or gas usage data as an optimization variable object</span>
+<span class="sd">    consumption_data_dict : dict</span>
+<span class="sd">        Baseline electrical and gas usage data as an optimization variable object</span>
+<span class="sd">        with keys &quot;electric&quot; and &quot;gas&quot;. Values of the dictionary must be of type</span>
+<span class="sd">        numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</span>
+
+<span class="sd">    electric_consumption_units : pint.Unit</span>
+<span class="sd">        Units for the electricity consumption data. Default is kW</span>
+
+<span class="sd">    gas_consumption_units : pint.Unit</span>
+<span class="sd">        Units for the natura gas consumption data. Default is cubic meters / day</span>
 
 <span class="sd">    resolution : str</span>
-<span class="sd">        granularity of each timestep in string form with default value of &quot;15m&quot;</span>
+<span class="sd">        String of the form `[int][str]` giving the temporal resolution</span>
+<span class="sd">        on which charges are assessed, the `str` portion corresponds to</span>
+<span class="sd">        numpy.timedelta64 types for example &#39;15m&#39; specifying demand charges</span>
+<span class="sd">        that are applied to 15-minute intervals of electricity consumption</span>
 
-<span class="sd">     prev_demand_dict : dict</span>
-<span class="sd">        Dictionary previous maximmum demand charges with a key for each charge.</span>
-<span class="sd">        Default is None, which results in an a prev_demand of zero for all charges.</span>
+<span class="sd">    prev_demand_dict : dict</span>
+<span class="sd">        Nested dictionary previous maximmum demand charges with an entry of the form</span>
+<span class="sd">        {&quot;cost&quot; : float, &quot;demand&quot; : float} for each charge.</span>
+<span class="sd">        Default is None, which results in an a prev_demand and prev_demand_cost</span>
+<span class="sd">        of zero for all charges.</span>
+
+<span class="sd">    prev_consumption_dict : dict</span>
+<span class="sd">        Dictionary of previous total energy consumption with a key for each charge</span>
+<span class="sd">        to be used when starting the cost calculation partway into a billing period</span>
+<span class="sd">        (e.g., while using a moving horizon that is shorter than a month).</span>
+<span class="sd">        Default is None, resulting in an a prev_consumption of zero for all charges.</span>
 
 <span class="sd">    consumption_estimate : float</span>
-<span class="sd">        estimated total consumption up to this point in the bililng period to determine</span>
-<span class="sd">        correct tier based on charge limits</span>
+<span class="sd">        Estimate of the total monthly demand or energy consumption from baseline data.</span>
+<span class="sd">        Only used when `consumption_data` is cvxpy.Expression for convex relaxation</span>
+<span class="sd">        of tiered charges, while numpy.ndarray `consumption_data` will use actual</span>
+<span class="sd">        consumption and ignore the estimate.</span>
+
+<span class="sd">    demand_scale_factor : float</span>
+<span class="sd">        Optional factor for scaling demand charges relative to energy charges</span>
+<span class="sd">        when the optimization/simulation period is not a full billing cycle.</span>
+<span class="sd">        Applied to monthly charges where end_date - start_date &gt; 1 day.</span>
+<span class="sd">        Default is 1</span>
 
 <span class="sd">    model : pyomo.Model</span>
 <span class="sd">        The model object associated with the problem.</span>
@@ -1172,24 +1235,55 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">total_cost</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">results_dict</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span> <span class="s2">&quot;gas&quot;</span><span class="p">]:</span>
-        <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">desired_utility</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span> <span class="s2">&quot;gas&quot;</span><span class="p">]:</span>
+            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">total_utility_cost</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;customer&quot;</span><span class="p">,</span> <span class="s2">&quot;energy&quot;</span><span class="p">,</span> <span class="s2">&quot;demand&quot;</span><span class="p">,</span> <span class="s2">&quot;export&quot;</span><span class="p">]:</span>
+                <span class="n">cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_cost</span><span class="p">(</span>
+                    <span class="n">charge_dict</span><span class="p">,</span>
+                    <span class="n">consumption_data_dict</span><span class="p">,</span>
+                    <span class="n">electric_consumption_units</span><span class="o">=</span><span class="n">electric_consumption_units</span><span class="p">,</span>
+                    <span class="n">gas_consumption_units</span><span class="o">=</span><span class="n">gas_consumption_units</span><span class="p">,</span>
+                    <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">,</span>
+                    <span class="n">prev_demand_dict</span><span class="o">=</span><span class="n">prev_demand_dict</span><span class="p">,</span>
+                    <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
+                    <span class="n">desired_utility</span><span class="o">=</span><span class="n">utility</span><span class="p">,</span>
+                    <span class="n">desired_charge_type</span><span class="o">=</span><span class="n">charge_type</span><span class="p">,</span>
+                    <span class="n">demand_scale_factor</span><span class="o">=</span><span class="n">demand_scale_factor</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">varstr_alias_func</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">cost</span>
+                <span class="n">total_utility_cost</span> <span class="o">+=</span> <span class="n">cost</span>
+
+            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_utility_cost</span>
+            <span class="n">total_cost</span> <span class="o">+=</span> <span class="n">total_utility_cost</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">results_dict</span><span class="p">[</span><span class="n">desired_utility</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">total_utility_cost</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;customer&quot;</span><span class="p">,</span> <span class="s2">&quot;energy&quot;</span><span class="p">,</span> <span class="s2">&quot;demand&quot;</span><span class="p">,</span> <span class="s2">&quot;export&quot;</span><span class="p">]:</span>
             <span class="n">cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_cost</span><span class="p">(</span>
                 <span class="n">charge_dict</span><span class="p">,</span>
-                <span class="n">consumption_data</span><span class="p">,</span>
+                <span class="n">consumption_data_dict</span><span class="p">,</span>
+                <span class="n">electric_consumption_units</span><span class="o">=</span><span class="n">electric_consumption_units</span><span class="p">,</span>
+                <span class="n">gas_consumption_units</span><span class="o">=</span><span class="n">gas_consumption_units</span><span class="p">,</span>
                 <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">,</span>
                 <span class="n">prev_demand_dict</span><span class="o">=</span><span class="n">prev_demand_dict</span><span class="p">,</span>
-                <span class="n">desired_utility</span><span class="o">=</span><span class="n">utility</span><span class="p">,</span>
+                <span class="n">prev_consumption_dict</span><span class="o">=</span><span class="n">prev_consumption_dict</span><span class="p">,</span>
+                <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
+                <span class="n">desired_utility</span><span class="o">=</span><span class="n">desired_utility</span><span class="p">,</span>
                 <span class="n">desired_charge_type</span><span class="o">=</span><span class="n">charge_type</span><span class="p">,</span>
+                <span class="n">demand_scale_factor</span><span class="o">=</span><span class="n">demand_scale_factor</span><span class="p">,</span>
                 <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">varstr_alias_func</span><span class="p">,</span>
             <span class="p">)</span>
 
-            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">cost</span>
+            <span class="n">results_dict</span><span class="p">[</span><span class="n">desired_utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">cost</span>
             <span class="n">total_utility_cost</span> <span class="o">+=</span> <span class="n">cost</span>
 
-        <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_utility_cost</span>
+        <span class="n">results_dict</span><span class="p">[</span><span class="n">desired_utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_utility_cost</span>
         <span class="n">total_cost</span> <span class="o">+=</span> <span class="n">total_utility_cost</span>
 
     <span class="n">results_dict</span><span class="p">[</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_cost</span>
@@ -1203,7 +1297,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2025, WE3 Lab.</p>
+    <p>&#169; Copyright 2025, WE3Lab.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

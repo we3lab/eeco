@@ -64,7 +64,8 @@
 <p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../data_format.html">Data Formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../how_to_cost.html">How to Calculate Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../how_to_emit.html">How to Calculate Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../how_to_metrics.html">How to Use Flexibility Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../how_to_advanced.html">How to Use Advanced Features</a></li>
 </ul>
@@ -105,12 +106,13 @@
   <h1>Source code for electric_emission_cost.emissions</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Functions to calculate emissions from electricity consumption data.&quot;&quot;&quot;</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">pint</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">calendar</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">pint</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">ut</span>
@@ -126,62 +128,11 @@
 <div class="viewcode-block" id="calculate_grid_emissions"><a class="viewcode-back" href="../../emissions.html#electric_emission_cost.emissions.calculate_grid_emissions">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_grid_emissions</span><span class="p">(</span>
     <span class="n">carbon_intensity</span><span class="p">,</span>
     <span class="n">consumption_data</span><span class="p">,</span>
-    <span class="n">net_demand_varname</span><span class="p">,</span>
-    <span class="n">emission_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">MWh</span><span class="p">,</span>
+    <span class="n">emissions_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">MWh</span><span class="p">,</span>
     <span class="n">consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">,</span>
     <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
-    <span class="n">ei_varname</span><span class="o">=</span><span class="n">EI_VARNAME</span><span class="p">,</span>
-<span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the emissions for the given consumption information and</span>
-<span class="sd">    carbon intensity of electricity generation structure as DataFrames.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    carbon_intensity : DataFrame</span>
-<span class="sd">        Pandas DataFrame with kg of CO2 per kWh by hour and month</span>
-
-<span class="sd">    consumption_data : DataFrame</span>
-<span class="sd">        Baseline electrical or gas usage data as a Pandas DataFrame</span>
-
-<span class="sd">    emissions_units : pint.Unit</span>
-<span class="sd">        Units for the emissions data. Default is kg / kWh</span>
-
-<span class="sd">    consumption_units : pint.Unit</span>
-<span class="sd">        Units for the electricity consumption data. Default is kW</span>
-
-<span class="sd">    resolution : str</span>
-<span class="sd">        granularity of each timestep in string form with default value of &quot;15m&quot;</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    pint.Quantity</span>
-<span class="sd">        total emissions due to grid electricity generation in kilograms CO2</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">consumption_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-    <span class="n">df</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">DT_VARNAME</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span>
-    <span class="n">df</span><span class="p">[</span><span class="n">HOUR_VARNAME</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">DT_VARNAME</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span>
-    <span class="c1"># convert the resolution to hourly</span>
-    <span class="n">n_per_hour</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">60</span> <span class="o">/</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">))</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">carbon_intensity</span><span class="p">,</span> <span class="n">pint</span><span class="o">.</span><span class="n">Quantity</span><span class="p">):</span>
-        <span class="n">emission_units</span> <span class="o">=</span> <span class="n">carbon_intensity</span><span class="o">.</span><span class="n">units</span>
-        <span class="n">carbon_intensity</span> <span class="o">=</span> <span class="n">carbon_intensity</span><span class="o">.</span><span class="n">magnitude</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">carbon_intensity</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="n">MONTH_VARNAME</span><span class="p">,</span> <span class="n">HOUR_VARNAME</span><span class="p">])</span>
-    <span class="n">emissions</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">net_demand_varname</span><span class="p">]</span> <span class="o">*</span> <span class="n">df</span><span class="p">[</span><span class="n">ei_varname</span><span class="p">])</span>
-        <span class="o">*</span> <span class="n">consumption_units</span>
-        <span class="o">*</span> <span class="n">emission_units</span>
-        <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">hour</span>
-        <span class="o">/</span> <span class="n">n_per_hour</span>
-    <span class="p">)</span>
-    <span class="k">return</span> <span class="n">emissions</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="calculate_grid_emissions_cvx"><a class="viewcode-back" href="../../emissions.html#electric_emission_cost.emissions.calculate_grid_emissions_cvx">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_grid_emissions_cvx</span><span class="p">(</span>
-    <span class="n">carbon_intensity</span><span class="p">,</span>
-    <span class="n">consumption_data</span><span class="p">,</span>
-    <span class="n">emission_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">MWh</span><span class="p">,</span>
-    <span class="n">consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">,</span>
-    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">varstr</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the emissions for the given consumption information as a cvxpy object</span>
 <span class="sd">    carbon intensity of electricity generation structure as a DataFrame.</span>
@@ -191,11 +142,11 @@
 <span class="sd">    carbon_intensity : array</span>
 <span class="sd">        numpy array with kg of CO2 per kWh</span>
 
-<span class="sd">    consumption_data : Variable</span>
-<span class="sd">        Baseline electrical or gas usage data as a CVXPY Variable</span>
+<span class="sd">    consumption_data : numpy.Array, cvxpy.Variable, or pyomo.environ.Var</span>
+<span class="sd">        Baseline electrical or gas usage data as a Pyomo Var</span>
 
 <span class="sd">    emissions_units : pint.Unit</span>
-<span class="sd">        Units for the emissions data. Default is kg / kWh</span>
+<span class="sd">        Units for the emissions data. Default is kg / MWh</span>
 
 <span class="sd">    consumption_units : pint.Unit</span>
 <span class="sd">        Units for the electricity consumption data. Default is kW</span>
@@ -203,22 +154,51 @@
 <span class="sd">    resolution : str</span>
 <span class="sd">        granularity of each timestep in string form with default value of &quot;15m&quot;</span>
 
+<span class="sd">    model : pyomo.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
+<span class="sd">    varstr : str</span>
+<span class="sd">        Name of the variable to be created if using a Pyomo `model`</span>
+
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    Expression</span>
-<span class="sd">        cvxpy Expression representing emissions in kg of CO2 for the given</span>
-<span class="sd">        `consumption_data` and `carbon_intensity`</span>
+<span class="sd">    (pint.Quantity, cvxpy.Expression, or pyomo.environ.Var), pyomo.Model</span>
+<span class="sd">        tuple of pyomo Var representing emissions in kg of CO2 for the given</span>
+<span class="sd">        `consumption_data` and `carbon_intensity` and the accompanying model object.</span>
+<span class="sd">        The `model` object is only used for Pyomo, so by default it is `None`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># get the emission factor units if they were provided as pint.Quantity</span>
     <span class="n">n_per_hour</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">60</span> <span class="o">/</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">))</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">carbon_intensity</span><span class="p">,</span> <span class="n">pint</span><span class="o">.</span><span class="n">Quantity</span><span class="p">):</span>
-        <span class="n">emission_units</span> <span class="o">=</span> <span class="n">carbon_intensity</span><span class="o">.</span><span class="n">units</span>
+        <span class="n">emissions_units</span> <span class="o">=</span> <span class="n">carbon_intensity</span><span class="o">.</span><span class="n">units</span>
         <span class="n">carbon_intensity</span> <span class="o">=</span> <span class="n">carbon_intensity</span><span class="o">.</span><span class="n">magnitude</span>
-    <span class="n">conversion_factor</span> <span class="o">=</span> <span class="p">(</span><span class="n">consumption_units</span> <span class="o">*</span> <span class="n">emission_units</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">hour</span><span class="p">)</span><span class="o">.</span><span class="n">magnitude</span>
-    <span class="n">emissions</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">carbon_intensity</span><span class="p">))</span> <span class="o">/</span> <span class="n">n_per_hour</span>
-    <span class="k">return</span> <span class="n">emissions</span> <span class="o">*</span> <span class="n">conversion_factor</span></div>
 
-
-<span class="c1"># TODO: need to write calculate_grid_emissions_pyo</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="n">total_emissions</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">consumption_data</span> <span class="o">*</span> <span class="n">carbon_intensity</span><span class="p">)</span>
+            <span class="o">*</span> <span class="n">consumption_units</span>
+            <span class="o">*</span> <span class="n">emissions_units</span>
+            <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">hour</span>
+            <span class="o">/</span> <span class="n">n_per_hour</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">total_emissions</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span><span class="p">),</span> <span class="kc">None</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">)):</span>
+        <span class="n">conversion_factor</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="n">consumption_units</span> <span class="o">*</span> <span class="n">emissions_units</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">hour</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span><span class="p">)</span><span class="o">.</span><span class="n">magnitude</span>
+        <span class="p">)</span>
+        <span class="n">emissions_timeseries</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
+            <span class="n">consumption_data</span><span class="p">,</span> <span class="n">carbon_intensity</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_multiply&quot;</span>
+        <span class="p">)</span>
+        <span class="n">total_emissions</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+            <span class="n">emissions_timeseries</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_sum&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">total_emissions</span> <span class="o">*</span> <span class="n">conversion_factor</span> <span class="o">/</span> <span class="n">n_per_hour</span><span class="p">,</span> <span class="n">model</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;consumption_data must be of type numpy.ndarray, &quot;</span>
+            <span class="s2">&quot;cvxpy.Expression, or pyomo.environ.Var&quot;</span>
+        <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="get_carbon_intensity"><a class="viewcode-back" href="../../emissions.html#electric_emission_cost.emissions.get_carbon_intensity">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_carbon_intensity</span><span class="p">(</span>
@@ -234,10 +214,11 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    start_dt : datetime.datetime or numpy.datetime64</span>
-<span class="sd">        Start datetime to gather rate information</span>
+<span class="sd">        Start datetime to gather rate information.</span>
 
 <span class="sd">    end_dt : datetime.datetime or numpy.datetime64</span>
-<span class="sd">        End datetime to gather rate information</span>
+<span class="sd">        End datetime to gather rate information.</span>
+<span class="sd">        This `end_dt` is excluded to be consistent with Python syntax.</span>
 
 <span class="sd">    emissions_data : DataFrame</span>
 <span class="sd">        Electric grid emissions information.</span>
@@ -259,6 +240,10 @@
 <span class="sd">        on which charges are assessed. The `str` portion corresponds to numpy</span>
 <span class="sd">        timedelta64 types. For example &#39;15m&#39; specifying demand charges</span>
 <span class="sd">        that are applied to 15-minute intervals of electricity consumption</span>
+
+<span class="sd">    ei_varname : str</span>
+<span class="sd">        column name for the Scope 2 emissions factor.</span>
+<span class="sd">        Default is `EI_VARNAME=&quot;co2_eq_kg_per_MWh&quot;`</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -469,7 +454,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2025, WE3 Lab.</p>
+    <p>&#169; Copyright 2025, WE3Lab.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

@@ -71,7 +71,8 @@
 <p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="how_to_calculate.html">How to Calculate Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_cost.html">How to Calculate Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_emit.html">How to Calculate Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_advanced.html">How to Use Advanced Features</a></li>
 </ul>
@@ -162,8 +163,8 @@ but the complete models are available in the <cite>examples</cite> folder:</p>
 <ol class="arabic simple">
 <li><p>Load an electricity tariff spreadsheet</p></li>
 </ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path_to_tariffsheet</span> <span class="o">=</span> <span class="s2">&quot;electric_emission_cost/data/tariff.csv&quot;</span>
-<span class="n">tariff_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_to_tariffsheet</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path_to_tariff_sheet</span> <span class="o">=</span> <span class="s2">&quot;electric_emission_cost/data/tariff.csv&quot;</span>
+<span class="n">tariff_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_to_tariff_sheet</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
 
 <span class="c1"># get the charge dictionary</span>
 <span class="n">charge_dict</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_dict</span><span class="p">(</span>
@@ -307,8 +308,8 @@ $703.81, $61.48 less than the baseline bill of $765.29.</p>
 <span class="go">Optimized Electricity Cost: $703.81</span>
 </pre></div>
 </div>
-<p>Below are a few simple plots to validate our results.</p>
-<p>First, we visualize the energy and demand charges:</p>
+<p>Below are a few simple plots to validate our results.
+First, we visualize the energy and demand charges:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># this can also be done in a dataframe format that drops all the unnecessary columns</span>
 <span class="n">charge_df</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_df</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span> <span class="n">tariff_df</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">)</span>
 <span class="n">charge_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
@@ -320,7 +321,7 @@ $703.81, $61.48 less than the baseline bill of $765.29.</p>
 <span class="c1"># sum across all energy charges</span>
 <span class="n">total_energy_charge</span> <span class="o">=</span> <span class="n">energy_charge_df</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
 <span class="c1"># plot the energy charges</span>
 <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">total_energy_charge</span><span class="p">)</span>
 <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
@@ -348,7 +349,7 @@ $703.81, $61.48 less than the baseline bill of $765.29.</p>
 <figure class="align-default" id="id2">
 <img alt="_images/cvx-tariff-structure.png" src="_images/cvx-tariff-structure.png" />
 <figcaption>
-<p><span class="caption-text">Structure of time-of-use (TOU) energy and demand charges for our modeling period (April 9-10, 2022).
+<p><span class="caption-text">Structure of time-of-use (TOU) energy and demand charges for our modeling period (April 9-10, 2023).
 Different colors indicate different demand charge periods.
 Note that because April 9th is a Sunday, there are no TOU charges until Monday (April 10th).</span><a class="headerlink" href="#id2" title="Permalink to this image"></a></p>
 </figcaption>
@@ -356,7 +357,7 @@ Note that because April 9th is a Sunday, there are no TOU charges until Monday (
 <p>Next, we plot the baseline and optimal electricity consumption profiles.
 This helps us to visualize how the model responds to the cost incentives of the tariff.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># plot the model outputs</span>
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">grid_demand_kW</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;C0&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Net Load&quot;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">load_df</span><span class="p">[</span><span class="s2">&quot;Load [kW]&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Baseload&quot;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;DateTime&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Power (kW)&quot;</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">11</span><span class="p">)))</span>
@@ -366,7 +367,7 @@ This helps us to visualize how the model responds to the cost incentives of the 
 </pre></div>
 </div>
 <figure class="align-default" id="id3">
-<img alt="_images/cvx-model-out.png" src="_images/cvx-model-out.png" />
+<img alt="_images/cvx-cost-model-out.png" src="_images/cvx-cost-model-out.png" />
 <figcaption>
 <p><span class="caption-text">Output of our electricity bill optimization using the virtual battery model.
 The dotted line is baseline electricity purchases, and the blue line is the optimized profile.
@@ -388,9 +389,9 @@ Note how the optimized electricity profile shaves peaks to readuce time-of-use (
 </pre></div>
 </div>
 <figure class="align-default" id="id4">
-<img alt="_images/cvx-battery-soc.png" src="_images/cvx-battery-soc.png" />
+<img alt="_images/cvx-cost-battery-soc.png" src="_images/cvx-cost-battery-soc.png" />
 <figcaption>
-<p><span class="caption-text">Battery state of charge (SOC) as a percentage during our modeling period (April 9-10, 2022).</span><a class="headerlink" href="#id4" title="Permalink to this image"></a></p>
+<p><span class="caption-text">Battery state of charge (SOC) as a percentage during our modeling period (April 9-10, 2023).</span><a class="headerlink" href="#id4" title="Permalink to this image"></a></p>
 </figcaption>
 </figure>
 </section>
@@ -399,11 +400,12 @@ Note how the optimized electricity profile shaves peaks to readuce time-of-use (
 <ol class="arabic simple" start="0">
 <li><p>Import dependencies</p></li>
 </ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">examples.pyomo_battery_model</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">examples.pyomo_battery_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">BatteryPyomo</span>
 </pre></div>
 </div>
 <ol class="arabic simple">
@@ -419,7 +421,7 @@ Note how the optimized electricity profile shaves peaks to readuce time-of-use (
 </pre></div>
 </div>
 <p>We are going to evaluate the electricity consumption for the entire month of July 2022.
-Below we will create synthetic <cite>baseload</cite> data for this month with 15-minute resolution, so <cite>resolution=”15m”</cite>
+Below we will create synthetic <cite>baseload</cite> data for this month with 15-minute resolution, so <cite>resolution=”15m”</cite>.
 If you print <cite>charge_dict</cite>, then you should get the following:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="s1">&#39;electric_customer_0_2022-07-01_2022-07-31_0&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="mf">666.65</span><span class="p">]),</span>
@@ -467,7 +469,6 @@ We’re going to stick to the electricity cost calculation details, but we encou
 
 <span class="c1"># Create a sample baseload profile based on a sine wave</span>
 <span class="n">baseload</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">96</span><span class="p">))</span><span class="o">*</span><span class="mi">100</span> <span class="o">+</span> <span class="mi">1000</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">96</span><span class="p">)</span>
-<span class="c1"># baseload = np.random.normal(1000, 20, size=96)</span>
 
 <span class="c1"># Create an instance of the BatteryOpt class</span>
 <span class="n">battery</span> <span class="o">=</span> <span class="n">BatteryPyomo</span><span class="p">(</span><span class="n">battery_params</span><span class="p">,</span> <span class="n">baseload</span><span class="p">,</span> <span class="n">baseload_repeat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -494,9 +495,9 @@ power capacity, and energy capacity.</p>
     <span class="n">model</span><span class="o">=</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="c1"># create an attribute objective based on the electricity cost</span>
-<span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objective</span> <span class="o">=</span> <span class="n">Objective</span><span class="p">(</span>
+<span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objective</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Objective</span><span class="p">(</span>
     <span class="n">expr</span><span class="o">=</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">electricity_cost</span><span class="p">,</span>
-    <span class="n">sense</span><span class="o">=</span><span class="n">minimize</span><span class="p">,</span>
+    <span class="n">sense</span><span class="o">=</span><span class="n">pyo</span><span class="o">.</span><span class="n">minimize</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -504,7 +505,7 @@ power capacity, and energy capacity.</p>
 <li><p>Minimize the electriciy costs of this consumer given the system constraints and base load consumption</p></li>
 </ol>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># use the glpk solver to solve the model - (any pyomo-supported LP solver will work here)</span>
-<span class="n">solver</span> <span class="o">=</span> <span class="n">SolverFactory</span><span class="p">(</span><span class="s2">&quot;glpk&quot;</span><span class="p">)</span>
+<span class="n">solver</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">SolverFactory</span><span class="p">(</span><span class="s2">&quot;glpk&quot;</span><span class="p">)</span>
 <span class="n">results</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">tee</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># turn tee=True to see solver output</span>
 </pre></div>
 </div>
@@ -540,8 +541,8 @@ $113384.23, $2182.47 less than the baseline bill of $115566.70.</p>
 <span class="go">Optimized Electricity Cost: $113384.23</span>
 </pre></div>
 </div>
-<p>Below are a few simple plots to validate our results.</p>
-<p>First, we visualize the energy and demand charges:</p>
+<p>Below are a few simple plots to validate our results.
+First, we visualize the energy and demand charges:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># this can also be done in a dataframe format that drops all the unnecessary columns</span>
 <span class="n">charge_df</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_df</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">battery</span><span class="o">.</span><span class="n">end_dt</span><span class="p">,</span> <span class="n">tariff_df</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">)</span>
 <span class="n">charge_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
@@ -553,7 +554,7 @@ $113384.23, $2182.47 less than the baseline bill of $115566.70.</p>
 <span class="c1"># sum across all energy charges</span>
 <span class="n">total_energy_charge</span> <span class="o">=</span> <span class="n">energy_charge_df</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
 <span class="c1"># plot the energy charges</span>
 <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">total_energy_charge</span><span class="p">)</span>
 <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;DateTime&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Energy Charge ($/kWh)&quot;</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">battery</span><span class="o">.</span><span class="n">end_dt</span><span class="p">))</span>
@@ -577,7 +578,7 @@ $113384.23, $2182.47 less than the baseline bill of $115566.70.</p>
 <p>Next, we plot the baseline and optimal electricity consumption profiles.
 This helps us to visualize how the model responds to the cost incentives of the tariff.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># plot the model outputs</span>
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">net_load</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;C0&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Net Load&quot;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">charge_df</span><span class="p">[</span><span class="s2">&quot;DateTime&quot;</span><span class="p">],</span> <span class="n">baseload</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Baseload&quot;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;DateTime&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Power (kW)&quot;</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">battery</span><span class="o">.</span><span class="n">end_dt</span><span class="p">))</span>
@@ -587,7 +588,7 @@ This helps us to visualize how the model responds to the cost incentives of the 
 </pre></div>
 </div>
 <figure class="align-default" id="id6">
-<img alt="_images/pyo-model-out.png" src="_images/pyo-model-out.png" />
+<img alt="_images/pyo-cost-model-out.png" src="_images/pyo-cost-model-out.png" />
 <figcaption>
 <p><span class="caption-text">Output of our electricity bill optimization using the virtual battery model.
 The dotted line is baseline electricity purchases, and the blue line is the optimized profile.
@@ -605,7 +606,7 @@ Note how the optimized electricity profile shaves peaks to readuce time-of-use (
 </pre></div>
 </div>
 <figure class="align-default" id="id7">
-<img alt="_images/pyo-battery-soc.png" src="_images/pyo-battery-soc.png" />
+<img alt="_images/pyo-cost-battery-soc.png" src="_images/pyo-cost-battery-soc.png" />
 <figcaption>
 <p><span class="caption-text">Battery state of charge (SOC) as a percentage during our modeling period (July 2022).</span><a class="headerlink" href="#id7" title="Permalink to this image"></a></p>
 </figcaption>
@@ -624,7 +625,7 @@ Note how the optimized electricity profile shaves peaks to readuce time-of-use (
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2025, WE3 Lab.</p>
+    <p>&#169; Copyright 2025, WE3Lab.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

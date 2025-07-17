@@ -43,8 +43,8 @@ CVXPY
 
 .. code-block:: python
    
-    path_to_tariffsheet = "electric_emission_cost/data/tariff.csv"
-    tariff_df = pd.read_csv(path_to_tariffsheet, sep=",")
+    path_to_tariff_sheet = "electric_emission_cost/data/tariff.csv"
+    tariff_df = pd.read_csv(path_to_tariff_sheet, sep=",")
    
     # get the charge dictionary
     charge_dict = costs.get_charge_dict(
@@ -198,8 +198,7 @@ $703.81, $61.48 less than the baseline bill of $765.29.
     >>>print(f"Optimized Electricity Cost: ${optimized_electricity_cost:.2f}")
     Optimized Electricity Cost: $703.81
 
-Below are a few simple plots to validate our results.
-
+Below are a few simple plots to validate our results. 
 First, we visualize the energy and demand charges:
 
 .. code-block:: python
@@ -215,7 +214,7 @@ First, we visualize the energy and demand charges:
     # sum across all energy charges
     total_energy_charge = energy_charge_df.sum(axis=1)
 
-    fig, ax= plt.subplots(2, 1, figsize=(10, 8))
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     # plot the energy charges
     ax[0].plot(charge_df["DateTime"], total_energy_charge)
     ax[0].set(
@@ -241,7 +240,7 @@ First, we visualize the energy and demand charges:
 
 .. figure:: _static/img/cvx-tariff-structure.png
     
-    Structure of time-of-use (TOU) energy and demand charges for our modeling period (April 9-10, 2022).
+    Structure of time-of-use (TOU) energy and demand charges for our modeling period (April 9-10, 2023).
     Different colors indicate different demand charge periods.
     Note that because April 9th is a Sunday, there are no TOU charges until Monday (April 10th).
 
@@ -251,7 +250,7 @@ This helps us to visualize how the model responds to the cost incentives of the 
 .. code-block:: python
 
     # plot the model outputs
-    fig, ax= plt.subplots()
+    fig, ax = plt.subplots()
     ax.step(charge_df["DateTime"], grid_demand_kW.value, color="C0", lw=2, label="Net Load")
     ax.step(charge_df["DateTime"], load_df["Load [kW]"].values, color="k", lw=1, ls='--', label="Baseload")
     ax.set(xlabel="DateTime", ylabel="Power (kW)", xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11)))
@@ -259,7 +258,7 @@ This helps us to visualize how the model responds to the cost incentives of the 
     fig.tight_layout()
     plt.legend()
 
-.. figure:: _static/img/cvx-model-out.png
+.. figure:: _static/img/cvx-cost-model-out.png
     
     Output of our electricity bill optimization using the virtual battery model.
     The dotted line is baseline electricity purchases, and the blue line is the optimized profile.
@@ -281,9 +280,9 @@ Finally, let's plot the battery state of charge (SOC) to confirm that the constr
     plt.xticks(rotation=45)
     fig.tight_layout()
 
-.. figure:: _static/img/cvx-battery-soc.png
+.. figure:: _static/img/cvx-cost-battery-soc.png
     
-    Battery state of charge (SOC) as a percentage during our modeling period (April 9-10, 2022).
+    Battery state of charge (SOC) as a percentage during our modeling period (April 9-10, 2023).
 
 .. _pyo-cost:
 
@@ -294,11 +293,12 @@ Pyomo
 
 .. code-block:: python
    
+    import datetime
     import numpy as np 
     import pandas as pd
     import matplotlib.pyplot as plt
     from electric_emission_cost import costs 
-    from examples.pyomo_battery_model import *
+    from examples.pyomo_battery_model import BatteryPyomo
 
 1. Load an electricity tariff spreadsheet
 
@@ -313,7 +313,7 @@ Pyomo
     )
 
 We are going to evaluate the electricity consumption for the entire month of July 2022.
-Below we will create synthetic `baseload` data for this month with 15-minute resolution, so `resolution="15m"`
+Below we will create synthetic `baseload` data for this month with 15-minute resolution, so `resolution="15m"`.
 If you print `charge_dict`, then you should get the following:
 
 .. code-block:: python
@@ -365,7 +365,6 @@ We're going to stick to the electricity cost calculation details, but we encoura
 
     # Create a sample baseload profile based on a sine wave
     baseload = np.sin(np.linspace(0, 4 * np.pi, 96))*100 + 1000 + np.random.normal(0, 10, 96)
-    # baseload = np.random.normal(1000, 20, size=96)
 
     # Create an instance of the BatteryOpt class
     battery = BatteryPyomo(battery_params, baseload, baseload_repeat=True)
@@ -393,9 +392,9 @@ power capacity, and energy capacity.
         model=battery.model,
     )
     # create an attribute objective based on the electricity cost
-    battery.model.objective = Objective(
+    battery.model.objective = pyo.Objective(
         expr=battery.model.electricity_cost,
-        sense=minimize,
+        sense=pyo.minimize,
     )
 
 4. Minimize the electriciy costs of this consumer given the system constraints and base load consumption
@@ -403,7 +402,7 @@ power capacity, and energy capacity.
 .. code-block:: python
 
     # use the glpk solver to solve the model - (any pyomo-supported LP solver will work here)
-    solver = SolverFactory("glpk")
+    solver = pyo.SolverFactory("glpk")
     results = solver.solve(battery.model, tee=False) # turn tee=True to see solver output
 
 5. Display the results to validate that the optimization is correct
@@ -443,7 +442,6 @@ $113384.23, $2182.47 less than the baseline bill of $115566.70.
 
 
 Below are a few simple plots to validate our results.
-
 First, we visualize the energy and demand charges:
 
 .. code-block:: python
@@ -459,7 +457,7 @@ First, we visualize the energy and demand charges:
     # sum across all energy charges
     total_energy_charge = energy_charge_df.sum(axis=1)
 
-    fig, ax= plt.subplots(2, 1, figsize=(10, 8))
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     # plot the energy charges
     ax[0].plot(charge_df["DateTime"], total_energy_charge)
     ax[0].set(xlabel="DateTime", ylabel="Energy Charge ($/kWh)", xlim=(battery.start_dt, battery.end_dt))
@@ -483,7 +481,7 @@ This helps us to visualize how the model responds to the cost incentives of the 
 .. code-block:: python
 
     # plot the model outputs
-    fig, ax= plt.subplots()
+    fig, ax = plt.subplots()
     ax.step(charge_df["DateTime"], net_load, color="C0", lw=2, label="Net Load")
     ax.step(charge_df["DateTime"], baseload, color="k", lw=1, ls='--', label="Baseload")
     ax.set(xlabel="DateTime", ylabel="Power (kW)", xlim=(battery.start_dt, battery.end_dt))
@@ -491,7 +489,7 @@ This helps us to visualize how the model responds to the cost incentives of the 
     fig.tight_layout()
     plt.legend()
 
-.. figure:: _static/img/pyo-model-out.png
+.. figure:: _static/img/pyo-cost-model-out.png
     
     Output of our electricity bill optimization using the virtual battery model.
     The dotted line is baseline electricity purchases, and the blue line is the optimized profile.
@@ -509,6 +507,6 @@ Finally, let's plot the battery state of charge (SOC) to confirm that the constr
     plt.xticks(rotation=45)
     fig.tight_layout()
 
-.. figure:: _static/img/pyo-battery-soc.png
+.. figure:: _static/img/pyo-cost-battery-soc.png
     
     Battery state of charge (SOC) as a percentage during our modeling period (July 2022).
