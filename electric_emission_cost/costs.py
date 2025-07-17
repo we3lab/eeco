@@ -307,7 +307,7 @@ def get_charge_df(
     rate_data,
     resolution="15m",
     keep_fixed_charges=True,
-    scale_charges=True,
+    scale_fixed_charges=True,
 ):
     """Creates a dictionary where the values are charge arrays and keys are of the form
     `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
@@ -377,7 +377,8 @@ def get_charge_df(
         for key, value in charge_dict.items()
         if any(k in key for k in ["electric_customer", "gas_customer"])
     }
-    if scale_charges:
+    
+    if scale_fixed_charges:
         # scale the fixed charges by the number of timesteps in the month
         month = start_dt.month
         year = end_dt.year
@@ -386,16 +387,14 @@ def get_charge_df(
         )
         bins_in_month = mins_in_month / res_binsize_minutes
         scale_factor = ntsteps / bins_in_month
-
-        for key, value in charge_dict.items():
-            if any(k in key.split("_") for k in ["customer", "demand"]):
-                charge_dict[key] = value * scale_factor
+    else:
+        scale_factor = 1
 
     if keep_fixed_charges:
         # replace the fixed charge in charge_dict with its time-averaged value
         for key, value in fixed_charge_dict.items():
             arr = np.zeros(ntsteps)
-            arr[0] = value
+            arr[0] = value * scale_factor
             charge_dict[key] = arr
     else:
         # remove fixed charges from the charge_dict
