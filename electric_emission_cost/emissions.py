@@ -22,7 +22,7 @@ EI_VARNAME = "co2_eq_kg_per_MWh"
 def calculate_grid_emissions(
     carbon_intensity,
     consumption_data,
-    emission_units=u.kg / u.kWh,
+    emissions_units=u.kg / u.MWh,
     consumption_units=u.kW,
     resolution="15m",
     model=None,
@@ -40,7 +40,7 @@ def calculate_grid_emissions(
         Baseline electrical or gas usage data as a Pyomo Var
 
     emissions_units : pint.Unit
-        Units for the emissions data. Default is kg / kWh
+        Units for the emissions data. Default is kg / MWh
 
     consumption_units : pint.Unit
         Units for the electricity consumption data. Default is kW
@@ -65,21 +65,21 @@ def calculate_grid_emissions(
     # get the emission factor units if they were provided as pint.Quantity
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
     if isinstance(carbon_intensity, pint.Quantity):
-        emission_units = carbon_intensity.units
+        emissions_units = carbon_intensity.units
         carbon_intensity = carbon_intensity.magnitude
 
     if isinstance(consumption_data, np.ndarray):
         total_emissions = (
             np.sum(consumption_data * carbon_intensity)
             * consumption_units
-            * emission_units
+            * emissions_units
             * u.hour
             / n_per_hour
         )
         return total_emissions.to(u.kg), None
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
         conversion_factor = (
-            (1 * consumption_units * emission_units * u.hour).to(u.kg).magnitude
+            (1 * consumption_units * emissions_units * u.hour).to(u.kg).magnitude
         )
         emissions_timeseries, model = ut.multiply(
             consumption_data, carbon_intensity, model=model, varstr=varstr + "_multiply"
