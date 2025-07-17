@@ -6,10 +6,11 @@
 How to Calculate Emissions
 **************************
 
-Many data sources report emissions factors as monthly/hourly averages (:ref:`data-format-emissions`).
-Our package is designed to unpack data in that format into a timeseries the same length as the consumption variable.
+This package is designed to calculate cumulative emissions from a given electricity consumption array and monthly/hourly average emissions factors.
+Many data sources report emissions factors as monthly/hourly averages (:ref:`data-format-emissions`), 
+so it is useful to convert data in monthly/hourly format into a time series the same length as the consumption variable.
 
-This package is not designed to calculate Scope 2 emissions that are a complete timeseries.
+Note that if you already have a complete time series of Scope 2 emissions factors, this package is not necessary. 
 We feel that is simple enough that it does not warrant its own function.
 
 As an example, if you assume that `emission_arr` is a `NumPy` array of Scope 2 emissions factors (in tons CO_2 / MWh)  
