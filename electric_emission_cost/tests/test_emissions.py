@@ -62,7 +62,7 @@ def test_calculate_grid_emissions_np(
     result, model = emissions.calculate_grid_emissions(
         emissions_factors.magnitude,
         consumption_df[net_demand_varname].values,
-        emission_units=emissions_units,
+        emissions_units=emissions_units,
     )
     assert result == expected
     assert model is None
@@ -110,7 +110,7 @@ def test_calculate_grid_emissions_cvx(
     result, model = emissions.calculate_grid_emissions(
         emissions_factors.magnitude,
         electric_consumption,
-        emission_units=emissions_units,
+        emissions_units=emissions_units,
     )
     prob = cp.Problem(cp.Minimize(result), constraints)
     prob.solve()
@@ -174,7 +174,7 @@ def test_calculate_grid_emissions_pyo(
     result, model = emissions.calculate_grid_emissions(
         emissions_factors.magnitude,
         getattr(model, net_demand_varname),
-        emission_units=emissions_units,
+        emissions_units=emissions_units,
         model=model,
     )
     model.obj = pyo.Objective(expr=result)
