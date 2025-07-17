@@ -308,6 +308,7 @@ def get_charge_df(
     resolution="15m",
     keep_fixed_charges=True,
     scale_fixed_charges=True,
+    scale_demand_charges=False
 ):
     """Creates a dictionary where the values are charge arrays and keys are of the form
     `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
@@ -333,9 +334,13 @@ def get_charge_df(
         If True, fixed charges will included in the first time step.
         If False, fixed charges will be dropped from the output. Default is False.
 
-    scale_charges : bool
-        If True, customer and demand charges will be scaled by timesteps in the month.
+    scale_fixed_charges : bool
+        If True, customer charges will be scaled by timesteps in the month.
         If False, they will not be scaled. Default is True.
+    
+    scale_demand_charges : bool
+        If True, demand charges will be scaled by the number of timesteps in the month.
+        If False, they will not be scaled. Default is False.
 
     Returns
     -------
@@ -377,9 +382,9 @@ def get_charge_df(
         for key, value in charge_dict.items()
         if any(k in key for k in ["electric_customer", "gas_customer"])
     }
-    
-    if scale_fixed_charges:
-        # scale the fixed charges by the number of timesteps in the month
+
+    if scale_fixed_charges or scale_demand_charges:
+        # calculate the scale factor
         month = start_dt.month
         year = end_dt.year
         mins_in_month = (
@@ -388,18 +393,27 @@ def get_charge_df(
         bins_in_month = mins_in_month / res_binsize_minutes
         scale_factor = ntsteps / bins_in_month
     else:
-        scale_factor = 1
+        scale_factor = 1.
 
     if keep_fixed_charges:
         # replace the fixed charge in charge_dict with its time-averaged value
         for key, value in fixed_charge_dict.items():
             arr = np.zeros(ntsteps)
-            arr[0] = value * scale_factor
+            arr[0] = value[0] * scale_factor
             charge_dict[key] = arr
     else:
         # remove fixed charges from the charge_dict
         for key in fixed_charge_dict.keys():
             del charge_dict[key]
+
+    if scale_demand_charges:
+        demand_charge_dict = {
+            key: value
+            for key, value in charge_dict.items()
+            if "demand" in key
+        }
+        for key, value in demand_charge_dict.items():
+            charge_dict[key] = value * scale_factor
 
     charge_df = pd.DataFrame(charge_dict)
 

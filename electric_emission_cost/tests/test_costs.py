@@ -1144,12 +1144,21 @@ def test_get_charge_array_duration(key, expected):
 
     assert get_charge_array_duration(key) == expected
 
+@pytest.mark.parametrize(
+    "keep_fixed_charge, scale_fixed_charge, scale_demand_charge, tariff, expected",
+    [
+        (True, True, True, "billing.csv", "billing_scaledcd.csv"),
+        (True, False, False, "billing.csv", "billing_unscaled.csv"),
+        (False, True, True, "billing_customer.csv", "billing_customer_nocharge.csv"),
+        (False, False, False, "billing_customer.csv", "billing_customer_nocharge.csv"),
+    ],
+)
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_get_charge_df():
+def test_get_charge_df(keep_fixed_charge, scale_fixed_charge, scale_demand_charge, tariff, expected):
     # load tariff
     path_to_tariff = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), 
-        "data", "input", "billing_customer.csv")
+        "data", "input", tariff)
     tariff_df = pd.read_csv(path_to_tariff, sep=",")
 
     # get charge dataframe
@@ -1158,14 +1167,15 @@ def test_get_charge_df():
             datetime.datetime(2023, 4, 11),
             tariff_df,
             resolution="15m",
-            keep_fixed_charges=True,
-            scale_fixed_charges=True,
+            keep_fixed_charges=keep_fixed_charge,
+            scale_fixed_charges=scale_fixed_charge,
+            scale_demand_charges=scale_demand_charge
     )
 
     # load expected output
     path_to_output = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), 
-        "data", "output", "billingcustomer_apr9_res15m.csv")
+        "data", "output", expected)
     df_expected = pd.read_csv(path_to_output, parse_dates=["DateTime"])
 
     # compare dataframes
