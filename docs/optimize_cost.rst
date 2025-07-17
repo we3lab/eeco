@@ -293,11 +293,12 @@ Pyomo
 
 .. code-block:: python
    
+    import datetime
     import numpy as np 
     import pandas as pd
     import matplotlib.pyplot as plt
     from electric_emission_cost import costs 
-    from examples.pyomo_battery_model import *
+    from examples.pyomo_battery_model import BatteryPyomo
 
 1. Load an electricity tariff spreadsheet
 
@@ -364,7 +365,6 @@ We're going to stick to the electricity cost calculation details, but we encoura
 
     # Create a sample baseload profile based on a sine wave
     baseload = np.sin(np.linspace(0, 4 * np.pi, 96))*100 + 1000 + np.random.normal(0, 10, 96)
-    # baseload = np.random.normal(1000, 20, size=96)
 
     # Create an instance of the BatteryOpt class
     battery = BatteryPyomo(battery_params, baseload, baseload_repeat=True)
@@ -392,9 +392,9 @@ power capacity, and energy capacity.
         model=battery.model,
     )
     # create an attribute objective based on the electricity cost
-    battery.model.objective = Objective(
+    battery.model.objective = pyo.Objective(
         expr=battery.model.electricity_cost,
-        sense=minimize,
+        sense=pyo.minimize,
     )
 
 4. Minimize the electriciy costs of this consumer given the system constraints and base load consumption
@@ -402,7 +402,7 @@ power capacity, and energy capacity.
 .. code-block:: python
 
     # use the glpk solver to solve the model - (any pyomo-supported LP solver will work here)
-    solver = SolverFactory("glpk")
+    solver = pyo.SolverFactory("glpk")
     results = solver.solve(battery.model, tee=False) # turn tee=True to see solver output
 
 5. Display the results to validate that the optimization is correct
