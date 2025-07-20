@@ -150,7 +150,7 @@ def max(expression, model=None, varstr=None, allow_negative=True):
 
     varstr : str
         Name of the variable to be created if using a Pyomo `model`
-        
+
     allow_negative : bool
         If True, allows negative maximum values. If False, forces non-negative.
 

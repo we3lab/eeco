@@ -579,7 +579,7 @@ def calculate_demand_cost(
             if consumption_estimate <= next_limit:
                 model.add_component(
                     varstr + "_limit",
-                    pyo.Var(model.t, initialize=0, bounds=(0, None)),
+                    pyo.Var(model.t, initialize=0, bounds=(None, None)),
                 )
                 var = model.find_component(varstr + "_limit")
 
@@ -632,7 +632,9 @@ def calculate_demand_cost(
         max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
         return max_pos_val * scale_factor, max_pos_model
     else:
-        max_var, model = ut.max(demand_charged, model=model, varstr=varstr + "_max", allow_negative=True)
+        max_var, model = ut.max(
+            demand_charged, model=model, varstr=varstr + "_max", allow_negative=True
+        )
         max_pos_val, max_pos_model = ut.max_pos(
             max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
         )
@@ -718,18 +720,19 @@ def calculate_energy_cost(
                 # set flag to false to avoid overcounting after this iteration
                 if energy >= float(next_limit):
                     within_limit_flag = False
-                    cost += max(float(next_limit) + consumption_data[i] / divisor - energy,
-                                0
-                            ) * charge_array [i]
+                    cost += (
+                        max(
+                            float(next_limit) + consumption_data[i] / divisor - energy,
+                            0,
+                        )
+                        * charge_array[i]
+                    )
                 else:
-                    cost += max(consumption_data[i] / divisor * charge_array[i],
-                                0)
+                    cost += max(consumption_data[i] / divisor * charge_array[i], 0)
             # went over existing charge limit on this iteration
             elif energy >= float(limit) and energy < float(next_limit):
                 within_limit_flag = True
-                cost += max(energy - float(limit), 
-                            0
-                            ) * charge_array[i]
+                cost += max(energy - float(limit), 0) * charge_array[i]
 
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
         charge_expr, model = ut.multiply(
@@ -739,8 +742,19 @@ def calculate_energy_cost(
             limit_to_subtract = float(limit) / n_steps
             sum_result, model = ut.sum(charge_expr, model=model, varstr=varstr + "_sum")
             cost, model = ut.max_pos(
-                (sum_result / divisor - ut.sum(ut.multiply(charge_array, limit_to_subtract, model=model, varstr=varstr + "_limit_mult")[0], 
-                                               model=model, varstr=varstr + "_limit_sum")[0]),
+                (
+                    sum_result / divisor
+                    - ut.sum(
+                        ut.multiply(
+                            charge_array,
+                            limit_to_subtract,
+                            model=model,
+                            varstr=varstr + "_limit_mult",
+                        )[0],
+                        model=model,
+                        varstr=varstr + "_limit_sum",
+                    )[0]
+                ),
                 model=model,
                 varstr=varstr,
             )
@@ -756,19 +770,24 @@ def calculate_energy_cost(
                     charge_expr, model=model, varstr=varstr + "_sum"
                 )
                 cost, model = ut.max_pos(
-                    sum_result / divisor - ut.sum(prev_limit_expr[0], 
-                                                  model=model, varstr=varstr + "_prev_sum")[0],
+                    sum_result / divisor
+                    - ut.sum(
+                        prev_limit_expr[0], model=model, varstr=varstr + "_prev_sum"
+                    )[0],
                     model=model,
                     varstr=varstr,
                 )
             else:
                 cost, model = ut.sum(
                     ut.multiply(
-                    charge_array, 
-                    (float(next_limit) - float(limit)) / n_steps,
+                        charge_array,
+                        (float(next_limit) - float(limit)) / n_steps,
+                        model=model,
+                        varstr=varstr + "_charge_diff",
+                    )[0],
                     model=model,
-                    varstr=varstr + "_charge_diff"
-                )[0], model=model, varstr=varstr + "_charge_sum")
+                    varstr=varstr + "_charge_sum",
+                )
     else:
         raise ValueError(
             "consumption_data must be of type numpy.ndarray, "
@@ -814,10 +833,11 @@ def calculate_export_revenues(
     """
     varstr_mul = varstr + "_multiply" if varstr is not None else None
     varstr_sum = varstr + "_sum" if varstr is not None else None
-    
+
     revenues, model = ut.sum(
         ut.multiply(charge_array, export_data, model=model, varstr=varstr_mul)[0],
-        model=model, varstr=varstr_sum
+        model=model,
+        varstr=varstr_sum,
     )
     if model is None:
         revenues, _ = ut.max_pos(revenues, model=model, varstr=varstr + "_max_pos")
