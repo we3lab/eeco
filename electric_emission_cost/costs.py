@@ -717,15 +717,19 @@ def calculate_energy_cost(
                 # set flag to false to avoid overcounting after this iteration
                 if energy >= float(next_limit):
                     within_limit_flag = False
-                    cost += (
-                        float(next_limit) + consumption_data[i] / divisor - energy
-                    ) * charge_array[i]
+                    cost += max(float(next_limit) + consumption_data[i] / divisor - energy,
+                                0
+                            ) * charge_array [i]
                 else:
-                    cost += consumption_data[i] / divisor * charge_array[i]
+                    cost += max(consumption_data[i] / divisor * charge_array[i],
+                                0)
             # went over existing charge limit on this iteration
             elif energy >= float(limit) and energy < float(next_limit):
                 within_limit_flag = True
-                cost += (energy - float(limit)) * charge_array[i]
+                cost += max(energy - float(limit), 
+                            0
+                            ) * charge_array[i]
+
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
         charge_expr, model = ut.multiply(
             consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
