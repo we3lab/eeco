@@ -835,7 +835,7 @@ def test_calculate_cost_pyo(
     solver = pyo.SolverFactory("gurobi")
     solver.solve(model)
     assert pyo.value(result) == expected_cost
-    assert model == model
+    assert model is not None
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")

@@ -40,3 +40,9 @@ How to Use `consumption_estimate`
 
 How to Use `demand_scale_factor`
 ================================
+
+
+.. _varstr-alias:
+
+How to Use `varstr_alias_func`
+==============================
