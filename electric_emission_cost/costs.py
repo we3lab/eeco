@@ -562,10 +562,10 @@ def calculate_demand_cost(
         and the second entry being the pyomo model object (or None)
     """
     if isinstance(consumption_data, np.ndarray):
-        if (np.max(consumption_data) >= limit) or (
+        if (ut.max(consumption_data)[0] >= limit) or (
             (prev_demand >= limit) and (prev_demand <= next_limit)
         ):
-            if np.max(consumption_data) >= next_limit:
+            if ut.max(consumption_data)[0] >= next_limit:
                 demand_charged, model = ut.multiply(next_limit - limit, charge_array)
             else:
                 demand_charged, model = ut.multiply(
@@ -738,7 +738,8 @@ def calculate_energy_cost(
             limit_to_subtract = float(limit) / n_steps
             sum_result, model = ut.sum(charge_expr, model=model, varstr=varstr + "_sum")
             cost, model = ut.max_pos(
-                (sum_result / divisor - np.sum(charge_array * limit_to_subtract)),
+                (sum_result / divisor - ut.sum(ut.multiply(charge_array, limit_to_subtract, model=model, varstr=varstr + "_limit_mult")[0], 
+                                               model=model, varstr=varstr + "_limit_sum")[0]),
                 model=model,
                 varstr=varstr,
             )
@@ -754,14 +755,19 @@ def calculate_energy_cost(
                     charge_expr, model=model, varstr=varstr + "_sum"
                 )
                 cost, model = ut.max_pos(
-                    sum_result / divisor - (np.sum(prev_limit_expr)),
+                    sum_result / divisor - ut.sum(prev_limit_expr[0], 
+                                                  model=model, varstr=varstr + "_prev_sum")[0],
                     model=model,
                     varstr=varstr,
                 )
             else:
-                cost = np.sum(
-                    charge_array * (float(next_limit) - float(limit)) / n_steps
-                )
+                cost, model = ut.sum(
+                    ut.multiply(
+                    charge_array, 
+                    (float(next_limit) - float(limit)) / n_steps,
+                    model=model,
+                    varstr=varstr + "_charge_diff"
+                )[0], model=model, varstr=varstr + "_charge_sum")
     else:
         raise ValueError(
             "consumption_data must be of type numpy.ndarray, "
@@ -807,10 +813,15 @@ def calculate_export_revenues(
     """
     varstr_mul = varstr + "_multiply" if varstr is not None else None
     varstr_sum = varstr + "_sum" if varstr is not None else None
-    result, model = ut.multiply(
-        charge_array, export_data, model=model, varstr=varstr_mul
+    
+    revenues, model = ut.sum(
+        ut.multiply(charge_array, export_data, model=model, varstr=varstr_mul)[0],
+        model=model, varstr=varstr_sum
     )
-    revenues, model = ut.sum(result, model=model, varstr=varstr_sum)
+    if model is None:
+        revenues, _ = ut.max_pos(revenues, model=model, varstr=varstr + "_max_pos")
+    else:
+        revenues, model = ut.max_pos(revenues, model=model, varstr=varstr + "_max_pos")
     return revenues / divisor, model
 
 
