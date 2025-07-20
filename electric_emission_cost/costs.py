@@ -1010,9 +1010,9 @@ def calculate_cost(
         charge_duration_days = get_charge_array_duration(key)
         effective_scale_factor = demand_scale_factor if charge_duration_days > 1 else 1
 
-        if charge_type == "demand":
+        if charge_type == DEMAND:
             if prev_demand_dict is not None:
-                prev_demand = prev_demand_dict[key]["demand"]
+                prev_demand = prev_demand_dict[key][DEMAND]
                 prev_demand_cost = prev_demand_dict[key]["cost"]
             else:
                 prev_demand = 0
@@ -1170,10 +1170,10 @@ def calculate_itemized_cost(
     total_cost = 0
     results_dict = {}
     if desired_utility is None:
-        for utility in ["electric", "gas"]:
+        for utility in [ELECTRIC, GAS]:
             results_dict[utility] = {}
             total_utility_cost = 0
-            for charge_type in ["customer", "energy", "demand", "export"]:
+            for charge_type in [CUSTOMER, ENERGY, DEMAND, EXPORT]:
                 cost, model = calculate_cost(
                     charge_dict,
                     consumption_data_dict,
@@ -1197,7 +1197,7 @@ def calculate_itemized_cost(
     else:
         results_dict[desired_utility] = {}
         total_utility_cost = 0
-        for charge_type in ["customer", "energy", "demand", "export"]:
+        for charge_type in [CUSTOMER, ENERGY, DEMAND, EXPORT]:
             cost, model = calculate_cost(
                 charge_dict,
                 consumption_data_dict,
