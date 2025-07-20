@@ -562,14 +562,15 @@ def calculate_demand_cost(
         and the second entry being the pyomo model object (or None)
     """
     if isinstance(consumption_data, np.ndarray):
-        if (ut.max(consumption_data)[0] >= limit) or (
+        nonnegative_entries = np.maximum(consumption_data, 0)
+        if (ut.max(nonnegative_entries)[0] >= limit) or (
             (prev_demand >= limit) and (prev_demand <= next_limit)
         ):
-            if ut.max(consumption_data)[0] >= next_limit:
+            if ut.max(nonnegative_entries)[0] >= next_limit:
                 demand_charged, model = ut.multiply(next_limit - limit, charge_array)
             else:
                 demand_charged, model = ut.multiply(
-                    consumption_data - limit, charge_array
+                    nonnegative_entries - limit, charge_array
                 )
         else:  # ignore if current and previous maxima outside of charge limit
             demand_charged = np.array([0])
@@ -627,11 +628,11 @@ def calculate_demand_cost(
             "cvxpy.Expression, or pyomo.environ.Var"
         )
     if model is None:
-        max_var, _ = ut.max(demand_charged)
+        max_var, _ = ut.max(demand_charged, allow_negative=True)
         max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
         return max_pos_val * scale_factor, max_pos_model
     else:
-        max_var, model = ut.max(demand_charged, model=model, varstr=varstr + "_max")
+        max_var, model = ut.max(demand_charged, model=model, varstr=varstr + "_max", allow_negative=True)
         max_pos_val, max_pos_model = ut.max_pos(
             max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
         )

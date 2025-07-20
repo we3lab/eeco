@@ -128,7 +128,7 @@ def idxparam_value(idx_param):
     return np.array([idx_param[i].value for i in range(len(idx_param))])
 
 
-def max(expression, model=None, varstr=None):
+def max(expression, model=None, varstr=None, allow_negative=True):
     """Elementwise maximum of an expression or array
 
     Parameters
@@ -150,6 +150,9 @@ def max(expression, model=None, varstr=None):
 
     varstr : str
         Name of the variable to be created if using a Pyomo `model`
+        
+    allow_negative : bool
+        If True, allows negative maximum values. If False, forces non-negative.
 
     Raises
     ------
@@ -177,7 +180,10 @@ def max(expression, model=None, varstr=None):
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
-        model.add_component(varstr, pyo.Var())
+        if allow_negative:
+            model.add_component(varstr, pyo.Var())
+        else:
+            model.add_component(varstr, pyo.Var(bounds=(0, None)))
         var = model.find_component(varstr)
 
         def const_rule(model, t):
