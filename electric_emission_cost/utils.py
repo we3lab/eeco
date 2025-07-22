@@ -138,7 +138,6 @@ def max(expression, model=None, varstr=None, allow_negative=True):
         cvxpy.Expression,
         pyomo.core.expr.numeric_expr.NumericExpression,
         pyomo.core.expr.numeric_expr.NumericNDArray,
-        pyomo.core.expr.numeric_expr.NumericNDArray,
         pyomo.environ.Param,
         pyomo.environ.Var
     ]
@@ -205,7 +204,7 @@ def max(expression, model=None, varstr=None, allow_negative=True):
 
 
 def sum(expression, axis=0, model=None, varstr=None):
-    """Elementwise maximum of an expression or array
+    """Elementwise sum of values in an expression or array
 
     Parameters
     ----------
@@ -308,15 +307,12 @@ def max_pos(expression, model=None, varstr=None):
     """
     if isinstance(
         expression, (LinearExpression, SumExpression, MonomialTermExpression, ScalarVar)
-    ):
+    ) or (hasattr(expression, "is_variable_type") and expression.is_variable_type()):
         model.add_component(varstr, pyo.Var(initialize=0, bounds=(0, None)))
         var = model.find_component(varstr)
-
-        def const_rule(model):
-            return var >= expression
-
-        constraint = pyo.Constraint(rule=const_rule)
-        model.add_component(varstr + "_constraint", constraint)
+        model.add_component(
+            varstr + "_constraint", pyo.Constraint(rule=var >= expression)
+        )
         return (var, model)
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
         model.add_component(varstr, pyo.Var(bounds=(0, None)))
@@ -325,8 +321,9 @@ def max_pos(expression, model=None, varstr=None):
         def const_rule(model, t):
             return var >= expression[t]
 
-        constraint = pyo.Constraint(model.t, rule=const_rule)
-        model.add_component(varstr + "_constraint", constraint)
+        model.add_component(
+            varstr + "_constraint", pyo.Constraint(model.t, rule=const_rule)
+        )
         return (var, model)
     elif isinstance(
         expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
@@ -340,7 +337,76 @@ def max_pos(expression, model=None, varstr=None):
         )
 
 
-def multiply(expression1, expression2, model=None, varstr=None):
+def non_neg(expression, model=None, varstr=None):
+    """Returns variables representing max(expression[t], 0) for each time index t.
+    Used for calculations where we only want non-negative values.
+
+    Parameters
+    ----------
+    expression : [
+        numpy.Array,
+        cvxpy.Expression,
+        pyomo.core.expr.numeric_expr.NumericExpression,
+        pyomo.core.expr.numeric_expr.NumericNDArray,
+        pyomo.environ.Param,
+        pyomo.environ.Var
+    ]
+        Expression representing a matrix, vector, or scalar
+
+    model : pyomo.environ.Model
+        The model object associated with the problem.
+        Only used in the case of Pyomo, so `None` by default.
+
+    varstr : str
+        Name of the variable to be created if using a Pyomo `model`
+
+    Raises
+    ------
+    TypeError
+        When `expression` is not of type `numpy.Array`, `cvxpy.Expression`,
+        `pyomo.core.expr.numeric_expr.NumericNDArray`,
+        `pyomo.core.expr.numeric_expr.NumericExpression`,
+        `pyomo.environ.Param`,  or `pyomo.environ.Var`
+
+    Returns
+    -------
+    (
+        [numpy.Array, cvxpy.Expression, or pyomo.environ.Var],
+        pyomo.environ.Model
+    )
+        Expression representing max(expression[t], 0) for each time index t
+    """
+    if isinstance(expression, np.ndarray):
+        return np.maximum(expression, 0), model
+    elif isinstance(expression, cp.Expression):
+        return cp.maximum(expression, 0), model
+    elif isinstance(expression, (pyo.Var, pyo.Param)):
+        # Create indexed variable containing max(0, expression[t]) for each t
+        model.add_component(varstr, pyo.Var(model.t, bounds=(0, None)))
+        var = model.find_component(varstr)
+
+        # For each timestep, use max_pos to get max(0, expression[t])
+        for t in model.t:
+            max_pos_var, model = max_pos(
+                expression[t], model=model, varstr=f"{varstr}_max_pos_{t}"
+            )
+            # Constrain var[t] to equal max_pos_var
+            constraint = pyo.Constraint(expr=var[t] == max_pos_var)
+            model.add_component(f"{varstr}_constraint_{t}", constraint)
+
+        return (var, model)
+    else:
+        raise TypeError(
+            "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
+        )
+
+
+def multiply(
+    expression1,
+    expression2,
+    model=None,
+    varstr=None,
+):
     """Implements elementwise multiplication operation on two optimization expressions
 
     Parameters
@@ -399,7 +465,6 @@ def multiply(expression1, expression2, model=None, varstr=None):
     ):
         if (not isinstance(expression1, (int, float))) and (len(expression1) > 1):
             if (not isinstance(expression2, (int, float))) and (len(expression2) > 1):
-                # TODO: replace model.t with better way to get dimensions
                 model.add_component(varstr, pyo.Var(model.t))
                 var = model.find_component(varstr)
 

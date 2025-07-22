@@ -792,6 +792,22 @@ def test_calculate_cost_cvx(
             None,
             pytest.approx(1191),
         ),
+        # export charges
+        (
+            {
+                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+            },
+            {
+                ELECTRIC: np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            pytest.approx(-1.5),
+        ),
     ],
 )
 def test_calculate_cost_pyo(
@@ -809,7 +825,7 @@ def test_calculate_cost_pyo(
     model.t = range(model.T)
     pyo_vars = {}
     for key, val in consumption_data_dict.items():
-        var = pyo.Var(range(len(val)), initialize=np.zeros(len(val)), bounds=(0, None))
+        var = pyo.Var(range(len(val)), initialize=np.zeros(len(val)))
         model.add_component(key, var)
         pyo_vars[key] = var
 
@@ -836,6 +852,11 @@ def test_calculate_cost_pyo(
     solver.solve(model)
     assert pyo.value(result) == expected_cost
     assert model is not None
+
+    # Add this after the solver.solve(model) call in the test
+    print("Model components:")
+    for component in model.component_objects():
+        print(f"  {component.name}: {type(component)}")
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1135,11 +1156,12 @@ def test_calculate_energy_costs(
 @pytest.mark.parametrize(
     "charge_array, export_data, divisor, expected",
     [
-        (np.ones(96), np.arange(96), 4, 1140),
+        (np.ones(96), -np.arange(96), 4, -1140),
+        (np.ones(96), np.arange(96), 4, 0),
     ],
 )
-def test_calculate_export_revenues(charge_array, export_data, divisor, expected):
-    result, model = costs.calculate_export_revenues(charge_array, export_data, divisor)
+def test_calculate_export_revenue(charge_array, export_data, divisor, expected):
+    result, model = costs.calculate_export_revenue(charge_array, export_data, divisor)
     assert result == expected
     assert model is None
 

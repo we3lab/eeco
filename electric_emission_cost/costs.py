@@ -651,6 +651,7 @@ def calculate_energy_cost(
     consumption_estimate=0,
     model=None,
     varstr="",
+    non_neg_consumption=None,
 ):
     """Calculates the cost of given energy charges for the given billing rate
     structure, utility, and consumption information.
@@ -664,7 +665,7 @@ def calculate_energy_cost(
         Baseline electrical or gas usage data as an optimization variable object
 
     divisor : int
-        Divisor for the energy charges
+        Divisor for the energy charges, based on the timeseries resolution
 
     limit : float
         The total consumption, or limit, that this charge came into effect.
@@ -735,8 +736,16 @@ def calculate_energy_cost(
                 cost += max(energy - float(limit), 0) * charge_array[i]
 
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
+        # Use pre-computed non-negative consumption if provided, otherwise initialize it
+        if non_neg_consumption is not None:
+            energy_consumption = non_neg_consumption
+        else:
+            energy_consumption, model = ut.non_neg(
+                consumption_data, model=model, varstr=varstr + "_non_negative_values"
+            )
+
         charge_expr, model = ut.multiply(
-            consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
+            energy_consumption, charge_array, model=model, varstr=varstr + "_multiply"
         )
         if next_limit == float("inf"):
             limit_to_subtract = float(limit) / n_steps
@@ -797,8 +806,13 @@ def calculate_energy_cost(
     return cost, model
 
 
-def calculate_export_revenues(
-    charge_array, export_data, divisor, model=None, varstr=""
+def calculate_export_revenue(
+    charge_array,
+    consumption_data,
+    divisor,
+    model=None,
+    varstr="",
+    non_neg_consumption=None,
 ):
     """Calculates the export revenues for the given billing rate structure,
     utility, and consumption information.
@@ -812,9 +826,12 @@ def calculate_export_revenues(
 
     consumption_data : numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
         Baseline electrical or gas usage data as an optimization variable object
+        Positive values represent energy imports (consumption from the grid)
+        Negative values represent energy exports (generation sent to the grid)
+        Only negative values (exports) are used in the export revenue calculation.
 
     divisor : int
-        Divisor for the export revenue
+        Divisor for the export revenue, based on the timeseries resolution
 
     model : pyomo.Model
         The model object associated with the problem.
@@ -823,27 +840,66 @@ def calculate_export_revenues(
     varstr : str
         Name of the variable to be created if using a Pyomo `model`
 
+    Raises
+    ------
+    ValueError
+        When invalid `utility`, `charge_type`, or `assessed`
+        is provided in `charge_arrays`
+
     Returns
     -------
     (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model
         tuple with the first entry being a float,
         cvxpy Expression, or pyomo Var representing export revenues
-        in USD for the given `charge_array` and `consumption_data`
+        in USD for the given `charge_array` and `export_data`
         and the second entry being the pyomo model object (or None)
     """
-    varstr_mul = varstr + "_multiply" if varstr is not None else None
-    varstr_sum = varstr + "_sum" if varstr is not None else None
+    if isinstance(consumption_data, np.ndarray):
+        cost = 0
+        for i in range(len(consumption_data)):
+            export_amount = min(consumption_data[i], 0)
+            cost += (export_amount / divisor) * charge_array[i]
+        return cost, model
 
-    revenues, model = ut.sum(
-        ut.multiply(charge_array, export_data, model=model, varstr=varstr_mul)[0],
-        model=model,
-        varstr=varstr_sum,
-    )
-    if model is None:
-        revenues, _ = ut.max_pos(revenues, model=model, varstr=varstr + "_max_pos")
+    elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
+        # Multiply through full consumption array
+        full_cost_expr, model = ut.multiply(
+            consumption_data,
+            charge_array,
+            model=model,
+            varstr=varstr + "_full_multiply",
+        )
+        full_cost, model = ut.sum(
+            full_cost_expr, model=model, varstr=varstr + "_full_sum"
+        )
+
+        # Use pre-computed non-negative consumption if provided, otherwise compute it
+        if non_neg_consumption is not None:
+            non_neg_consumption_data = non_neg_consumption
+        else:
+            non_neg_consumption_data, model = ut.non_neg(
+                consumption_data, model=model, varstr=varstr + "_non_negative_values"
+            )
+
+        # Calculate cost for non-negative components
+        non_neg_cost_expr, model = ut.multiply(
+            non_neg_consumption_data,
+            charge_array,
+            model=model,
+            varstr=varstr + "_non_neg_multiply",
+        )
+        non_neg_cost, model = ut.sum(
+            non_neg_cost_expr, model=model, varstr=varstr + "_non_neg_sum"
+        )
+
+        # Export revenue = full result - non-negative result
+        export_revenue = full_cost - non_neg_cost
+        return export_revenue / divisor, model
     else:
-        revenues, model = ut.max_pos(revenues, model=model, varstr=varstr + "_max_pos")
-    return revenues / divisor, model
+        raise ValueError(
+            "consumption_data must be of type numpy.ndarray, "
+            "cvxpy.Expression, or pyomo.environ.Var"
+        )
 
 
 def get_charge_array_duration(key):
@@ -920,7 +976,9 @@ def calculate_cost(
     consumption_data_dict : dict
         Baseline electrical and gas usage data as an optimization variable object
         with keys "electric" and "gas". Values of the dictionary must be of type
-        numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
+        numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var.
+        Positive values represent energy imports (consumption from the grid)
+        Negative values represent energy exports (generation sent to the grid)
 
     electric_consumption_units : pint.Unit
         Units for the electricity consumption data. Default is kW
@@ -1008,6 +1066,29 @@ def calculate_cost(
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
     n_per_day = n_per_hour * 24
 
+    # Create non-negative consumption data once per utility
+    non_neg_consumption_dict = {}
+    for utility in consumption_data_dict.keys():
+        if utility == "electric":
+            conversion_factor = (1 * electric_consumption_units).to(u.kW).magnitude
+        elif utility == "gas":
+            conversion_factor = (
+                (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
+            )
+        else:
+            raise ValueError("Invalid utility: " + utility)
+
+        converted_data, model = ut.multiply(
+            consumption_data_dict[utility],
+            conversion_factor,
+            model=model,
+            varstr=utility + "_converted",
+        )
+
+        non_neg_consumption_dict[utility], model = ut.non_neg(
+            converted_data, model=model, varstr=utility + "_non_negative_values"
+        )
+
     for key, charge_array in charge_dict.items():
         utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
         varstr = ut.sanitize_varstr(
@@ -1041,6 +1122,9 @@ def calculate_cost(
             model=model,
             varstr=varstr_converted,
         )
+
+        # Use pre-computed non-negative consumption
+        non_neg_consumption = non_neg_consumption_dict[utility]
 
         # Only apply demand_scale_factor if charge spans more than one day
         charge_duration_days = get_charge_array_duration(key)
@@ -1081,13 +1165,19 @@ def calculate_cost(
                 consumption_estimate=consumption_estimate,
                 model=model,
                 varstr=varstr,
+                non_neg_consumption=non_neg_consumption,
             )
             cost += new_cost
         elif charge_type == EXPORT:
-            new_cost, model = calculate_export_revenues(
-                charge_array, converted_data, divisor, model=model, varstr=varstr
+            new_cost, model = calculate_export_revenue(
+                charge_array,
+                converted_data,
+                divisor,
+                model=model,
+                varstr=varstr,
+                non_neg_consumption=non_neg_consumption,
             )
-            cost -= new_cost
+            cost += new_cost
         elif charge_type == CUSTOMER:
             cost += charge_array.sum()
         else:
@@ -1124,6 +1214,8 @@ def calculate_itemized_cost(
         Baseline electrical and gas usage data as an optimization variable object
         with keys "electric" and "gas". Values of the dictionary must be of type
         numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
+        Positive values represent energy imports (consumption from the grid)
+        Negative values represent energy exports (generation sent to the grid)
 
     electric_consumption_units : pint.Unit
         Units for the electricity consumption data. Default is kW
