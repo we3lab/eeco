@@ -399,7 +399,10 @@ def get_charge_df(
         # replace the fixed charge in charge_dict with its time-averaged value
         for key, value in fixed_charge_dict.items():
             arr = np.zeros(ntsteps)
-            arr[0] = value[0] * scale_factor
+            if scale_fixed_charges:
+                arr[0] = value[0] * scale_factor
+            else:
+                arr[0] = value[0]
             charge_dict[key] = arr
     else:
         # remove fixed charges from the charge_dict
