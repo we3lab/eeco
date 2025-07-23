@@ -331,12 +331,13 @@ def get_charge_df(
         granularity of each timestep in string form with default value of "15m"
 
     keep_fixed_charges : bool
-        If True, fixed charges will included in the first time step.
+        If True, fixed charges will included.
         If False, fixed charges will be dropped from the output. Default is False.
 
     scale_fixed_charges : bool
-        If True, customer charges will be scaled by timesteps in the month.
-        If False, they will not be scaled. Default is True.
+        If True, fixed charges will be divided amongst all time steps and scaled
+        by timesteps in the month. If False, they will not be scaled
+        but included in the first timestep only. Default is True.
 
     scale_demand_charges : bool
         If True, demand charges will be scaled by the number of timesteps in the month.
@@ -401,7 +402,9 @@ def get_charge_df(
             if scale_fixed_charges:
                 arr = np.ones(ntsteps) * value[0] * scale_factor / ntsteps
             else:
-                arr = np.ones(ntsteps) * value[0] / ntsteps
+                arr = np.zeros(ntsteps)
+                arr[0] = value[0]
+
             charge_dict[key] = arr
     else:
         # remove fixed charges from the charge_dict

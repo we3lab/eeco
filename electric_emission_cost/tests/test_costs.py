@@ -1148,7 +1148,7 @@ def test_get_charge_array_duration(key, expected):
 @pytest.mark.parametrize(
     "keep_fixed_charge, scale_fixed_charge, scale_demand_charge, tariff, expected",
     [
-        (True, True, True, "billing.csv", "billing_scaledcd.csv"),
+        (True, True, True, "billing.csv", "billing_scaled.csv"),
         (True, False, False, "billing.csv", "billing_unscaled.csv"),
         (False, True, True, "billing_customer.csv", "billing_customer_nocharge.csv"),
         (False, False, False, "billing_customer.csv", "billing_customer_nocharge.csv"),
