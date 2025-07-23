@@ -486,7 +486,7 @@ where start_date and end_date are in YYYYMMDD or YYYY-MM-DD format</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="electric_emission_cost.costs.get_charge_df">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">get_charge_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_fixed_charges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#get_charge_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.get_charge_df" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">get_charge_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_fixed_charges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_fixed_charges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_demand_charges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#get_charge_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.get_charge_df" title="Permalink to this definition"></a></dt>
 <dd><p>Creates a dictionary where the values are charge arrays and keys are of the form
 <cite>{utility}_{type}_{name}_{start_date}_{end_date}_{limit}</cite></p>
 <dl class="field-list simple">
@@ -499,8 +499,13 @@ where start_date and end_date are in YYYYMMDD or YYYY-MM-DD format</p>
 <cite>hour_start</cite>, <cite>hour_end</cite>, and <cite>charge</cite> and optional columns <cite>assessed</cite>,
 <cite>effective_start_date</cite>, and <cite>effective_end_date</cite></p></li>
 <li><p><strong>resolution</strong> (<em>str</em>) – granularity of each timestep in string form with default value of “15m”</p></li>
-<li><p><strong>keep_fixed_charges</strong> (<em>bool</em>) – If True, fixed charges will be divided amongst all time steps and included.
+<li><p><strong>keep_fixed_charges</strong> (<em>bool</em>) – If True, fixed charges will included.
 If False, fixed charges will be dropped from the output. Default is False.</p></li>
+<li><p><strong>scale_fixed_charges</strong> (<em>bool</em>) – If True, fixed charges will be divided amongst all time steps and scaled
+by timesteps in the month. If False, they will not be scaled
+but included in the first timestep only. Default is True.</p></li>
+<li><p><strong>scale_demand_charges</strong> (<em>bool</em>) – If True, demand charges will be scaled by the number of timesteps in the month.
+If False, they will not be scaled. Default is False.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>

@@ -409,7 +409,13 @@
 
 
 <div class="viewcode-block" id="get_charge_df"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_charge_df">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_df</span><span class="p">(</span>
-    <span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span> <span class="n">keep_fixed_charges</span><span class="o">=</span><span class="kc">True</span>
+    <span class="n">start_dt</span><span class="p">,</span>
+    <span class="n">end_dt</span><span class="p">,</span>
+    <span class="n">rate_data</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">keep_fixed_charges</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">scale_fixed_charges</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">scale_demand_charges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a dictionary where the values are charge arrays and keys are of the form</span>
 <span class="sd">    `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`</span>
@@ -432,17 +438,29 @@
 <span class="sd">        granularity of each timestep in string form with default value of &quot;15m&quot;</span>
 
 <span class="sd">    keep_fixed_charges : bool</span>
-<span class="sd">        If True, fixed charges will be divided amongst all time steps and included.</span>
+<span class="sd">        If True, fixed charges will included.</span>
 <span class="sd">        If False, fixed charges will be dropped from the output. Default is False.</span>
+
+<span class="sd">    scale_fixed_charges : bool</span>
+<span class="sd">        If True, fixed charges will be divided amongst all time steps and scaled</span>
+<span class="sd">        by timesteps in the month. If False, they will not be scaled</span>
+<span class="sd">        but included in the first timestep only. Default is True.</span>
+
+<span class="sd">    scale_demand_charges : bool</span>
+<span class="sd">        If True, demand charges will be scaled by the number of timesteps in the month.</span>
+<span class="sd">        If False, they will not be scaled. Default is False.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    pandas.DataFrame</span>
 <span class="sd">        DataFrame of charge arrays</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># get the number of timesteps in a day (according to charge resolution)</span>
+    <span class="n">res_binsize_minutes</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
+
+    <span class="c1"># get the charge dictionary</span>
     <span class="n">charge_dict</span> <span class="o">=</span> <span class="n">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">)</span>
 
-    <span class="n">res_binsize_minutes</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">end_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">):</span>
         <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">res_binsize_minutes</span><span class="p">))</span>
         <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
@@ -473,15 +491,39 @@
         <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">key</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;electric_customer&quot;</span><span class="p">,</span> <span class="s2">&quot;gas_customer&quot;</span><span class="p">])</span>
     <span class="p">}</span>
 
+    <span class="k">if</span> <span class="n">scale_fixed_charges</span> <span class="ow">or</span> <span class="n">scale_demand_charges</span><span class="p">:</span>
+        <span class="c1"># calculate the scale factor</span>
+        <span class="n">month</span> <span class="o">=</span> <span class="n">start_dt</span><span class="o">.</span><span class="n">month</span>
+        <span class="n">year</span> <span class="o">=</span> <span class="n">end_dt</span><span class="o">.</span><span class="n">year</span>
+        <span class="n">mins_in_month</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="n">month</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">days</span> <span class="o">*</span> <span class="mi">24</span> <span class="o">*</span> <span class="mi">60</span>
+        <span class="p">)</span>
+        <span class="n">bins_in_month</span> <span class="o">=</span> <span class="n">mins_in_month</span> <span class="o">/</span> <span class="n">res_binsize_minutes</span>
+        <span class="n">scale_factor</span> <span class="o">=</span> <span class="n">ntsteps</span> <span class="o">/</span> <span class="n">bins_in_month</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">scale_factor</span> <span class="o">=</span> <span class="mf">1.0</span>
+
     <span class="k">if</span> <span class="n">keep_fixed_charges</span><span class="p">:</span>
         <span class="c1"># replace the fixed charge in charge_dict with its time-averaged value</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">fixed_charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">charge_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span> <span class="o">*</span> <span class="n">value</span> <span class="o">/</span> <span class="n">ntsteps</span>
+            <span class="k">if</span> <span class="n">scale_fixed_charges</span><span class="p">:</span>
+                <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span> <span class="o">*</span> <span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">scale_factor</span> <span class="o">/</span> <span class="n">ntsteps</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span>
+                <span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
+            <span class="n">charge_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">arr</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># remove fixed charges from the charge_dict</span>
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">fixed_charge_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
             <span class="k">del</span> <span class="n">charge_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">scale_demand_charges</span><span class="p">:</span>
+        <span class="n">demand_charge_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;demand&quot;</span> <span class="ow">in</span> <span class="n">key</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">demand_charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">charge_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span> <span class="o">*</span> <span class="n">scale_factor</span>
 
     <span class="n">charge_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">)</span>
 
