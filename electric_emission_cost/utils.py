@@ -390,11 +390,143 @@ def non_neg(expression, model=None, varstr=None):
             max_pos_var, model = max_pos(
                 expression[t], model=model, varstr=f"{varstr}_max_pos_{t}"
             )
-            # Constrain var[t] to equal max_pos_var
-            constraint = pyo.Constraint(expr=var[t] == max_pos_var)
-            model.add_component(f"{varstr}_constraint_{t}", constraint)
 
         return (var, model)
+    else:
+        raise TypeError(
+            "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
+        )
+
+
+def neg(expression, model=None, varstr=None):
+    """Returns variables representing min(expression[t], 0) for each time index t.
+    Used for calculations where we only want negative values.
+
+    Parameters
+    ----------
+    expression : [
+        numpy.Array,
+        cvxpy.Expression,
+        pyomo.core.expr.numeric_expr.NumericExpression,
+        pyomo.core.expr.numeric_expr.NumericNDArray,
+        pyomo.environ.Param,
+        pyomo.environ.Var
+    ]
+        Expression representing a matrix, vector, or scalar
+
+    model : pyomo.environ.Model
+        The model object associated with the problem.
+        Only used in the case of Pyomo, so `None` by default.
+
+    varstr : str
+        Name of the variable to be created if using a Pyomo `model`
+
+    Raises
+    ------
+    TypeError
+        When `expression` is not of type `numpy.Array`, `cvxpy.Expression`,
+        `pyomo.core.expr.numeric_expr.NumericNDArray`,
+        `pyomo.core.expr.numeric_expr.NumericExpression`,
+        `pyomo.environ.Param`,  or `pyomo.environ.Var`
+
+    Returns
+    -------
+    (
+        [numpy.Array, cvxpy.Expression, or pyomo.environ.Var],
+        pyomo.environ.Model
+    )
+        Expression representing min(expression[t], 0) for each time index t
+    """
+    if isinstance(expression, np.ndarray):
+        return np.minimum(expression, 0), model
+    elif isinstance(expression, cp.Expression):
+        return cp.minimum(expression, 0), model
+    elif isinstance(expression, (pyo.Var, pyo.Param)):
+        # Create indexed variable containing min(0, expression[t]) for each t
+        model.add_component(varstr, pyo.Var(model.t, bounds=(None, 0)))
+        var = model.find_component(varstr)
+
+        # Add constraints for all timesteps at once
+        def upper_bound_rule(model, t):
+            return var[t] <= 0
+
+        def expr_bound_rule(model, t):
+            return var[t] <= expression[t]
+
+        model.add_component(
+            f"{varstr}_upper_bound", pyo.Constraint(model.t, rule=upper_bound_rule)
+        )
+        model.add_component(
+            f"{varstr}_expr_bound", pyo.Constraint(model.t, rule=expr_bound_rule)
+        )
+
+        return (var, model)
+    else:
+        raise TypeError(
+            "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
+        )
+
+
+def decompose_consumption(expression, model=None, varstr=None):
+    """Decomposes consumption data into positive and negative components
+    And adds constraint such that total consumption equals
+    positive values plus negative values.
+
+    Parameters
+    ----------
+    expression : [
+        numpy.Array,
+        cvxpy.Expression,
+        pyomo.core.expr.numeric_expr.NumericExpression,
+        pyomo.core.expr.numeric_expr.NumericNDArray,
+        pyomo.environ.Param,
+        pyomo.environ.Var
+    ]
+        Expression representing consumption data
+
+    model : pyomo.environ.Model
+        The model object associated with the problem.
+        Only used in the case of Pyomo, so `None` by default.
+
+    varstr : str
+        Name prefix for the variables to be created if using a Pyomo `model`
+
+    Returns
+    -------
+    tuple
+        (positive_values, negative_values, model) where
+        positive_values and negative_values are the
+        decomposed components with the constraint that
+        total = positive + negative
+    """
+    if isinstance(expression, np.ndarray):
+        positive_values = np.maximum(expression, 0)
+        negative_values = np.minimum(expression, 0)
+        return positive_values, negative_values, model
+    elif isinstance(expression, cp.Expression):
+        positive_values = cp.maximum(expression, 0)
+        negative_values = cp.minimum(expression, 0)
+        return positive_values, negative_values, model
+    elif isinstance(expression, (pyo.Var, pyo.Param)):
+        # Create positive and negative variables
+        positive_var, model = non_neg(
+            expression, model=model, varstr=f"{varstr}_positive"
+        )
+        negative_var, model = neg(expression, model=model, varstr=f"{varstr}_negative")
+
+        # TODO: convention is to keep variables strictly positive. do positive - negative
+        # both will be postivie but represent positives and negatives
+        
+        # Add constraint: expression = positive_var + negative_var
+        def decomposition_rule(model, t):
+            return expression[t] == positive_var[t] + negative_var[t]
+
+        model.add_component(
+            f"{varstr}_decomposition_constraint",
+            pyo.Constraint(model.t, rule=decomposition_rule),
+        )
+
+        return positive_var, negative_var, model
     else:
         raise TypeError(
             "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."

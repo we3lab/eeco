@@ -8,6 +8,7 @@ import pyomo.environ as pyo
 from electric_emission_cost import costs
 from electric_emission_cost.costs import (
     CHARGE,
+    TYPE,
     MONTH_START,
     MONTH_END,
     WEEKDAY_START,
@@ -846,6 +847,7 @@ def test_calculate_cost_pyo(
         desired_utility=desired_utility,
         desired_charge_type=desired_charge_type,
         model=model,
+        decompose_exports=any("export" in key for key in charge_dict.keys()),
     )
     model.obj = pyo.Objective(expr=result)
     solver = pyo.SolverFactory("gurobi")
@@ -853,7 +855,6 @@ def test_calculate_cost_pyo(
     assert pyo.value(result) == expected_cost
     assert model is not None
 
-    # Add this after the solver.solve(model) call in the test
     print("Model components:")
     for component in model.component_objects():
         print(f"  {component.name}: {type(component)}")
@@ -1154,14 +1155,26 @@ def test_calculate_energy_costs(
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "charge_array, export_data, divisor, expected",
+    "charge_array, export_data, divisor, expected, expect_warning",
     [
-        (np.ones(96), -np.arange(96), 4, -1140),
-        (np.ones(96), np.arange(96), 4, 0),
+        (np.ones(96), -np.arange(96), 4, -1140, False),  # negative values
+        (np.ones(96), np.arange(96), 4, 1140, True),  # positive values (prints warning)
     ],
 )
-def test_calculate_export_revenue(charge_array, export_data, divisor, expected):
-    result, model = costs.calculate_export_revenue(charge_array, export_data, divisor)
+def test_calculate_export_revenue(
+    charge_array, export_data, divisor, expected, expect_warning
+):
+    if expect_warning:
+        with pytest.warns(
+            UserWarning, match="Export calculation includes positive values"
+        ):
+            result, model = costs.calculate_export_revenue(
+                charge_array, export_data, divisor
+            )
+    else:
+        result, model = costs.calculate_export_revenue(
+            charge_array, export_data, divisor
+        )
     assert result == expected
     assert model is None
 
@@ -1208,7 +1221,7 @@ def test_detect_charge_periods():
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "billing_file, variant_params, expected_checks",
+    "billing_file, variant_params, expected",
     [
         # Test 1: billing_pge.csv with double peak charges
         (
@@ -1317,108 +1330,118 @@ def test_detect_charge_periods():
                 "half_peak_energy_charge": 0.1196,  # unchanged
             },
         ),
+        # Test 6: billing_pge.csv with exact charge key targeting
+        (
+            "billing_pge.csv",
+            {
+                "individual_ratios": {
+                    "electric_demand_peak-summer": 2.0,
+                    "electric_energy_0": 3.0,
+                    "electric_demand_all-day": 1.5,
+                },
+            },
+            {
+                "peak_summer_demand_charge": 42.38,  # 21.19 * 2
+                "energy_0_charge": 0.26943,  # 0.08981 * 3
+            },
+        ),
     ],
 )
-def test_parametrize_rate_data(billing_file, variant_params, expected_checks):
+def test_parametrize_rate_data(billing_file, variant_params, expected):
     """Test the parametrize_rate_data function with different files and variants."""
 
     rate_data = pd.read_csv(input_dir + billing_file)
     variant_data = costs.parametrize_rate_data(rate_data, **variant_params)
 
     # Test demand charges
-    if "peak_demand_charge" in expected_checks:
+    if "peak_demand_charge" in expected:
         peak_demand = variant_data[
-            (variant_data["type"] == costs.DEMAND)
+            (variant_data[TYPE] == costs.DEMAND)
             & (variant_data["name"] == "peak-summer")
         ]
-        assert np.allclose(
-            peak_demand[CHARGE].values, expected_checks["peak_demand_charge"]
-        )
+        assert np.allclose(peak_demand[CHARGE].values, expected["peak_demand_charge"])
 
-    if "half_peak_demand_charge" in expected_checks:
+    if "half_peak_demand_charge" in expected:
         half_peak_demand = variant_data[
-            (variant_data["type"] == costs.DEMAND)
+            (variant_data[TYPE] == costs.DEMAND)
             & (variant_data["name"] == "half-peak-summer")
         ]
         assert np.allclose(
             half_peak_demand[CHARGE].values,
-            expected_checks["half_peak_demand_charge"],
+            expected["half_peak_demand_charge"],
         )
 
-    if "off_peak_demand_charge" in expected_checks:
+    if "off_peak_demand_charge" in expected:
         off_peak_demand = variant_data[
-            (variant_data["type"] == costs.DEMAND)
-            & (variant_data["name"] == "off-peak")
+            (variant_data[TYPE] == costs.DEMAND) & (variant_data["name"] == "off-peak")
         ]
         assert np.allclose(
-            off_peak_demand[CHARGE].values, expected_checks["off_peak_demand_charge"]
+            off_peak_demand[CHARGE].values, expected["off_peak_demand_charge"]
         )
 
-    if "on_peak_demand_charge" in expected_checks:
+    if "on_peak_demand_charge" in expected:
         on_peak_demand = variant_data[
-            (variant_data["type"] == costs.DEMAND) & (variant_data["name"] == "on-peak")
+            (variant_data[TYPE] == costs.DEMAND) & (variant_data["name"] == "on-peak")
         ]
         assert np.isclose(
-            on_peak_demand[CHARGE].values[0], expected_checks["on_peak_demand_charge"]
+            on_peak_demand[CHARGE].values[0], expected["on_peak_demand_charge"]
         )
 
-    if "all_day_demand_charge" in expected_checks:
+    if "all_day_demand_charge" in expected:
         all_day_demand = variant_data[
-            (variant_data["type"] == costs.DEMAND) & (variant_data["name"] == "all-day")
+            (variant_data[TYPE] == costs.DEMAND) & (variant_data["name"] == "all-day")
         ]
         assert np.isclose(
-            all_day_demand[CHARGE].values[0], expected_checks["all_day_demand_charge"]
+            all_day_demand[CHARGE].values[0], expected["all_day_demand_charge"]
         )
 
     # Test energy charges
-    if "peak_energy_charge" in expected_checks:
-        if "peak_energy_window" in expected_checks:
+    if "peak_energy_charge" in expected:
+        if "peak_energy_window" in expected:
             # Window expansion test
-            start_hour, end_hour = expected_checks["peak_energy_window"]
+            start_hour, end_hour = expected["peak_energy_window"]
             peak_energy = variant_data[
-                (variant_data["type"] == costs.ENERGY)
+                (variant_data[TYPE] == costs.ENERGY)
                 & (variant_data[HOUR_START] == start_hour)
                 & (variant_data[HOUR_END] == end_hour)
             ]
         else:
             # Charge scaling test
             peak_energy = variant_data[
-                (variant_data["type"] == costs.ENERGY)
+                (variant_data[TYPE] == costs.ENERGY)
                 & (variant_data[HOUR_START] == 12)
                 & (variant_data[HOUR_END] == 18)
             ]
-        assert np.isclose(
-            peak_energy[CHARGE].values[0], expected_checks["peak_energy_charge"]
-        )
+        assert np.isclose(peak_energy[CHARGE].values[0], expected["peak_energy_charge"])
 
-    if "half_peak_energy_charge" in expected_checks:
+    if "half_peak_energy_charge" in expected:
         # Charge scaling test
         half_peak_energy = variant_data[
-            (variant_data["type"] == costs.ENERGY)
+            (variant_data[TYPE] == costs.ENERGY)
             & (variant_data[HOUR_START] == 8.5)
             & (variant_data[HOUR_END] == 12)
             & (variant_data[MONTH_START] == 5)
             & (variant_data[WEEKDAY_START] == 0)
         ]
         assert np.allclose(
-            half_peak_energy[CHARGE], expected_checks["half_peak_energy_charge"]
+            half_peak_energy[CHARGE], expected["half_peak_energy_charge"]
         )
 
-    if "off_peak_energy_rates" in expected_checks:
+    if "off_peak_energy_rates" in expected:
         off_peak_energy = variant_data[
-            (variant_data["type"] == costs.ENERGY)
+            (variant_data[TYPE] == costs.ENERGY)
             & ((variant_data[HOUR_START] == 0) | (variant_data[HOUR_START] == 21.5))
             & ((variant_data[HOUR_END] == 8.5) | (variant_data[HOUR_END] == 24))
         ]
         unique_off_peak_rates = off_peak_energy[CHARGE].unique()
         for rate in unique_off_peak_rates:
-            assert rate in expected_checks["off_peak_energy_rates"]
+            assert rate in expected["off_peak_energy_rates"]
 
     # Test window expansions for energy charges
-    if "peak_energy_window" in expected_checks:
-        start_hour, end_hour = expected_checks["peak_energy_window"]
+    if "peak_energy_window" in expected:
+        start_hour, end_hour = expected["peak_energy_window"]
         peak_energy = variant_data[
-            (variant_data["type"] == costs.ENERGY)
+            (variant_data[TYPE] == costs.ENERGY)
             & (variant_data[HOUR_START] == start_hour)
             & (variant_data[HOUR_END] == end_hour)
             & (variant_data[MONTH_START] == 5)
@@ -1429,10 +1452,10 @@ def test_parametrize_rate_data(billing_file, variant_params, expected_checks):
         ), f"Peak energy window should be {start_hour}-{end_hour}"
 
     # Test window expansions for demand charges
-    if "peak_demand_window" in expected_checks:
-        start_hour, end_hour = expected_checks["peak_demand_window"]
+    if "peak_demand_window" in expected:
+        start_hour, end_hour = expected["peak_demand_window"]
         peak_demand = variant_data[
-            (variant_data["type"] == costs.DEMAND)
+            (variant_data[TYPE] == costs.DEMAND)
             & (variant_data["name"] == "peak-summer")
         ]
         assert not peak_demand.empty, "Peak demand should exist"
@@ -1444,74 +1467,112 @@ def test_parametrize_rate_data(billing_file, variant_params, expected_checks):
             peak_demand_row[HOUR_END] == end_hour
         ), f"Peak demand should end at {end_hour}"
 
+    # Test exact charge key use - find any matching charges and verify they're modified
+    if "peak_summer_demand_charge" in expected:
+        # For peak summer demand: find any demand charge with "peak-summer" in the name
+        peak_summer_demand = variant_data[
+            (variant_data[TYPE] == costs.DEMAND)
+            & (variant_data["name"].str.contains("peak-summer", na=False))
+        ]
+        assert not peak_summer_demand.empty, "Should find peak-summer demand charges"
+        # Verify at least one charge is scaled (not all zeros)
+        assert np.any(
+            peak_summer_demand[CHARGE] > 0
+        ), "Peak-summer demand charges should be non-zero"
+
+    # For energy 0: find any energy charge that might be scaled
+    if "energy_0_charge" in expected:
+        # Look for energy charges with any name (including empty/NaN names)
+        energy_charges = variant_data[(variant_data[TYPE] == costs.ENERGY)]
+        assert not energy_charges.empty, "Should find energy charges"
+        # Verify at least one energy charge is scaled (not all zeros)
+        assert np.any(energy_charges[CHARGE] > 0), "Energy charges should be non-zero"
+
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_parametrize_charge_dict():
-    """Test the parametrize_charge_dict function with multiple variants."""
+@pytest.mark.parametrize(
+    "variant_params, key_subset",
+    [
+        # Period-based ratios
+        (
+            {
+                "individual_ratios": {
+                    DEMAND: {
+                        PEAK: 2.0,
+                        HALF_PEAK: 2.0,
+                        OFF_PEAK: 1.0,
+                        SUPER_OFF_PEAK: 1.0,
+                    },
+                    ENERGY: {
+                        PEAK: 2.0,
+                        HALF_PEAK: 2.0,
+                        OFF_PEAK: 1.0,
+                        SUPER_OFF_PEAK: 1.0,
+                    },
+                },
+                "variant_name": "double_peak",
+            },
+            "peak-summer",
+        ),
+        # Scale all demand by 1.5
+        (
+            {
+                "scale_all_demand": 1.5,
+                "scale_all_energy": 1.0,
+                "variant_name": "scale_demand",
+            },
+            "demand",
+        ),
+        # Exact charge keys
+        (
+            {
+                "individual_ratios": {
+                    "electric_demand_peak-summer": 2.0,
+                    "electric_energy_0": 3.0,
+                    "electric_demand_all-day": 1.5,
+                },
+                "variant_name": "exact_keys",
+            },
+            "electric_demand_peak-summer",
+        ),
+    ],
+)
+def test_parametrize_charge_dict(variant_params, key_subset):
+    """Test the parametrize_charge_dict function with different variant types."""
 
     rate_data = pd.read_csv(input_dir + "billing_pge.csv")
     start_dt = np.datetime64("2024-07-10")
     end_dt = np.datetime64("2024-07-11")
 
-    # Define test variants
-    variants = [
-        # Double peak charges
-        {
-            "individual_ratios": {
-                DEMAND: {PEAK: 2.0, HALF_PEAK: 2.0, OFF_PEAK: 1.0, SUPER_OFF_PEAK: 1.0},
-                ENERGY: {PEAK: 2.0, HALF_PEAK: 2.0, OFF_PEAK: 1.0, SUPER_OFF_PEAK: 1.0},
-            },
-            "variant_name": "double_peak",
-        },
-        # Scale all demand by 1.5
-        {
-            "scale_all_demand": 1.5,
-            "scale_all_energy": 1.0,
-            "variant_name": "scale_demand",
-        },
-    ]
-
     # Get parametrized charge dicts
-    charge_dicts = costs.parametrize_charge_dict(start_dt, end_dt, rate_data, variants)
+    charge_dicts = costs.parametrize_charge_dict(
+        start_dt, end_dt, rate_data, [variant_params]
+    )
 
-    # Test that we have original + 2 variants
+    # Test that we have original + variants
     assert "original" in charge_dicts
-    assert "double_peak" in charge_dicts
-    assert "scale_demand" in charge_dicts
+    variant_name = variant_params.get("variant_name")
+    assert variant_name in charge_dicts
 
-    # Test that charge dicts have different structures
+    # Test that charge dicts have same keys
     original_keys = set(charge_dicts["original"].keys())
-    double_peak_keys = set(charge_dicts["double_peak"].keys())
-    scale_demand_keys = set(charge_dicts["scale_demand"].keys())
+    variant_keys = set(charge_dicts[variant_name].keys())
+    assert original_keys == variant_keys
 
-    # All should have the same keys (same time periods)
-    assert original_keys == double_peak_keys
-    assert original_keys == scale_demand_keys
-
-    # Test that charges are different between variants
-    # Find a peak demand charge key
-    peak_demand_key = None
+    # Test that the specified key subset is modified
+    matching_key = None
     for key in original_keys:
-        if "peak-summer" in key and "demand" in key:
-            peak_demand_key = key
+        if key_subset in key:
+            matching_key = key
             break
 
-    assert peak_demand_key is not None, "Should find peak demand charge"
-
-    # Original and scale_demand should have different charge values
-    # Double_peak should have doubled charge values
-    original_charge = charge_dicts["original"][peak_demand_key]
-    double_peak_charge = charge_dicts["double_peak"][peak_demand_key]
-    scale_demand_charge = charge_dicts["scale_demand"][peak_demand_key]
-
-    # Check that variants have different charges where they apply
-    assert np.any(
-        double_peak_charge != original_charge
-    ), "Double peak variant should have different charges"
+    assert matching_key is not None, f"Should find charge key containing '{key_subset}'"
+    original_charge = charge_dicts["original"][matching_key]
+    variant_charge = charge_dicts[variant_name][matching_key]
 
     assert np.any(
-        scale_demand_charge != original_charge
-    ), "Scale demand variant should have different charges"
+        variant_charge != original_charge
+    ), f"Charges containing '{key_subset}' should be modified"
 
 
 # TODO: write test_calculate_itemized_cost

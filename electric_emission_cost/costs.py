@@ -562,15 +562,20 @@ def calculate_demand_cost(
         and the second entry being the pyomo model object (or None)
     """
     if isinstance(consumption_data, np.ndarray):
-        nonnegative_entries = np.maximum(consumption_data, 0)
-        if (ut.max(nonnegative_entries)[0] >= limit) or (
+        if np.any(consumption_data < 0):
+            warnings.warn(
+                "UserWarning: Demand calculation includes negative values. "
+                "Pass in only positive values or "
+                "run calculate_cost with decompose_exports=True"
+            )
+        if (ut.max(consumption_data)[0] >= limit) or (
             (prev_demand >= limit) and (prev_demand <= next_limit)
         ):
-            if ut.max(nonnegative_entries)[0] >= next_limit:
+            if ut.max(consumption_data)[0] >= next_limit:
                 demand_charged, model = ut.multiply(next_limit - limit, charge_array)
             else:
                 demand_charged, model = ut.multiply(
-                    nonnegative_entries - limit, charge_array
+                    consumption_data - limit, charge_array
                 )
         else:  # ignore if current and previous maxima outside of charge limit
             demand_charged = np.array([0])
@@ -641,6 +646,167 @@ def calculate_demand_cost(
         return max_pos_val * scale_factor, max_pos_model
 
 
+# def calculate_energy_cost(
+#     charge_array,
+#     consumption_data,
+#     divisor,
+#     limit=0,
+#     next_limit=float("inf"),
+#     prev_consumption=0,
+#     consumption_estimate=0,
+#     model=None,
+#     varstr="",
+# ):
+#     """Calculates the cost of given energy charges for the given billing rate
+#     structure, utility, and consumption information.
+
+#     Parameters
+#     ----------
+#     charge_array : numpy.ndarray
+#         Array of the charges in $/kWh for electric and $/cubic meter for gas
+
+#     consumption_data : numpy.ndarray cvxpy.Expression, or pyomo.environ.Var
+#         Baseline electrical or gas usage data as an optimization variable object
+
+#     divisor : int
+#         Divisor for the energy charges, based on the timeseries resolution
+
+#     limit : float
+#         The total consumption, or limit, that this charge came into effect.
+#         Default is 0
+
+#     next_limit : float
+#         The total consumption, or limit, that the next charge comes into effect.
+#         Default is float('inf') indicating that there is no higher tier
+
+#     consumption_estimate : float
+#         Estimate of the total monthly demand or energy consumption from baseline data.
+#         Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
+#         for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
+#         will use actual consumption and ignore the estimate.
+
+#     model : pyomo.Model
+#         The model object associated with the problem.
+#         Only used in the case of Pyomo, so `None` by default.
+
+#     varstr : str
+#         Name of the variable to be created if using a Pyomo `model`
+
+#     Raises
+#     ------
+#     ValueError
+#         When invalid `utility`, `charge_type`, or `assessed`
+#         is provided in `charge_arrays`
+
+#     Returns
+#     -------
+#     (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model
+#         tuple with the first entry being a float,
+#         cvxpy Expression, or pyomo Var representing energy charge costs
+#         in USD for the given `charge_array` and `consumption_data`
+#         and the second entry being the pyomo model object (or None)
+#     """
+#     cost = 0
+#     if model is None:
+#         n_steps = consumption_data.shape[0]
+#     else:  # Pyomo does not support shape attribute
+#         n_steps = len(consumption_data)
+
+#     if isinstance(consumption_data, np.ndarray):
+#         if np.any(consumption_data < 0):
+#             warnings.warn(
+#                 "UserWarning: Energy calculation includes negative values. "
+#                 "Pass in only positive values or "
+#                 "run calculate_cost with decompose_exports=True"
+#             )
+#         energy = prev_consumption
+#         # set the flag if we are starting with previous consumption that lands us
+#         # within the current tier of charge limits
+#         within_limit_flag = energy >= float(limit) and energy < float(next_limit)
+#         for i in range(len(consumption_data)):
+#             energy += consumption_data[i] / divisor
+#             # only add to charges if already within correct charge limits
+#             if within_limit_flag:
+#                 # went over next charge limit on this iteration
+#                 # set flag to false to avoid overcounting after this iteration
+#                 if energy >= float(next_limit):
+#                     within_limit_flag = False
+#                     cost += (
+#                         max(
+#                             float(next_limit) + consumption_data[i] / divisor - energy,
+#                             0,
+#                         )
+#                         * charge_array[i]
+#                     )
+#                 else:
+#                     cost += max(consumption_data[i] / divisor * charge_array[i], 0)
+#             # went over existing charge limit on this iteration
+#             elif energy >= float(limit) and energy < float(next_limit):
+#                 within_limit_flag = True
+#                 cost += max(energy - float(limit), 0) * charge_array[i]
+
+#     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
+#         charge_expr, model = ut.multiply(
+#             consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
+#         )
+#         if next_limit == float("inf"):
+#             limit_to_subtract = float(limit) / n_steps
+#             sum_result, model = ut.sum(charge_expr, model=model, varstr=varstr + "_sum")
+#             cost, model = ut.max_pos(
+#                 (
+#                     sum_result / divisor
+#                     - ut.sum(
+#                         ut.multiply(
+#                             charge_array,
+#                             limit_to_subtract,
+#                             model=model,
+#                             varstr=varstr + "_limit_mult",
+#                         )[0],
+#                         model=model,
+#                         varstr=varstr + "_limit_sum",
+#                     )[0]
+#                 ),
+#                 model=model,
+#                 varstr=varstr,
+#             )
+#         else:
+#             if consumption_estimate < float(next_limit):
+#                 prev_limit_expr, model = ut.multiply(
+#                     float(limit) / n_steps,
+#                     charge_array,
+#                     model=model,
+#                     varstr=varstr + "_prev",
+#                 )
+#                 sum_result, model = ut.sum(
+#                     charge_expr, model=model, varstr=varstr + "_sum"
+#                 )
+#                 cost, model = ut.max_pos(
+#                     sum_result / divisor
+#                     - ut.sum(
+#                         prev_limit_expr[0], model=model, varstr=varstr + "_prev_sum"
+#                     )[0],
+#                     model=model,
+#                     varstr=varstr,
+#                 )
+#             else:
+#                 cost, model = ut.sum(
+#                     ut.multiply(
+#                         charge_array,
+#                         (float(next_limit) - float(limit)) / n_steps,
+#                         model=model,
+#                         varstr=varstr + "_charge_diff",
+#                     )[0],
+#                     model=model,
+#                     varstr=varstr + "_charge_sum",
+#                 )
+#     else:
+#         raise ValueError(
+#             "consumption_data must be of type numpy.ndarray, "
+#             "cvxpy.Expression, or pyomo.environ.Var"
+#         )
+
+#     return cost, model
+
 def calculate_energy_cost(
     charge_array,
     consumption_data,
@@ -651,7 +817,6 @@ def calculate_energy_cost(
     consumption_estimate=0,
     model=None,
     varstr="",
-    non_neg_consumption=None,
 ):
     """Calculates the cost of given energy charges for the given billing rate
     structure, utility, and consumption information.
@@ -674,6 +839,10 @@ def calculate_energy_cost(
     next_limit : float
         The total consumption, or limit, that the next charge comes into effect.
         Default is float('inf') indicating that there is no higher tier
+
+    prev_consumption : float
+        Previous total energy consumption for tiered charges.
+        Default is 0
 
     consumption_estimate : float
         Estimate of the total monthly demand or energy consumption from baseline data.
@@ -708,44 +877,51 @@ def calculate_energy_cost(
     else:  # Pyomo does not support shape attribute
         n_steps = len(consumption_data)
 
+    # Check if this is a flat charge (no tiers)
+    is_flat_charge = (limit == 0 and next_limit == float("inf"))
+
     if isinstance(consumption_data, np.ndarray):
-        energy = prev_consumption
-        # set the flag if we are starting with previous consumption that lands us
-        # within the current tier of charge limits
-        within_limit_flag = energy >= float(limit) and energy < float(next_limit)
-        for i in range(len(consumption_data)):
-            energy += consumption_data[i] / divisor
-            # only add to charges if already within correct charge limits
-            if within_limit_flag:
-                # went over next charge limit on this iteration
-                # set flag to false to avoid overcounting after this iteration
-                if energy >= float(next_limit):
-                    within_limit_flag = False
-                    cost += (
-                        max(
-                            float(next_limit) + consumption_data[i] / divisor - energy,
-                            0,
+        if np.any(consumption_data < 0):
+            warnings.warn(
+                "UserWarning: Energy calculation includes negative values. "
+                "Pass in only positive values or "
+                "run calculate_cost with decompose_exports=True"
+            )
+        
+        if is_flat_charge:
+            # For flat charges, use simple multiplication
+            cost = np.sum(consumption_data * charge_array) / divisor
+        else:
+            # For tiered charges, use the existing cumulative logic
+            energy = prev_consumption
+            # set the flag if we are starting with previous consumption that lands us
+            # within the current tier of charge limits
+            within_limit_flag = energy >= float(limit) and energy < float(next_limit)
+            for i in range(len(consumption_data)):
+                energy += consumption_data[i] / divisor
+                # only add to charges if already within correct charge limits
+                if within_limit_flag:
+                    # went over next charge limit on this iteration
+                    # set flag to false to avoid overcounting after this iteration
+                    if energy >= float(next_limit):
+                        within_limit_flag = False
+                        cost += (
+                            max(
+                                float(next_limit) + consumption_data[i] / divisor - energy,
+                                0,
+                            )
+                            * charge_array[i]
                         )
-                        * charge_array[i]
-                    )
-                else:
-                    cost += max(consumption_data[i] / divisor * charge_array[i], 0)
-            # went over existing charge limit on this iteration
-            elif energy >= float(limit) and energy < float(next_limit):
-                within_limit_flag = True
-                cost += max(energy - float(limit), 0) * charge_array[i]
+                    else:
+                        cost += max(consumption_data[i] / divisor * charge_array[i], 0)
+                # went over existing charge limit on this iteration
+                elif energy >= float(limit) and energy < float(next_limit):
+                    within_limit_flag = True
+                    cost += max(energy - float(limit), 0) * charge_array[i]
 
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
-        # Use pre-computed non-negative consumption if provided, otherwise initialize it
-        if non_neg_consumption is not None:
-            energy_consumption = non_neg_consumption
-        else:
-            energy_consumption, model = ut.non_neg(
-                consumption_data, model=model, varstr=varstr + "_non_negative_values"
-            )
-
         charge_expr, model = ut.multiply(
-            energy_consumption, charge_array, model=model, varstr=varstr + "_multiply"
+            consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
         )
         if next_limit == float("inf"):
             limit_to_subtract = float(limit) / n_steps
@@ -805,14 +981,8 @@ def calculate_energy_cost(
 
     return cost, model
 
-
 def calculate_export_revenue(
-    charge_array,
-    consumption_data,
-    divisor,
-    model=None,
-    varstr="",
-    non_neg_consumption=None,
+    charge_array, consumption_data, divisor, model=None, varstr=""
 ):
     """Calculates the export revenues for the given billing rate structure,
     utility, and consumption information.
@@ -825,10 +995,8 @@ def calculate_export_revenue(
         array with price per kWh sold back to the grid
 
     consumption_data : numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
-        Baseline electrical or gas usage data as an optimization variable object
-        Positive values represent energy imports (consumption from the grid)
-        Negative values represent energy exports (generation sent to the grid)
-        Only negative values (exports) are used in the export revenue calculation.
+        Negative components electrical or gas usage data
+        as an optimization variable object
 
     divisor : int
         Divisor for the export revenue, based on the timeseries resolution
@@ -855,45 +1023,24 @@ def calculate_export_revenue(
         and the second entry being the pyomo model object (or None)
     """
     if isinstance(consumption_data, np.ndarray):
-        cost = 0
-        for i in range(len(consumption_data)):
-            export_amount = min(consumption_data[i], 0)
-            cost += (export_amount / divisor) * charge_array[i]
-        return cost, model
+        # Check for positive values in export calculation
+        if np.any(consumption_data > 0):
+            warnings.warn(
+                "UserWarning: Export calculation includes positive values. "
+                "Pass in only negative values or "
+                "run calculate_cost with decompose_exports=True"
+            )
+        return np.sum(consumption_data * charge_array) / divisor, model
 
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
-        # Multiply through full consumption array
-        full_cost_expr, model = ut.multiply(
+        cost_expr, model = ut.multiply(
             consumption_data,
             charge_array,
             model=model,
-            varstr=varstr + "_full_multiply",
+            varstr=varstr + "_multiply",
         )
-        full_cost, model = ut.sum(
-            full_cost_expr, model=model, varstr=varstr + "_full_sum"
-        )
+        export_revenue, model = ut.sum(cost_expr, model=model, varstr=varstr + "_sum")
 
-        # Use pre-computed non-negative consumption if provided, otherwise compute it
-        if non_neg_consumption is not None:
-            non_neg_consumption_data = non_neg_consumption
-        else:
-            non_neg_consumption_data, model = ut.non_neg(
-                consumption_data, model=model, varstr=varstr + "_non_negative_values"
-            )
-
-        # Calculate cost for non-negative components
-        non_neg_cost_expr, model = ut.multiply(
-            non_neg_consumption_data,
-            charge_array,
-            model=model,
-            varstr=varstr + "_non_neg_multiply",
-        )
-        non_neg_cost, model = ut.sum(
-            non_neg_cost_expr, model=model, varstr=varstr + "_non_neg_sum"
-        )
-
-        # Export revenue = full result - non-negative result
-        export_revenue = full_cost - non_neg_cost
         return export_revenue / divisor, model
     else:
         raise ValueError(
@@ -958,7 +1105,9 @@ def calculate_cost(
     desired_charge_type=None,
     demand_scale_factor=1,
     model=None,
+    decompose_exports=False,
     varstr_alias_func=default_varstr_alias_func,
+    consumption_object_dict=None,
 ):
     """Calculates the cost of given charges (demand or energy) for the given
     billing rate structure, utility, and consumption information as a
@@ -1048,6 +1197,10 @@ def calculate_cost(
             charge_limit:
             f"{utility}_{charge_type}_{name}_{charge_limit}"
 
+    consumption_object_dict: dict, optional
+        Pre-created consumption objects to avoid recreating them.
+        If None, will create new objects. Used internally by calculate_itemized_cost.
+
     Raises
     ------
     ValueError
@@ -1066,28 +1219,51 @@ def calculate_cost(
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
     n_per_day = n_per_hour * 24
 
-    # Create non-negative consumption data once per utility
-    non_neg_consumption_dict = {}
-    for utility in consumption_data_dict.keys():
-        if utility == "electric":
-            conversion_factor = (1 * electric_consumption_units).to(u.kW).magnitude
-        elif utility == "gas":
-            conversion_factor = (
-                (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
+    # Use provided consumption_object_dict or create one
+    if consumption_object_dict is None:
+        consumption_object_dict = {}
+
+        # Define the conversion factors upfront for each utility,
+        # To pass into each charge array below
+        for utility in consumption_data_dict.keys():
+            consumption_object_dict[utility] = {}
+            if utility == "electric":
+                conversion_factor = (1 * electric_consumption_units).to(u.kW).magnitude
+            elif utility == "gas":
+                conversion_factor = (
+                    (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
+                )
+            else:
+                raise ValueError("Invalid utility: " + utility)
+
+            converted_consumption, model = ut.multiply(
+                consumption_data_dict[utility],
+                conversion_factor,
+                model=model,
+                varstr=utility + "_converted",
             )
-        else:
-            raise ValueError("Invalid utility: " + utility)
 
-        converted_data, model = ut.multiply(
-            consumption_data_dict[utility],
-            conversion_factor,
-            model=model,
-            varstr=utility + "_converted",
-        )
+            if decompose_exports:
+                # Decompose consumption data into positive and negative components
+                # with constraint that total = positive + negative
+                imports, exports, model = (
+                    ut.decompose_consumption(
+                        converted_consumption,
+                        model=model,
+                        varstr=utility + "_decomposed",
+                    )
+                )
 
-        non_neg_consumption_dict[utility], model = ut.non_neg(
-            converted_data, model=model, varstr=utility + "_non_negative_values"
-        )
+                # Store the same objects for subsequent calculations
+                consumption_object_dict[utility][
+                    "imports"
+                ] = imports
+                consumption_object_dict[utility]["exports"] = exports
+            else:
+                consumption_object_dict[utility][
+                    "imports"
+                ] = converted_consumption
+                consumption_object_dict[utility]["exports"] = converted_consumption
 
     for key, charge_array in charge_dict.items():
         utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
@@ -1102,12 +1278,8 @@ def calculate_cost(
             continue
 
         if utility == "electric":
-            conversion_factor = (1 * electric_consumption_units).to(u.kW).magnitude
             divisor = n_per_hour
         elif utility == "gas":
-            conversion_factor = (
-                (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
-            )
             divisor = n_per_day / conversion_factor
         else:
             raise ValueError("Invalid utility: " + utility)
@@ -1115,16 +1287,6 @@ def calculate_cost(
         charge_limit = int(limit_str)
         key_substr = "_".join([utility, charge_type, name, eff_start, eff_end])
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
-        varstr_converted = varstr + "_converted" if varstr is not None else None
-        converted_data, model = ut.multiply(
-            consumption_data_dict[utility],
-            conversion_factor,
-            model=model,
-            varstr=varstr_converted,
-        )
-
-        # Use pre-computed non-negative consumption
-        non_neg_consumption = non_neg_consumption_dict[utility]
 
         # Only apply demand_scale_factor if charge spans more than one day
         charge_duration_days = get_charge_array_duration(key)
@@ -1139,7 +1301,7 @@ def calculate_cost(
                 prev_demand_cost = 0
             new_cost, model = calculate_demand_cost(
                 charge_array,
-                converted_data,
+                consumption_object_dict[utility]["imports"],
                 limit=charge_limit,
                 next_limit=next_limit,
                 prev_demand=prev_demand,
@@ -1157,7 +1319,7 @@ def calculate_cost(
                 prev_consumption = 0
             new_cost, model = calculate_energy_cost(
                 charge_array,
-                converted_data,
+                consumption_object_dict[utility]["imports"],
                 divisor,
                 limit=charge_limit,
                 next_limit=next_limit,
@@ -1165,17 +1327,15 @@ def calculate_cost(
                 consumption_estimate=consumption_estimate,
                 model=model,
                 varstr=varstr,
-                non_neg_consumption=non_neg_consumption,
             )
             cost += new_cost
         elif charge_type == EXPORT:
             new_cost, model = calculate_export_revenue(
                 charge_array,
-                converted_data,
+                consumption_object_dict[utility]["exports"],
                 divisor,
                 model=model,
                 varstr=varstr,
-                non_neg_consumption=non_neg_consumption,
             )
             cost += new_cost
         elif charge_type == CUSTOMER:
@@ -1197,6 +1357,7 @@ def calculate_itemized_cost(
     desired_utility=None,
     demand_scale_factor=1,
     model=None,
+    decompose_exports=False,
     varstr_alias_func=default_varstr_alias_func,
 ):
     """Calculates itemized costs as a nested dictionary
@@ -1297,6 +1458,46 @@ def calculate_itemized_cost(
     """
     total_cost = 0
     results_dict = {}
+
+    # Create consumption objects once to avoid recreating in each calculate_cost call
+    consumption_object_dict = {}
+
+    for utility in consumption_data_dict.keys():
+        consumption_object_dict[utility] = {}
+        if utility == "electric":
+            conversion_factor = (1 * electric_consumption_units).to(u.kW).magnitude
+        elif utility == "gas":
+            conversion_factor = (
+                (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
+            )
+        else:
+            raise ValueError("Invalid utility: " + utility)
+
+        converted_consumption, model = ut.multiply(
+            consumption_data_dict[utility],
+            conversion_factor,
+            model=model,
+            varstr=utility + "_converted",
+        )
+
+        if decompose_exports:
+            # Decompose consumption data into positive and negative components
+            # with constraint that total = positive + negative
+            imports, exports, model = (
+                ut.decompose_consumption(
+                    converted_consumption, model=model, varstr=utility + "_decomposed"
+                )
+            )
+
+            # Store the same objects for subsequent calculations
+            consumption_object_dict[utility]["imports"] = imports
+            consumption_object_dict[utility]["exports"] = exports
+        else:
+            consumption_object_dict[utility][
+                "imports"
+            ] = converted_consumption
+            consumption_object_dict[utility]["exports"] = converted_consumption
+
     if desired_utility is None:
         for utility in [ELECTRIC, GAS]:
             results_dict[utility] = {}
@@ -1314,7 +1515,9 @@ def calculate_itemized_cost(
                     desired_charge_type=charge_type,
                     demand_scale_factor=demand_scale_factor,
                     model=model,
+                    decompose_exports=decompose_exports,
                     varstr_alias_func=varstr_alias_func,
+                    consumption_object_dict=consumption_object_dict,
                 )
 
                 results_dict[utility][charge_type] = cost
@@ -1339,7 +1542,9 @@ def calculate_itemized_cost(
                 desired_charge_type=charge_type,
                 demand_scale_factor=demand_scale_factor,
                 model=model,
+                decompose_exports=decompose_exports,
                 varstr_alias_func=varstr_alias_func,
+                consumption_object_dict=consumption_object_dict,
             )
 
             results_dict[desired_utility][charge_type] = cost
@@ -1505,7 +1710,7 @@ def detect_charge_periods(
 
 def parametrize_rate_data(
     rate_data,
-    individual_ratios=None,
+    individual_ratios={},
     scale_all_demand=None,
     scale_all_energy=None,
     shift_peak_hours_before=0,
@@ -1514,7 +1719,7 @@ def parametrize_rate_data(
 ):
     """
     Parametrize rate data by charge periods
-    (peak, half-peak, off-peak, super-off-peak).
+    (peak, half-peak, off-peak, super-off-peak) or exact charge keys.
     Applies scaling and window shifting to create
     alternative rate structures.
 
@@ -1523,7 +1728,9 @@ def parametrize_rate_data(
     rate_data : pandas.DataFrame
         Tariff data with required columns
     individual_ratios : dict, optional
-        Nested dictionary with structure for charge scaling:
+        Nested dictionary for charge scaling. Can be either:
+
+        Option 1 - Nested dictionary with structure for charge scaling:
         {
             'demand': {
                 'peak': float, 'half_peak': float,
@@ -1534,6 +1741,15 @@ def parametrize_rate_data(
                 'off_peak': float, 'super_off_peak': float
             }
         }
+
+        Option 2 - Dictionary with exact charge key prefixes based on csv:
+        {
+            'electric_demand_peak-summer': float,
+            'electric_energy_0': float,
+            'electric_demand_all-day': float,
+            ...
+        }
+
         If None, all ratios default to 1.0
     scale_all_demand : float, optional
         If provided, scales all demand charges by this factor
@@ -1568,41 +1784,50 @@ def parametrize_rate_data(
         else [CHARGE]
     )
 
-    # Set default individual_ratios if not provided
-    if individual_ratios is None:
-        individual_ratios = {
+    # Determine if individual_ratios uses exact charge keys or standard periods
+    uses_exact_keys = len(individual_ratios) > 0 and any(
+        isinstance(k, str) and ("electric_" in k or "gas_" in k)
+        for k in individual_ratios.keys()
+    )
+
+    if uses_exact_keys:
+        ratios = individual_ratios
+        # Check for conflicts between setting individual ratios and scale_all
+        if scale_all_demand is not None or scale_all_energy is not None:
+            warnings.warn(
+                "scale_all_demand/scale_all_energy overrides individual ratios",
+                "when using exact charge keys.",
+                "Only scale_all parameters will be used.",
+                UserWarning,
+            )
+    else:
+        # Check for conflicts between setting individual ratios and scale_all
+        for charge_type, scale_all in [
+            (DEMAND, scale_all_demand),
+            (ENERGY, scale_all_energy),
+        ]:
+            if scale_all is not None and any(
+                ratio != 1.0
+                for ratio in individual_ratios.get(charge_type, {}).values()
+            ):
+                warnings.warn(
+                    f"scale_all_{charge_type} overrides individual ratios.",
+                    f"Only scale_all_{charge_type} will be used.",
+                    UserWarning,
+                )
+
+        ratios = {
             charge_type: {
-                period: 1.0 for period in [PEAK, HALF_PEAK, OFF_PEAK, SUPER_OFF_PEAK]
+                period: (
+                    (scale_all_demand if charge_type == DEMAND else scale_all_energy)
+                    if (scale_all_demand if charge_type == DEMAND else scale_all_energy)
+                    is not None
+                    else individual_ratios.get(charge_type, {}).get(period, 1.0)
+                )
+                for period in [PEAK, HALF_PEAK, OFF_PEAK, SUPER_OFF_PEAK]
             }
             for charge_type in [DEMAND, ENERGY]
         }
-
-    # Check for conflicts between setting individual ratios and scale_all
-    for charge_type, scale_all in [
-        (DEMAND, scale_all_demand),
-        (ENERGY, scale_all_energy),
-    ]:
-        if scale_all is not None and any(
-            ratio != 1.0 for ratio in individual_ratios.get(charge_type, {}).values()
-        ):
-            warnings.warn(
-                f"scale_all_{charge_type} overrides individual ratios.",
-                f"Only scale_all_{charge_type} will be used.",
-                UserWarning,
-            )
-
-    ratios = {
-        charge_type: {
-            period: (
-                (scale_all_demand if charge_type == DEMAND else scale_all_energy)
-                if (scale_all_demand if charge_type == DEMAND else scale_all_energy)
-                is not None
-                else individual_ratios.get(charge_type, {}).get(period, 1.0)
-            )
-            for period in [PEAK, HALF_PEAK, OFF_PEAK, SUPER_OFF_PEAK]
-        }
-        for charge_type in [DEMAND, ENERGY]
-    }
 
     # Validate shift parameters as multiples of 0.25 hours
     for shift_param, param_name in [
@@ -1614,6 +1839,7 @@ def parametrize_rate_data(
                 f"{param_name} must be a multiple of 0.25 hours (15 minutes). "
                 f"Got {shift_param}"
             )
+        #TODO: allow less than 15 minutes but greater than resolution of tariff
 
     # Cache original charges and track processed/shifted rows
     original_charges = {
@@ -1625,7 +1851,10 @@ def parametrize_rate_data(
 
     # Process each month, weekday, charge_type
     for charge_type in [ENERGY, DEMAND]:
-        charge_ratios = ratios[charge_type]
+        if uses_exact_keys:  # process each row individually
+            charge_ratios = ratios
+        else:  # period-based approach
+            charge_ratios = ratios[charge_type]
 
         for month in range(1, 13):
             for weekday in range(7):
@@ -1673,24 +1902,55 @@ def parametrize_rate_data(
                 for row_idx, period in period_classifications.items():
                     if row_idx in processed_rows:
                         continue
+
+                    # Get the row data for charge key matching
+                    row = variant_data.loc[row_idx]
+
+                    # Determine the ratio to apply
+                    if uses_exact_keys:
+                        name = (
+                            str(row.get("name", "")).replace("_", "-")
+                            if pd.notna(row.get("name")) and row.get("name")
+                            else ""
+                        )
+
+                        # Try to match exact charge key
+                        ratio = 1.0
+                        if name:
+                            for key_prefix, key_ratio in charge_ratios.items():
+                                if key_prefix.startswith(
+                                    f"{row[UTILITY]}_{row[TYPE]}_{name}"
+                                ):
+                                    ratio = key_ratio
+                                    break
+                            else:
+                                warnings.warn(
+                                    f"Charge key w/ '{row[UTILITY]}_{row[TYPE]}_{name}'"
+                                    f"not found in individual_ratios. "
+                                    f"Using default ratio of 1.0.",
+                                    UserWarning,
+                                )
+                                #TODO: raise warning if user passed in a key that doesn't exist
+                                #TODO: Only need to raise one warning with a list of keys that weren't varied
+                    else:  # period-based appeoach
+                        ratio = charge_ratios[period]
+
                     for col in charge_cols:
                         if col in variant_data.columns:
                             current_charge = original_charges[col][row_idx]
                             if has_24h_charge:
                                 # Additive structure: scale each charge independently
-                                variant_data.loc[row_idx, col] = (
-                                    current_charge * charge_ratios[period]
-                                )
+                                variant_data.loc[row_idx, col] = current_charge * ratio
                             else:
                                 # Replacement structure: use difference logic
                                 if np.isclose(current_charge, base_charge):
                                     variant_data.loc[row_idx, col] = (
-                                        current_charge * charge_ratios[period]
+                                        current_charge * ratio
                                     )
                                 else:
                                     adder = max(0, current_charge - base_charge)
                                     variant_data.loc[row_idx, col] = (
-                                        base_charge + adder * charge_ratios[period]
+                                        base_charge + adder * ratio
                                     )
                     processed_rows.add(row_idx)
 

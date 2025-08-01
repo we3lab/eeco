@@ -1,0 +1,4 @@
+utility,type,period,basic_charge_limit,assessed,month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge (metric),units
+electric,demand,average-demand,0,monthly,1,12,0,24,0,6,16.0,$/kW
+electric,energy,average-energy,0,,1,12,0,24,0,6,0.10,$/kWh
+electric,export,average-rec-export,0,,1,12,0,24,0,6,0.0,$/kWh
