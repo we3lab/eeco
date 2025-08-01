@@ -304,9 +304,12 @@ def max_pos(expression, model=None, varstr=None):
     ) or (hasattr(expression, "is_variable_type") and expression.is_variable_type()):
         model.add_component(varstr, pyo.Var(initialize=0, bounds=(0, None)))
         var = model.find_component(varstr)
-        model.add_component(
-            varstr + "_constraint", pyo.Constraint(rule=var >= expression)
-        )
+
+        def const_rule(model):
+            return var >= expression
+
+        constraint = pyo.Constraint(rule=const_rule)
+        model.add_component(varstr + "_constraint", constraint)
         return (var, model)
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
         model.add_component(varstr, pyo.Var(bounds=(0, None)))
@@ -315,9 +318,8 @@ def max_pos(expression, model=None, varstr=None):
         def const_rule(model, t):
             return var >= expression[t]
 
-        model.add_component(
-            varstr + "_constraint", pyo.Constraint(model.t, rule=const_rule)
-        )
+        constraint = pyo.Constraint(model.t, rule=const_rule)
+        model.add_component(varstr + "_constraint", constraint)
         return (var, model)
     elif isinstance(
         expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
@@ -592,6 +594,7 @@ def multiply(
     ):
         if (not isinstance(expression1, (int, float))) and (len(expression1) > 1):
             if (not isinstance(expression2, (int, float))) and (len(expression2) > 1):
+                # TODO: replace model.t with better way to get dimensions
                 model.add_component(varstr, pyo.Var(model.t))
                 var = model.find_component(varstr)
 
