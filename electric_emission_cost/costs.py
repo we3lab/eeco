@@ -633,179 +633,18 @@ def calculate_demand_cost(
             "cvxpy.Expression, or pyomo.environ.Var"
         )
     if model is None:
-        max_var, _ = ut.max(demand_charged, allow_negative=True)
+        max_var, _ = ut.max(demand_charged)
         max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
         return max_pos_val * scale_factor, max_pos_model
     else:
         max_var, model = ut.max(
-            demand_charged, model=model, varstr=varstr + "_max", allow_negative=True
+            demand_charged, model=model, varstr=varstr + "_max"
         )
         max_pos_val, max_pos_model = ut.max_pos(
             max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
         )
         return max_pos_val * scale_factor, max_pos_model
 
-
-# def calculate_energy_cost(
-#     charge_array,
-#     consumption_data,
-#     divisor,
-#     limit=0,
-#     next_limit=float("inf"),
-#     prev_consumption=0,
-#     consumption_estimate=0,
-#     model=None,
-#     varstr="",
-# ):
-#     """Calculates the cost of given energy charges for the given billing rate
-#     structure, utility, and consumption information.
-
-#     Parameters
-#     ----------
-#     charge_array : numpy.ndarray
-#         Array of the charges in $/kWh for electric and $/cubic meter for gas
-
-#     consumption_data : numpy.ndarray cvxpy.Expression, or pyomo.environ.Var
-#         Baseline electrical or gas usage data as an optimization variable object
-
-#     divisor : int
-#         Divisor for the energy charges, based on the timeseries resolution
-
-#     limit : float
-#         The total consumption, or limit, that this charge came into effect.
-#         Default is 0
-
-#     next_limit : float
-#         The total consumption, or limit, that the next charge comes into effect.
-#         Default is float('inf') indicating that there is no higher tier
-
-#     consumption_estimate : float
-#         Estimate of the total monthly demand or energy consumption from baseline data.
-#         Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
-#         for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
-#         will use actual consumption and ignore the estimate.
-
-#     model : pyomo.Model
-#         The model object associated with the problem.
-#         Only used in the case of Pyomo, so `None` by default.
-
-#     varstr : str
-#         Name of the variable to be created if using a Pyomo `model`
-
-#     Raises
-#     ------
-#     ValueError
-#         When invalid `utility`, `charge_type`, or `assessed`
-#         is provided in `charge_arrays`
-
-#     Returns
-#     -------
-#     (cvxpy.Expression, pyomo.environ.Var, or float), pyomo.Model
-#         tuple with the first entry being a float,
-#         cvxpy Expression, or pyomo Var representing energy charge costs
-#         in USD for the given `charge_array` and `consumption_data`
-#         and the second entry being the pyomo model object (or None)
-#     """
-#     cost = 0
-#     if model is None:
-#         n_steps = consumption_data.shape[0]
-#     else:  # Pyomo does not support shape attribute
-#         n_steps = len(consumption_data)
-
-#     if isinstance(consumption_data, np.ndarray):
-#         if np.any(consumption_data < 0):
-#             warnings.warn(
-#                 "UserWarning: Energy calculation includes negative values. "
-#                 "Pass in only positive values or "
-#                 "run calculate_cost with decompose_exports=True"
-#             )
-#         energy = prev_consumption
-#         # set the flag if we are starting with previous consumption that lands us
-#         # within the current tier of charge limits
-#         within_limit_flag = energy >= float(limit) and energy < float(next_limit)
-#         for i in range(len(consumption_data)):
-#             energy += consumption_data[i] / divisor
-#             # only add to charges if already within correct charge limits
-#             if within_limit_flag:
-#                 # went over next charge limit on this iteration
-#                 # set flag to false to avoid overcounting after this iteration
-#                 if energy >= float(next_limit):
-#                     within_limit_flag = False
-#                     cost += (
-#                         max(
-#                             float(next_limit) + consumption_data[i] / divisor - energy,
-#                             0,
-#                         )
-#                         * charge_array[i]
-#                     )
-#                 else:
-#                     cost += max(consumption_data[i] / divisor * charge_array[i], 0)
-#             # went over existing charge limit on this iteration
-#             elif energy >= float(limit) and energy < float(next_limit):
-#                 within_limit_flag = True
-#                 cost += max(energy - float(limit), 0) * charge_array[i]
-
-#     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
-#         charge_expr, model = ut.multiply(
-#             consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
-#         )
-#         if next_limit == float("inf"):
-#             limit_to_subtract = float(limit) / n_steps
-#             sum_result, model = ut.sum(charge_expr, model=model, varstr=varstr + "_sum")
-#             cost, model = ut.max_pos(
-#                 (
-#                     sum_result / divisor
-#                     - ut.sum(
-#                         ut.multiply(
-#                             charge_array,
-#                             limit_to_subtract,
-#                             model=model,
-#                             varstr=varstr + "_limit_mult",
-#                         )[0],
-#                         model=model,
-#                         varstr=varstr + "_limit_sum",
-#                     )[0]
-#                 ),
-#                 model=model,
-#                 varstr=varstr,
-#             )
-#         else:
-#             if consumption_estimate < float(next_limit):
-#                 prev_limit_expr, model = ut.multiply(
-#                     float(limit) / n_steps,
-#                     charge_array,
-#                     model=model,
-#                     varstr=varstr + "_prev",
-#                 )
-#                 sum_result, model = ut.sum(
-#                     charge_expr, model=model, varstr=varstr + "_sum"
-#                 )
-#                 cost, model = ut.max_pos(
-#                     sum_result / divisor
-#                     - ut.sum(
-#                         prev_limit_expr[0], model=model, varstr=varstr + "_prev_sum"
-#                     )[0],
-#                     model=model,
-#                     varstr=varstr,
-#                 )
-#             else:
-#                 cost, model = ut.sum(
-#                     ut.multiply(
-#                         charge_array,
-#                         (float(next_limit) - float(limit)) / n_steps,
-#                         model=model,
-#                         varstr=varstr + "_charge_diff",
-#                     )[0],
-#                     model=model,
-#                     varstr=varstr + "_charge_sum",
-#                 )
-#     else:
-#         raise ValueError(
-#             "consumption_data must be of type numpy.ndarray, "
-#             "cvxpy.Expression, or pyomo.environ.Var"
-#         )
-
-#     return cost, model
 
 def calculate_energy_cost(
     charge_array,
