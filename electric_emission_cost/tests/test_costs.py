@@ -7,7 +7,6 @@ import pyomo.environ as pyo
 import datetime
 
 from electric_emission_cost import costs
-from electric_emission_cost import utils
 from electric_emission_cost.costs import (
     CHARGE,
     TYPE,
@@ -750,7 +749,7 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
-            pytest.approx(138),
+            pytest.approx(140),
         ),
         (
             {
@@ -793,23 +792,7 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
-            pytest.approx(1188),
-        ),
-        # export charges
-        (
-            {
-                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
-            },
-            {
-                ELECTRIC: np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
-                GAS: np.ones(96),
-            },
-            "15m",
-            None,
-            0,
-            None,
-            None,
-            pytest.approx(-1.5),
+            pytest.approx(1191),
         ),
     ],
 )
@@ -824,25 +807,21 @@ def test_calculate_cost_pyo(
     expected_cost,
 ):
     model = pyo.ConcreteModel()
-    model.T = len(consumption_data_dict[ELECTRIC])
-    model.t = pyo.RangeSet(0, model.T - 1)
-    model.electric_consumption = pyo.Var(model.t, bounds=(None, None))
-    model.gas_consumption = pyo.Var(model.t, bounds=(None, None))
+    model.T = len(consumption_data_dict["electric"])
+    model.t = range(model.T)
+    pyo_vars = {}
+    for key, val in consumption_data_dict.items():
+        var = pyo.Var(range(len(val)), initialize=np.zeros(len(val)), bounds=(0, None))
+        model.add_component(key, var)
+        pyo_vars[key] = var
 
-    # Constrain variables to initialized values
-    def electric_constraint_rule(model, t):
-        return model.electric_consumption[t] == consumption_data_dict[ELECTRIC][t - 1]
+    @model.Constraint(model.t)
+    def electric_constraint(m, t):
+        return consumption_data_dict["electric"][t] == m.electric[t]
 
-    def gas_constraint_rule(model, t):
-        return model.gas_consumption[t] == consumption_data_dict[GAS][t - 1]
-
-    model.electric_constraint = pyo.Constraint(model.t, rule=electric_constraint_rule)
-    model.gas_constraint = pyo.Constraint(model.t, rule=gas_constraint_rule)
-
-    pyo_vars = {
-        "electric": model.electric_consumption,
-        "gas": model.gas_consumption,
-    }
+    @model.Constraint(model.t)
+    def gas_constraint(m, t):
+        return consumption_data_dict["gas"][t] == m.gas[t]
 
     result, model = costs.calculate_cost(
         charge_dict,
@@ -853,19 +832,7 @@ def test_calculate_cost_pyo(
         desired_utility=desired_utility,
         desired_charge_type=desired_charge_type,
         model=model,
-        decompose_exports=any("export" in key for key in charge_dict.keys()),
     )
-
-    # Initialize Pyomo variables if decompose_exports is True
-    decompose_exports = any("export" in key for key in charge_dict.keys())
-    if decompose_exports:
-        init_consumption_data = {
-            "electric": np.array(
-                [consumption_data_dict[ELECTRIC][t - 1] for t in model.t]
-            ),
-            "gas": np.array([consumption_data_dict[GAS][t - 1] for t in model.t]),
-        }
-        utils.initialize_decomposed_pyo_vars(init_consumption_data, model, charge_dict)
 
     model.obj = pyo.Objective(expr=result)
     solver = pyo.SolverFactory("gurobi")
@@ -1169,28 +1136,13 @@ def test_calculate_energy_costs(
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "charge_array, export_data, divisor, expected, expect_warning",
+    "charge_array, export_data, divisor, expected",
     [
-        (
-            np.ones(96),
-            np.arange(96),
-            4,
-            1140,
-            False,
-        ),  # positive values (export magnitude)
-        (
-            np.ones(96),
-            np.arange(96),
-            4,
-            1140,
-            False,
-        ),  # positive values (export magnitude)
+        (np.ones(96), np.arange(96), 4, 1140),
     ],
 )
-def test_calculate_export_revenue(
-    charge_array, export_data, divisor, expected, expect_warning
-):
-    result, model = costs.calculate_export_revenue(charge_array, export_data, divisor)
+def test_calculate_export_revenues(charge_array, export_data, divisor, expected):
+    result, model = costs.calculate_export_revenues(charge_array, export_data, divisor)
     assert result == expected
     assert model is None
 
