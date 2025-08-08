@@ -73,7 +73,6 @@ NumPy
     # one month of 15-min intervals
     num_timesteps = 24 * 4 * 31
     # this is synthetic consumption data, but a user could provide real historical meter data
-    # Positive values represent imports, negative values represent exports in consumption data
     consumption_data_dict = {"electric": np.ones(num_timesteps) * 100, "gas": np.ones(num_timesteps))}
     total_monthly_bill, _ = costs.calculate_cost(charge_dict, consumption_data_dict)
 

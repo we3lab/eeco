@@ -1206,25 +1206,63 @@ def test_get_charge_df(
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_detect_charge_periods():
-    """Test the detect_charge_periods function."""
+@pytest.mark.parametrize(
+    (
+        "charge_type, "
+        "month, "
+        "weekday, "
+        "expected_base_charge, "
+        "expected_overlap, "
+        "expected_periods"
+    ),
+    [
+        # July weekday energy
+        (
+            costs.ENERGY,
+            7,
+            0,
+            0.08981,
+            False,
+            {costs.PEAK, costs.HALF_PEAK, costs.OFF_PEAK},
+        ),
+        # July weekday demand
+        (costs.DEMAND, 7, 0, 21.3, True, {costs.PEAK, costs.HALF_PEAK, costs.OFF_PEAK}),
+        # July weekend energy
+        (costs.ENERGY, 7, 5, 0.08981, False, {costs.OFF_PEAK}),
+        # July weekend demand
+        (costs.DEMAND, 7, 5, 21.3, False, {costs.OFF_PEAK}),
+        # Winter weekday energy
+        (costs.ENERGY, 1, 0, 0.1133, False, {costs.OFF_PEAK, costs.SUPER_OFF_PEAK}),
+        # Winter weekday demand
+        (costs.DEMAND, 1, 0, 21.3, True, {costs.PEAK, costs.OFF_PEAK}),
+    ],
+)
+def test_detect_charge_periods(
+    charge_type,
+    month,
+    weekday,
+    expected_base_charge,
+    expected_overlap,
+    expected_periods,
+):
+    """Test the detect_charge_periods function with different scenarios."""
 
     # Use csv that has names like "peak" in the columns
     rate_data = pd.read_csv(input_dir + "billing_pge.csv")
 
-    # Test the expected energy period types for July weekday
-    energy_periods = costs.detect_charge_periods(rate_data, costs.ENERGY, 7, 0)
-    period_types = set(energy_periods.values())
-    assert costs.PEAK in period_types
-    assert costs.HALF_PEAK in period_types
-    assert costs.OFF_PEAK in period_types
+    # Test the expected period types and base charge
+    periods, base_charge, has_overlapping = costs.detect_charge_periods(
+        rate_data, charge_type, month, weekday
+    )
+    period_types = set(periods.values())
 
-    # Test the expected demand period types for July weekday
-    demand_periods = costs.detect_charge_periods(rate_data, costs.DEMAND, 7, 0)
-    period_types = set(demand_periods.values())
-    assert costs.PEAK in period_types
-    assert costs.HALF_PEAK in period_types
-    assert costs.OFF_PEAK in period_types
+    # Verify expected periods are present
+    for expected_period in expected_periods:
+        assert expected_period in period_types
+
+    # Verify base charge and overlapping flag
+    assert base_charge == expected_base_charge
+    assert has_overlapping is expected_overlap
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1322,36 +1360,6 @@ def test_detect_charge_periods():
             None,
             False,
         ),
-        # billing_pge.csv with peak window expansion
-        (
-            "billing_pge.csv",
-            {
-                "scale_ratios": {
-                    DEMAND: {
-                        PEAK: 1.0,
-                        HALF_PEAK: 1.0,
-                        OFF_PEAK: 1.0,
-                        SUPER_OFF_PEAK: 1.0,
-                    },
-                    ENERGY: {
-                        PEAK: 1.0,
-                        HALF_PEAK: 1.0,
-                        OFF_PEAK: 1.0,
-                        SUPER_OFF_PEAK: 1.0,
-                    },
-                },
-                "shift_peak_hours_before": -1.0,  # negative = earlier start
-                "shift_peak_hours_after": 1.0,  # positive = later end
-            },
-            {
-                "peak_energy_window": (11, 19),  # expanded from 12-18
-                "peak_demand_window": (11, 19),  # expanded from 12-18
-                "peak_energy_charge": 0.16299,  # unchanged
-                "half_peak_energy_charge": 0.1196,  # unchanged
-            },
-            None,
-            False,
-        ),
         # billing_pge.csv with exact charge key inputs
         (
             "billing_pge.csv",
@@ -1369,52 +1377,19 @@ def test_detect_charge_periods():
             None,
             False,
         ),
-        # blank scale_ratios
-        (
-            "billing_pge.csv",
-            {},
-            {
-                "peak_demand_charge": 21.19,  # unchanged
-                "half_peak_demand_charge": 5.88,  # unchanged
-                "off_peak_demand_charge": 21.3,  # unchanged
-                "peak_energy_charge": 0.16299,  # unchanged
-                "half_peak_energy_charge": 0.1196,  # unchanged
-            },
-            None,
-            False,
-        ),
-        # zero scale_ratios
+        # Scale ratio unusual inputs (blank, zero, negative)
         (
             "billing_pge.csv",
             {
                 "scale_ratios": {
                     "demand": 0.0,
-                    "energy": 0.0,
+                    "energy": -2.0,
                 },
             },
             {
                 "peak_demand_charge": 0.0,  # 21.19 * 0
                 "half_peak_demand_charge": 0.0,  # 5.88 * 0
                 "off_peak_demand_charge": 0.0,  # 21.3 * 0
-                "peak_energy_charge": 0.08981,  # unchanged
-                "half_peak_energy_charge": 0.08981,  # unchanged
-            },
-            None,
-            False,
-        ),
-        # negative scale_ratios
-        (
-            "billing_pge.csv",
-            {
-                "scale_ratios": {
-                    "demand": -1.0,
-                    "energy": -2.0,
-                },
-            },
-            {
-                "peak_demand_charge": -21.19,  # 21.19 * -1
-                "half_peak_demand_charge": -5.88,  # 5.88 * -1
-                "off_peak_demand_charge": -21.3,  # 21.3 * -1
                 "peak_energy_charge": 0.016630,  # 0.08981 + (0.16299 - 0.08981) * -2
                 "half_peak_energy_charge": 0.03023,  # 0.08981 + (0.1196 - 0.08981) * -2
             },
@@ -1450,32 +1425,68 @@ def test_detect_charge_periods():
             None,
             False,
         ),
-        # Window shifting to start at 0
+        # Window expansion
         (
             "billing_pge.csv",
             {
-                "shift_peak_hours_before": -12.0,  # Shift peak to start at 0
-                "shift_peak_hours_after": 0,  # No change to end
+                "scale_ratios": {
+                    DEMAND: {
+                        PEAK: 1.0,
+                        HALF_PEAK: 1.0,
+                        OFF_PEAK: 1.0,
+                        SUPER_OFF_PEAK: 1.0,
+                    },
+                    ENERGY: {
+                        PEAK: 1.0,
+                        HALF_PEAK: 1.0,
+                        OFF_PEAK: 1.0,
+                        SUPER_OFF_PEAK: 1.0,
+                    },
+                },
+                "shift_peak_hours_before": -1.0,  # negative = earlier start
+                "shift_peak_hours_after": 1.0,  # positive = later end
             },
             {
-                "peak_energy_window": (0, 18),  # shifted from 12-18 to 0-18
-                "peak_demand_window": (0, 18),  # shifted from 12-18 to 0-18
+                "peak_energy_window": (11, 19),  # expanded from 12-18
+                "peak_demand_window": (11, 19),  # expanded from 12-18
                 "peak_energy_charge": 0.16299,  # unchanged
                 "half_peak_energy_charge": 0.1196,  # unchanged
             },
             None,
             False,
         ),
-        # Window shifting to end at 24
+        # Window shifting boundary (start at 0, end at 24)
         (
             "billing_pge.csv",
             {
-                "shift_peak_hours_before": 0,
+                "shift_peak_hours_before": -12.0,  # Shift peak to start at 0
                 "shift_peak_hours_after": 6.0,  # Shift peak to end at 24
             },
             {
-                "peak_energy_window": (12, 24),  # shifted from 12-18 to 12-24
-                "peak_demand_window": (12, 24),  # shifted from 12-18 to 12-24
+                "peak_energy_window": (0, 24),  # shifted from 12-18 to 0-24
+                "peak_demand_window": (0, 24),  # shifted from 12-18 to 0-24
+                "peak_energy_charge": 0.16299,  # unchanged
+                "half_peak_energy_charge": 0.1196,  # unchanged
+            },
+            None,
+            False,
+        ),
+        # Window shifting for non-overlapping charges with random float shift values
+        (
+            "billing_pge.csv",
+            {
+                "shift_peak_hours_before": -2.104,  # expand peak window earlier
+                "shift_peak_hours_after": 2.7,  # expand peak window later
+            },
+            {
+                "peak_energy_window": (
+                    9.896,
+                    20.7,
+                ),  # expanded from 12-18 to 9.896-20.7
+                "peak_demand_window": (
+                    9.896,
+                    20.7,
+                ),  # expanded from 12-18 to 9.896-20.7
                 "peak_energy_charge": 0.16299,  # unchanged
                 "half_peak_energy_charge": 0.1196,  # unchanged
             },
@@ -1536,18 +1547,36 @@ def test_detect_charge_periods():
             ValueError,  # Throws ValueError due to conflict
             False,
         ),
-        # Random float window shift
+        # Window shifting test with super-off-peak adjacent to peak
         (
-            "billing_pge.csv",
+            "billing_energy_super_off_peak.csv",
             {
-                "shift_peak_hours_before": -12.104,  # negative = earlier start
-                "shift_peak_hours_after": -3.7,  # negative = earlier end
+                "shift_peak_hours_before": -2.0,  # Expand earlier into super off-peak
+                "shift_peak_hours_after": 1.0,
             },
             {
-                "peak_energy_window": (0, 14.3),  # shifted from 12-18 to 0-14.3
-                "peak_demand_window": (0, 14.3),  # shifted from 12-18 to 0-14.3
-                "peak_energy_charge": 0.16299,  # unchanged
-                "half_peak_energy_charge": 0.1196,  # unchanged
+                "peak_energy_window": (6, 18),  # shifted from 8-17 to 6-18
+                "peak_demand_window": (6, 18),  # shifted from 8-20 to 6-18
+                "super_off_peak_charge": 0.018994,  # super off-peak period charge
+            },
+            None,
+            False,
+        ),
+        # Super off-peak scaling
+        (
+            "billing_energy_super_off_peak.csv",
+            {
+                "scale_ratios": {
+                    "energy": {
+                        "peak": 1.0,
+                        "half_peak": 1.0,
+                        "off_peak": 1.0,
+                        "super_off_peak": 2.0,  # Double super off-peak charges
+                    },
+                },
+            },
+            {
+                "super_off_peak_charge": 0.037988,  # 0.018994 * 2
             },
             None,
             False,
@@ -1701,8 +1730,10 @@ def test_parametrize_rate_data(
         start_hour, end_hour = expected["peak_demand_window"]
         peak_demand = variant_data[
             (variant_data[TYPE] == costs.DEMAND)
-            & (variant_data["name"] == "peak-summer")
+            & (variant_data[HOUR_START] == start_hour)
+            & (variant_data[HOUR_END] == end_hour)
         ]
+
         if not peak_demand.empty:
             peak_demand_row = peak_demand.iloc[0]
             assert (
@@ -1735,6 +1766,22 @@ def test_parametrize_rate_data(
         assert not energy_charges.empty, "Should find energy charges"
         # Verify at least one energy charge is scaled (not all zeros)
         assert np.any(energy_charges[CHARGE] > 0), "Energy charges should be non-zero"
+
+        # Test super off-peak charges
+        if "super_off_peak_charge" in expected:
+            # Check for super off-peak periods (0-5 hours)
+            super_off_peak_energy = variant_data[
+                (variant_data[TYPE] == costs.ENERGY)
+                & (variant_data[HOUR_START] == 0)
+                & (variant_data[HOUR_END] == 5)
+            ]
+            assert (
+                not super_off_peak_energy.empty
+            ), "Should find super off-peak periods (0-5 hours)"
+            assert np.isclose(
+                super_off_peak_energy[costs.CHARGE_METRIC].values[0],
+                expected["super_off_peak_charge"],
+            )
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
