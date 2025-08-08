@@ -2,6 +2,7 @@ import os
 import pytest
 import numpy as np
 import pyomo.environ as pyo
+import cvxpy as cp
 
 from eeco import utils as ut
 
@@ -158,3 +159,97 @@ def test_max_pos_pyo(consumption_data, varstr, expected):
     solver.solve(model)
     assert pyo.value(result) == expected
     assert model is not None
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "consumption_data, expected_positive, expected_negative",
+    [
+        (
+            np.array([1, -2, 3, -4, 0]),
+            np.array([1, 0, 3, 0, 0]),
+            np.array([0, 2, 0, 4, 0]),
+        ),
+        (
+            np.array([5, 0, -3, 7, -1]),
+            np.array([5, 0, 0, 7, 0]),
+            np.array([0, 0, 3, 0, 1]),
+        ),
+        (np.array([0, 0, 0]), np.array([0, 0, 0]), np.array([0, 0, 0])),
+        (np.array([-10, -5, -1]), np.array([0, 0, 0]), np.array([10, 5, 1])),
+        (np.array([10, 5, 1]), np.array([10, 5, 1]), np.array([0, 0, 0])),
+    ],
+)
+def test_decompose_consumption_np(
+    consumption_data, expected_positive, expected_negative
+):
+    """Test decompose_consumption with numpy arrays."""
+    positive_values, negative_values, model = ut.decompose_consumption(consumption_data)
+
+    assert np.array_equal(positive_values, expected_positive)
+    assert np.array_equal(negative_values, expected_negative)
+    assert model is None
+    assert np.array_equal(consumption_data, positive_values - negative_values)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_decompose_consumption_cvx():
+    """Test decompose_consumption with cvxpy expressions."""
+    x = cp.Variable(5)
+    positive_values, negative_values, model = ut.decompose_consumption(x)
+    assert isinstance(positive_values, cp.Expression)
+    assert isinstance(negative_values, cp.Expression)
+    # TODO: add value checks
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "consumption_data, expected_positive_sum, expected_negative_sum",
+    [
+        (np.array([1, -2, 3, -4, 0]), 4, 6),  # positive: 1+3=4, negative: 2+4=6
+        (np.array([5, 0, -3, 7, -1]), 12, 4),  # positive: 5+7=12, negative: 3+1=4
+        (np.array([0, 0, 0]), 0, 0),
+        (np.array([-10, -5, -1]), 0, 16),  # positive: 0, negative: 10+5+1=16
+        (np.array([10, 5, 1]), 16, 0),  # positive: 10+5+1=16, negative: 0
+    ],
+)
+def test_decompose_consumption_pyo(
+    consumption_data, expected_positive_sum, expected_negative_sum
+):
+    """Test decompose_consumption with pyomo variables."""
+    model = pyo.ConcreteModel()
+    model.T = len(consumption_data)
+    model.t = range(1, model.T + 1)  # Pyomo uses 1-indexed
+
+    model.electric_consumption = pyo.Var(model.t, initialize=0)
+    for t in model.t:
+        model.electric_consumption[t].value = consumption_data[t - 1]
+
+    positive_var, negative_var, model = ut.decompose_consumption(
+        model.electric_consumption, model=model, varstr="electric"
+    )
+
+    init_consumption_data = {
+        "electric": consumption_data,
+    }
+    ut.initialize_decomposed_pyo_vars(init_consumption_data, model, None)
+
+    # Verify the expected sums from the initialized values
+    assert (
+        abs(sum(pyo.value(positive_var[t]) for t in model.t) - expected_positive_sum)
+        < 1e-6
+    )
+    assert (
+        abs(sum(pyo.value(negative_var[t]) for t in model.t) - expected_negative_sum)
+        < 1e-6
+    )
+
+    # Verify the decomposition constraint is satisfied
+    for t in model.t:
+        assert (
+            abs(
+                pyo.value(model.electric_consumption[t])
+                - (pyo.value(positive_var[t]) - pyo.value(negative_var[t]))
+            )
+            < 1e-6
+        )

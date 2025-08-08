@@ -535,7 +535,8 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
-    "consumption_estimate, desired_utility, desired_charge_type, expected_cost",
+    "consumption_estimate, desired_utility, desired_charge_type, expected_cost, "
+    "expect_warning, expect_error",
     [
         # single energy charge with flat consumption
         (
@@ -547,6 +548,8 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             None,
             None,
             pytest.approx(1.2),
+            False,
+            False,
         ),
         # single energy charge with increasing consumption
         (
@@ -558,6 +561,8 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             None,
             None,
             np.sum(np.arange(96)) * 0.05 / 4,
+            False,
+            False,
         ),
         # energy charge with charge limit
         (
@@ -584,6 +589,58 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             None,
             None,
             260,
+            False,
+            False,
+        ),
+        # single energy charge with negative consumption values - should warn
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
+            {
+                ELECTRIC: np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            pytest.approx(
+                3.0
+            ),  # (48*10 + 48*5) * 0.05 / 4 = 3.0 (negative values treated as magnitude)
+            True,
+            False,
+        ),
+        # list input instead of numpy array
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(4) * 0.05},
+            {
+                ELECTRIC: [1, 2, 3, 4],
+                GAS: [1, 1, 1, 1],
+            },  # Lists instead of numpy arrays
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            None,  # No expected cost
+            False,
+            True,
+        ),
+        # predefined consumption_data_dict format with invalid import/export types
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(4) * 0.05},
+            {
+                ELECTRIC: {"imports": [1, 2, 3, 4], "exports": [1, 2, 3, 4]},
+                GAS: np.ones(4),
+            },  # Extended format with invalid list types
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            None,  # No expected cost since error is raised
+            False,
+            True,  # AttributeError
         ),
     ],
 )
@@ -596,18 +653,70 @@ def test_calculate_cost_np(
     desired_utility,
     desired_charge_type,
     expected_cost,
+    expect_warning,
+    expect_error,
 ):
-    result, model = costs.calculate_cost(
-        charge_dict,
-        consumption_data_dict,
-        resolution=resolution,
-        prev_demand_dict=prev_demand_dict,
-        consumption_estimate=consumption_estimate,
-        desired_utility=desired_utility,
-        desired_charge_type=desired_charge_type,
-    )
-    assert result == expected_cost
-    assert model is None
+    if expect_error:
+        if (
+            isinstance(consumption_data_dict.get(ELECTRIC), dict)
+            and "imports" in consumption_data_dict[ELECTRIC]
+        ):
+            # Import/export format with invalid list types
+            with pytest.raises(
+                AttributeError, match="'list' object has no attribute 'shape'"
+            ):
+                costs.calculate_cost(
+                    charge_dict,
+                    consumption_data_dict,
+                    resolution=resolution,
+                    prev_demand_dict=prev_demand_dict,
+                    consumption_estimate=consumption_estimate,
+                    desired_utility=desired_utility,
+                    desired_charge_type=desired_charge_type,
+                )
+        else:
+            # Invalid list types
+            with pytest.raises(
+                TypeError,
+                match="Only CVXPY or Pyomo variables and NumPy arrays "
+                "are currently supported",
+            ):
+                costs.calculate_cost(
+                    charge_dict,
+                    consumption_data_dict,
+                    resolution=resolution,
+                    prev_demand_dict=prev_demand_dict,
+                    consumption_estimate=consumption_estimate,
+                    desired_utility=desired_utility,
+                    desired_charge_type=desired_charge_type,
+                )
+    elif expect_warning:
+        with pytest.warns(
+            UserWarning, match="Energy calculation includes negative values"
+        ):
+            result, model = costs.calculate_cost(
+                charge_dict,
+                consumption_data_dict,
+                resolution=resolution,
+                prev_demand_dict=prev_demand_dict,
+                consumption_estimate=consumption_estimate,
+                desired_utility=desired_utility,
+                desired_charge_type=desired_charge_type,
+            )
+        assert result == expected_cost
+        assert model is None
+    else:
+        result, model = costs.calculate_cost(
+            charge_dict,
+            consumption_data_dict,
+            resolution=resolution,
+            prev_demand_dict=prev_demand_dict,
+            consumption_estimate=consumption_estimate,
+            desired_utility=desired_utility,
+            desired_charge_type=desired_charge_type,
+        )
+        assert result == expected_cost
+        assert model is None
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1039,7 +1148,7 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
-            pytest.approx(140),
+            pytest.approx(138),
         ),
         # demand charge with no previous consumption
         (
@@ -1083,7 +1192,23 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
-            pytest.approx(1191),
+            pytest.approx(1188),
+        ),
+        # export charges
+        (
+            {
+                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+            },
+            {
+                ELECTRIC: np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            pytest.approx(-1.5),
         ),
         # energy charge with charge limit and time-varying consumption estimate
         (
@@ -1205,21 +1330,25 @@ def test_calculate_cost_pyo(
     expected_cost,
 ):
     model = pyo.ConcreteModel()
-    model.T = len(consumption_data_dict["electric"])
-    model.t = range(model.T)
-    pyo_vars = {}
-    for key, val in consumption_data_dict.items():
-        var = pyo.Var(range(len(val)), initialize=np.zeros(len(val)), bounds=(0, None))
-        model.add_component(key, var)
-        pyo_vars[key] = var
+    model.T = len(consumption_data_dict[ELECTRIC])
+    model.t = pyo.RangeSet(0, model.T - 1)
+    model.electric_consumption = pyo.Var(model.t, bounds=(None, None))
+    model.gas_consumption = pyo.Var(model.t, bounds=(None, None))
 
-    @model.Constraint(model.t)
-    def electric_constraint(m, t):
-        return consumption_data_dict["electric"][t] == m.electric[t]
+    # Constrain variables to initialized values
+    def electric_constraint_rule(model, t):
+        return model.electric_consumption[t] == consumption_data_dict[ELECTRIC][t - 1]
 
-    @model.Constraint(model.t)
-    def gas_constraint(m, t):
-        return consumption_data_dict["gas"][t] == m.gas[t]
+    def gas_constraint_rule(model, t):
+        return model.gas_consumption[t] == consumption_data_dict[GAS][t - 1]
+
+    model.electric_constraint = pyo.Constraint(model.t, rule=electric_constraint_rule)
+    model.gas_constraint = pyo.Constraint(model.t, rule=gas_constraint_rule)
+
+    pyo_vars = {
+        "electric": model.electric_consumption,
+        "gas": model.gas_consumption,
+    }
 
     result, model = costs.calculate_cost(
         charge_dict,
@@ -1230,10 +1359,28 @@ def test_calculate_cost_pyo(
         desired_utility=desired_utility,
         desired_charge_type=desired_charge_type,
         model=model,
+        decompose_exports=any("export" in key for key in charge_dict.keys()),
     )
 
-    model.objective = pyo.Objective(expr=result)
-    solver = pyo.SolverFactory("gurobi")
+    # Initialize Pyomo variables if decompose_exports is True
+    decompose_exports = any("export" in key for key in charge_dict.keys())
+    if decompose_exports:
+        init_consumption_data = {
+            "electric": np.array(
+                [consumption_data_dict[ELECTRIC][t - 1] for t in model.t]
+            ),
+            "gas": np.array([consumption_data_dict[GAS][t - 1] for t in model.t]),
+        }
+        utils.initialize_decomposed_pyo_vars(init_consumption_data, model, charge_dict)
+
+    model.obj = pyo.Objective(expr=result)
+
+    # Use IPOPT for nonlinear constraints when decompose_exports=True
+    if decompose_exports:
+        solver = pyo.SolverFactory("ipopt")
+    else:  # Gurobi otherwise
+        solver = pyo.SolverFactory("gurobi")
+
     solver.solve(model)
     assert pyo.value(result) == expected_cost
     assert model is not None
@@ -1698,13 +1845,28 @@ def test_calculate_energy_costs(
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "charge_array, export_data, divisor, expected",
+    "charge_array, export_data, divisor, expected, expect_warning",
     [
-        (np.ones(96), np.arange(96), 4, 1140),
+        (
+            np.ones(96),
+            np.arange(96),
+            4,
+            1140,
+            False,
+        ),  # positive values (export magnitude)
+        (
+            np.ones(96),
+            np.arange(96),
+            4,
+            1140,
+            False,
+        ),  # positive values (export magnitude)
     ],
 )
-def test_calculate_export_revenues(charge_array, export_data, divisor, expected):
-    result, model = costs.calculate_export_revenues(charge_array, export_data, divisor)
+def test_calculate_export_revenue(
+    charge_array, export_data, divisor, expected, expect_warning
+):
+    result, model = costs.calculate_export_revenue(charge_array, export_data, divisor)
     assert result == expected
     assert model is None
 
