@@ -637,9 +637,7 @@ def calculate_demand_cost(
         max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
         return max_pos_val * scale_factor, max_pos_model
     else:
-        max_var, model = ut.max(
-            demand_charged, model=model, varstr=varstr + "_max"
-        )
+        max_var, model = ut.max(demand_charged, model=model, varstr=varstr + "_max")
         max_pos_val, max_pos_model = ut.max_pos(
             max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
         )
@@ -717,7 +715,7 @@ def calculate_energy_cost(
         n_steps = len(consumption_data)
 
     # Check if this is a flat charge (no tiers)
-    is_flat_charge = (limit == 0 and next_limit == float("inf"))
+    is_flat_charge = limit == 0 and next_limit == float("inf")
 
     if isinstance(consumption_data, np.ndarray):
         if np.any(consumption_data < 0):
@@ -726,7 +724,7 @@ def calculate_energy_cost(
                 "Pass in only positive values or "
                 "run calculate_cost with decompose_exports=True"
             )
-        
+
         if is_flat_charge:
             # For flat charges, use simple multiplication
             cost = np.sum(consumption_data * charge_array) / divisor
@@ -746,7 +744,9 @@ def calculate_energy_cost(
                         within_limit_flag = False
                         cost += (
                             max(
-                                float(next_limit) + consumption_data[i] / divisor - energy,
+                                float(next_limit)
+                                + consumption_data[i] / divisor
+                                - energy,
                                 0,
                             )
                             * charge_array[i]
@@ -820,6 +820,7 @@ def calculate_energy_cost(
 
     return cost, model
 
+
 def calculate_export_revenue(
     charge_array, consumption_data, divisor, model=None, varstr=""
 ):
@@ -827,6 +828,7 @@ def calculate_export_revenue(
     utility, and consumption information.
 
     Only flat rates for exports are supported (in $ / kWh).
+    Returns positive revenue values that should be subtracted from total cost.
 
     Parameters
     ----------
@@ -834,8 +836,9 @@ def calculate_export_revenue(
         array with price per kWh sold back to the grid
 
     consumption_data : numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
-        Negative components electrical or gas usage data
-        as an optimization variable object
+        Magnitude of exported electrical or gas usage data
+        as an optimization variable object.
+        Should be positive values.
 
     divisor : int
         Divisor for the export revenue, based on the timeseries resolution
@@ -862,13 +865,6 @@ def calculate_export_revenue(
         and the second entry being the pyomo model object (or None)
     """
     if isinstance(consumption_data, np.ndarray):
-        # Check for positive values in export calculation
-        if np.any(consumption_data > 0):
-            warnings.warn(
-                "UserWarning: Export calculation includes positive values. "
-                "Pass in only negative values or "
-                "run calculate_cost with decompose_exports=True"
-            )
         return np.sum(consumption_data * charge_array) / divisor, model
 
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
@@ -1058,22 +1054,23 @@ def calculate_cost(
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
     n_per_day = n_per_hour * 24
 
+    # Initialize definition of conversion factors for each utility type
+    conversion_factors = {}
+    conversion_factors[ELECTRIC] = (1 * electric_consumption_units).to(u.kW).magnitude
+    conversion_factors[GAS] = (
+        (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
+    )
+
     # Use provided consumption_object_dict or create one
     if consumption_object_dict is None:
+        print("consumption object dict is none")
         consumption_object_dict = {}
 
         # Define the conversion factors upfront for each utility,
         # To pass into each charge array below
         for utility in consumption_data_dict.keys():
             consumption_object_dict[utility] = {}
-            if utility == "electric":
-                conversion_factor = (1 * electric_consumption_units).to(u.kW).magnitude
-            elif utility == "gas":
-                conversion_factor = (
-                    (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
-                )
-            else:
-                raise ValueError("Invalid utility: " + utility)
+            conversion_factor = conversion_factors[utility]
 
             converted_consumption, model = ut.multiply(
                 consumption_data_dict[utility],
@@ -1084,24 +1081,19 @@ def calculate_cost(
 
             if decompose_exports:
                 # Decompose consumption data into positive and negative components
-                # with constraint that total = positive + negative
-                imports, exports, model = (
-                    ut.decompose_consumption(
-                        converted_consumption,
-                        model=model,
-                        varstr=utility + "_decomposed",
-                    )
+                # with constraint that total = positive - negative
+                # (where negative is stored as positive magnitude)
+                imports, exports, model = ut.decompose_consumption(
+                    converted_consumption,
+                    model=model,
+                    varstr=utility + "_decomposed",
                 )
 
                 # Store the same objects for subsequent calculations
-                consumption_object_dict[utility][
-                    "imports"
-                ] = imports
+                consumption_object_dict[utility]["imports"] = imports
                 consumption_object_dict[utility]["exports"] = exports
             else:
-                consumption_object_dict[utility][
-                    "imports"
-                ] = converted_consumption
+                consumption_object_dict[utility]["imports"] = converted_consumption
                 consumption_object_dict[utility]["exports"] = converted_consumption
 
     for key, charge_array in charge_dict.items():
@@ -1116,10 +1108,10 @@ def calculate_cost(
         ):
             continue
 
-        if utility == "electric":
+        if utility == ELECTRIC:
             divisor = n_per_hour
-        elif utility == "gas":
-            divisor = n_per_day / conversion_factor
+        elif utility == GAS:
+            divisor = n_per_day / conversion_factors[utility]
         else:
             raise ValueError("Invalid utility: " + utility)
 
@@ -1176,7 +1168,7 @@ def calculate_cost(
                 model=model,
                 varstr=varstr,
             )
-            cost += new_cost
+            cost -= new_cost
         elif charge_type == CUSTOMER:
             cost += charge_array.sum()
         else:
@@ -1303,9 +1295,9 @@ def calculate_itemized_cost(
 
     for utility in consumption_data_dict.keys():
         consumption_object_dict[utility] = {}
-        if utility == "electric":
+        if utility == ELECTRIC:
             conversion_factor = (1 * electric_consumption_units).to(u.kW).magnitude
-        elif utility == "gas":
+        elif utility == GAS:
             conversion_factor = (
                 (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
             )
@@ -1321,20 +1313,17 @@ def calculate_itemized_cost(
 
         if decompose_exports:
             # Decompose consumption data into positive and negative components
-            # with constraint that total = positive + negative
-            imports, exports, model = (
-                ut.decompose_consumption(
-                    converted_consumption, model=model, varstr=utility + "_decomposed"
-                )
+            # with constraint that total = positive - negative
+            # (where negative is stored as positive magnitude)
+            imports, exports, model = ut.decompose_consumption(
+                converted_consumption, model=model, varstr=utility + "_decomposed"
             )
 
             # Store the same objects for subsequent calculations
             consumption_object_dict[utility]["imports"] = imports
             consumption_object_dict[utility]["exports"] = exports
         else:
-            consumption_object_dict[utility][
-                "imports"
-            ] = converted_consumption
+            consumption_object_dict[utility]["imports"] = converted_consumption
             consumption_object_dict[utility]["exports"] = converted_consumption
 
     if desired_utility is None:
@@ -1549,9 +1538,7 @@ def detect_charge_periods(
 
 def parametrize_rate_data(
     rate_data,
-    individual_ratios={},
-    scale_all_demand=None,
-    scale_all_energy=None,
+    scale_ratios={},
     shift_peak_hours_before=0,
     shift_peak_hours_after=0,
     variant_name=None,
@@ -1566,10 +1553,10 @@ def parametrize_rate_data(
     ----------
     rate_data : pandas.DataFrame
         Tariff data with required columns
-    individual_ratios : dict, optional
-        Nested dictionary for charge scaling. Can be either:
+    scale_ratios : dict, optional
+        Dictionary for charge scaling. Can be one of three formats:
 
-        Option 1 - Nested dictionary with structure for charge scaling:
+        Format 1 - Nested dictionary with structure for charge scaling:
         {
             'demand': {
                 'peak': float, 'half_peak': float,
@@ -1581,7 +1568,7 @@ def parametrize_rate_data(
             }
         }
 
-        Option 2 - Dictionary with exact charge key prefixes based on csv:
+        Format 2 - Dictionary with exact charge key prefixes based on csv:
         {
             'electric_demand_peak-summer': float,
             'electric_energy_0': float,
@@ -1589,13 +1576,13 @@ def parametrize_rate_data(
             ...
         }
 
+        Format 3 - Global scaling for all charges of each type:
+        {
+            'demand': float,  # scales all demand charges
+            'energy': float,   # scales all energy charges
+        }
+
         If None, all ratios default to 1.0
-    scale_all_demand : float, optional
-        If provided, scales all demand charges by this factor
-        (overrides individual ratios)
-    scale_all_energy : float, optional
-        If provided, scales all energy charges by this factor
-        (overrides individual ratios)
     shift_peak_hours_before : float, optional
         Hours to shift peak window start
         (negative=earlier, positive=later).
@@ -1612,6 +1599,14 @@ def parametrize_rate_data(
     pandas.DataFrame
         Updated rate_data dataframe with
         parametrized charges and windows
+
+    Raises
+    ------
+    ValueError
+        If scale_ratios contains both period-based scaling and individual charge
+        scaling for the same charge type
+    UserWarning
+        If scale_ratios contains exact charge keys that are not found in the data
     """
     variant_data = rate_data.copy(deep=True)
     variant_data[HOUR_START] = variant_data[HOUR_START].astype(float)
@@ -1623,62 +1618,27 @@ def parametrize_rate_data(
         else [CHARGE]
     )
 
-    # Determine if individual_ratios uses exact charge keys or standard periods
-    uses_exact_keys = len(individual_ratios) > 0 and any(
+    # Determine the type of scale_ratios input
+    has_exact_keys = len(scale_ratios) > 0 and any(
         isinstance(k, str) and ("electric_" in k or "gas_" in k)
-        for k in individual_ratios.keys()
+        for k in scale_ratios.keys()
     )
 
-    if uses_exact_keys:
-        ratios = individual_ratios
-        # Check for conflicts between setting individual ratios and scale_all
-        if scale_all_demand is not None or scale_all_energy is not None:
-            warnings.warn(
-                "scale_all_demand/scale_all_energy overrides individual ratios",
-                "when using exact charge keys.",
-                "Only scale_all parameters will be used.",
-                UserWarning,
-            )
-    else:
-        # Check for conflicts between setting individual ratios and scale_all
-        for charge_type, scale_all in [
-            (DEMAND, scale_all_demand),
-            (ENERGY, scale_all_energy),
-        ]:
-            if scale_all is not None and any(
-                ratio != 1.0
-                for ratio in individual_ratios.get(charge_type, {}).values()
-            ):
-                warnings.warn(
-                    f"scale_all_{charge_type} overrides individual ratios.",
-                    f"Only scale_all_{charge_type} will be used.",
-                    UserWarning,
-                )
+    has_global_scaling = len(scale_ratios) > 0 and any(
+        k in [DEMAND, ENERGY] and isinstance(v, (int, float))
+        for k, v in scale_ratios.items()
+    )
 
-        ratios = {
-            charge_type: {
-                period: (
-                    (scale_all_demand if charge_type == DEMAND else scale_all_energy)
-                    if (scale_all_demand if charge_type == DEMAND else scale_all_energy)
-                    is not None
-                    else individual_ratios.get(charge_type, {}).get(period, 1.0)
-                )
-                for period in [PEAK, HALF_PEAK, OFF_PEAK, SUPER_OFF_PEAK]
-            }
-            for charge_type in [DEMAND, ENERGY]
-        }
+    has_period_scaling = len(scale_ratios) > 0 and any(
+        isinstance(v, dict) and k in [DEMAND, ENERGY] for k, v in scale_ratios.items()
+    )
 
-    # Validate shift parameters as multiples of 0.25 hours
-    for shift_param, param_name in [
-        (shift_peak_hours_before, "shift_peak_hours_before"),
-        (shift_peak_hours_after, "shift_peak_hours_after"),
-    ]:
-        if shift_param != 0 and shift_param % 0.25 != 0:
-            raise ValueError(
-                f"{param_name} must be a multiple of 0.25 hours (15 minutes). "
-                f"Got {shift_param}"
-            )
-        #TODO: allow less than 15 minutes but greater than resolution of tariff
+    # Check for conflicts between period/global scaling and exact keys
+    if has_exact_keys and (has_period_scaling or has_global_scaling):
+        raise ValueError(
+            "scale_ratios cannot contain both exact charge keys"
+            " and global/period-based scaling"
+        )
 
     # Cache original charges and track processed/shifted rows
     original_charges = {
@@ -1688,12 +1648,40 @@ def parametrize_rate_data(
     }
     processed_rows, shifted_rows = set(), set()
 
+    # Track shifted rows and missing keys
+    shifted_rows = {ENERGY: set(), DEMAND: set()}
+    missing_keys = set()
+
     # Process each month, weekday, charge_type
     for charge_type in [ENERGY, DEMAND]:
-        if uses_exact_keys:  # process each row individually
-            charge_ratios = ratios
-        else:  # period-based approach
-            charge_ratios = ratios[charge_type]
+        # Determine charge ratios for this charge type
+        if (
+            has_global_scaling
+            and charge_type in scale_ratios
+            and isinstance(scale_ratios[charge_type], (int, float))
+        ):
+            # Format 3: Global scaling for all charges of this type
+            # Set all period factors to the same value
+            scale_factor = scale_ratios[charge_type]
+            charge_ratios = {
+                PEAK: scale_factor,
+                HALF_PEAK: scale_factor,
+                OFF_PEAK: scale_factor,
+                SUPER_OFF_PEAK: scale_factor,
+            }
+        elif has_exact_keys:
+            # Format 2: Exact charge keys
+            charge_ratios = scale_ratios
+        elif has_period_scaling and charge_type in scale_ratios:
+            # Format 1: Period-based scaling
+            charge_ratios = scale_ratios[charge_type]
+        else:  # Default: no scaling - set all ratios to 1.0
+            charge_ratios = {
+                PEAK: 1.0,
+                HALF_PEAK: 1.0,
+                OFF_PEAK: 1.0,
+                SUPER_OFF_PEAK: 1.0,
+            }
 
         for month in range(1, 13):
             for weekday in range(7):
@@ -1746,7 +1734,7 @@ def parametrize_rate_data(
                     row = variant_data.loc[row_idx]
 
                     # Determine the ratio to apply
-                    if uses_exact_keys:
+                    if has_exact_keys:  # Format 2: Exact charge key matching
                         name = (
                             str(row.get("name", "")).replace("_", "-")
                             if pd.notna(row.get("name")) and row.get("name")
@@ -1763,16 +1751,11 @@ def parametrize_rate_data(
                                     ratio = key_ratio
                                     break
                             else:
-                                warnings.warn(
-                                    f"Charge key w/ '{row[UTILITY]}_{row[TYPE]}_{name}'"
-                                    f"not found in individual_ratios. "
-                                    f"Using default ratio of 1.0.",
-                                    UserWarning,
-                                )
-                                #TODO: raise warning if user passed in a key that doesn't exist
-                                #TODO: Only need to raise one warning with a list of keys that weren't varied
-                    else:  # period-based appeoach
+                                missing_keys.add(f"{row[UTILITY]}_{row[TYPE]}_{name}")
+                    elif charge_ratios:  # Format 1: Period-based approach
                         ratio = charge_ratios[period]
+                    else:  # No scaling
+                        ratio = 1.0
 
                     for col in charge_cols:
                         if col in variant_data.columns:
@@ -1822,7 +1805,7 @@ def parametrize_rate_data(
                         ).iloc[0]
 
                         # Only shift if this period hasn't been shifted before
-                        if peak_period.name not in shifted_rows:
+                        if peak_period.name not in shifted_rows[charge_type]:
                             orig_peak_start, orig_peak_end = (
                                 peak_period[HOUR_START],
                                 peak_period[HOUR_END],
@@ -1834,15 +1817,23 @@ def parametrize_rate_data(
                                 24, orig_peak_end + shift_peak_hours_after
                             )
 
-                            # Ensure the window doesn't become invalid (start >= end)
-                            if new_peak_start < new_peak_end:
+                            # Check if the window becomes invalid (start >= end)
+                            if new_peak_start >= new_peak_end:
+                                # Remove the peak period row and give warning
+                                variant_data = variant_data.drop(peak_period.name)
+                                warnings.warn(
+                                    f"Peak window was shifted to zero width for"
+                                    f"{charge_type} in month {month} weekday {weekday}",
+                                    UserWarning,
+                                )
+                            else:
                                 variant_data.loc[peak_period.name, HOUR_START] = (
                                     new_peak_start
                                 )
                                 variant_data.loc[peak_period.name, HOUR_END] = (
                                     new_peak_end
                                 )
-                                shifted_rows.add(peak_period.name)
+                                shifted_rows[charge_type].add(peak_period.name)
 
                                 # Shift adjacent half-peak periods
                                 half_peak_mask = (
@@ -1856,16 +1847,25 @@ def parametrize_rate_data(
                                 )
 
                                 for idx in variant_data[half_peak_mask].index:
-                                    if idx in shifted_rows:
+                                    if idx in shifted_rows[charge_type]:
                                         continue
 
                                     row = variant_data.loc[idx]
                                     if np.isclose(row[HOUR_END], orig_peak_start):
                                         variant_data.loc[idx, HOUR_END] = new_peak_start
-                                        shifted_rows.add(idx)
+                                        shifted_rows[charge_type].add(idx)
                                     elif np.isclose(row[HOUR_START], orig_peak_end):
                                         variant_data.loc[idx, HOUR_START] = new_peak_end
-                                        shifted_rows.add(idx)
+                                        shifted_rows[charge_type].add(idx)
+
+    # Issue consolidated warning for missing charge keys
+    if missing_keys and has_exact_keys:
+        missing_keys_list = sorted(list(missing_keys))
+        warnings.warn(
+            f"The following charge keys were not found in scale_ratios and "
+            f"will use default ratio of 1.0: {missing_keys_list}",
+            UserWarning,
+        )
 
     return variant_data
 
@@ -1886,27 +1886,21 @@ def parametrize_charge_dict(start_dt, end_dt, rate_data, variants=None):
         tariff data with required columns
     variants : list[dict]
         List of dictionaries containing variation parameters with keys:
-        - individual_ratios: dict with nested structure for charge scaling:
-            {
-                'demand': {
-                    'peak': float, 'half_peak': float,
-                    'off_peak': float, 'super_off_peak': float
-                },
-                'energy': {
-                    'peak': float, 'half_peak': float,
-                    'off_peak': float, 'super_off_peak': float
-                }
-            }
-        - scale_all_demand: float to scale all charges of type demand
-        - scale_all_energy: float to scale all charges of type energy
-        - shift_peak_hours_before: float to shift peak start (multiples of 15 min)
-        - shift_peak_hours_after: float to shift peak end (multiples of 15 min)
+        - scale_ratios: dict for charge scaling (see parametrize_rate_data for options)
+        - shift_peak_hours_before: float to shift peak start, in hours
+        - shift_peak_hours_after: float to shift peak end, in hours
         - variant_name: str (optional) variant name
 
     Returns
     -------
     dict
         dictionary of charge_dicts with different variations
+
+    Raises
+    ------
+    UserWarning
+        If global scaling overrides individual ratios in any variant
+        (inherited from parametrize_rate_data)
     """
 
     # Initialize rate data dictionary with copy of original data
@@ -1914,6 +1908,9 @@ def parametrize_charge_dict(start_dt, end_dt, rate_data, variants=None):
 
     # Initialize dictionary of charge dicts for given start/end dates with variants
     charge_dicts = {"original": get_charge_dict(start_dt, end_dt, rate_data)}
+
+    if variants is None:
+        return charge_dicts
 
     for i, variant in enumerate(variants):
         # Use variant_name if specified, otherwise use default 'variant_{i}'
