@@ -341,7 +341,13 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
 
 
 def get_charge_df(
-    start_dt, end_dt, rate_data, resolution="15m", keep_fixed_charges=True
+    start_dt,
+    end_dt,
+    rate_data,
+    resolution="15m",
+    keep_fixed_charges=True,
+    scale_fixed_charges=True,
+    scale_demand_charges=False,
 ):
     """Creates a dictionary where the values are charge arrays and keys are of the form
     `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
@@ -364,17 +370,29 @@ def get_charge_df(
         granularity of each timestep in string form with default value of "15m"
 
     keep_fixed_charges : bool
-        If True, fixed charges will be divided amongst all time steps and included.
+        If True, fixed charges will included.
         If False, fixed charges will be dropped from the output. Default is False.
+
+    scale_fixed_charges : bool
+        If True, fixed charges will be divided amongst all time steps and scaled
+        by timesteps in the month. If False, they will not be scaled
+        but included in the first timestep only. Default is True.
+
+    scale_demand_charges : bool
+        If True, demand charges will be scaled by the number of timesteps in the month.
+        If False, they will not be scaled. Default is False.
 
     Returns
     -------
     pandas.DataFrame
         DataFrame of charge arrays
     """
+    # get the number of timesteps in a day (according to charge resolution)
+    res_binsize_minutes = ut.get_freq_binsize_minutes(resolution)
+
+    # get the charge dictionary
     charge_dict = get_charge_dict(start_dt, end_dt, rate_data, resolution=resolution)
 
-    res_binsize_minutes = ut.get_freq_binsize_minutes(resolution)
     if isinstance(start_dt, dt.datetime) or isinstance(end_dt, dt.datetime):
         ntsteps = int((end_dt - start_dt) / dt.timedelta(minutes=res_binsize_minutes))
         datetime = pd.DataFrame(
@@ -407,15 +425,39 @@ def get_charge_df(
         )
     }
 
+    if scale_fixed_charges or scale_demand_charges:
+        # calculate the scale factor
+        month = start_dt.month
+        year = end_dt.year
+        mins_in_month = (
+            (dt.date(year, month + 1, 1) - dt.date(year, month, 1)).days * 24 * 60
+        )
+        bins_in_month = mins_in_month / res_binsize_minutes
+        scale_factor = ntsteps / bins_in_month
+    else:
+        scale_factor = 1.0
+
     if keep_fixed_charges:
         # replace the fixed charge in charge_dict with its time-averaged value
         for key, value in fixed_charge_dict.items():
-            charge_dict[key] = np.ones(ntsteps) * value / ntsteps
+            if scale_fixed_charges:
+                arr = np.ones(ntsteps) * value[0] * scale_factor / ntsteps
+            else:
+                arr = np.zeros(ntsteps)
+                arr[0] = value[0]
 
+            charge_dict[key] = arr
     else:
         # remove fixed charges from the charge_dict
         for key in fixed_charge_dict.keys():
             del charge_dict[key]
+
+    if scale_demand_charges:
+        demand_charge_dict = {
+            key: value for key, value in charge_dict.items() if "demand" in key
+        }
+        for key, value in demand_charge_dict.items():
+            charge_dict[key] = value * scale_factor
 
     charge_df = pd.DataFrame(charge_dict)
 
