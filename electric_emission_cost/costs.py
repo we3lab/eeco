@@ -798,10 +798,11 @@ def calculate_energy_cost(
         consumption_per_timestep = consumption_estimate / n_steps
         total_consumption = prev_consumption
         end_idx = None
+        start_idx = None
         for i in range(n_steps): 
-            if total_consumption >= float(limit):
+            if total_consumption >= float(limit) and start_idx is None:
                 start_idx = i # index where this charge tier starts
-            if total_consumption >= float(next_limit):
+            if total_consumption >= float(next_limit) and end_idx is None:
                 end_idx = i # index where this charge tier ends
             total_consumption += consumption_per_timestep
         charge_array[:start_idx] = 0
