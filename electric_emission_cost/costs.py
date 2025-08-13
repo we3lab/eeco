@@ -799,11 +799,11 @@ def calculate_energy_cost(
         total_consumption = prev_consumption
         end_idx = None
         start_idx = None
-        for i in range(n_steps): 
+        for i in range(n_steps):
             if total_consumption >= float(limit) and start_idx is None:
-                start_idx = i # index where this charge tier starts
+                start_idx = i  # index where this charge tier starts
             if total_consumption >= float(next_limit) and end_idx is None:
-                end_idx = i # index where this charge tier ends
+                end_idx = i  # index where this charge tier ends
             total_consumption += consumption_per_timestep
         charge_array[:start_idx] = 0
         if end_idx is not None:
@@ -811,9 +811,7 @@ def calculate_energy_cost(
         charge_expr, model = ut.multiply(
             consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
         )
-        sum_result, model = ut.sum(
-            charge_expr, model=model, varstr=varstr + "_sum"
-        )
+        sum_result, model = ut.sum(charge_expr, model=model, varstr=varstr + "_sum")
         cost, model = ut.max_pos(
             sum_result / divisor,
             model=model,
