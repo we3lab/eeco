@@ -1039,8 +1039,8 @@ def calculate_cost(
         )
 
         # if we want itemized costs skip irrelvant portions of the bill
-        if (desired_utility and utility != desired_utility) or (
-            desired_charge_type and charge_type != desired_charge_type
+        if (desired_utility and utility not in desired_utility) or (
+            desired_charge_type and charge_type not in desired_charge_type
         ):
             continue
 
