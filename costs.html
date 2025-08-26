@@ -83,10 +83,14 @@
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.calculate_itemized_cost"><code class="docutils literal notranslate"><span class="pre">calculate_itemized_cost()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.create_charge_array"><code class="docutils literal notranslate"><span class="pre">create_charge_array()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.default_varstr_alias_func"><code class="docutils literal notranslate"><span class="pre">default_varstr_alias_func()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.detect_charge_periods"><code class="docutils literal notranslate"><span class="pre">detect_charge_periods()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.get_charge_array_duration"><code class="docutils literal notranslate"><span class="pre">get_charge_array_duration()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.get_charge_df"><code class="docutils literal notranslate"><span class="pre">get_charge_df()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.get_charge_dict"><code class="docutils literal notranslate"><span class="pre">get_charge_dict()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.get_next_limit"><code class="docutils literal notranslate"><span class="pre">get_next_limit()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.get_unique_row_name"><code class="docutils literal notranslate"><span class="pre">get_unique_row_name()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.parametrize_charge_dict"><code class="docutils literal notranslate"><span class="pre">parametrize_charge_dict()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.parametrize_rate_data"><code class="docutils literal notranslate"><span class="pre">parametrize_rate_data()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
@@ -295,11 +299,13 @@ structure, utility, and consumption information.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>charge_array</strong> (<em>numpy.ndarray</em>) – Array of the charges in $/kWh for electric and $/cubic meter for gas</p></li>
 <li><p><strong>consumption_data</strong> (<em>numpy.ndarray cvxpy.Expression, or pyomo.environ.Var</em>) – Baseline electrical or gas usage data as an optimization variable object</p></li>
-<li><p><strong>divisor</strong> (<em>int</em>) – Divisor for the energy charges</p></li>
+<li><p><strong>divisor</strong> (<em>int</em>) – Divisor for the energy charges, based on the timeseries resolution</p></li>
 <li><p><strong>limit</strong> (<em>float</em>) – The total consumption, or limit, that this charge came into effect.
 Default is 0</p></li>
 <li><p><strong>next_limit</strong> (<em>float</em>) – The total consumption, or limit, that the next charge comes into effect.
 Default is float(‘inf’) indicating that there is no higher tier</p></li>
+<li><p><strong>prev_consumption</strong> (<em>float</em>) – Previous total energy consumption for tiered charges.
+Default is 0</p></li>
 <li><p><strong>consumption_estimate</strong> (<em>float</em>) – Estimate of the total monthly demand or energy consumption from baseline data.
 Only used when <cite>consumption_data</cite> is cvxpy.Expression or pyomo.environ.Var
 for convex relaxation of tiered charges, while numpy.ndarray <cite>consumption_data</cite>
@@ -330,13 +336,14 @@ and the second entry being the pyomo model object (or None)</p>
 <span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_export_revenues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">export_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divisor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#calculate_export_revenues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.calculate_export_revenues" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates the export revenues for the given billing rate structure,
 utility, and consumption information.</p>
-<p>Only flat rates for exports are supported (in $ / kWh).</p>
+<p>Only flat rates for exports are supported (in $ / kWh).
+Returns positive revenue values that should be subtracted from total cost.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>charge_array</strong> (<em>numpy.ndarray</em>) – array with price per kWh sold back to the grid</p></li>
 <li><p><strong>consumption_data</strong> (<em>numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</em>) – Baseline electrical or gas usage data as an optimization variable object</p></li>
-<li><p><strong>divisor</strong> (<em>int</em>) – Divisor for the export revenue</p></li>
+<li><p><strong>divisor</strong> (<em>int</em>) – Divisor for the export revenue, based on the timeseries resolution</p></li>
 <li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <li><p><strong>varstr</strong> (<em>str</em>) – Name of the variable to be created if using a Pyomo <cite>model</cite></p></li>
@@ -482,6 +489,40 @@ to customize variable names.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.detect_charge_periods">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">detect_charge_periods</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charge_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">month</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weekday</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution_minutes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#detect_charge_periods"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.detect_charge_periods" title="Permalink to this definition"></a></dt>
+<dd><p>Categorize charges into charge periods
+(peak, half-peak, off-peak, super-off-peak)
+for a particular month, weekday and charge_type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rate_data</strong> (<em>pandas.DataFrame</em>) – Tariff data with required columns</p></li>
+<li><p><strong>charge_type</strong> (<em>str</em>) – Type of charge (ENERGY or DEMAND)</p></li>
+<li><p><strong>month</strong> (<em>int</em>) – Month (1-12)</p></li>
+<li><p><strong>weekday</strong> (<em>int</em>) – Weekday (0-6)</p></li>
+<li><p><strong>resolution_minutes</strong> (<em>int</em>) – Time resolution in minutes for checking full day coverage. Default 30</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>period_categories: dict with period classifications for each row index:
+- PEAK: highest charge periods
+- HALF_PEAK: periods adjacent to peak
+- OFF_PEAK: average charge periods
+- SUPER_OFF_PEAK: below average charge periods</p></li>
+<li><p>base_charge: the most frequent charge value</p></li>
+<li><p>has_overlapping: the most frequent charge value</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple with</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="electric_emission_cost.costs.get_charge_array_duration">
 <span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">get_charge_array_duration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#get_charge_array_duration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.get_charge_array_duration" title="Permalink to this definition"></a></dt>
 <dd><p>Parse a charge array key to determine the duration of the charge period.</p>
@@ -530,7 +571,7 @@ If False, they will not be scaled. Default is False.</p></li>
 <dd class="field-even"><p>DataFrame of charge arrays</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.1)">pandas.DataFrame</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.2)">pandas.DataFrame</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -579,6 +620,131 @@ If False, they will not be scaled. Default is False.</p></li>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.get_unique_row_name">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">get_unique_row_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#get_unique_row_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.get_unique_row_name" title="Permalink to this definition"></a></dt>
+<dd><p>Get a unique row name for each row of charge df.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>charge</strong> (<em>dict or pandas.Series</em>) – The charge row data containing NAME and PERIOD fields</p></li>
+<li><p><strong>index</strong> (<em>int, optional</em>) – Index to use if name is empty or None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A unique name with underscores converted to dashes</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.parametrize_charge_dict">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">parametrize_charge_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variants</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#parametrize_charge_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.parametrize_charge_dict" title="Permalink to this definition"></a></dt>
+<dd><p>Takes in an existing charge_dict and varies it parametrically to create
+alternative rate structures. Calls parametrize_rate_data to parametrize the
+billing csv file, then calls it on the dates specified.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_dt</strong> (<em>datetime.datetime</em>) – first timestep to be included in the cost analysis</p></li>
+<li><p><strong>end_dt</strong> (<em>datetime.datetime</em>) – last timestep to be included in the cost analysis</p></li>
+<li><p><strong>rate_data</strong> (<em>pandas.DataFrame</em>) – tariff data with required columns</p></li>
+<li><p><strong>variants</strong> (<em>list[dict]</em>) – List of dictionaries containing variation parameters with keys:
+- scale_ratios: dict for charge scaling (see parametrize_rate_data for options)
+- shift_peak_hours_before: float to shift peak start, in hours
+- shift_peak_hours_after: float to shift peak end, in hours
+- variant_name: str (optional) variant name</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dictionary of charge_dicts with different variations</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)">dict</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#UserWarning" title="(in Python v3.13)"><strong>UserWarning</strong></a> – If global scaling overrides individual ratios in any variant
+    (inherited from parametrize_rate_data)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.parametrize_rate_data">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">parametrize_rate_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_ratios</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift_peak_hours_before</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift_peak_hours_after</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variant_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#parametrize_rate_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.parametrize_rate_data" title="Permalink to this definition"></a></dt>
+<dd><p>Parametrize rate data by charge periods
+(peak, half-peak, off-peak, super-off-peak) or exact charge keys.
+Applies scaling and window shifting to create
+alternative rate structures.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul>
+<li><p><strong>rate_data</strong> (<em>pandas.DataFrame</em>) – Tariff data with required columns</p></li>
+<li><p><strong>scale_ratios</strong> (<em>dict, optional</em>) – Dictionary for charge scaling. Can be one of three formats:</p>
+<p>Format 1 - Nested dictionary with structure for charge scaling:
+{</p>
+<blockquote>
+<div><dl class="simple">
+<dt>‘demand’: {</dt><dd><p>‘peak’: float, ‘half_peak’: float,
+‘off_peak’: float, ‘super_off_peak’: float</p>
+</dd>
+</dl>
+<p>},
+‘energy’: {</p>
+<blockquote>
+<div><p>‘peak’: float, ‘half_peak’: float,
+‘off_peak’: float, ‘super_off_peak’: float</p>
+</div></blockquote>
+<p>}</p>
+</div></blockquote>
+<p>}</p>
+<p>Format 2 - Dictionary with exact charge key prefixes based on csv:
+{</p>
+<blockquote>
+<div><p>‘electric_demand_peak-summer’: float,
+‘electric_energy_0’: float,
+‘electric_demand_all-day’: float,
+…</p>
+</div></blockquote>
+<p>}</p>
+<p>Format 3 - Global scaling for all charges of each type:
+{</p>
+<blockquote>
+<div><p>‘demand’: float,  # scales all demand charges
+‘energy’: float,   # scales all energy charges</p>
+</div></blockquote>
+<p>}</p>
+<p>If None, all ratios default to 1.0</p>
+</li>
+<li><p><strong>shift_peak_hours_before</strong> (<em>float, optional</em>) – Hours to shift peak window start
+(negative=earlier, positive=later).
+Must be multiple of 0.25 hours. Default 0</p></li>
+<li><p><strong>shift_peak_hours_after</strong> (<em>float, optional</em>) – Hours to shift peak window end
+(negative=earlier, positive=later).
+Must be multiple of 0.25 hours. Default 0</p></li>
+<li><p><strong>variant_name</strong> (<em>str, optional</em>) – Name for this variant. Default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Updated rate_data dataframe with
+parametrized charges and windows</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.2)">pandas.DataFrame</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – If scale_ratios contains both period-based scaling and individual charge
+    scaling for the same charge type</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#UserWarning" title="(in Python v3.13)"><strong>UserWarning</strong></a> – If scale_ratios contains exact charge keys that are not found in the data</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>

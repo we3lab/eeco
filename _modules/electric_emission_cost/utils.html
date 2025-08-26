@@ -244,7 +244,6 @@
 <span class="sd">        cvxpy.Expression,</span>
 <span class="sd">        pyomo.core.expr.numeric_expr.NumericExpression,</span>
 <span class="sd">        pyomo.core.expr.numeric_expr.NumericNDArray,</span>
-<span class="sd">        pyomo.core.expr.numeric_expr.NumericNDArray,</span>
 <span class="sd">        pyomo.environ.Param,</span>
 <span class="sd">        pyomo.environ.Var</span>
 <span class="sd">    ]</span>
@@ -305,7 +304,7 @@
 
 
 <div class="viewcode-block" id="sum"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.sum">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Elementwise maximum of an expression or array</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Elementwise sum of values in an expression or array</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -408,7 +407,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span>
         <span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="n">LinearExpression</span><span class="p">,</span> <span class="n">SumExpression</span><span class="p">,</span> <span class="n">MonomialTermExpression</span><span class="p">,</span> <span class="n">ScalarVar</span><span class="p">)</span>
-    <span class="p">):</span>
+    <span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="s2">&quot;is_variable_type&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">expression</span><span class="o">.</span><span class="n">is_variable_type</span><span class="p">()):</span>
         <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">initialize</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)))</span>
         <span class="n">var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">)</span>
 
@@ -440,7 +439,12 @@
         <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="multiply"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.multiply">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">multiply</span><span class="p">(</span><span class="n">expression1</span><span class="p">,</span> <span class="n">expression2</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="multiply"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.multiply">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">multiply</span><span class="p">(</span>
+    <span class="n">expression1</span><span class="p">,</span>
+    <span class="n">expression2</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Implements elementwise multiplication operation on two optimization expressions</span>
 
 <span class="sd">    Parameters</span>
