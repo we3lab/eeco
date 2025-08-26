@@ -138,7 +138,6 @@ def max(expression, model=None, varstr=None):
         cvxpy.Expression,
         pyomo.core.expr.numeric_expr.NumericExpression,
         pyomo.core.expr.numeric_expr.NumericNDArray,
-        pyomo.core.expr.numeric_expr.NumericNDArray,
         pyomo.environ.Param,
         pyomo.environ.Var
     ]
@@ -199,7 +198,7 @@ def max(expression, model=None, varstr=None):
 
 
 def sum(expression, axis=0, model=None, varstr=None):
-    """Elementwise maximum of an expression or array
+    """Elementwise sum of values in an expression or array
 
     Parameters
     ----------
@@ -302,7 +301,7 @@ def max_pos(expression, model=None, varstr=None):
     """
     if isinstance(
         expression, (LinearExpression, SumExpression, MonomialTermExpression, ScalarVar)
-    ):
+    ) or (hasattr(expression, "is_variable_type") and expression.is_variable_type()):
         model.add_component(varstr, pyo.Var(initialize=0, bounds=(0, None)))
         var = model.find_component(varstr)
 
@@ -334,7 +333,12 @@ def max_pos(expression, model=None, varstr=None):
         )
 
 
-def multiply(expression1, expression2, model=None, varstr=None):
+def multiply(
+    expression1,
+    expression2,
+    model=None,
+    varstr=None,
+):
     """Implements elementwise multiplication operation on two optimization expressions
 
     Parameters
