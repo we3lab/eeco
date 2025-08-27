@@ -733,7 +733,8 @@ def calculate_energy_cost(
         Default is float('inf') indicating that there is no higher tier
 
     prev_consumption : float
-        Previous total energy consumption for tiered charges.
+        Consumption from within this billing period but outside the horizon window
+        (e.g., previously in the month). Necessary for moving-horizon optimization.
         Default is 0
 
     consumption_estimate : float
@@ -774,7 +775,7 @@ def calculate_energy_cost(
         # set the flag if we are starting with previous consumption that lands us
         # within the current tier of charge limits
         within_limit_flag = energy >= float(limit) and energy < float(next_limit)
-        for i in range(len(consumption_data)):
+        for i in range(n_steps):
             energy += consumption_data[i] / divisor
             # only add to charges if already within correct charge limits
             if within_limit_flag:
@@ -792,37 +793,30 @@ def calculate_energy_cost(
                 within_limit_flag = True
                 cost += (energy - float(limit)) * charge_array[i]
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
+        # assume consumption is split evenly as an approximation
+        # NOTE: this convex approximation breaks global optimality guarantees
+        consumption_per_timestep = consumption_estimate / n_steps
+        total_consumption = prev_consumption
+        end_idx = None
+        start_idx = None
+        for i in range(n_steps):
+            if total_consumption >= float(limit) and start_idx is None:
+                start_idx = i  # index where this charge tier starts
+            if total_consumption >= float(next_limit) and end_idx is None:
+                end_idx = i  # index where this charge tier ends
+            total_consumption += consumption_per_timestep
+        charge_array[:start_idx] = 0
+        if end_idx is not None:
+            charge_array[end_idx:] = 0
         charge_expr, model = ut.multiply(
             consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
         )
-        if next_limit == float("inf"):
-            limit_to_subtract = float(limit) / n_steps
-            sum_result, model = ut.sum(charge_expr, model=model, varstr=varstr + "_sum")
-            cost, model = ut.max_pos(
-                (sum_result / divisor - np.sum(charge_array * limit_to_subtract)),
-                model=model,
-                varstr=varstr,
-            )
-        else:
-            if consumption_estimate < float(next_limit):
-                prev_limit_expr, model = ut.multiply(
-                    float(limit) / n_steps,
-                    charge_array,
-                    model=model,
-                    varstr=varstr + "_prev",
-                )
-                sum_result, model = ut.sum(
-                    charge_expr, model=model, varstr=varstr + "_sum"
-                )
-                cost, model = ut.max_pos(
-                    sum_result / divisor - (np.sum(prev_limit_expr)),
-                    model=model,
-                    varstr=varstr,
-                )
-            else:
-                cost = np.sum(
-                    charge_array * (float(next_limit) - float(limit)) / n_steps
-                )
+        sum_result, model = ut.sum(charge_expr, model=model, varstr=varstr + "_sum")
+        cost, model = ut.max_pos(
+            sum_result / divisor,
+            model=model,
+            varstr=varstr,
+        )
     else:
         raise ValueError(
             "consumption_data must be of type numpy.ndarray, "
