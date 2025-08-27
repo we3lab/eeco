@@ -734,7 +734,7 @@ def calculate_energy_cost(
 
     prev_consumption : float
         Consumption from within this billing period but outside the horizon window
-        (e.g., previously in the month). Necessary for moving-horizon optimization. 
+        (e.g., previously in the month). Necessary for moving-horizon optimization.
         Default is 0
 
     consumption_estimate : float
