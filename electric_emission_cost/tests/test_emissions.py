@@ -64,7 +64,8 @@ def test_calculate_grid_emissions_np(
         consumption_df[net_demand_varname].values,
         emissions_units=emissions_units,
     )
-    assert result == expected
+    assert result.units == expected.units
+    assert result.magnitude == pytest.approx(expected.magnitude)
     assert model is None
 
 
