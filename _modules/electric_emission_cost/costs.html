@@ -839,7 +839,8 @@
 <span class="sd">        Default is float(&#39;inf&#39;) indicating that there is no higher tier</span>
 
 <span class="sd">    prev_consumption : float</span>
-<span class="sd">        Previous total energy consumption for tiered charges.</span>
+<span class="sd">        Consumption from within this billing period but outside the horizon window</span>
+<span class="sd">        (e.g., previously in the month). Necessary for moving-horizon optimization.</span>
 <span class="sd">        Default is 0</span>
 
 <span class="sd">    consumption_estimate : float</span>
@@ -880,7 +881,7 @@
         <span class="c1"># set the flag if we are starting with previous consumption that lands us</span>
         <span class="c1"># within the current tier of charge limits</span>
         <span class="n">within_limit_flag</span> <span class="o">=</span> <span class="n">energy</span> <span class="o">&gt;=</span> <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span> <span class="ow">and</span> <span class="n">energy</span> <span class="o">&lt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">next_limit</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_steps</span><span class="p">):</span>
             <span class="n">energy</span> <span class="o">+=</span> <span class="n">consumption_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">divisor</span>
             <span class="c1"># only add to charges if already within correct charge limits</span>
             <span class="k">if</span> <span class="n">within_limit_flag</span><span class="p">:</span>
@@ -898,37 +899,30 @@
                 <span class="n">within_limit_flag</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">cost</span> <span class="o">+=</span> <span class="p">(</span><span class="n">energy</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">))</span> <span class="o">*</span> <span class="n">charge_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">)):</span>
+        <span class="c1"># assume consumption is split evenly as an approximation</span>
+        <span class="c1"># NOTE: this convex approximation breaks global optimality guarantees</span>
+        <span class="n">consumption_per_timestep</span> <span class="o">=</span> <span class="n">consumption_estimate</span> <span class="o">/</span> <span class="n">n_steps</span>
+        <span class="n">total_consumption</span> <span class="o">=</span> <span class="n">prev_consumption</span>
+        <span class="n">end_idx</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">start_idx</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_steps</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">total_consumption</span> <span class="o">&gt;=</span> <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span> <span class="ow">and</span> <span class="n">start_idx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">start_idx</span> <span class="o">=</span> <span class="n">i</span>  <span class="c1"># index where this charge tier starts</span>
+            <span class="k">if</span> <span class="n">total_consumption</span> <span class="o">&gt;=</span> <span class="nb">float</span><span class="p">(</span><span class="n">next_limit</span><span class="p">)</span> <span class="ow">and</span> <span class="n">end_idx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">end_idx</span> <span class="o">=</span> <span class="n">i</span>  <span class="c1"># index where this charge tier ends</span>
+            <span class="n">total_consumption</span> <span class="o">+=</span> <span class="n">consumption_per_timestep</span>
+        <span class="n">charge_array</span><span class="p">[:</span><span class="n">start_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">end_idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">charge_array</span><span class="p">[</span><span class="n">end_idx</span><span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">charge_expr</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
             <span class="n">consumption_data</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_multiply&quot;</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="n">next_limit</span> <span class="o">==</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">):</span>
-            <span class="n">limit_to_subtract</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_steps</span>
-            <span class="n">sum_result</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">charge_expr</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_sum&quot;</span><span class="p">)</span>
-            <span class="n">cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span>
-                <span class="p">(</span><span class="n">sum_result</span> <span class="o">/</span> <span class="n">divisor</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">charge_array</span> <span class="o">*</span> <span class="n">limit_to_subtract</span><span class="p">)),</span>
-                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-                <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span><span class="p">,</span>
-            <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">consumption_estimate</span> <span class="o">&lt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">next_limit</span><span class="p">):</span>
-                <span class="n">prev_limit_expr</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
-                    <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_steps</span><span class="p">,</span>
-                    <span class="n">charge_array</span><span class="p">,</span>
-                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-                    <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_prev&quot;</span><span class="p">,</span>
-                <span class="p">)</span>
-                <span class="n">sum_result</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
-                    <span class="n">charge_expr</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_sum&quot;</span>
-                <span class="p">)</span>
-                <span class="n">cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span>
-                    <span class="n">sum_result</span> <span class="o">/</span> <span class="n">divisor</span> <span class="o">-</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">prev_limit_expr</span><span class="p">)),</span>
-                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-                    <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span><span class="p">,</span>
-                <span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
-                    <span class="n">charge_array</span> <span class="o">*</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">next_limit</span><span class="p">)</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">))</span> <span class="o">/</span> <span class="n">n_steps</span>
-                <span class="p">)</span>
+        <span class="n">sum_result</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">charge_expr</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_sum&quot;</span><span class="p">)</span>
+        <span class="n">cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span>
+            <span class="n">sum_result</span> <span class="o">/</span> <span class="n">divisor</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span><span class="p">,</span>
+        <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="s2">&quot;consumption_data must be of type numpy.ndarray, &quot;</span>

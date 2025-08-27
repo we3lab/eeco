@@ -304,7 +304,8 @@ structure, utility, and consumption information.</p>
 Default is 0</p></li>
 <li><p><strong>next_limit</strong> (<em>float</em>) – The total consumption, or limit, that the next charge comes into effect.
 Default is float(‘inf’) indicating that there is no higher tier</p></li>
-<li><p><strong>prev_consumption</strong> (<em>float</em>) – Previous total energy consumption for tiered charges.
+<li><p><strong>prev_consumption</strong> (<em>float</em>) – Consumption from within this billing period but outside the horizon window
+(e.g., previously in the month). Necessary for moving-horizon optimization.
 Default is 0</p></li>
 <li><p><strong>consumption_estimate</strong> (<em>float</em>) – Estimate of the total monthly demand or energy consumption from baseline data.
 Only used when <cite>consumption_data</cite> is cvxpy.Expression or pyomo.environ.Var
