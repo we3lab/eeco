@@ -1082,13 +1082,14 @@
 <span class="sd">        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`</span>
 <span class="sd">        will use actual consumption and ignore the estimate.</span>
 
-<span class="sd">    desired_charge_type : str</span>
+<span class="sd">    desired_charge_type : list or str</span>
 <span class="sd">        Name of desired charge type for itemized costs.</span>
-<span class="sd">        Either &#39;customer&#39;, &#39;energy&#39;, &#39;demand&#39;, or &#39;export&#39;.</span>
+<span class="sd">        Either &#39;customer&#39;, &#39;energy&#39;, &#39;demand&#39;, &#39;export&#39;, or a list of charge types.</span>
 <span class="sd">        Default is None, meaning that all costs will be summed together.</span>
 
-<span class="sd">    desired_utility : str</span>
-<span class="sd">        Name of desired utility for itemized costs. Either &#39;electric&#39; or &#39;gas&#39;</span>
+<span class="sd">    desired_utility : list or str</span>
+<span class="sd">        Name of desired utility for itemized costs.</span>
+<span class="sd">        Either &#39;electric&#39;, &#39;gas&#39;, or a list of utilities (e.g., [&#39;electric&#39;, &#39;gas&#39;]).</span>
 <span class="sd">        Default is None, meaning that all costs will be summed together.</span>
 
 <span class="sd">    demand_scale_factor : float</span>
@@ -1145,8 +1146,8 @@
         <span class="p">)</span>
 
         <span class="c1"># if we want itemized costs skip irrelvant portions of the bill</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">desired_utility</span> <span class="ow">and</span> <span class="n">utility</span> <span class="o">!=</span> <span class="n">desired_utility</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
-            <span class="n">desired_charge_type</span> <span class="ow">and</span> <span class="n">charge_type</span> <span class="o">!=</span> <span class="n">desired_charge_type</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">desired_utility</span> <span class="ow">and</span> <span class="n">utility</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">desired_utility</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="n">desired_charge_type</span> <span class="ow">and</span> <span class="n">charge_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">desired_charge_type</span>
         <span class="p">):</span>
             <span class="k">continue</span>
 

@@ -173,10 +173,11 @@ Default is None, resulting in an a prev_consumption of zero for all charges.</p>
 Only used when <cite>consumption_data</cite> is cvxpy.Expression or pyomo.environ.Var
 for convex relaxation of tiered charges, while numpy.ndarray <cite>consumption_data</cite>
 will use actual consumption and ignore the estimate.</p></li>
-<li><p><strong>desired_charge_type</strong> (<em>str</em>) – Name of desired charge type for itemized costs.
-Either ‘customer’, ‘energy’, ‘demand’, or ‘export’.
+<li><p><strong>desired_charge_type</strong> (<em>list or str</em>) – Name of desired charge type for itemized costs.
+Either ‘customer’, ‘energy’, ‘demand’, ‘export’, or a list of charge types.
 Default is None, meaning that all costs will be summed together.</p></li>
-<li><p><strong>desired_utility</strong> (<em>str</em>) – Name of desired utility for itemized costs. Either ‘electric’ or ‘gas’
+<li><p><strong>desired_utility</strong> (<em>list or str</em>) – Name of desired utility for itemized costs.
+Either ‘electric’, ‘gas’, or a list of utilities (e.g., [‘electric’, ‘gas’]).
 Default is None, meaning that all costs will be summed together.</p></li>
 <li><p><strong>demand_scale_factor</strong> (<em>float</em>) – Optional factor for scaling demand charges relative to energy charges
 when the optimization/simulation period is not a full billing cycle.
