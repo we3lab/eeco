@@ -978,12 +978,12 @@ def calculate_cost(
 
     desired_charge_type : list or str
         Name of desired charge type for itemized costs.
-        Either 'customer', 'energy', 'demand', 'export', or a list of those charge types.
+        Either 'customer', 'energy', 'demand', 'export', or a list of charge types.
         Default is None, meaning that all costs will be summed together.
 
     desired_utility : list or str
-        Name of desired utility for itemized costs. 
-        Either 'electric', 'gas', or a list of utilities (e.g., ['electric', 'gas'])
+        Name of desired utility for itemized costs.
+        Either 'electric', 'gas', or a list of utilities (e.g., ['electric', 'gas']).
         Default is None, meaning that all costs will be summed together.
 
     demand_scale_factor : float
