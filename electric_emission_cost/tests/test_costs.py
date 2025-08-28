@@ -2138,3 +2138,44 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
 
 
 # TODO: write test_calculate_itemized_cost
+
+# TODO: write test for itemized cost
+
+
+@pytest.mark.parametrize(
+    "charge_list, expected_result",
+    [
+        (["demand"], pytest.approx(7.128)),
+        ("demand", pytest.approx(7.128)),
+        (["energy", "demand"], pytest.approx(7.92081)),
+        (None, pytest.approx(307.92081)),
+    ],
+)
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_individual_charge(charge_list, expected_result):
+
+    billing_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "data", "input", "billing.csv"
+    )
+    tariff_df = pd.read_csv(billing_path)
+    start_date = np.datetime64("2024-07-10")
+    end_date = np.datetime64("2024-07-11")
+    datetime_range = pd.date_range(start=start_date, end=end_date, freq="15min")
+    baseload = np.ones(len(datetime_range) - 1)
+    charge_dict = costs.get_charge_dict(
+        np.datetime64("2024-07-10"),
+        np.datetime64("2024-07-11"),
+        tariff_df,
+    )
+
+    cost, _ = costs.calculate_cost(
+        charge_dict,
+        {"electric": baseload, "gas": np.zeros_like(baseload)},
+        resolution="15m",
+        desired_utility="electric",
+        desired_charge_type=charge_list,
+        prev_demand_dict=None,
+        prev_consumption_dict=None,
+        model=None,
+    )
+    assert cost == expected_result
