@@ -976,13 +976,14 @@ def calculate_cost(
         for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
         will use actual consumption and ignore the estimate.
 
-    desired_charge_type : str
+    desired_charge_type : list or str
         Name of desired charge type for itemized costs.
-        Either 'customer', 'energy', 'demand', or 'export'.
+        Either 'customer', 'energy', 'demand', 'export', or a list of those charge types.
         Default is None, meaning that all costs will be summed together.
 
-    desired_utility : str
-        Name of desired utility for itemized costs. Either 'electric' or 'gas'
+    desired_utility : list or str
+        Name of desired utility for itemized costs. 
+        Either 'electric', 'gas', or a list of utilities (e.g., ['electric', 'gas'])
         Default is None, meaning that all costs will be summed together.
 
     demand_scale_factor : float
