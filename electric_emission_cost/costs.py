@@ -623,9 +623,9 @@ def calculate_demand_cost(
         and the second entry being the pyomo model object (or None)
     """
     if isinstance(consumption_estimate, (float, int)):
-        consumption_max = float(consumption_estimate)
+        consumption_max = max(float(consumption_estimate), prev_demand) 
     else:
-        consumption_max = max(consumption_estimate)
+        consumption_max = max(max(consumption_estimate),prev_demand)
         
     if isinstance(consumption_data, np.ndarray):
         if (np.max(consumption_data) >= limit) or (
