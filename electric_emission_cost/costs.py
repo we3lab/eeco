@@ -623,10 +623,10 @@ def calculate_demand_cost(
         and the second entry being the pyomo model object (or None)
     """
     if isinstance(consumption_estimate, (float, int)):
-        consumption_max = max(float(consumption_estimate), prev_demand) 
+        consumption_max = max(float(consumption_estimate), prev_demand)
     else:
-        consumption_max = max(max(consumption_estimate),prev_demand)
-        
+        consumption_max = max(max(consumption_estimate), prev_demand)
+
     if isinstance(consumption_data, np.ndarray):
         if (np.max(consumption_data) >= limit) or (
             (prev_demand >= limit) and (prev_demand <= next_limit)
@@ -805,18 +805,20 @@ def calculate_energy_cost(
             consumption_estimate = np.ones(n_steps) * consumption_per_timestep
 
         cumulative_consumption = np.cumsum(consumption_estimate) + prev_consumption
-
         total_consumption = cumulative_consumption[-1]
-        end_idx = None
-        start_idx = None
 
         start_idx = np.argmax(cumulative_consumption >= float(limit))
-        if np.isinf(next_limit or total_consumption < float(next_limit)):
+        if (start_idx == 0) and (total_consumption < float(limit)):
+            start_idx = -1
+        if np.isinf(next_limit) or (total_consumption < float(next_limit)):
             end_idx = -1
         else:
-            end_idx = np.argmax(cumulative_consumption > float(next_limit)) # if not found argmax returns 0
-        charge_array[end_idx:] = 0
-        charge_array[:start_idx] = 0 # 0 for charge array before the start index
+            end_idx = np.argmax(
+                cumulative_consumption > float(next_limit)
+            )  # if not found argmax returns 0
+
+        charge_array[:start_idx] = 0  # 0 for charge array before the start index
+        charge_array[end_idx:] = 0  # 0 for charge array after the end index
 
         charge_expr, model = ut.multiply(
             consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
@@ -986,7 +988,7 @@ def calculate_cost(
         for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
         will use actual consumption and ignore the estimate. If consumption estimate is
         a float, int, it is assumed to carry units of kWh, therms OR m3. If consumption
-        estimate is array-like it is assumed to carry units of kW, therms/hr OR m3/hr. 
+        estimate is array-like it is assumed to carry units of kW, therms/hr OR m3/hr.
         If consumption estimate is a dict, it should have keys matching the charge dict.
 
     desired_charge_type : list or str
@@ -1094,17 +1096,21 @@ def calculate_cost(
             else:
                 prev_demand = 0
                 prev_demand_cost = 0
-            
+
             if isinstance(consumption_estimate, (float, int)):
                 # convert single kWh to the equivalent kW per timestep
-                demand_consumption_estimate = consumption_estimate * divisor / len(charge_array)
+                demand_consumption_estimate = (
+                    consumption_estimate * divisor / len(charge_array)
+                )
             elif isinstance(consumption_estimate, (dict)):
                 demand_consumption_estimate = consumption_estimate[utility]
-                if isinstance(demand_consumption_estimate, (float,int)):
-                    demand_consumption_estimate = demand_consumption_estimate * divisor / len(charge_array)
+                if isinstance(demand_consumption_estimate, (float, int)):
+                    demand_consumption_estimate = (
+                        demand_consumption_estimate * divisor / len(charge_array)
+                    )
             else:
                 demand_consumption_estimate = consumption_estimate
-            
+
             new_cost, model = calculate_demand_cost(
                 charge_array,
                 converted_data,
@@ -1129,7 +1135,9 @@ def calculate_cost(
                 energy_consumption_estimate = consumption_estimate
             elif isinstance(consumption_estimate, (dict)):
                 energy_consumption_estimate = consumption_estimate[utility]
-                if not isinstance(energy_consumption_estimate, (float, int)): # array-like
+                if not isinstance(
+                    energy_consumption_estimate, (float, int)
+                ):  # array-like
                     energy_consumption_estimate = energy_consumption_estimate / divisor
             else:
                 energy_consumption_estimate = consumption_estimate / divisor
