@@ -926,6 +926,7 @@ def calculate_cost(
     desired_charge_type=None,
     demand_scale_factor=1,
     model=None,
+    additional_objective_terms=None,
     varstr_alias_func=default_varstr_alias_func,
 ):
     """Calculates the cost of given charges (demand or energy) for the given
@@ -994,6 +995,11 @@ def calculate_cost(
 
     model : pyomo.Model
         The model object associated with the problem.
+        Only used in the case of Pyomo, so `None` by default.
+
+    additional_objective_terms : pyomo.Expression, list
+        Additional terms to be added to the objective function.
+        Can be a single pyomo Expression or a list of pyomo Expressions.
         Only used in the case of Pyomo, so `None` by default.
 
     varstr_alias_func: function
@@ -1117,6 +1123,12 @@ def calculate_cost(
             cost += charge_array.sum()
         else:
             raise ValueError("Invalid charge_type: " + charge_type)
+
+    if additional_objective_terms is not None:
+        if len(additional_objective_terms) > 1:
+            cost += sum(additional_objective_terms)
+        else:
+            cost += additional_objective_terms
     return cost, model
 
 
