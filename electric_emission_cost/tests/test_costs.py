@@ -640,7 +640,64 @@ def test_calculate_cost_np(
             None,
             None,
             260,
-        )
+        ),
+        # energy charge with charge limit and time-varying consumption estimate
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            np.ones(96) * 100,
+            None,
+            None,
+            260,
+        ),
+        # energy charge with charge limit that wont be hit and time-varying consumption estimate
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100000": np.concatenate(
+                    [
+                        np.ones(96)
+                    ]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            2400,
+            None,
+            None,
+            260,
+        ),
     ],
 )
 def test_calculate_cost_cvx(

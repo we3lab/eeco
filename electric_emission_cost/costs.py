@@ -811,8 +811,7 @@ def calculate_energy_cost(
         start_idx = None
 
         start_idx = np.argmax(cumulative_consumption >= float(limit))
-        end_idx = np.argmax(cumulative_consumption >= float(next_limit)) # if not found argmax returns 0
-        if np.isinf(next_limit):
+        if np.isinf(next_limit or total_consumption < float(next_limit)):
             end_idx = -1
         else:
             end_idx = np.argmax(cumulative_consumption > float(next_limit)) # if not found argmax returns 0
