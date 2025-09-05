@@ -8,8 +8,8 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
    :caption: Overview
 
    Table of Contents <self>
-   hello
    purpose
+   hello
    complexities
    why_metrics
    why_neutral
