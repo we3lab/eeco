@@ -1125,6 +1125,7 @@ def calculate_cost(
 
     return cost, model
 
+
 def build_pyomo_costing(
     charge_dict,
     consumption_data_dict,
@@ -1140,7 +1141,7 @@ def build_pyomo_costing(
     demand_scale_factor=1,
     additional_objective_terms=None,
     varstr_alias_func=default_varstr_alias_func,
-    ):
+):
     """
     Wrapper for calculate_cost to build the cost components into a Pyomo model.
 
@@ -1208,7 +1209,7 @@ def build_pyomo_costing(
         Default is 1
 
     additional_objective_terms : list
-        Additional terms to be added to the objective function. 
+        Additional terms to be added to the objective function.
         Must be a list of pyomo Expressions.
 
     varstr_alias_func: function
@@ -1242,19 +1243,19 @@ def build_pyomo_costing(
         The model object associated with the problem with costing components added.
     """
     model.electricity_cost, model = calculate_cost(
-            charge_dict=charge_dict,
-            consumption_data_dict=consumption_data_dict,
-            electric_consumption_units=electric_consumption_units,
-            gas_consumption_units=gas_consumption_units,
-            resolution=resolution,
-            prev_demand_dict=prev_demand_dict,
-            prev_consumption_dict=prev_consumption_dict,
-            consumption_estimate=consumption_estimate,
-            desired_utility=desired_utility,
-            desired_charge_type=desired_charge_type,
-            demand_scale_factor=demand_scale_factor,
-            model=model,
-            varstr_alias_func=varstr_alias_func
+        charge_dict=charge_dict,
+        consumption_data_dict=consumption_data_dict,
+        electric_consumption_units=electric_consumption_units,
+        gas_consumption_units=gas_consumption_units,
+        resolution=resolution,
+        prev_demand_dict=prev_demand_dict,
+        prev_consumption_dict=prev_consumption_dict,
+        consumption_estimate=consumption_estimate,
+        desired_utility=desired_utility,
+        desired_charge_type=desired_charge_type,
+        demand_scale_factor=demand_scale_factor,
+        model=model,
+        varstr_alias_func=varstr_alias_func,
     )
 
     model.obj = pyo.Objective(expr=model.electricity_cost, sense=pyo.minimize)

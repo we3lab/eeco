@@ -869,7 +869,7 @@ def test_calculate_cost_pyo(
             "single",
             pytest.approx(270),
         ),
-                # energy charge with charge limit
+        # energy charge with charge limit
         (
             {
                 "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
@@ -947,6 +947,7 @@ def test_build_pyomo_costing(
     assert model is not None
     assert model.obj is not None
     assert pyo.value(model.obj) == expected_cost
+
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
