@@ -28,7 +28,7 @@ The columns are:
 - **weekday_end**: Last weekday on which this charge occurs (0 = Monday to 6 = Sunday).
 - **charge (imperial)**: Cost represented as a float in imperial units. I.e., “$/month”, “$/kWh”, “$/kW”, “$/therm”, and “$/therm/hr” for customer charges, electricity energy charges, electric demand charges, natural gas energy charges, and natural gas demand charges, respectively.
 - **charge (metric)**: Cost represented as a float in metric units. I.e., “$/month”, “$/kWh”, “$/kW”, “$/m3”, and “$/m3/hr” for customer charges, electricity energy charges, electricity demand charges, natural gas energy charges, and natural gas demand charges, respectively. A conversion factor of 2.83168 cubic meters to 1 therm was used.
-- **units**: Units of the charge, e.g. “$/kWh”. If units are different between imperial and metric then imperial is listed followed by metric. E.g., “$/therm or $/m3”.
+- **units**: Units of the charge, e.g., “$/kWh”. If units are different between imperial and metric, then imperial is listed followed by metric. E.g., “$/therm or $/m3”.
 - **Notes**: Any comments the authors felt would help explain unintuitive decisions in data collection or formatting.
 
 Each row in the tariff data corresponds to a different charge. 
@@ -94,8 +94,8 @@ The columns are:
 - **hour**: The hour for which this grid emissions value is relevant (0–23).
 - **co2_eq_kg_per_MWh**: The average grid emissions intensity for a given hour during a given calendar month, given in kg CO\ :sub:`2`\ e per MWh.
 
-Each row in the emmissions data corresponds to a different hourly average emissions intensity. 
-For example, There are 24 rows for January. The row with month "1" and hour "0" represents the average emissions intensity from 00:00 - 00:59 across all days in January.
+Each row in the emissions data corresponds to a different hourly average emissions intensity. 
+For example, there are 24 rows for January. The row with month "1" and hour "0" represents the average emissions intensity from 00:00 - 00:59 across all days in January.
 
 The Scope 2 emissions data format used in this project is based on the following reference.
 
