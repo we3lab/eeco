@@ -1102,6 +1102,11 @@
 <span class="sd">        The model object associated with the problem.</span>
 <span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
 
+<span class="sd">    additional_objective_terms : pyomo.Expression, list</span>
+<span class="sd">        Additional terms to be added to the objective function.</span>
+<span class="sd">        Can be a single pyomo Expression or a list of pyomo Expressions.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
 <span class="sd">    varstr_alias_func: function</span>
 <span class="sd">        Function to generate variable name for pyomo,</span>
 <span class="sd">        should take in a 6 inputs and generate a string output.</span>
@@ -1223,7 +1228,148 @@
             <span class="n">cost</span> <span class="o">+=</span> <span class="n">charge_array</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid charge_type: &quot;</span> <span class="o">+</span> <span class="n">charge_type</span><span class="p">)</span>
+
     <span class="k">return</span> <span class="n">cost</span><span class="p">,</span> <span class="n">model</span></div>
+
+
+<div class="viewcode-block" id="build_pyomo_costing"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.build_pyomo_costing">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">build_pyomo_costing</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="n">consumption_data_dict</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">,</span>
+    <span class="n">electric_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">,</span>
+    <span class="n">gas_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">meters</span><span class="o">**</span><span class="mi">3</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">day</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">prev_demand_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">prev_consumption_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">consumption_estimate</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">desired_charge_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">demand_scale_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">additional_objective_terms</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">default_varstr_alias_func</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper for calculate_cost to build the cost components into a Pyomo model.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    charge_dict : dict</span>
+<span class="sd">        dictionary of arrays with keys of the form</span>
+<span class="sd">        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`</span>
+<span class="sd">        and values being the $ per kW (electric demand), kWh (electric energy/export),</span>
+<span class="sd">        cubic meter / day (gas demand), cubic meter (gas energy),</span>
+<span class="sd">        or $ / month (customer)</span>
+
+<span class="sd">    consumption_data_dict : dict</span>
+<span class="sd">        Baseline electrical and gas usage data as an optimization variable object</span>
+<span class="sd">        with keys &quot;electric&quot; and &quot;gas&quot;. Values of the dictionary must be of type</span>
+<span class="sd">        numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</span>
+
+<span class="sd">    model : pyomo.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+
+<span class="sd">    electric_consumption_units : pint.Unit</span>
+<span class="sd">        Units for the electricity consumption data. Default is kW</span>
+
+<span class="sd">    gas_consumption_units : pint.Unit</span>
+<span class="sd">        Units for the natural gas consumption data. Default is cubic meters / day</span>
+
+<span class="sd">    resolution : str</span>
+<span class="sd">        String of the form `[int][str]` giving the temporal resolution</span>
+<span class="sd">        on which charges are assessed, the `str` portion corresponds to</span>
+<span class="sd">        numpy.timedelta64 types for example &#39;15m&#39; specifying demand charges</span>
+<span class="sd">        that are applied to 15-minute intervals of electricity consumption</span>
+
+<span class="sd">    prev_demand_dict : dict</span>
+<span class="sd">        Nested dictionary previous maximmum demand charges with an entry of the form</span>
+<span class="sd">        {&quot;cost&quot; : float, &quot;demand&quot; : float} for each charge.</span>
+<span class="sd">        Default is None, which results in an a prev_demand and prev_demand_cost</span>
+<span class="sd">        of zero for all charges.</span>
+
+<span class="sd">    prev_consumption_dict : dict</span>
+<span class="sd">        Dictionary of previous total energy consumption with a key for each charge</span>
+<span class="sd">        to be used when starting the cost calculation partway into a billing period</span>
+<span class="sd">        (e.g., while using a moving horizon that is shorter than a month).</span>
+<span class="sd">        Default is None, resulting in an a prev_consumption of zero for all charges.</span>
+
+<span class="sd">    consumption_estimate : float</span>
+<span class="sd">        Estimate of the total monthly demand or energy consumption from baseline data.</span>
+<span class="sd">        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var</span>
+<span class="sd">        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`</span>
+<span class="sd">        will use actual consumption and ignore the estimate.</span>
+
+<span class="sd">    desired_charge_type : list or str</span>
+<span class="sd">        Name of desired charge type for itemized costs.</span>
+<span class="sd">        Either &#39;customer&#39;, &#39;energy&#39;, &#39;demand&#39;, &#39;export&#39;, or a list of charge types.</span>
+<span class="sd">        Default is None, meaning that all costs will be summed together.</span>
+
+<span class="sd">    desired_utility : list or str</span>
+<span class="sd">        Name of desired utility for itemized costs.</span>
+<span class="sd">        Either &#39;electric&#39;, &#39;gas&#39;, or a list of utilities (e.g., [&#39;electric&#39;, &#39;gas&#39;]).</span>
+<span class="sd">        Default is None, meaning that all costs will be summed together.</span>
+
+<span class="sd">    demand_scale_factor : float</span>
+<span class="sd">        Optional factor for scaling demand charges relative to energy charges</span>
+<span class="sd">        when the optimization/simulation period is not a full billing cycle.</span>
+<span class="sd">        Applied to monthly charges where end_date - start_date &gt; 1 day.</span>
+<span class="sd">        Default is 1</span>
+
+<span class="sd">    additional_objective_terms : list</span>
+<span class="sd">        Additional terms to be added to the objective function.</span>
+<span class="sd">        Must be a list of pyomo Expressions.</span>
+
+<span class="sd">    varstr_alias_func: function</span>
+<span class="sd">        Function to generate variable name for pyomo,</span>
+<span class="sd">        should take in a 6 inputs and generate a string output.</span>
+<span class="sd">        The function will receive following six inputs:</span>
+
+<span class="sd">        - utility: str</span>
+<span class="sd">        - charge_type: str</span>
+<span class="sd">        - name: str</span>
+<span class="sd">        - start_date: str</span>
+<span class="sd">        - end_date: str</span>
+<span class="sd">        - charge_limit: str</span>
+
+<span class="sd">        Examples of functions:</span>
+<span class="sd">            f_no_dates=lambda utility,</span>
+<span class="sd">            charge_type, name,</span>
+<span class="sd">            start_date, end_date,</span>
+<span class="sd">            charge_limit:</span>
+<span class="sd">            f&quot;{utility}_{charge_type}_{name}_{charge_limit}&quot;</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        When invalid `utility`, `charge_type`, or `assessed`</span>
+<span class="sd">        is provided in `charge_arrays`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pyomo.Model</span>
+<span class="sd">        The model object associated with the problem with costing components added.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">electricity_cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_cost</span><span class="p">(</span>
+        <span class="n">charge_dict</span><span class="o">=</span><span class="n">charge_dict</span><span class="p">,</span>
+        <span class="n">consumption_data_dict</span><span class="o">=</span><span class="n">consumption_data_dict</span><span class="p">,</span>
+        <span class="n">electric_consumption_units</span><span class="o">=</span><span class="n">electric_consumption_units</span><span class="p">,</span>
+        <span class="n">gas_consumption_units</span><span class="o">=</span><span class="n">gas_consumption_units</span><span class="p">,</span>
+        <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">,</span>
+        <span class="n">prev_demand_dict</span><span class="o">=</span><span class="n">prev_demand_dict</span><span class="p">,</span>
+        <span class="n">prev_consumption_dict</span><span class="o">=</span><span class="n">prev_consumption_dict</span><span class="p">,</span>
+        <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
+        <span class="n">desired_utility</span><span class="o">=</span><span class="n">desired_utility</span><span class="p">,</span>
+        <span class="n">desired_charge_type</span><span class="o">=</span><span class="n">desired_charge_type</span><span class="p">,</span>
+        <span class="n">demand_scale_factor</span><span class="o">=</span><span class="n">demand_scale_factor</span><span class="p">,</span>
+        <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+        <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">varstr_alias_func</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">model</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Objective</span><span class="p">(</span><span class="n">expr</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">electricity_cost</span><span class="p">,</span> <span class="n">sense</span><span class="o">=</span><span class="n">pyo</span><span class="o">.</span><span class="n">minimize</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">additional_objective_terms</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">additional_objective_terms</span><span class="p">:</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">expr</span> <span class="o">+=</span> <span class="n">term</span>
+    <span class="k">return</span> <span class="n">model</span></div>
 
 
 <div class="viewcode-block" id="calculate_itemized_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_itemized_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_itemized_cost</span><span class="p">(</span>

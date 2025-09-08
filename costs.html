@@ -76,6 +76,7 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">costs</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.add_to_charge_array"><code class="docutils literal notranslate"><span class="pre">add_to_charge_array()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.build_pyomo_costing"><code class="docutils literal notranslate"><span class="pre">build_pyomo_costing()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.calculate_cost"><code class="docutils literal notranslate"><span class="pre">calculate_cost()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.calculate_demand_cost"><code class="docutils literal notranslate"><span class="pre">calculate_demand_cost()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.costs.calculate_energy_cost"><code class="docutils literal notranslate"><span class="pre">calculate_energy_cost()</span></code></a></li>
@@ -161,6 +162,87 @@ cubic meter (gas energy), or $ / month (customer)</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="electric_emission_cost.costs.build_pyomo_costing">
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">build_pyomo_costing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">day')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional_objective_terms=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#build_pyomo_costing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.build_pyomo_costing" title="Permalink to this definition"></a></dt>
+<dd><p>Wrapper for calculate_cost to build the cost components into a Pyomo model.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul>
+<li><p><strong>charge_dict</strong> (<em>dict</em>) – dictionary of arrays with keys of the form
+<cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite>
+and values being the $ per kW (electric demand), kWh (electric energy/export),
+cubic meter / day (gas demand), cubic meter (gas energy),
+or $ / month (customer)</p></li>
+<li><p><strong>consumption_data_dict</strong> (<em>dict</em>) – Baseline electrical and gas usage data as an optimization variable object
+with keys “electric” and “gas”. Values of the dictionary must be of type
+numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</p></li>
+<li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.</p></li>
+<li><p><strong>electric_consumption_units</strong> (<em>pint.Unit</em>) – Units for the electricity consumption data. Default is kW</p></li>
+<li><p><strong>gas_consumption_units</strong> (<em>pint.Unit</em>) – Units for the natural gas consumption data. Default is cubic meters / day</p></li>
+<li><p><strong>resolution</strong> (<em>str</em>) – String of the form <cite>[int][str]</cite> giving the temporal resolution
+on which charges are assessed, the <cite>str</cite> portion corresponds to
+numpy.timedelta64 types for example ‘15m’ specifying demand charges
+that are applied to 15-minute intervals of electricity consumption</p></li>
+<li><p><strong>prev_demand_dict</strong> (<em>dict</em>) – Nested dictionary previous maximmum demand charges with an entry of the form
+{“cost” : float, “demand” : float} for each charge.
+Default is None, which results in an a prev_demand and prev_demand_cost
+of zero for all charges.</p></li>
+<li><p><strong>prev_consumption_dict</strong> (<em>dict</em>) – Dictionary of previous total energy consumption with a key for each charge
+to be used when starting the cost calculation partway into a billing period
+(e.g., while using a moving horizon that is shorter than a month).
+Default is None, resulting in an a prev_consumption of zero for all charges.</p></li>
+<li><p><strong>consumption_estimate</strong> (<em>float</em>) – Estimate of the total monthly demand or energy consumption from baseline data.
+Only used when <cite>consumption_data</cite> is cvxpy.Expression or pyomo.environ.Var
+for convex relaxation of tiered charges, while numpy.ndarray <cite>consumption_data</cite>
+will use actual consumption and ignore the estimate.</p></li>
+<li><p><strong>desired_charge_type</strong> (<em>list or str</em>) – Name of desired charge type for itemized costs.
+Either ‘customer’, ‘energy’, ‘demand’, ‘export’, or a list of charge types.
+Default is None, meaning that all costs will be summed together.</p></li>
+<li><p><strong>desired_utility</strong> (<em>list or str</em>) – Name of desired utility for itemized costs.
+Either ‘electric’, ‘gas’, or a list of utilities (e.g., [‘electric’, ‘gas’]).
+Default is None, meaning that all costs will be summed together.</p></li>
+<li><p><strong>demand_scale_factor</strong> (<em>float</em>) – Optional factor for scaling demand charges relative to energy charges
+when the optimization/simulation period is not a full billing cycle.
+Applied to monthly charges where end_date - start_date &gt; 1 day.
+Default is 1</p></li>
+<li><p><strong>additional_objective_terms</strong> (<em>list</em>) – Additional terms to be added to the objective function.
+Must be a list of pyomo Expressions.</p></li>
+<li><p><strong>varstr_alias_func</strong> (<em>function</em>) – Function to generate variable name for pyomo,
+should take in a 6 inputs and generate a string output.
+The function will receive following six inputs:</p>
+<ul class="simple">
+<li><p>utility: str</p></li>
+<li><p>charge_type: str</p></li>
+<li><p>name: str</p></li>
+<li><p>start_date: str</p></li>
+<li><p>end_date: str</p></li>
+<li><p>charge_limit: str</p></li>
+</ul>
+<dl class="simple">
+<dt>Examples of functions:</dt><dd><p>f_no_dates=lambda utility,
+charge_type, name,
+start_date, end_date,
+charge_limit:
+f”{utility}_{charge_type}_{name}_{charge_limit}”</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+    is provided in <cite>charge_arrays</cite></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The model object associated with the problem with costing components added.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pyomo.Model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="electric_emission_cost.costs.calculate_cost">
 <span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">day')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#calculate_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.calculate_cost" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates the cost of given charges (demand or energy) for the given
@@ -206,6 +288,9 @@ when the optimization/simulation period is not a full billing cycle.
 Applied to monthly charges where end_date - start_date &gt; 1 day.
 Default is 1</p></li>
 <li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
+Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
+<li><p><strong>additional_objective_terms</strong> (<em>pyomo.Expression, list</em>) – Additional terms to be added to the objective function.
+Can be a single pyomo Expression or a list of pyomo Expressions.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <li><p><strong>varstr_alias_func</strong> (<em>function</em>) – Function to generate variable name for pyomo,
 should take in a 6 inputs and generate a string output.
