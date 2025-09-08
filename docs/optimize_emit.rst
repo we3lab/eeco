@@ -6,19 +6,19 @@
 Optimize Scope 2 Emissions
 **************************
 
-This tutorial will walkthrough how to optimize Scope 2 emissions for a simple battery model in either :ref:`cvx-emit` or :ref:`pyo-emit` by going through the following steps:
+This tutorial will walk through how to optimize Scope 2 emissions for a simple battery model in either :ref:`cvx-emit` or :ref:`pyo-emit` by going through the following steps:
 
   #. Load a Scope 2 emissions spreadsheet
   #. Configure an optimization model of the electricity consumer with system constraints
   
      - Consider using flexibility metrics to encode system constraints (:ref:`tutorial-metrics`)!
-     - The models are presented step-by-step to demonstrate the model building process, 
+     - The models are presented step-by-step to demonstrate the model-building process, 
        but the complete models are available in the `examples` folder:
 
        - `pyomo_battery_model.py <https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py>`_
        - `cvxpy_battery_model.py <https://github.com/we3lab/electric-emission-cost/blob/main/examples/cvxpy_battery_model.py>`_
   #. Create an objective function of Scope 2 emissions using the emissions factors
-  #. Minimize the Scope 2 emissions of this consumer given the system constraints and base load consumption
+  #. Minimize the Scope 2 emissions of this consumer, given the system constraints and base load consumption
   #. Display the results to validate that the optimization is correct
 
 
@@ -113,7 +113,7 @@ but that's fine for these demonstration purposes.
 There is also an optional `emissions_units` argument that we do not use in the above example.
 That is because `get_carbon_intensity` returns a `pint.Quantity` from which we can automatically parse the emissions units.
 
-4. Minimize the Scope 2 emissions of this consumer given the system constraints and base load consumption
+4. Minimize the Scope 2 emissions of this consumer, given the system constraints and base load consumption
 
 .. code-block:: python
 
@@ -245,7 +245,7 @@ Pyomo
     )
 
 We are going to evaluate the electricity consumption for the entire month of July 2022.
-Below we will create synthetic `baseload` data for this month with 15-minute resolution, so `resolution="15m"`.
+Below, we will create synthetic `baseload` data for this month with 15-minute resolution, so `resolution="15m"`.
 
 2. Configure an optimization model of the electricity consumer with system constraints
 

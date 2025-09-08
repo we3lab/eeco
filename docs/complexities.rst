@@ -33,7 +33,7 @@ Demand charges are particularly problematic for optimization problems since taki
 Tiered charges provide another challenge since assumptions will have to be made about what tier a customer will fall into before the optimization problem is solved,
 but that assumption could be influenced by the results of the optimization problem (:ref:`why-consumption-est`).
 
-We standardized a machine-readable format for storing tariff data that address the complexities of tarrif structure found across the United States (:ref:`data-format`).
+We standardized a machine-readable format for storing tariff data that addresses the complexities of tariff structure found across the United States (:ref:`data-format`).
 
 .. _categorize-tariffs:
 
@@ -66,7 +66,7 @@ We categorize monthly electricity energy and demand charges into Flat, Seasonal-
 Bundling
 ********
 In the United States, generation, transmission, and distribution charges are commonly bundled into a single electricity energy charge. 
-However, in some cases facilities pay separate generation (or supply) and delivery (or transmission and distribution) charges to a single provider or to generation and delivery providers separately. 
+However, in some cases, facilities pay separate generation (or supply) and delivery (or transmission and distribution) charges to a single provider or to generation and delivery providers separately. 
 For example, in much of the Texas interconnection, delivery and generation service providers are distinct.
 
 We developed a second categorization scheme for electricity tariffs based on the extent to which generation and delivery charges are bundled:

@@ -6,7 +6,7 @@
 Optimize Electricity Costs
 **************************
 
-This tutorial will walkthrough how to optimize electricity bill savings for a simple battery model in either :ref:`cvx-cost` or :ref:`pyo-cost` by going through the following steps:
+This tutorial will walk through how to optimize electricity bill savings for a simple battery model in either :ref:`cvx-cost` or :ref:`pyo-cost` by going through the following steps:
 
   #. Load an electricity tariff spreadsheet
 
@@ -21,7 +21,7 @@ This tutorial will walkthrough how to optimize electricity bill savings for a si
        - `pyomo_battery_model.py <https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py>`_
        - `cvxpy_battery_model.py <https://github.com/we3lab/electric-emission-cost/blob/main/examples/cvxpy_battery_model.py>`_
   #. Create an objective function of electricity costs based on this tariff sheet
-  #. Minimize the electriciy costs of this consumer given the system constraints and base load consumption
+  #. Minimize the electricity costs of this consumer, given the system constraints and base load consumption
   #. Display the results to validate that the optimization is correct
 
 .. _cvx-cost:
@@ -146,7 +146,7 @@ but that's fine for these demonstration purposes.
 The charge and consumption dictionaries are relatively straightforward: 
 `charge_dict` comes from the EEC package and `consumption_data_dict` is either an optimization variable or
 numpy array (in the case of historical analysis).
-The only caveat would be that an entry with key "gas" must be included to analzye natural gas consumption.
+The only caveat would be that an entry with key "gas" must be included to analyze natural gas consumption.
 
 Carefully note that the function `calculate_cost` returns a tuple. 
 The second entry of the tuple is for Pyomo, so it can be ignored since we are using CVXPY.
@@ -372,7 +372,7 @@ We're going to stick to the electricity cost calculation details, but we encoura
     # create the model on the instance battery
     battery.create_model()
 
-The above code initializes the battery model with flexibility metrics like round-trip efficiency (RTE), 
+The above code initializes the battery model with flexibility metrics, like round-trip efficiency (RTE), 
 power capacity, and energy capacity.
 
 3. Create an objective function of electricity costs based on this tariff sheet

@@ -1289,8 +1289,7 @@ def calculate_itemized_cost(
 def detect_charge_periods(
     rate_data, charge_type, month, weekday, resolution_minutes=30
 ):
-    """
-    Categorize charges into charge periods
+    """Categorize charges into charge periods
     (peak, half-peak, off-peak, super-off-peak)
     for a particular month, weekday and charge_type.
 
@@ -1423,8 +1422,7 @@ def parametrize_rate_data(
     shift_peak_hours_after=0,
     variant_name=None,
 ):
-    """
-    Parametrize rate data by charge periods
+    """Parametrize rate data by charge periods
     (peak, half-peak, off-peak, super-off-peak) or exact charge keys.
     Applies scaling and window shifting to create
     alternative rate structures.
@@ -1433,44 +1431,66 @@ def parametrize_rate_data(
     ----------
     rate_data : pandas.DataFrame
         Tariff data with required columns
+
     scale_ratios : dict, optional
         Dictionary for charge scaling. Can be one of three formats:
 
         Format 1 - Nested dictionary with structure for charge scaling:
-        {
-            'demand': {
-                'peak': float, 'half_peak': float,
-                'off_peak': float, 'super_off_peak': float
-            },
-            'energy': {
-                'peak': float, 'half_peak': float,
-                'off_peak': float, 'super_off_peak': float
+
+            {
+
+                'demand': {
+
+                    'peak': float,
+                    'half_peak': float,
+                    'off_peak': float,
+                    'super_off_peak': float
+
+                },
+
+                'energy': {
+
+                    'peak': float,
+                    'half_peak': float,
+                    'off_peak': float,
+                    'super_off_peak': float
+
+                }
+
             }
-        }
 
         Format 2 - Dictionary with exact charge key prefixes based on csv:
-        {
-            'electric_demand_peak-summer': float,
-            'electric_energy_0': float,
-            'electric_demand_all-day': float,
-            ...
-        }
+
+            {
+
+                'electric_demand_peak-summer': float,
+                'electric_energy_0': float,
+                'electric_demand_all-day': float,
+                ...
+
+            }
 
         Format 3 - Global scaling for all charges of each type:
-        {
-            'demand': float,  # scales all demand charges
-            'energy': float,   # scales all energy charges
-        }
+
+            {
+
+                'demand': float,  # scales all demand charges
+                'energy': float,   # scales all energy charges
+
+            }
 
         If None, all ratios default to 1.0
+
     shift_peak_hours_before : float, optional
         Hours to shift peak window start
         (negative=earlier, positive=later).
         Must be multiple of 0.25 hours. Default 0
+
     shift_peak_hours_after : float, optional
         Hours to shift peak window end
         (negative=earlier, positive=later).
         Must be multiple of 0.25 hours. Default 0
+
     variant_name : str, optional
         Name for this variant. Default None
 
