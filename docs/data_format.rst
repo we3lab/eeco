@@ -1,12 +1,12 @@
 .. contents::
 
-.. _dataformat:
+.. _data-format:
 
 ************
 Data Formats
 ************
 
-.. _dataformattariff:
+.. _data-format-tariff:
 
 Electricity Tariffs
 ===================
@@ -35,13 +35,13 @@ Each row in the tariff data corresponds to a different charge.
 For example, a municipality with a flat electricity tariff would have only one charge and therefore one row. A municipality with a complex tariff would have many rows corresponding to many charges.
 
 The electricity and natural gas tariff data format used in this project is based on the following reference.
-Additional industrial tariff examples are available in the same reference.
+Additional industrial tariff examples are available in the same reference:
 
-&nbsp; Chapin, F.T., Bolorinos, J. & Mauter, M.S. Electricity and natural gas tariffs at United States wastewater treatment plants. *Sci Data* **11**, 113 (2024). DOI: [10.1038/s41597-023-02886-6](https://doi.org/10.1038/s41597-023-02886-6)
+   Chapin, F.T., Bolorinos, J. & Mauter, M.S. Electricity and natural gas tariffs at United States wastewater treatment plants. *Sci Data* **11**, 113 (2024). DOI: `10.1038/s41597-023-02886-6 <https://doi.org/10.1038/s41597-023-02886-6/>`_
 
 The raw data can also be cited directly from Figshare:
 
-&nbsp; Chapin, F.T., Bolorinos, J., & Mauter, M. S. Electricity and natural gas tariffs at United States wastewater treatment plants. *figshare* https://doi.org/10.6084/m9.figshare.c.6435578.v1 (2024).
+   Chapin, F.T., Bolorinos, J., & Mauter, M. S. Electricity and natural gas tariffs at United States wastewater treatment plants. *figshare* https://doi.org/10.6084/m9.figshare.c.6435578.v1 (2024).
 
 In `bibtex` format:
 
@@ -78,7 +78,7 @@ In `bibtex` format:
    month={Jan}
    }
 
-.. _dataformatemissions:
+.. _data-format-emissions:
 
 Scope 2 Emissions
 =================
@@ -97,9 +97,9 @@ The columns are:
 Each row in the emissions data corresponds to a different hourly average emissions intensity. 
 For example, there are 24 rows for January. The row with month "1" and hour "0" represents the average emissions intensity from 00:00 - 00:59 across all days in January.
 
-The Scope 2 emissions data format used in this project is based on the following reference.
-
-&nbsp; de Chalendar, J.A., Taggart, J. & Benson, S.M. Tracking emissions in the US electricity system. *Proc Natl Acad Sci USA* **116**, 25497-25502 (2019). DOI: [10.1073/pnas.1912950116](https://doi.org/10.1073/pnas.1912950116)
+The Scope 2 emissions data format used in this project is based on the following reference:
+   
+   de Chalendar, J.A., Taggart, J. & Benson, S.M. Tracking emissions in the US electricity system. *Proc Natl Acad Sci USA* **116**, 25497-25502 (2019). DOI: `10.1073/pnas.1912950116 <https://doi.org/10.1073/pnas.1912950116/>`_
 
 In `bibtex` format:
 

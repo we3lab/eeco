@@ -32,7 +32,7 @@ These functions can be performed in three different modes:
 (2) ``CVXPY``
 (3) ``Pyomo``
 
-More information about how to correctly format data inputs can be found in :ref:`dataformat`.
+More information about how to correctly format data inputs can be found in :ref:`data-format`.
 
 .. _batteryoptimization:
 
