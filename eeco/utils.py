@@ -330,6 +330,11 @@ def max_pos(expression, model=None, varstr=None):
         )
 
 
+def _get_decomposed_var_names(utility):
+    """Get consistent variable names for decomposed consumption variables."""
+    return f"{utility}_positive", f"{utility}_negative"
+
+
 def initialize_decomposed_pyo_vars(consumption_data_dict, model, charge_dict):
     """Helper function to initialize Pyomo variables with baseline consumption values.
 
@@ -376,8 +381,9 @@ def initialize_decomposed_pyo_vars(consumption_data_dict, model, charge_dict):
         positive_values, negative_values, _ = decompose_consumption(consumption_data)
 
         # Find and initialize the corresponding Pyomo variables
-        positive_var = model.find_component(f"{utility}_positive")
-        negative_var = model.find_component(f"{utility}_negative")
+        pos_name, neg_name = _get_decomposed_var_names(utility)
+        positive_var = model.find_component(pos_name)
+        negative_var = model.find_component(neg_name)
 
         for t in model.t:
             positive_var[t].value = positive_values[t - 1]
