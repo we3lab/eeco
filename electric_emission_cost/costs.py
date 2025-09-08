@@ -596,7 +596,7 @@ def calculate_demand_cost(
         so the default is 0
 
     consumption_estimate : float, array
-        Estimate of the total consumption from baseline data in (kW, therms/hr OR m3/hr).
+        Estimate of the total consumption from baseline data in kW, therms/hr OR m3/hr.
         Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
         for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
         will use actual consumption and ignore the estimate.
@@ -743,7 +743,8 @@ def calculate_energy_cost(
         Default is 0
 
     consumption_estimate : float, array
-        Estimate of the total monthly energy consumption from baseline data (kWh, therms or m3).
+        Estimate of the total monthly energy consumption from baseline data
+        in kWh, therms, or cubic meters.
         Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
         for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
         will use actual consumption and ignore the estimate.
@@ -1045,7 +1046,6 @@ def calculate_cost(
     """
     cost = 0
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
-    n_per_day = n_per_hour * 24
 
     if consumption_estimate is None:
         consumption_estimate = 0
@@ -1053,7 +1053,9 @@ def calculate_cost(
     for key, charge_array in charge_dict.items():
         utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
         varstr = ut.sanitize_varstr(
-            varstr_alias_func(utility, charge_type, name, eff_start, eff_end, limit_str)
+            varstr_alias_func(
+                utility, charge_type, name, eff_start, eff_end, limit_str
+            )  # noqa: E501
         )
 
         # if we want itemized costs skip irrelvant portions of the bill

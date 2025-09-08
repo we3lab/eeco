@@ -902,7 +902,7 @@ def test_calculate_cost_np(
             None,
             260,
         ),
-        # energy charge with charge limit that wont be hit and time-varying consumption estimate
+        # energy charge that won't hit charge limit + time-varying consumption estimate
         (
             {
                 "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
@@ -1163,7 +1163,7 @@ def test_calculate_cost_cvx(
             None,
             260,
         ),
-        # energy charge with charge limit that wont be hit and time-varying consumption estimate
+        # energy charge that won't hit charge limit + time-varying consumption estimate
         (
             {
                 "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
