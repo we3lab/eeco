@@ -1048,6 +1048,11 @@ def calculate_cost(
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
 
+    additional_objective_terms : pyomo.Expression, list
+        Additional terms to be added to the objective function.
+        Can be a single pyomo Expression or a list of pyomo Expressions.
+        Only used in the case of Pyomo, so `None` by default.
+
     decompose_exports : indicates whether to add additional optimization variables
         indicating positive or negative consumption. Set to "True" if electricity
         or gas exports are possible. Default "False"
@@ -1213,7 +1218,148 @@ def calculate_cost(
             cost += charge_array.sum()
         else:
             raise ValueError("Invalid charge_type: " + charge_type)
+
     return cost, model
+
+
+def build_pyomo_costing(
+    charge_dict,
+    consumption_data_dict,
+    model,
+    electric_consumption_units=u.kW,
+    gas_consumption_units=u.meters**3 / u.day,
+    resolution="15m",
+    prev_demand_dict=None,
+    prev_consumption_dict=None,
+    consumption_estimate=0,
+    desired_utility=None,
+    desired_charge_type=None,
+    demand_scale_factor=1,
+    additional_objective_terms=None,
+    varstr_alias_func=default_varstr_alias_func,
+):
+    """
+    Wrapper for calculate_cost to build the cost components into a Pyomo model.
+
+    Parameters
+    ----------
+    charge_dict : dict
+        dictionary of arrays with keys of the form
+        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
+        and values being the $ per kW (electric demand), kWh (electric energy/export),
+        cubic meter / day (gas demand), cubic meter (gas energy),
+        or $ / month (customer)
+
+    consumption_data_dict : dict
+        Baseline electrical and gas usage data as an optimization variable object
+        with keys "electric" and "gas". Values of the dictionary must be of type
+        numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
+
+    model : pyomo.Model
+        The model object associated with the problem.
+
+    electric_consumption_units : pint.Unit
+        Units for the electricity consumption data. Default is kW
+
+    gas_consumption_units : pint.Unit
+        Units for the natural gas consumption data. Default is cubic meters / day
+
+    resolution : str
+        String of the form `[int][str]` giving the temporal resolution
+        on which charges are assessed, the `str` portion corresponds to
+        numpy.timedelta64 types for example '15m' specifying demand charges
+        that are applied to 15-minute intervals of electricity consumption
+
+    prev_demand_dict : dict
+        Nested dictionary previous maximmum demand charges with an entry of the form
+        {"cost" : float, "demand" : float} for each charge.
+        Default is None, which results in an a prev_demand and prev_demand_cost
+        of zero for all charges.
+
+    prev_consumption_dict : dict
+        Dictionary of previous total energy consumption with a key for each charge
+        to be used when starting the cost calculation partway into a billing period
+        (e.g., while using a moving horizon that is shorter than a month).
+        Default is None, resulting in an a prev_consumption of zero for all charges.
+
+    consumption_estimate : float
+        Estimate of the total monthly demand or energy consumption from baseline data.
+        Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
+        for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
+        will use actual consumption and ignore the estimate.
+
+    desired_charge_type : list or str
+        Name of desired charge type for itemized costs.
+        Either 'customer', 'energy', 'demand', 'export', or a list of charge types.
+        Default is None, meaning that all costs will be summed together.
+
+    desired_utility : list or str
+        Name of desired utility for itemized costs.
+        Either 'electric', 'gas', or a list of utilities (e.g., ['electric', 'gas']).
+        Default is None, meaning that all costs will be summed together.
+
+    demand_scale_factor : float
+        Optional factor for scaling demand charges relative to energy charges
+        when the optimization/simulation period is not a full billing cycle.
+        Applied to monthly charges where end_date - start_date > 1 day.
+        Default is 1
+
+    additional_objective_terms : list
+        Additional terms to be added to the objective function.
+        Must be a list of pyomo Expressions.
+
+    varstr_alias_func: function
+        Function to generate variable name for pyomo,
+        should take in a 6 inputs and generate a string output.
+        The function will receive following six inputs:
+
+        - utility: str
+        - charge_type: str
+        - name: str
+        - start_date: str
+        - end_date: str
+        - charge_limit: str
+
+        Examples of functions:
+            f_no_dates=lambda utility,
+            charge_type, name,
+            start_date, end_date,
+            charge_limit:
+            f"{utility}_{charge_type}_{name}_{charge_limit}"
+
+    Raises
+    ------
+    ValueError
+        When invalid `utility`, `charge_type`, or `assessed`
+        is provided in `charge_arrays`
+
+    Returns
+    -------
+    pyomo.Model
+        The model object associated with the problem with costing components added.
+    """
+    model.electricity_cost, model = calculate_cost(
+        charge_dict=charge_dict,
+        consumption_data_dict=consumption_data_dict,
+        electric_consumption_units=electric_consumption_units,
+        gas_consumption_units=gas_consumption_units,
+        resolution=resolution,
+        prev_demand_dict=prev_demand_dict,
+        prev_consumption_dict=prev_consumption_dict,
+        consumption_estimate=consumption_estimate,
+        desired_utility=desired_utility,
+        desired_charge_type=desired_charge_type,
+        demand_scale_factor=demand_scale_factor,
+        model=model,
+        varstr_alias_func=varstr_alias_func,
+    )
+
+    model.obj = pyo.Objective(expr=model.electricity_cost, sense=pyo.minimize)
+
+    if additional_objective_terms is not None:
+        for term in additional_objective_terms:
+            model.obj.expr += term
+    return model
 
 
 def calculate_itemized_cost(
@@ -1445,8 +1591,7 @@ def calculate_itemized_cost(
 def detect_charge_periods(
     rate_data, charge_type, month, weekday, resolution_minutes=30
 ):
-    """
-    Categorize charges into charge periods
+    """Categorize charges into charge periods
     (peak, half-peak, off-peak, super-off-peak)
     for a particular month, weekday and charge_type.
 
@@ -1579,8 +1724,7 @@ def parametrize_rate_data(
     shift_peak_hours_after=0,
     variant_name=None,
 ):
-    """
-    Parametrize rate data by charge periods
+    """Parametrize rate data by charge periods
     (peak, half-peak, off-peak, super-off-peak) or exact charge keys.
     Applies scaling and window shifting to create
     alternative rate structures.
@@ -1589,44 +1733,65 @@ def parametrize_rate_data(
     ----------
     rate_data : pandas.DataFrame
         Tariff data with required columns
-    percent_change_dict : dict, optional
+    scale_ratios : dict, optional
         Dictionary for charge scaling. Can be one of three formats:
 
         Format 1 - Nested dictionary with structure for charge scaling:
-        {
-            'demand': {
-                'peak': float, 'half_peak': float,
-                'off_peak': float, 'super_off_peak': float
-            },
-            'energy': {
-                'peak': float, 'half_peak': float,
-                'off_peak': float, 'super_off_peak': float
+
+            {
+
+                'demand': {
+
+                    'peak': float,
+                    'half_peak': float,
+                    'off_peak': float,
+                    'super_off_peak': float
+
+                },
+
+                'energy': {
+
+                    'peak': float,
+                    'half_peak': float,
+                    'off_peak': float,
+                    'super_off_peak': float
+
+                }
+
             }
-        }
 
         Format 2 - Dictionary with exact charge key prefixes based on csv:
-        {
-            'electric_demand_peak-summer': float,
-            'electric_energy_0': float,
-            'electric_demand_all-day': float,
-            ...
-        }
+
+            {
+
+                'electric_demand_peak-summer': float,
+                'electric_energy_0': float,
+                'electric_demand_all-day': float,
+                ...
+
+            }
 
         Format 3 - Global scaling for all charges of each type:
-        {
-            'demand': float,  # scales all demand charges
-            'energy': float,   # scales all energy charges
-        }
+
+            {
+
+                'demand': float,  # scales all demand charges
+                'energy': float,   # scales all energy charges
+
+            }
 
         If None, all ratios default to 1.0
+
     shift_peak_hours_before : float, optional
         Hours to shift peak window start
         (negative=earlier, positive=later).
         Must be multiple of 0.25 hours. Default 0
+
     shift_peak_hours_after : float, optional
         Hours to shift peak window end
         (negative=earlier, positive=later).
         Must be multiple of 0.25 hours. Default 0
+
     variant_name : str, optional
         Name for this variant. Default None
 

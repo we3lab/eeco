@@ -1020,6 +1020,114 @@ def test_calculate_cost_pyo(
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
+    "charge_dict, consumption_data_dict, consumption_estimate, "
+    "additional_objective_type, expected_cost",
+    [
+        # energy charge with charge limit
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            2400,
+            "single",
+            pytest.approx(270),
+        ),
+        # energy charge with charge limit
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            2400,
+            "multiple",
+            pytest.approx(270),
+        ),
+    ],
+)
+def test_build_pyomo_costing(
+    charge_dict,
+    consumption_data_dict,
+    consumption_estimate,
+    additional_objective_type,
+    expected_cost,
+):
+    model = pyo.ConcreteModel()
+    model.T = len(consumption_data_dict["electric"])
+    model.t = range(model.T)
+
+    # the expression must be on the model so it can't be passed externally
+    if additional_objective_type == "single":
+        model.x = pyo.Expression(expr=10)
+        additional_objective_terms = [model.x]
+    elif additional_objective_type == "multiple":
+        model.x = pyo.Expression(expr=10)
+        model.y = pyo.Expression(expr=0)
+        additional_objective_terms = [model.x, model.y]
+    else:
+        pass
+
+    pyo_vars = {}
+    for key, val in consumption_data_dict.items():
+        var = pyo.Var(range(len(val)), initialize=np.zeros(len(val)), bounds=(0, None))
+        model.add_component(key, var)
+        pyo_vars[key] = var
+
+    @model.Constraint(model.t)
+    def electric_constraint(m, t):
+        return consumption_data_dict["electric"][t] == m.electric[t]
+
+    @model.Constraint(model.t)
+    def gas_constraint(m, t):
+        return consumption_data_dict["gas"][t] == m.gas[t]
+
+    model = costs.build_pyomo_costing(
+        charge_dict,
+        pyo_vars,
+        model=model,
+        resolution="15m",
+        prev_demand_dict=None,
+        consumption_estimate=consumption_estimate,
+        desired_utility=None,
+        desired_charge_type=None,
+        additional_objective_terms=additional_objective_terms,
+    )
+    solver = pyo.SolverFactory("gurobi")
+    solver.solve(model)
+
+    assert model is not None
+    assert model.obj is not None
+    assert pyo.value(model.obj) == expected_cost
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
     "start_dt, end_dt, billing_data, utility, consumption_data_dict, "
     "prev_demand_dict, consumption_estimate, scale_factor, expected",
     [
