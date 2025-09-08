@@ -179,7 +179,7 @@ Units
 The EEC package uses `Pint <https://pint.readthedocs.io/en/stable/>`_ to handle nit conversions automaitcally. 
 The logic depends on the proper `electric_consumption_units` and `gas_consumption_units` arguments being provided.
 Based on the most common data sources we have used, the electric consumption units are in kW
-and gas consumption units in cubic meters per day, so `electric_consumption_units=u.kW` and `gas_consumption_units=u.m ** 3 / u.day`.
+and gas consumption units in cubic meters per hour, so `electric_consumption_units=u.kW` and `gas_consumption_units=u.m ** 3 / u.hour`.
 
 For example:
 

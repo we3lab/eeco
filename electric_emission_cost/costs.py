@@ -161,7 +161,7 @@ def add_to_charge_array(charge_dict, key_str, charge_array):
         Dictionary of arrays with keys of the form
         `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
         and values being the $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy),
+        cubic meter / hour (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
     key_str : str
@@ -170,7 +170,7 @@ def add_to_charge_array(charge_dict, key_str, charge_array):
 
     charge_array : numpy.ndarray
         Value of the charge to add in $ per kW (electric demand),
-        kWh (electric energy/export), cubic meter / day (gas demand),
+        kWh (electric energy/export), cubic meter / hour (gas demand),
         cubic meter (gas energy), or $ / month (customer)
     """
     try:
@@ -808,14 +808,13 @@ def calculate_energy_cost(
         total_consumption = cumulative_consumption[-1]
 
         start_idx = np.argmax(cumulative_consumption >= float(limit))
+        # if not found argmax returns 0
         if (start_idx == 0) and (total_consumption < float(limit)):
             start_idx = -1
         if np.isinf(next_limit) or (total_consumption < float(next_limit)):
             end_idx = -1
         else:
-            end_idx = np.argmax(
-                cumulative_consumption > float(next_limit)
-            )  # if not found argmax returns 0
+            end_idx = np.argmax(cumulative_consumption > float(next_limit))
 
         charge_array[:start_idx] = 0  # 0 for charge array before the start index
         charge_array[end_idx:] = 0  # 0 for charge array after the end index
@@ -929,7 +928,7 @@ def calculate_cost(
     charge_dict,
     consumption_data_dict,
     electric_consumption_units=u.kW,
-    gas_consumption_units=u.meters**3 / u.day,
+    gas_consumption_units=u.meters**3 / u.hour,
     resolution="15m",
     prev_demand_dict=None,
     prev_consumption_dict=None,
@@ -950,7 +949,7 @@ def calculate_cost(
         dictionary of arrays with keys of the form
         `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
         and values being the $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy),
+        cubic meter / hour (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
     consumption_data_dict : dict
@@ -962,7 +961,7 @@ def calculate_cost(
         Units for the electricity consumption data. Default is kW
 
     gas_consumption_units : pint.Unit
-        Units for the natural gas consumption data. Default is cubic meters / day
+        Units for the natural gas consumption data. Default is cubic meters / hour
 
     resolution : str
         String of the form `[int][str]` giving the temporal resolution
@@ -1068,9 +1067,9 @@ def calculate_cost(
             divisor = n_per_hour
         elif utility == GAS:
             conversion_factor = (
-                (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
+                (1 * gas_consumption_units).to(u.meter**3 / u.hour).magnitude
             )
-            divisor = n_per_day / conversion_factor
+            divisor = n_per_hour
         else:
             raise ValueError("Invalid utility: " + utility)
 
@@ -1170,7 +1169,7 @@ def calculate_itemized_cost(
     charge_dict,
     consumption_data_dict,
     electric_consumption_units=u.kW,
-    gas_consumption_units=u.meters**3 / u.day,
+    gas_consumption_units=u.meters**3 / u.hour,
     resolution="15m",
     prev_demand_dict=None,
     prev_consumption_dict=None,
@@ -1188,7 +1187,7 @@ def calculate_itemized_cost(
         dictionary of arrays with keys of the form
         `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
         and values being the $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy),
+        cubic meter / hour (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
     consumption_data_dict : dict
@@ -1200,7 +1199,7 @@ def calculate_itemized_cost(
         Units for the electricity consumption data. Default is kW
 
     gas_consumption_units : pint.Unit
-        Units for the natura gas consumption data. Default is cubic meters / day
+        Units for the natura gas consumption data. Default is cubic meters / hour
 
     resolution : str
         String of the form `[int][str]` giving the temporal resolution
