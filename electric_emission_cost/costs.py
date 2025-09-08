@@ -887,6 +887,12 @@ def calculate_export_revenue(
         and the second entry being the pyomo model object (or None)
     """
     if isinstance(consumption_data, np.ndarray):
+        if np.any(consumption_data < 0):
+            warnings.warn(
+                "UserWarning: Export revenue calculation includes negative values. "
+                "Pass in only positive values or "
+                "run calculate_cost with decompose_exports=True"
+            )
         return np.sum(consumption_data * charge_array) / divisor, model
 
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
@@ -1113,6 +1119,7 @@ def calculate_cost(
                 # Decompose consumption data into positive and negative components
                 # with constraint that total = positive - negative
                 # (where negative is stored as positive magnitude)
+                pos_name, neg_name = ut._get_decomposed_var_names(utility)
                 imports, exports, model = ut.decompose_consumption(
                     converted_consumption,
                     model=model,
@@ -1320,6 +1327,16 @@ def calculate_itemized_cost(
         }
 
     """
+    # Check if decompose_exports=True is used with CVXPY objects
+    # (not yet supported because imports - exports creates non-DCP issues)
+    if decompose_exports:
+        for utility in consumption_data_dict.keys():
+            if isinstance(consumption_data_dict[utility], cp.Variable):
+                raise ValueError(
+                    "decompose_exports=True is not supported with CVXPY objects. "
+                    "Use Pyomo instead for problems requiring decompose_exports."
+                )
+
     total_cost = 0
     results_dict = {}
 
@@ -1353,8 +1370,9 @@ def calculate_itemized_cost(
                 # Decompose consumption data into positive and negative components
                 # with constraint that total = positive - negative
                 # (where negative is stored as positive magnitude)
+                pos_name, neg_name = ut._get_decomposed_var_names(utility)
                 imports, exports, model = ut.decompose_consumption(
-                    converted_consumption, model=model, varstr=utility + "_decomposed"
+                    converted_consumption, model=model, varstr=utility
                 )
 
                 consumption_data_dict[utility] = {
@@ -1556,7 +1574,7 @@ def detect_charge_periods(
 
 def parametrize_rate_data(
     rate_data,
-    scale_ratios={},
+    percent_change_dict={},
     shift_peak_hours_before=0,
     shift_peak_hours_after=0,
     variant_name=None,
@@ -1571,7 +1589,7 @@ def parametrize_rate_data(
     ----------
     rate_data : pandas.DataFrame
         Tariff data with required columns
-    scale_ratios : dict, optional
+    percent_change_dict : dict, optional
         Dictionary for charge scaling. Can be one of three formats:
 
         Format 1 - Nested dictionary with structure for charge scaling:
@@ -1621,10 +1639,10 @@ def parametrize_rate_data(
     Raises
     ------
     ValueError
-        If scale_ratios contains both period-based scaling and individual charge
+        If percent_change_dict contains both period-based scaling and individual charge
         scaling for the same charge type
     UserWarning
-        If scale_ratios contains exact charge keys that are not found in the data
+        If percent_change_dict contains exact charge keys that are not found in the data
     """
     variant_data = rate_data.copy(deep=True)  # deep copy required for variants
     variant_data[HOUR_START] = variant_data[HOUR_START].astype(float)
@@ -1636,25 +1654,26 @@ def parametrize_rate_data(
         else [CHARGE]
     )
 
-    # Determine which format scale_ratios was passed in
-    has_exact_keys = len(scale_ratios) > 0 and any(
+    # Determine which format percent_change_dict was passed in
+    has_exact_keys = len(percent_change_dict) > 0 and any(
         isinstance(k, str) and ("electric_" in k or "gas_" in k)
-        for k in scale_ratios.keys()
+        for k in percent_change_dict.keys()
     )
 
-    has_global_scaling = len(scale_ratios) > 0 and any(
+    has_global_scaling = len(percent_change_dict) > 0 and any(
         k in [DEMAND, ENERGY] and isinstance(v, (int, float))
-        for k, v in scale_ratios.items()
+        for k, v in percent_change_dict.items()
     )
 
-    has_period_scaling = len(scale_ratios) > 0 and any(
-        isinstance(v, dict) and k in [DEMAND, ENERGY] for k, v in scale_ratios.items()
+    has_period_scaling = len(percent_change_dict) > 0 and any(
+        isinstance(v, dict) and k in [DEMAND, ENERGY]
+        for k, v in percent_change_dict.items()
     )
 
     # Check for conflicts between period/global scaling and exact keys
     if has_exact_keys and (has_period_scaling or has_global_scaling):
         raise ValueError(
-            "scale_ratios cannot contain both exact charge keys"
+            "percent_change_dict cannot contain both exact charge keys"
             " and global/period-based scaling"
         )
 
@@ -1672,11 +1691,11 @@ def parametrize_rate_data(
     for charge_type in [ENERGY, DEMAND]:
         if (
             has_global_scaling
-            and charge_type in scale_ratios
-            and isinstance(scale_ratios[charge_type], (int, float))
+            and charge_type in percent_change_dict
+            and isinstance(percent_change_dict[charge_type], (int, float))
         ):
             # Format 3: Global scaling for all charges of this type
-            scale_factor = scale_ratios[charge_type]
+            scale_factor = percent_change_dict[charge_type]
             charge_ratios = {
                 PEAK: scale_factor,
                 HALF_PEAK: scale_factor,
@@ -1685,10 +1704,10 @@ def parametrize_rate_data(
             }
         # Format 2: Exact charge keys
         elif has_exact_keys:
-            charge_ratios = scale_ratios
+            charge_ratios = percent_change_dict
         # Format 1: Period-based scaling
-        elif has_period_scaling and charge_type in scale_ratios:
-            charge_ratios = scale_ratios[charge_type]
+        elif has_period_scaling and charge_type in percent_change_dict:
+            charge_ratios = percent_change_dict[charge_type]
         else:  # No scaling - window shifting only
             charge_ratios = {
                 PEAK: 1.0,
@@ -1857,7 +1876,7 @@ def parametrize_rate_data(
 
     if missing_keys and has_exact_keys:
         warnings.warn(
-            f"The following charge keys were not found in scale_ratios and "
+            f"The following charge keys were not found in percent_change_dict and "
             f"will use default ratio of 1.0: {sorted(list(missing_keys))}",
             UserWarning,
         )
@@ -1881,7 +1900,7 @@ def parametrize_charge_dict(start_dt, end_dt, rate_data, variants=None):
         tariff data with required columns
     variants : list[dict]
         List of dictionaries containing variation parameters with keys:
-        - scale_ratios: dict for charge scaling (see parametrize_rate_data for options)
+        - percent_change_dict: dict for charge scaling (see parametrize_rate_data)
         - shift_peak_hours_before: float to shift peak start, in hours
         - shift_peak_hours_after: float to shift peak end, in hours
         - variant_name: str (optional) variant name
