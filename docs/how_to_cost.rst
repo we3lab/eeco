@@ -181,13 +181,15 @@ The logic depends on the proper `electric_consumption_units` and `gas_consumptio
 Based on the most common data sources we have used, the electric consumption units are in kW
 and gas consumption units in cubic meters per hour, so `electric_consumption_units=u.kW` and `gas_consumption_units=u.m ** 3 / u.hour`.
 
-For example:
+For example, if `electric_consumption_units` are in megawatts instead of the default kilowatts:
 
 .. code-block:: python
 
-    # TODO: INSERT CODE SNIPPET WITH VARIOUS UNITS
-    # THESE OPTIONAL ARGUMENTS STILL HAVE TO BE IMPLEMENTED
-    # https://github.com/we3lab/electric-emission-cost/issues/17
+    total_monthly_bill, _ = costs.calculate_cost(
+        charge_dict, consumption_data_dict, electric_consumption_units=u.MW
+    )
+
+By default, `gas_consumption_units=u.meters**3 / u.hr` in order to be consistent with our published natural gas tariff dataset (:ref:`data-format-tariff`).
 
 ================
 Itemized Charges
