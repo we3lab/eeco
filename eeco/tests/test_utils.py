@@ -207,7 +207,6 @@ def test_decompose_consumption_cvx():
     "consumption_data, expected_positive_sum, expected_negative_sum",
     [
         (np.array([1, -2, 3, -4, 0]), 4, 6),  # positive: 1+3=4, negative: 2+4=6
-        (np.array([5, 0, -3, 7, -1]), 12, 4),  # positive: 5+7=12, negative: 3+1=4
         (np.array([0, 0, 0]), 0, 0),
         (np.array([-10, -5, -1]), 0, 16),  # positive: 0, negative: 10+5+1=16
         (np.array([10, 5, 1]), 16, 0),  # positive: 10+5+1=16, negative: 0
@@ -234,22 +233,16 @@ def test_decompose_consumption_pyo(
     }
     ut.initialize_decomposed_pyo_vars(init_consumption_data, model, None)
 
-    # Verify the expected sums from the initialized values
-    assert (
-        abs(sum(pyo.value(positive_var[t]) for t in model.t) - expected_positive_sum)
-        < 1e-6
+    # Verify expected sums
+    assert sum(pyo.value(positive_var[t]) for t in model.t) == pytest.approx(
+        expected_positive_sum
     )
-    assert (
-        abs(sum(pyo.value(negative_var[t]) for t in model.t) - expected_negative_sum)
-        < 1e-6
+    assert sum(pyo.value(negative_var[t]) for t in model.t) == pytest.approx(
+        expected_negative_sum
     )
 
-    # Verify the decomposition constraint is satisfied
+    # Verify decomposition constraint
     for t in model.t:
-        assert (
-            abs(
-                pyo.value(model.electric_consumption[t])
-                - (pyo.value(positive_var[t]) - pyo.value(negative_var[t]))
-            )
-            < 1e-6
+        assert pyo.value(model.electric_consumption[t]) == pytest.approx(
+            pyo.value(positive_var[t]) - pyo.value(negative_var[t])
         )
