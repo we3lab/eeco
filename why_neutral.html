@@ -48,8 +48,8 @@
               <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
@@ -111,45 +111,27 @@
 <li><p><a class="reference internal" href="#why-design-a-pyomo-cvxpy-neutral-library" id="id1">Why Design a Pyomo/CVXPY Neutral Library?</a></p></li>
 </ul>
 </nav>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Site under construction!
-Documentation incomplete :(</p>
-</div>
 <section id="why-design-a-pyomo-cvxpy-neutral-library">
 <span id="why-neutral"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">Why Design a Pyomo/CVXPY Neutral Library?</a><a class="headerlink" href="#why-design-a-pyomo-cvxpy-neutral-library" title="Permalink to this heading"></a></h1>
-<p>Bullets to formulate into paragraphs:</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>Both libraries are widely used</p>
-<ul>
-<li><p>Pros and cons of each</p>
-<ul>
-<li><p>cvx: native support for matrices, computation time</p></li>
-<li><p>pyo: nonconvex support, object-oriented (could be considered a con as well - not as lightweight)</p></li>
-<li><p>etc.</p></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><p>Do not want energy research community siloed</p></li>
-<li><p>Reproducability and code quality</p>
-<ul>
-<li><p>Using the same functions allows for results between researchers using different methods to be consistent</p></li>
-<li><p>We know that any discrepancies are due to their model itself, not the cost calculation</p></li>
-<li><p>Bugs are more likely to be discovered the more widely used the package is,
-and when they are fixed there will not be two versions out of sync with one another</p></li>
-</ul>
-</li>
-<li><p>Distributed optimization with multiple libraries</p>
-<ul>
-<li><p>Maybe this is a niche use case,
-but we use this package to link together cost calculations from a joint opt. problem with both CVXPY and Pyomo subproblems</p></li>
-<li><p>It’s nice to have the same dependency for every subproblem</p></li>
-</ul>
-</li>
-</ul>
-</div></blockquote>
+<p><a class="reference external" href="https://www.pyomo.org/">Pyomo</a> and <a class="reference external" href="https://www.cvxpy.org/">CVXPY</a> are the two most widely used optimization modelling languages in Python.
+As a result, both are widely used in scientific research across applications such as computer hardware design, electric grid modeling, and assembly line optimization.</p>
+<p>Without getting too into the weeds, each library has its own pros and cons. CVXPY has native support for matrices and is generally lighter weight,
+leading to shorter model intialization and solve times.
+Pyomo supports nonconvex optimization, enabling it to solve a much larger set of problems than CVXPY.
+Additionally, Pyomo’s object-oriented nature can be helpful in organizing complex models, but could be considered a con as well as it can lead to unnecessary overhead.</p>
+<p>Since there are good reasons to use both CVXPY and Pyomo depending on the application, we do not want to make that decision for our users.
+With that in mind, we could have created two separate packages, one for CVXPY and one for Pyomo, and in a lot of ways that would have been a more straightforward approach.
+However, we feel that maintaining a Pyomo/CVXPY neutral library has three key benefits:</p>
+<ol class="arabic simple">
+<li><p><em>Generalizability</em>: A useful model or other software tool can reach a larger audience of both Pyomo and CVXPY experts and avoid siloing research.</p></li>
+<li><p><em>Reproducibility</em>: A researcher can validate results from a CVXPY model in Pyomo using the same cost calculation code. In other words,
+Using the same functions allows for researchers to be certain that any discrepancies are due to the models themselves, not the cost calculation code.</p></li>
+<li><p><em>Quality</em>: Maintaining correct code becomes easier because bug fixes are done for both Pyomo and CVXPY simultaneously rather than having to keep
+two separate repositories in sync. Additionally, bugs are more likely to be discovered by widening the user base to both CVXPY and Pyomo.</p></li>
+</ol>
+<p>As an example of the utility of a Pyomo/CVXPY neutral package, the WE3Lab has been working on distributed optimization to coordinate operation between multiple water systems.
+We use this package to link together cost calculations from each water system subproblem when there are both CVXPY and Pyomo subproblems.
+When orchestrating the solver, it is extremely helpful to use the same cost calculation code across subproblems regardless of the underlying model architecture.</p>
 </section>
 
 

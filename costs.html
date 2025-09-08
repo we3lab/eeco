@@ -48,8 +48,8 @@
               <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
@@ -690,25 +690,32 @@ alternative rate structures.</p>
 <dd class="field-odd"><ul>
 <li><p><strong>rate_data</strong> (<em>pandas.DataFrame</em>) – Tariff data with required columns</p></li>
 <li><p><strong>scale_ratios</strong> (<em>dict, optional</em>) – Dictionary for charge scaling. Can be one of three formats:</p>
-<p>Format 1 - Nested dictionary with structure for charge scaling:
-{</p>
+<p>Format 1 - Nested dictionary with structure for charge scaling:</p>
 <blockquote>
-<div><dl class="simple">
-<dt>‘demand’: {</dt><dd><p>‘peak’: float, ‘half_peak’: float,
-‘off_peak’: float, ‘super_off_peak’: float</p>
-</dd>
-</dl>
-<p>},
-‘energy’: {</p>
+<div><p>{</p>
 <blockquote>
-<div><p>‘peak’: float, ‘half_peak’: float,
-‘off_peak’: float, ‘super_off_peak’: float</p>
+<div><p>‘demand’: {</p>
+<blockquote>
+<div><p>‘peak’: float,
+‘half_peak’: float,
+‘off_peak’: float,
+‘super_off_peak’: float</p>
+</div></blockquote>
+<p>},</p>
+<p>‘energy’: {</p>
+<blockquote>
+<div><p>‘peak’: float,
+‘half_peak’: float,
+‘off_peak’: float,
+‘super_off_peak’: float</p>
 </div></blockquote>
 <p>}</p>
 </div></blockquote>
 <p>}</p>
-<p>Format 2 - Dictionary with exact charge key prefixes based on csv:
-{</p>
+</div></blockquote>
+<p>Format 2 - Dictionary with exact charge key prefixes based on csv:</p>
+<blockquote>
+<div><p>{</p>
 <blockquote>
 <div><p>‘electric_demand_peak-summer’: float,
 ‘electric_energy_0’: float,
@@ -716,13 +723,16 @@ alternative rate structures.</p>
 …</p>
 </div></blockquote>
 <p>}</p>
-<p>Format 3 - Global scaling for all charges of each type:
-{</p>
+</div></blockquote>
+<p>Format 3 - Global scaling for all charges of each type:</p>
+<blockquote>
+<div><p>{</p>
 <blockquote>
 <div><p>‘demand’: float,  # scales all demand charges
 ‘energy’: float,   # scales all energy charges</p>
 </div></blockquote>
 <p>}</p>
+</div></blockquote>
 <p>If None, all ratios default to 1.0</p>
 </li>
 <li><p><strong>shift_peak_hours_before</strong> (<em>float, optional</em>) – Hours to shift peak window start

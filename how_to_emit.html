@@ -48,8 +48,8 @@
               <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
@@ -138,7 +138,7 @@
 <section id="how-to-calculate-emissions">
 <span id="how-to-emissions"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">How to Calculate Emissions</a><a class="headerlink" href="#how-to-calculate-emissions" title="Permalink to this heading"></a></h1>
 <p>This package is designed to calculate cumulative emissions from a given electricity consumption array and monthly/hourly average emissions factors.
-Many data sources report emissions factors as monthly/hourly averages (<span class="xref std std-ref">data-format-emissions</span>),
+Many data sources report emissions factors as monthly/hourly averages (<a class="reference internal" href="data_format.html#data-format-emissions"><span class="std std-ref">Scope 2 Emissions</span></a>),
 so it is useful to convert data in monthly/hourly format into a time series the same length as the consumption variable.</p>
 <p>Note that if you already have a complete time series of Scope 2 emissions factors, this package is not necessary.
 We feel that is simple enough that it does not warrant its own function.</p>

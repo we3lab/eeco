@@ -45,8 +45,8 @@
               <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../index.html">Table of Contents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../why_metrics.html">Why Use Flexibility Metrics?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
@@ -1395,8 +1395,7 @@
 <div class="viewcode-block" id="detect_charge_periods"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.detect_charge_periods">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">detect_charge_periods</span><span class="p">(</span>
     <span class="n">rate_data</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="n">weekday</span><span class="p">,</span> <span class="n">resolution_minutes</span><span class="o">=</span><span class="mi">30</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Categorize charges into charge periods</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Categorize charges into charge periods</span>
 <span class="sd">    (peak, half-peak, off-peak, super-off-peak)</span>
 <span class="sd">    for a particular month, weekday and charge_type.</span>
 
@@ -1529,8 +1528,7 @@
     <span class="n">shift_peak_hours_after</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">variant_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Parametrize rate data by charge periods</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parametrize rate data by charge periods</span>
 <span class="sd">    (peak, half-peak, off-peak, super-off-peak) or exact charge keys.</span>
 <span class="sd">    Applies scaling and window shifting to create</span>
 <span class="sd">    alternative rate structures.</span>
@@ -1539,44 +1537,66 @@
 <span class="sd">    ----------</span>
 <span class="sd">    rate_data : pandas.DataFrame</span>
 <span class="sd">        Tariff data with required columns</span>
+
 <span class="sd">    scale_ratios : dict, optional</span>
 <span class="sd">        Dictionary for charge scaling. Can be one of three formats:</span>
 
 <span class="sd">        Format 1 - Nested dictionary with structure for charge scaling:</span>
-<span class="sd">        {</span>
-<span class="sd">            &#39;demand&#39;: {</span>
-<span class="sd">                &#39;peak&#39;: float, &#39;half_peak&#39;: float,</span>
-<span class="sd">                &#39;off_peak&#39;: float, &#39;super_off_peak&#39;: float</span>
-<span class="sd">            },</span>
-<span class="sd">            &#39;energy&#39;: {</span>
-<span class="sd">                &#39;peak&#39;: float, &#39;half_peak&#39;: float,</span>
-<span class="sd">                &#39;off_peak&#39;: float, &#39;super_off_peak&#39;: float</span>
+
+<span class="sd">            {</span>
+
+<span class="sd">                &#39;demand&#39;: {</span>
+
+<span class="sd">                    &#39;peak&#39;: float,</span>
+<span class="sd">                    &#39;half_peak&#39;: float,</span>
+<span class="sd">                    &#39;off_peak&#39;: float,</span>
+<span class="sd">                    &#39;super_off_peak&#39;: float</span>
+
+<span class="sd">                },</span>
+
+<span class="sd">                &#39;energy&#39;: {</span>
+
+<span class="sd">                    &#39;peak&#39;: float,</span>
+<span class="sd">                    &#39;half_peak&#39;: float,</span>
+<span class="sd">                    &#39;off_peak&#39;: float,</span>
+<span class="sd">                    &#39;super_off_peak&#39;: float</span>
+
+<span class="sd">                }</span>
+
 <span class="sd">            }</span>
-<span class="sd">        }</span>
 
 <span class="sd">        Format 2 - Dictionary with exact charge key prefixes based on csv:</span>
-<span class="sd">        {</span>
-<span class="sd">            &#39;electric_demand_peak-summer&#39;: float,</span>
-<span class="sd">            &#39;electric_energy_0&#39;: float,</span>
-<span class="sd">            &#39;electric_demand_all-day&#39;: float,</span>
-<span class="sd">            ...</span>
-<span class="sd">        }</span>
+
+<span class="sd">            {</span>
+
+<span class="sd">                &#39;electric_demand_peak-summer&#39;: float,</span>
+<span class="sd">                &#39;electric_energy_0&#39;: float,</span>
+<span class="sd">                &#39;electric_demand_all-day&#39;: float,</span>
+<span class="sd">                ...</span>
+
+<span class="sd">            }</span>
 
 <span class="sd">        Format 3 - Global scaling for all charges of each type:</span>
-<span class="sd">        {</span>
-<span class="sd">            &#39;demand&#39;: float,  # scales all demand charges</span>
-<span class="sd">            &#39;energy&#39;: float,   # scales all energy charges</span>
-<span class="sd">        }</span>
+
+<span class="sd">            {</span>
+
+<span class="sd">                &#39;demand&#39;: float,  # scales all demand charges</span>
+<span class="sd">                &#39;energy&#39;: float,   # scales all energy charges</span>
+
+<span class="sd">            }</span>
 
 <span class="sd">        If None, all ratios default to 1.0</span>
+
 <span class="sd">    shift_peak_hours_before : float, optional</span>
 <span class="sd">        Hours to shift peak window start</span>
 <span class="sd">        (negative=earlier, positive=later).</span>
 <span class="sd">        Must be multiple of 0.25 hours. Default 0</span>
+
 <span class="sd">    shift_peak_hours_after : float, optional</span>
 <span class="sd">        Hours to shift peak window end</span>
 <span class="sd">        (negative=earlier, positive=later).</span>
 <span class="sd">        Must be multiple of 0.25 hours. Default 0</span>
+
 <span class="sd">    variant_name : str, optional</span>
 <span class="sd">        Name for this variant. Default None</span>
 
