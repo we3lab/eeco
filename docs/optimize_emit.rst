@@ -326,7 +326,6 @@ Unlike :ref:`tutorial-cost`, there are no convex relaxations during problem form
         resolution="15m",
         consumption_units=u.kW
     )
-    # NOTE: second entry of the tuple can be ignored since it's for Pyomo
     optimized_emissions = pyo.value(battery.model.objective)
 
 If we print our results, we confirm that the optimal electricity profile has emissions of

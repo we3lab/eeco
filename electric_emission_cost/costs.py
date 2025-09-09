@@ -1190,7 +1190,8 @@ def build_pyomo_costing(
     varstr_alias_func=default_varstr_alias_func,
 ):
     """
-    Wrapper for calculate_cost to build the cost components into a Pyomo model.
+    Wrapper for `calculate_cost` to build the cost components into a Pyomo model.
+    An objective function will be created in `model.objective`.
 
     Parameters
     ----------

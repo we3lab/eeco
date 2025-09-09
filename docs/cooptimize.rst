@@ -148,15 +148,15 @@ Always compute the ex-post cost using numpy due to the convex relaxations that w
 .. code-block:: python
 
     # NOTE: second entry of the tuple can be ignored since it's for Pyomo
-    baseline_electricity_emissions, _ = costs.calculate_cost(
-        charge_dict,
+    baseline_electricity_emissions, _ = costs.calculate_grid_emissions(
+        carbon_intensity,
         load_df["Load [kW]"].values,
         resolution="1m",
         consumption_units=u.kW
     )
     # NOTE: second entry of the tuple can be ignored since it's for Pyomo
     optimized_electricity_emissions, _ = costs.calculate_grid_emissions(
-        charge_dict,
+        carbon_intensity,
         grid_demand_kW.value,
         resolution="1m",
         consumption_units=u.kW
@@ -227,20 +227,19 @@ Pyomo
    
     # get the carbon intensity
     carbon_intensity = emissions.get_carbon_intensity(
-        datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11), emission_df, resolution="1m"
+        datetime.datetime(2022, 7, 1), datetime.datetime(2022, 8, 1), emission_df, resolution="15m"
     )
 
-    path_to_tariff_sheet = "electric_emission_cost/data/tariff.csv"
-    tariff_df = pd.read_csv(path_to_tariff_sheet, sep=",")
+    path_to_tariffsheet = "electric_emission_cost/data/tariff.csv"
+    tariff_df = pd.read_csv(path_to_tariffsheet, sep=",")
    
     # get the charge dictionary
     charge_dict = costs.get_charge_dict(
-        datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11), tariff_df, resolution="1m"
+        datetime.datetime(2022, 7, 1), datetime.datetime(2022, 8, 1), tariff_df, resolution="15m"
     )
 
-We are going to evaluate the electricity consumption from only April 9th to April 10th since that is where our 
-synthetic data comes from (https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/consumption.csv).
-You will also see that it is in 1-minute intervals, hence `resolution="1m"`.
+We are going to evaluate the electricity consumption for the entire month of July 2022.
+Below we will create synthetic `baseload` data for this month with 15-minute resolution, so `resolution="15m"`.
 
 2. Configure an optimization model of the electricity consumer with system constraints
 
@@ -310,9 +309,9 @@ power capacity, and energy capacity.
 
 .. code-block:: python
 
-    # solve the CVX problem (objective variable should be named obj)
-    prob = cp.Problem(cp.Minimize(obj), constraints)
-    prob.solve()
+    # use the glpk solver to solve the model - (any pyomo-supported LP solver will work here)
+    solver = pyo.SolverFactory("glpk")
+    results = solver.solve(battery.model, tee=False) # turn tee=True to see solver output
 
 5. Display the results to validate that the optimization is correct
 
@@ -320,34 +319,31 @@ Always compute the ex-post cost using numpy due to the convex relaxations that w
 
 .. code-block:: python
 
-    # TODO: use model builder Akshay created
+    # retrieve outputs from Pyomo model
+    net_load = np.array([battery.model.net_facility_load[t].value for t in battery.model.t])
+    baseload = np.array([battery.model.baseload[t] for t in battery.model.t])
 
     # NOTE: second entry of the tuple can be ignored since it's for Pyomo
     baseline_electricity_emissions, _ = costs.calculate_cost(
-        charge_dict,
-        load_df["Load [kW]"].values,
+        carbon_intensity,
+        baseload,
         resolution="1m",
         consumption_units=u.kW
     )
-    # NOTE: second entry of the tuple can be ignored since it's for Pyomo
-    optimized_electricity_emissions, _ = costs.calculate_grid_emissions(
-        charge_dict,
-        grid_demand_kW.value,
-        resolution="1m",
-        consumption_units=u.kW
-    )
+    optimized_electricity_emissions = pyo.value(battery.model.emissions)
+
     # NOTE: second entry of the tuple can be ignored since it's for Pyomo
     baseline_electricity_cost, _ = costs.calculate_cost(
-        charge_dict,
-        {"electric": load_df["Load [kW]"].values},
-        resolution="1m",
+        carbon_intensity,
+        {"electric": baseload},
+        resolution="15m",
         desired_utility="electric",
     )
     # NOTE: second entry of the tuple can be ignored since it's for Pyomo
     optimized_electricity_cost, _ = costs.calculate_cost(
         charge_dict,
-        {"electric": grid_demand_kW.value},
-        resolution="1m",
+        {"electric": net_load},
+        resolution="15m",
         desired_utility="electric",
     )
 
