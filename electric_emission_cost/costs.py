@@ -1199,7 +1199,7 @@ def build_pyomo_costing(
         dictionary of arrays with keys of the form
         `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
         and values being the $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy),
+        cubic meter / hour (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
     consumption_data_dict : dict
@@ -1214,7 +1214,7 @@ def build_pyomo_costing(
         Units for the electricity consumption data. Default is kW
 
     gas_consumption_units : pint.Unit
-        Units for the natural gas consumption data. Default is cubic meters / day
+        Units for the natural gas consumption data. Default is cubic meters / hour
 
     resolution : str
         String of the form `[int][str]` giving the temporal resolution
