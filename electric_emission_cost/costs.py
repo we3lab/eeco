@@ -161,7 +161,7 @@ def add_to_charge_array(charge_dict, key_str, charge_array):
         Dictionary of arrays with keys of the form
         `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
         and values being the $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy),
+        cubic meter / hour (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
     key_str : str
@@ -170,7 +170,7 @@ def add_to_charge_array(charge_dict, key_str, charge_array):
 
     charge_array : numpy.ndarray
         Value of the charge to add in $ per kW (electric demand),
-        kWh (electric energy/export), cubic meter / day (gas demand),
+        kWh (electric energy/export), cubic meter / hour (gas demand),
         cubic meter (gas energy), or $ / month (customer)
     """
     try:
@@ -595,8 +595,8 @@ def calculate_demand_cost(
         Only used for optimizing on a horizon shorter than the billing period,
         so the default is 0
 
-    consumption_estimate : float
-        Estimate of the total monthly demand or energy consumption from baseline data.
+    consumption_estimate : float, array
+        Estimate of the total consumption from baseline data in kW, therms/hr OR m3/hr.
         Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
         for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
         will use actual consumption and ignore the estimate.
@@ -605,7 +605,7 @@ def calculate_demand_cost(
         Optional factor for scaling demand charges relative to energy charges
         when the optimization/simulation period is not a full billing cycle.
         Applied to monthly charges where end_date - start_date > 1 day.
-        Default is 1
+        Default is 1.
 
     model : pyomo.Model
         The model object associated with the problem.
@@ -622,6 +622,11 @@ def calculate_demand_cost(
         in USD for the given `charge_array` and `consumption_data`
         and the second entry being the pyomo model object (or None)
     """
+    if isinstance(consumption_estimate, (float, int)):
+        consumption_max = max(float(consumption_estimate), prev_demand)
+    else:
+        consumption_max = max(max(consumption_estimate), prev_demand)
+
     if isinstance(consumption_data, np.ndarray):
         if (np.max(consumption_data) >= limit) or (
             (prev_demand >= limit) and (prev_demand <= next_limit)
@@ -635,8 +640,8 @@ def calculate_demand_cost(
         else:  # ignore if current and previous maxima outside of charge limit
             demand_charged = np.array([0])
     elif isinstance(consumption_data, (pyo.Param, pyo.Var)):
-        if consumption_estimate >= limit:
-            if consumption_estimate <= next_limit:
+        if consumption_max >= limit:
+            if consumption_max <= next_limit:
                 model.add_component(
                     varstr + "_limit",
                     pyo.Var(model.t, initialize=0, bounds=(0, None)),
@@ -665,8 +670,8 @@ def calculate_demand_cost(
         else:
             demand_charged = np.array([0])
     elif isinstance(consumption_data, cp.Expression):
-        if consumption_estimate >= limit:
-            if consumption_estimate <= next_limit:
+        if consumption_max >= limit:
+            if consumption_max <= next_limit:
                 demand_charged, model = ut.multiply(
                     consumption_data - limit,
                     charge_array,
@@ -737,8 +742,9 @@ def calculate_energy_cost(
         (e.g., previously in the month). Necessary for moving-horizon optimization.
         Default is 0
 
-    consumption_estimate : float
-        Estimate of the total monthly demand or energy consumption from baseline data.
+    consumption_estimate : float, array
+        Estimate of the total monthly energy consumption from baseline data
+        in kWh, therms, or cubic meters.
         Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
         for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
         will use actual consumption and ignore the estimate.
@@ -795,19 +801,25 @@ def calculate_energy_cost(
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
         # assume consumption is split evenly as an approximation
         # NOTE: this convex approximation breaks global optimality guarantees
-        consumption_per_timestep = consumption_estimate / n_steps
-        total_consumption = prev_consumption
-        end_idx = None
-        start_idx = None
-        for i in range(n_steps):
-            if total_consumption >= float(limit) and start_idx is None:
-                start_idx = i  # index where this charge tier starts
-            if total_consumption >= float(next_limit) and end_idx is None:
-                end_idx = i  # index where this charge tier ends
-            total_consumption += consumption_per_timestep
-        charge_array[:start_idx] = 0
-        if end_idx is not None:
-            charge_array[end_idx:] = 0
+        if isinstance(consumption_estimate, (float, int)):
+            consumption_per_timestep = consumption_estimate / n_steps
+            consumption_estimate = np.ones(n_steps) * consumption_per_timestep
+
+        cumulative_consumption = np.cumsum(consumption_estimate) + prev_consumption
+        total_consumption = cumulative_consumption[-1]
+
+        start_idx = np.argmax(cumulative_consumption >= float(limit))
+        # if not found argmax returns 0
+        if (start_idx == 0) and (total_consumption < float(limit)):
+            start_idx = -1
+        if np.isinf(next_limit) or (total_consumption < float(next_limit)):
+            end_idx = -1
+        else:
+            end_idx = np.argmax(cumulative_consumption > float(next_limit))
+
+        charge_array[:start_idx] = 0  # 0 for charge array before the start index
+        charge_array[end_idx:] = 0  # 0 for charge array after the end index
+
         charge_expr, model = ut.multiply(
             consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
         )
@@ -917,7 +929,7 @@ def calculate_cost(
     charge_dict,
     consumption_data_dict,
     electric_consumption_units=u.kW,
-    gas_consumption_units=u.meters**3 / u.day,
+    gas_consumption_units=u.meters**3 / u.hour,
     resolution="15m",
     prev_demand_dict=None,
     prev_consumption_dict=None,
@@ -938,7 +950,7 @@ def calculate_cost(
         dictionary of arrays with keys of the form
         `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
         and values being the $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy),
+        cubic meter / hour (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
     consumption_data_dict : dict
@@ -950,7 +962,7 @@ def calculate_cost(
         Units for the electricity consumption data. Default is kW
 
     gas_consumption_units : pint.Unit
-        Units for the natural gas consumption data. Default is cubic meters / day
+        Units for the natural gas consumption data. Default is cubic meters / hour
 
     resolution : str
         String of the form `[int][str]` giving the temporal resolution
@@ -970,11 +982,14 @@ def calculate_cost(
         (e.g., while using a moving horizon that is shorter than a month).
         Default is None, resulting in an a prev_consumption of zero for all charges.
 
-    consumption_estimate : float
+    consumption_estimate : float, array, dict
         Estimate of the total monthly demand or energy consumption from baseline data.
         Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
         for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
-        will use actual consumption and ignore the estimate.
+        will use actual consumption and ignore the estimate. If consumption estimate is
+        a float, int, it is assumed to carry units of kWh, therms OR m3. If consumption
+        estimate is array-like it is assumed to carry units of kW, therms/hr OR m3/hr.
+        If consumption estimate is a dict, it should have keys matching the charge dict.
 
     desired_charge_type : list or str
         Name of desired charge type for itemized costs.
@@ -1036,12 +1051,16 @@ def calculate_cost(
     """
     cost = 0
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
-    n_per_day = n_per_hour * 24
+
+    if consumption_estimate is None:
+        consumption_estimate = 0
 
     for key, charge_array in charge_dict.items():
         utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
         varstr = ut.sanitize_varstr(
-            varstr_alias_func(utility, charge_type, name, eff_start, eff_end, limit_str)
+            varstr_alias_func(
+                utility, charge_type, name, eff_start, eff_end, limit_str
+            )  # noqa: E501
         )
 
         # if we want itemized costs skip irrelvant portions of the bill
@@ -1055,9 +1074,9 @@ def calculate_cost(
             divisor = n_per_hour
         elif utility == GAS:
             conversion_factor = (
-                (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
+                (1 * gas_consumption_units).to(u.meter**3 / u.hour).magnitude
             )
-            divisor = n_per_day / conversion_factor
+            divisor = n_per_hour
         else:
             raise ValueError("Invalid utility: " + utility)
 
@@ -1083,6 +1102,21 @@ def calculate_cost(
             else:
                 prev_demand = 0
                 prev_demand_cost = 0
+
+            if isinstance(consumption_estimate, (float, int)):
+                # convert single kWh to the equivalent kW per timestep
+                demand_consumption_estimate = (
+                    consumption_estimate * divisor / len(charge_array)
+                )
+            elif isinstance(consumption_estimate, (dict)):
+                demand_consumption_estimate = consumption_estimate[utility]
+                if isinstance(demand_consumption_estimate, (float, int)):
+                    demand_consumption_estimate = (
+                        demand_consumption_estimate * divisor / len(charge_array)
+                    )
+            else:
+                demand_consumption_estimate = consumption_estimate
+
             new_cost, model = calculate_demand_cost(
                 charge_array,
                 converted_data,
@@ -1090,7 +1124,7 @@ def calculate_cost(
                 next_limit=next_limit,
                 prev_demand=prev_demand,
                 prev_demand_cost=prev_demand_cost,
-                consumption_estimate=consumption_estimate,
+                consumption_estimate=demand_consumption_estimate,
                 scale_factor=effective_scale_factor,
                 model=model,
                 varstr=varstr,
@@ -1101,6 +1135,19 @@ def calculate_cost(
                 prev_consumption = prev_consumption_dict[key]
             else:
                 prev_consumption = 0
+
+            if isinstance(consumption_estimate, (float, int)):
+                # assumed to be kWh or therms/m3 per month
+                energy_consumption_estimate = consumption_estimate
+            elif isinstance(consumption_estimate, (dict)):
+                energy_consumption_estimate = consumption_estimate[utility]
+                if not isinstance(
+                    energy_consumption_estimate, (float, int)
+                ):  # array-like
+                    energy_consumption_estimate = energy_consumption_estimate / divisor
+            else:
+                energy_consumption_estimate = consumption_estimate / divisor
+
             new_cost, model = calculate_energy_cost(
                 charge_array,
                 converted_data,
@@ -1108,7 +1155,7 @@ def calculate_cost(
                 limit=charge_limit,
                 next_limit=next_limit,
                 prev_consumption=prev_consumption,
-                consumption_estimate=consumption_estimate,
+                consumption_estimate=energy_consumption_estimate,
                 model=model,
                 varstr=varstr,
             )
@@ -1270,7 +1317,7 @@ def calculate_itemized_cost(
     charge_dict,
     consumption_data_dict,
     electric_consumption_units=u.kW,
-    gas_consumption_units=u.meters**3 / u.day,
+    gas_consumption_units=u.meters**3 / u.hour,
     resolution="15m",
     prev_demand_dict=None,
     prev_consumption_dict=None,
@@ -1288,7 +1335,7 @@ def calculate_itemized_cost(
         dictionary of arrays with keys of the form
         `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
         and values being the $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy),
+        cubic meter / hour (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
     consumption_data_dict : dict
@@ -1300,7 +1347,7 @@ def calculate_itemized_cost(
         Units for the electricity consumption data. Default is kW
 
     gas_consumption_units : pint.Unit
-        Units for the natura gas consumption data. Default is cubic meters / day
+        Units for the natura gas consumption data. Default is cubic meters / hour
 
     resolution : str
         String of the form `[int][str]` giving the temporal resolution
