@@ -1232,7 +1232,7 @@ def test_calculate_cost_pyo(
         model=model,
     )
 
-    model.obj = pyo.Objective(expr=result)
+    model.objective = pyo.Objective(expr=result)
     solver = pyo.SolverFactory("gurobi")
     solver.solve(model)
     assert pyo.value(result) == expected_cost
@@ -1343,8 +1343,8 @@ def test_build_pyomo_costing(
     solver.solve(model)
 
     assert model is not None
-    assert model.obj is not None
-    assert pyo.value(model.obj) == expected_cost
+    assert model.objective is not None
+    assert pyo.value(model.objective) == expected_cost
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")

@@ -178,7 +178,7 @@ def test_calculate_grid_emissions_pyo(
         emissions_units=emissions_units,
         model=model,
     )
-    model.obj = pyo.Objective(expr=result)
+    model.objective = pyo.Objective(expr=result)
     solver = pyo.SolverFactory("ipopt")
     solver.solve(model)
     assert pyo.value(result) == expected

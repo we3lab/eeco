@@ -239,7 +239,7 @@ Pyomo
     path_to_emissions_sheet = "electric_emission_cost/data/emissions.csv"
     emission_df = pd.read_csv(path_to_emissions_sheet, sep=",")
    
-    # get the charge dictionary
+    # get the carbon intensity
     carbon_intensity = emissions.get_carbon_intensity(
         datetime.datetime(2022, 7, 1), datetime.datetime(2022, 8, 1), emission_df, resolution="15m"
     )
@@ -296,6 +296,9 @@ power capacity, and energy capacity.
         expr=battery.model.emissions,
         sense=pyo.minimize,
     )
+
+There is also an optional `emissions_units` argument that we do not use in the above example.
+That is because `get_carbon_intensity` returns a `pint.Quantity` from which we can automatically parse the emissions units.
 
 4. Minimize the Scope 2 emissions of this consumer given the system constraints and base load consumption
 

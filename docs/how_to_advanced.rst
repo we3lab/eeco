@@ -1,10 +1,5 @@
 .. contents::
 
-.. WARNING::
-
-  Site under construction!    
-  Documentation incomplete :( 
-
 .. _how-to-advanced:
 
 ****************************
@@ -132,7 +127,7 @@ Here are examples of each method in code, assuming that tariff data has already 
         desired_utility="electric"
     )
 
-Note that consumption estimate is for the simulation period only since :ref:`prev_consumption` will take into account 
+Note that consumption estimate is for the simulation period only since :ref:`prev-consumption` will take into account 
 the previous consumption during this billing period in conjunction with `consumption_estimate` to estimate the charge tier.
 
 .. _scale-demand:

@@ -1305,11 +1305,11 @@ def build_pyomo_costing(
         varstr_alias_func=varstr_alias_func,
     )
 
-    model.obj = pyo.Objective(expr=model.electricity_cost, sense=pyo.minimize)
+    model.objective = pyo.Objective(expr=model.electricity_cost, sense=pyo.minimize)
 
     if additional_objective_terms is not None:
         for term in additional_objective_terms:
-            model.obj.expr += term
+            model.objective.expr += term
     return model
 
 
