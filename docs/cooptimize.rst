@@ -326,11 +326,11 @@ Always compute the ex-post cost using numpy due to the convex relaxations that w
 
     # NOTE: second entry of the tuple can be ignored since it's for Pyomo
     baseline_electricity_emissions, _ = emissions.calculate_grid_emissions(
-    carbon_intensity,
-    baseload,
-    resolution="15m",
-    consumption_units=u.kW
-)
+        carbon_intensity,
+        baseload,
+        resolution="15m",
+        consumption_units=u.kW
+    )
     optimized_electricity_emissions = pyo.value(battery.model.emissions)
 
     # NOTE: second entry of the tuple can be ignored since it's for Pyomo

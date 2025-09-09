@@ -22,17 +22,26 @@ in a time window of only a few days for moving horizon optmization.
 Why Use Moving Horizon Optimization?
 ====================================
 
-1. computational complexity
-2. avoid perfect foresight
+We believe the two main benefits to moving horizon optimization are (1) computational complexity and (2) avoiding perfect foresight.
+
+Sometimes running optimization for an entire billing period (usually a month) at the necessary control intervals is computationally infeasible.
+In those cases, moving horizon optimization allows an analyst to define a sliding window (the horizon period) and step through the entire billing period sequentially.
+
+Even when computationally feasible, running an entire billing period may be undesirable because it provides too much foresight to the model.
+Moving horizon optimization can be used to realistically simulated model-predictive control (MPC), 
+which ensures that the benefits of improved control strategies are correctly quantified.
 
 .. _why-prev-consumption:
 
 What Is the Purpose of `prev_demand_dict` and `prev_consumption_dict`?
 ======================================================================
 
-FILL IN STUB: when performing moving horizon optimization, we need to know the previous consumption and costs
+When performing moving horizon optimization, we need to know the previous consumption and costs from within the same billing period.
+For example, if I have already hit 100 kW of peak demand, then going up to 99 kW will not add any cost to the demand charge on my bill.
 
-WHY BOTH?: for some demand charges there are different costs at different times, so we cannot just use the `prev_consumption_dict`
+Both `prev_demand_dict` and `prev_consumption_dict` are necessary due to the complexity of the tariffs. 
+For some demand charges there are different costs at different times, so we cannot just use the `prev_consumption_dict` directly to compute
+the previous maximum charge billed.
 
 .. _why-consumption-est:
 
@@ -53,8 +62,22 @@ However, in other applications this convex approxmiation may not fare as well.
 What Is the Purpose of `demand_scale_factor`?
 =============================================
 
-[cite Bolorinos ES&T (2023) & Chapin ES&T (2025)]: gist is that it is necessary for moving horizon optimization 
-because the certainty around demand charges and therefore relative weight between demand and energy charges
-varies throughout the month.
+The demand scale factor was designed in our academic papers to balance demand and energy charges during moving horizon optimization. 
 
-TODO: INSERT FORMULATION FROM SI OF PAPER
+The basic concept is that the certainty around demand charges and therefore relative weight between demand and energy charges
+varies throughout the month. In other words, as time goes on the demand charge becomes more certain and should be given a higher weight.
+
+The specific mathematical formulation that we recommend is as follows, but the scale factor should be tuned for each application
+by adjusting `lambda_energy`:
+
+.. code-block:: python
+
+    n_billing = 4  # number of days in the horizon window
+    n_horizon = 31  # number of days in the billing period
+    lambda_energy = 0.7  # tunable parameter 
+    for d in range(n_billing):
+        energy_scale_factor = lambda_energy * (n_billing - d) / n_horizon
+        demand_scale_factor = 1 / energy_scale_factor
+
+You can read more about this concept in "Integrated energy flexibility management at wastewater treatment facilities" [`Bolorinos 𝐸𝑛𝑣𝑖𝑟𝑜𝑛. 𝑆𝑐𝑖. 𝑇𝑒𝑐ℎ𝑛𝑜𝑙. (2023) <https://doi.org/10.1021/acs.est.3c00365>`_]
+and "Load-Shifting Strategies for Cost-Effective Emission Reductions at Wastewater Facilities" [`Chapin 𝐸𝑛𝑣𝑖𝑟𝑜𝑛. 𝑆𝑐𝑖. 𝑇𝑒𝑐ℎ𝑛𝑜𝑙. (2025) <https://doi.org/10.1021/acs.est.4c09773>`_].
