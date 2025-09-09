@@ -5,7 +5,7 @@ __author__ = "WE3Lab"
 __email__ = "fchapin@stanford.edu"
 # Do not edit this string manually, always use bumpversion
 # Details in CONTRIBUTING.rst
-__version__ = "0.0.5"
+__version__ = "0.1.0"
 
 
 def get_module_version():
