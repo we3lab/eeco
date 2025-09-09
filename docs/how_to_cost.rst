@@ -6,7 +6,7 @@
 How to Calculate Costs
 **********************
 
-The EEC package supports computing the electricity bill of a consumer with the following data:
+EECO supports computing the electricity bill of a consumer with the following data:
 
   - Consumption data: `NumPy` array, `CVXPY` variable, or `Pyomo` parameter/variable
   - Tariff sheet: `Pandas` dataframe that can be loaded from our CSV format
@@ -27,8 +27,8 @@ To make this how-to guide clear, below are the import statements used throughout
     import numpy as np
     import pandas as pd
     import pyomo.environ as pyo
-    from electric_emission_cost.units as u
-    from electric_emission_cost import costs
+    from eeco.units as u
+    from eeco import costs
 
 ========================
 Create Charge Dictionary
@@ -55,7 +55,7 @@ Calculate Electricity Bill
 ==========================
 
 Next, we will calculate the cost for the given period (from `start_date` to `end_date`, *exclusively*). 
-We show an example in `NumPy`, `CVXPY`, and `Pyomo` since the EEC package supports all three libraries.
+We show an example in `NumPy`, `CVXPY`, and `Pyomo` since EECO supports all three libraries.
 
 The below examples exclude some more advanced features available via optional arguments and flags, which are particularly useful for moving horizon optimization.
 :ref:`how-to-advanced` offers a more complete overview of those advanced features.
@@ -176,7 +176,7 @@ By default, the combined costs across both utilities is calculated (i.e., `desir
 Units
 =====
 
-The EEC package uses `Pint <https://pint.readthedocs.io/en/stable/>`_ to handle unit conversions automaitcally. 
+EECO uses `Pint <https://pint.readthedocs.io/en/stable/>`_ to handle unit conversions automaitcally. 
 The logic depends on the proper `electric_consumption_units` and `gas_consumption_units` arguments being provided.
 The electric consumption units are in kW and gas consumption units in cubic meters per hour,
 so `electric_consumption_units=u.kW` and `gas_consumption_units=u.m ** 3 / u.hour`,

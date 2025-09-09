@@ -7,7 +7,7 @@ labels: "testing, needs triage"
 
 ---
 
-- [ ] I have reviewed the test coverage on [Codecov](https://codecov.io/gh/we3lab/electric-emission-cost)
+- [ ] I have reviewed the test coverage on [Codecov](https://codecov.io/gh/we3lab/eeco)
 
 ---
 

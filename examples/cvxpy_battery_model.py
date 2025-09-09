@@ -4,13 +4,13 @@ import numpy as np
 import cvxpy as cp
 import pandas as pd
 import matplotlib.pyplot as plt
-from electric_emission_cost import costs
+from eeco import costs
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ## Cost optimization
 # load tariff data
-path_to_tariffsheet = "electric_emission_cost/data/tariff.csv"
+path_to_tariffsheet = "eeco/data/tariff.csv"
 tariff_df = pd.read_csv(path_to_tariffsheet, sep=",")
 
 # get the charge dictionary
@@ -23,7 +23,7 @@ charge_dict = costs.get_charge_dict(
 
 # load historical consumption data
 load_df = pd.read_csv(
-    "electric_emission_cost/data/consumption.csv", parse_dates=["Datetime"]
+    "eeco/data/consumption.csv", parse_dates=["Datetime"]
 )
 
 # set battery parameters
@@ -147,7 +147,7 @@ fig.tight_layout()
 plt.savefig("cvx-cost-battery-soc.png", bbox_inches="tight")
 
 ## Emissions optimization
-path_to_emissions_sheet = "electric_emission_cost/data/emissions.csv"
+path_to_emissions_sheet = "eeco/data/emissions.csv"
 emission_df = pd.read_csv(path_to_emissions_sheet, sep=",")
 
 # get the charge dictionary

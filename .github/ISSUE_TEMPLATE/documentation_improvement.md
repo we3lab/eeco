@@ -7,12 +7,12 @@ labels: "documentation, needs triage"
 
 ---
 
-- [ ] I have reviewed the documentation on `main` [here](https://we3lab.github.io/electric-emission-cost/).
+- [ ] I have reviewed the documentation on `main` [here](https://we3lab.github.io/eeco/).
 
 ---
 
 ## Location of Documentation
-*This should provide the location of the documentation, e.g. "electric_emission_cost.tag.TagType" or the URL of the documentation, e.g. "https://we3lab.github.io/electric-emission-cost/utils.html"*
+*This should provide the location of the documentation, e.g. "eeco.tag.TagType" or the URL of the documentation, e.g. "https://we3lab.github.io/eeco/utils.html"*
 
 ## Documentation Problem
 *This should provide a description of what documentation you believe needs to be fixed/improved*
