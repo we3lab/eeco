@@ -227,6 +227,7 @@ Pyomo
     import datetime
     import numpy as np 
     import pandas as pd
+    import pyomo.environ as pyo
     import matplotlib.pyplot as plt
     from electric_emission_cost.units import u
     from electric_emission_cost import emissions
@@ -239,7 +240,7 @@ Pyomo
     path_to_emissions_sheet = "electric_emission_cost/data/emissions.csv"
     emission_df = pd.read_csv(path_to_emissions_sheet, sep=",")
    
-    # get the charge dictionary
+    # get the carbon intensity
     carbon_intensity = emissions.get_carbon_intensity(
         datetime.datetime(2022, 7, 1), datetime.datetime(2022, 8, 1), emission_df, resolution="15m"
     )
@@ -297,6 +298,9 @@ power capacity, and energy capacity.
         sense=pyo.minimize,
     )
 
+There is also an optional `emissions_units` argument that we do not use in the above example.
+That is because `get_carbon_intensity` returns a `pint.Quantity` from which we can automatically parse the emissions units.
+
 4. Minimize the Scope 2 emissions of this consumer given the system constraints and base load consumption
 
 .. code-block:: python
@@ -323,7 +327,6 @@ Unlike :ref:`tutorial-cost`, there are no convex relaxations during problem form
         resolution="15m",
         consumption_units=u.kW
     )
-    # NOTE: second entry of the tuple can be ignored since it's for Pyomo
     optimized_emissions = pyo.value(battery.model.objective)
 
 If we print our results, we confirm that the optimal electricity profile has emissions of

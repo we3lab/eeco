@@ -1178,7 +1178,7 @@ def build_pyomo_costing(
     consumption_data_dict,
     model,
     electric_consumption_units=u.kW,
-    gas_consumption_units=u.meters**3 / u.day,
+    gas_consumption_units=u.meters**3 / u.hour,
     resolution="15m",
     prev_demand_dict=None,
     prev_consumption_dict=None,
@@ -1190,7 +1190,8 @@ def build_pyomo_costing(
     varstr_alias_func=default_varstr_alias_func,
 ):
     """
-    Wrapper for calculate_cost to build the cost components into a Pyomo model.
+    Wrapper for `calculate_cost` to build the cost components into a Pyomo model.
+    An objective function will be created in `model.objective`.
 
     Parameters
     ----------
@@ -1198,7 +1199,7 @@ def build_pyomo_costing(
         dictionary of arrays with keys of the form
         `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
         and values being the $ per kW (electric demand), kWh (electric energy/export),
-        cubic meter / day (gas demand), cubic meter (gas energy),
+        cubic meter / hour (gas demand), cubic meter (gas energy),
         or $ / month (customer)
 
     consumption_data_dict : dict
@@ -1213,7 +1214,7 @@ def build_pyomo_costing(
         Units for the electricity consumption data. Default is kW
 
     gas_consumption_units : pint.Unit
-        Units for the natural gas consumption data. Default is cubic meters / day
+        Units for the natural gas consumption data. Default is cubic meters / hour
 
     resolution : str
         String of the form `[int][str]` giving the temporal resolution
@@ -1305,11 +1306,11 @@ def build_pyomo_costing(
         varstr_alias_func=varstr_alias_func,
     )
 
-    model.obj = pyo.Objective(expr=model.electricity_cost, sense=pyo.minimize)
+    model.objective = pyo.Objective(expr=model.electricity_cost, sense=pyo.minimize)
 
     if additional_objective_terms is not None:
         for term in additional_objective_terms:
-            model.obj.expr += term
+            model.objective.expr += term
     return model
 
 
