@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>electric_emission_cost.metrics &mdash; EEC 0.0.5 documentation</title>
+  <title>eeco.metrics &mdash; EECO 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
@@ -32,7 +32,7 @@
           
           
           <a href="../../index.html" class="icon icon-home">
-            EEC
+            EECO
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -84,7 +84,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../index.html">EEC</a>
+          <a href="../../index.html">EECO</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -93,8 +93,8 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
-          <li class="breadcrumb-item"><a href="../electric_emission_cost.html">electric_emission_cost</a></li>
-      <li class="breadcrumb-item active">electric_emission_cost.metrics</li>
+          <li class="breadcrumb-item"><a href="../eeco.html">eeco</a></li>
+      <li class="breadcrumb-item active">eeco.metrics</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -103,14 +103,14 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>Source code for electric_emission_cost.metrics</h1><div class="highlight"><pre>
+  <h1>Source code for eeco.metrics</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Functions to estimate flexibility metrics from power consumption trajectories.&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 
-<div class="viewcode-block" id="roundtrip_efficiency"><a class="viewcode-back" href="../../metrics.html#electric_emission_cost.metrics.roundtrip_efficiency">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">roundtrip_efficiency</span><span class="p">(</span><span class="n">baseline_kW</span><span class="p">,</span> <span class="n">flexible_kW</span><span class="p">):</span>
+<div class="viewcode-block" id="roundtrip_efficiency"><a class="viewcode-back" href="../../metrics.html#eeco.metrics.roundtrip_efficiency">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">roundtrip_efficiency</span><span class="p">(</span><span class="n">baseline_kW</span><span class="p">,</span> <span class="n">flexible_kW</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate the round-trip efficiency of a flexibly operating power trajectory</span>
 <span class="sd">    relative to a baseline.</span>
 
@@ -192,7 +192,7 @@
     <span class="k">return</span> <span class="n">rte_value</span></div>
 
 
-<div class="viewcode-block" id="power_capacity"><a class="viewcode-back" href="../../metrics.html#electric_emission_cost.metrics.power_capacity">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">power_capacity</span><span class="p">(</span>
+<div class="viewcode-block" id="power_capacity"><a class="viewcode-back" href="../../metrics.html#eeco.metrics.power_capacity">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">power_capacity</span><span class="p">(</span>
     <span class="n">baseline_kW</span><span class="p">,</span> <span class="n">flexible_kW</span><span class="p">,</span> <span class="n">timestep</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">pc_type</span><span class="o">=</span><span class="s2">&quot;average&quot;</span><span class="p">,</span> <span class="n">relative</span><span class="o">=</span><span class="kc">True</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate the power capacity of a virtual battery system.</span>
@@ -257,7 +257,7 @@
         <span class="k">return</span> <span class="n">power_capacity</span></div>
 
 
-<div class="viewcode-block" id="energy_capacity"><a class="viewcode-back" href="../../metrics.html#electric_emission_cost.metrics.energy_capacity">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">energy_capacity</span><span class="p">(</span>
+<div class="viewcode-block" id="energy_capacity"><a class="viewcode-back" href="../../metrics.html#eeco.metrics.energy_capacity">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">energy_capacity</span><span class="p">(</span>
     <span class="n">baseline_kW</span><span class="p">,</span> <span class="n">flexible_kW</span><span class="p">,</span> <span class="n">timestep</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">ec_type</span><span class="o">=</span><span class="s2">&quot;discharging&quot;</span><span class="p">,</span> <span class="n">relative</span><span class="o">=</span><span class="kc">True</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate the energy capacity of a virtual battery system.</span>
@@ -322,7 +322,7 @@
         <span class="k">return</span> <span class="n">energy_capacity</span></div>
 
 
-<div class="viewcode-block" id="net_present_value"><a class="viewcode-back" href="../../metrics.html#electric_emission_cost.metrics.net_present_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">net_present_value</span><span class="p">(</span>
+<div class="viewcode-block" id="net_present_value"><a class="viewcode-back" href="../../metrics.html#eeco.metrics.net_present_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">net_present_value</span><span class="p">(</span>
     <span class="n">capital_cost</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">electricity_savings</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">maintenance_diff</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>

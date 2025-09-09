@@ -1,7 +1,7 @@
-electric_emission_cost
-======================
+eeco
+====
 
 .. toctree::
    :maxdepth: 4
 
-   electric_emission_cost
+   eeco

@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>utils &mdash; EEC 0.0.5 documentation</title>
+  <title>utils &mdash; EECO 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
@@ -34,7 +34,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            EEC
+            EECO
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -78,15 +78,15 @@
 <li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">utils</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.convert_utc_to_timezone"><code class="docutils literal notranslate"><span class="pre">convert_utc_to_timezone()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.get_freq_binsize_minutes"><code class="docutils literal notranslate"><span class="pre">get_freq_binsize_minutes()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.idxparam_value"><code class="docutils literal notranslate"><span class="pre">idxparam_value()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.max"><code class="docutils literal notranslate"><span class="pre">max()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.max_pos"><code class="docutils literal notranslate"><span class="pre">max_pos()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.multiply"><code class="docutils literal notranslate"><span class="pre">multiply()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.parse_freq"><code class="docutils literal notranslate"><span class="pre">parse_freq()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.sanitize_varstr"><code class="docutils literal notranslate"><span class="pre">sanitize_varstr()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.utils.sum"><code class="docutils literal notranslate"><span class="pre">sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.convert_utc_to_timezone"><code class="docutils literal notranslate"><span class="pre">convert_utc_to_timezone()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.get_freq_binsize_minutes"><code class="docutils literal notranslate"><span class="pre">get_freq_binsize_minutes()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.idxparam_value"><code class="docutils literal notranslate"><span class="pre">idxparam_value()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.max"><code class="docutils literal notranslate"><span class="pre">max()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.max_pos"><code class="docutils literal notranslate"><span class="pre">max_pos()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.multiply"><code class="docutils literal notranslate"><span class="pre">multiply()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.parse_freq"><code class="docutils literal notranslate"><span class="pre">parse_freq()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.sanitize_varstr"><code class="docutils literal notranslate"><span class="pre">sanitize_varstr()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.sum"><code class="docutils literal notranslate"><span class="pre">sum()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -97,7 +97,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">EEC</a>
+          <a href="index.html">EECO</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -124,9 +124,9 @@
 <section id="utils">
 <span id="id1"></span><h1><a class="toc-backref" href="#id2" role="doc-backlink">utils</a><a class="headerlink" href="#utils" title="Permalink to this heading"></a></h1>
 <p>This module consists of helpful utility functions</p>
-<span class="target" id="module-electric_emission_cost.utils"></span><dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.utils.convert_utc_to_timezone">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.utils.</span></span><span class="sig-name descname"><span class="pre">convert_utc_to_timezone</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">utc_hour</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timezone_str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/utils.html#convert_utc_to_timezone"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.utils.convert_utc_to_timezone" title="Permalink to this definition"></a></dt>
+<span class="target" id="module-eeco.utils"></span><dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.convert_utc_to_timezone">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">convert_utc_to_timezone</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">utc_hour</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timezone_str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#convert_utc_to_timezone"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.convert_utc_to_timezone" title="Permalink to this definition"></a></dt>
 <dd><p>Convert UTC hour (0-23) to the corresponding hour in a specified timezone.</p>
 <p>Parameters:
 utc_hour (int): Hour in UTC (0-23).
@@ -136,8 +136,8 @@ int: Corresponding hour in the specified timezone.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.utils.get_freq_binsize_minutes">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.utils.</span></span><span class="sig-name descname"><span class="pre">get_freq_binsize_minutes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">freq</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/utils.html#get_freq_binsize_minutes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.utils.get_freq_binsize_minutes" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.utils.get_freq_binsize_minutes">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">get_freq_binsize_minutes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">freq</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#get_freq_binsize_minutes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.get_freq_binsize_minutes" title="Permalink to this definition"></a></dt>
 <dd><p>Gets size of a given time frequency expressed in units of minutes</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -159,8 +159,8 @@ of increments of <cite>type</cite> of one binned increment of our time variable
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.utils.idxparam_value">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.utils.</span></span><span class="sig-name descname"><span class="pre">idxparam_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx_param</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/utils.html#idxparam_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.utils.idxparam_value" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.utils.idxparam_value">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">idxparam_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx_param</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#idxparam_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.idxparam_value" title="Permalink to this definition"></a></dt>
 <dd><p>Returns the parameter value at the given index.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -176,8 +176,8 @@ of increments of <cite>type</cite> of one binned increment of our time variable
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.utils.max">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.utils.</span></span><span class="sig-name descname"><span class="pre">max</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/utils.html#max"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.utils.max" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.utils.max">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">max</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#max"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.max" title="Permalink to this definition"></a></dt>
 <dd><p>Elementwise maximum of an expression or array</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -210,8 +210,8 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.utils.max_pos">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.utils.</span></span><span class="sig-name descname"><span class="pre">max_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/utils.html#max_pos"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.utils.max_pos" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.utils.max_pos">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">max_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#max_pos"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.max_pos" title="Permalink to this definition"></a></dt>
 <dd><p>Returns the maximum positive scalar value of an expression.
 I.e., max([x, 0]) where x is any element of the expression (if a matrix)</p>
 <dl class="field-list simple">
@@ -247,8 +247,8 @@ pyomo.environ.Model</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.utils.multiply">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.utils.</span></span><span class="sig-name descname"><span class="pre">multiply</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expression2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/utils.html#multiply"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.utils.multiply" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.utils.multiply">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">multiply</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expression2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#multiply"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.multiply" title="Permalink to this definition"></a></dt>
 <dd><p>Implements elementwise multiplication operation on two optimization expressions</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -292,8 +292,8 @@ pyomo.environ.Expression</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.utils.parse_freq">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.utils.</span></span><span class="sig-name descname"><span class="pre">parse_freq</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">freq</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/utils.html#parse_freq"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.utils.parse_freq" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.utils.parse_freq">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">parse_freq</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">freq</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#parse_freq"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.parse_freq" title="Permalink to this definition"></a></dt>
 <dd><p>Parses a time frequency code string, returning its type and its freq_binsize</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -312,8 +312,8 @@ of increments of <cite>type</cite> of one binned increment of our time variable
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.utils.sanitize_varstr">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.utils.</span></span><span class="sig-name descname"><span class="pre">sanitize_varstr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">varstr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/utils.html#sanitize_varstr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.utils.sanitize_varstr" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.utils.sanitize_varstr">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">sanitize_varstr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">varstr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#sanitize_varstr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.sanitize_varstr" title="Permalink to this definition"></a></dt>
 <dd><p>Sanitizes a variable string by removing non-alphanumeric
 characters and replacing spaces with underscores.</p>
 <dl class="field-list simple">
@@ -330,8 +330,8 @@ characters and replacing spaces with underscores.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.utils.sum">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.utils.</span></span><span class="sig-name descname"><span class="pre">sum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/utils.html#sum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.utils.sum" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.utils.sum">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">sum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#sum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.sum" title="Permalink to this definition"></a></dt>
 <dd><p>Elementwise sum of values in an expression or array</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>

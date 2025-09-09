@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>electric_emission_cost.utils &mdash; EEC 0.0.5 documentation</title>
+  <title>eeco.utils &mdash; EECO 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
@@ -32,7 +32,7 @@
           
           
           <a href="../../index.html" class="icon icon-home">
-            EEC
+            EECO
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -84,7 +84,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../index.html">EEC</a>
+          <a href="../../index.html">EECO</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -93,8 +93,8 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
-          <li class="breadcrumb-item"><a href="../electric_emission_cost.html">electric_emission_cost</a></li>
-      <li class="breadcrumb-item active">electric_emission_cost.utils</li>
+          <li class="breadcrumb-item"><a href="../eeco.html">eeco</a></li>
+      <li class="breadcrumb-item active">eeco.utils</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -103,7 +103,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>Source code for electric_emission_cost.utils</h1><div class="highlight"><pre>
+  <h1>Source code for eeco.utils</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pytz</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
@@ -218,7 +218,7 @@
 <span class="p">}</span>
 
 
-<div class="viewcode-block" id="idxparam_value"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.idxparam_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">idxparam_value</span><span class="p">(</span><span class="n">idx_param</span><span class="p">):</span>
+<div class="viewcode-block" id="idxparam_value"><a class="viewcode-back" href="../../utils.html#eeco.utils.idxparam_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">idxparam_value</span><span class="p">(</span><span class="n">idx_param</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the parameter value at the given index.</span>
 
 <span class="sd">    Parameters</span>
@@ -234,7 +234,7 @@
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">idx_param</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_param</span><span class="p">))])</span></div>
 
 
-<div class="viewcode-block" id="max"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.max">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">max</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="max"><a class="viewcode-back" href="../../utils.html#eeco.utils.max">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">max</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Elementwise maximum of an expression or array</span>
 
 <span class="sd">    Parameters</span>
@@ -303,7 +303,7 @@
         <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="sum"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.sum">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="sum"><a class="viewcode-back" href="../../utils.html#eeco.utils.sum">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Elementwise sum of values in an expression or array</span>
 
 <span class="sd">    Parameters</span>
@@ -366,7 +366,7 @@
         <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="max_pos"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.max_pos">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">max_pos</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="max_pos"><a class="viewcode-back" href="../../utils.html#eeco.utils.max_pos">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">max_pos</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the maximum positive scalar value of an expression.</span>
 <span class="sd">    I.e., max([x, 0]) where x is any element of the expression (if a matrix)</span>
 
@@ -439,7 +439,7 @@
         <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="multiply"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.multiply">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">multiply</span><span class="p">(</span>
+<div class="viewcode-block" id="multiply"><a class="viewcode-back" href="../../utils.html#eeco.utils.multiply">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">multiply</span><span class="p">(</span>
     <span class="n">expression1</span><span class="p">,</span>
     <span class="n">expression2</span><span class="p">,</span>
     <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -549,7 +549,7 @@
         <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="parse_freq"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.parse_freq">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parse_freq</span><span class="p">(</span><span class="n">freq</span><span class="p">):</span>
+<div class="viewcode-block" id="parse_freq"><a class="viewcode-back" href="../../utils.html#eeco.utils.parse_freq">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parse_freq</span><span class="p">(</span><span class="n">freq</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Parses a time frequency code string, returning its type and its freq_binsize</span>
 
 <span class="sd">    Parameters</span>
@@ -570,7 +570,7 @@
     <span class="k">return</span> <span class="n">freq_binsize</span><span class="p">,</span> <span class="n">freq_type</span></div>
 
 
-<div class="viewcode-block" id="get_freq_binsize_minutes"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.get_freq_binsize_minutes">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">freq</span><span class="p">):</span>
+<div class="viewcode-block" id="get_freq_binsize_minutes"><a class="viewcode-back" href="../../utils.html#eeco.utils.get_freq_binsize_minutes">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">freq</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Gets size of a given time frequency expressed in units of minutes</span>
 
 <span class="sd">    Parameters</span>
@@ -605,7 +605,7 @@
     <span class="k">return</span> <span class="n">multiplier</span> <span class="o">*</span> <span class="n">freq_binsize</span></div>
 
 
-<div class="viewcode-block" id="convert_utc_to_timezone"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.convert_utc_to_timezone">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">convert_utc_to_timezone</span><span class="p">(</span><span class="n">utc_hour</span><span class="p">,</span> <span class="n">timezone_str</span><span class="p">):</span>
+<div class="viewcode-block" id="convert_utc_to_timezone"><a class="viewcode-back" href="../../utils.html#eeco.utils.convert_utc_to_timezone">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">convert_utc_to_timezone</span><span class="p">(</span><span class="n">utc_hour</span><span class="p">,</span> <span class="n">timezone_str</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert UTC hour (0-23) to the corresponding hour in a specified timezone.</span>
 
@@ -632,7 +632,7 @@
     <span class="k">return</span> <span class="n">local_time</span><span class="o">.</span><span class="n">hour</span></div>
 
 
-<div class="viewcode-block" id="sanitize_varstr"><a class="viewcode-back" href="../../utils.html#electric_emission_cost.utils.sanitize_varstr">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sanitize_varstr</span><span class="p">(</span><span class="n">varstr</span><span class="p">):</span>
+<div class="viewcode-block" id="sanitize_varstr"><a class="viewcode-back" href="../../utils.html#eeco.utils.sanitize_varstr">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sanitize_varstr</span><span class="p">(</span><span class="n">varstr</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Sanitizes a variable string by removing non-alphanumeric</span>
 <span class="sd">    characters and replacing spaces with underscores.</span>
 

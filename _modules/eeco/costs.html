@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>electric_emission_cost.costs &mdash; EEC 0.0.5 documentation</title>
+  <title>eeco.costs &mdash; EECO 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
@@ -32,7 +32,7 @@
           
           
           <a href="../../index.html" class="icon icon-home">
-            EEC
+            EECO
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -84,7 +84,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../index.html">EEC</a>
+          <a href="../../index.html">EECO</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -93,8 +93,8 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
-          <li class="breadcrumb-item"><a href="../electric_emission_cost.html">electric_emission_cost</a></li>
-      <li class="breadcrumb-item active">electric_emission_cost.costs</li>
+          <li class="breadcrumb-item"><a href="../eeco.html">eeco</a></li>
+      <li class="breadcrumb-item active">eeco.costs</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -103,7 +103,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>Source code for electric_emission_cost.costs</h1><div class="highlight"><pre>
+  <h1>Source code for eeco.costs</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Functions to calculate costs from electricity consumption data.&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
@@ -156,7 +156,7 @@
 <span class="n">OFF_PEAK</span> <span class="o">=</span> <span class="s2">&quot;off_peak&quot;</span>
 
 
-<div class="viewcode-block" id="get_unique_row_name"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_unique_row_name">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_unique_row_name</span><span class="p">(</span><span class="n">charge</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="get_unique_row_name"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_unique_row_name">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_unique_row_name</span><span class="p">(</span><span class="n">charge</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get a unique row name for each row of charge df.</span>
 
@@ -184,7 +184,7 @@
     <span class="k">return</span> <span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="create_charge_array"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.create_charge_array">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">create_charge_array</span><span class="p">(</span><span class="n">charge</span><span class="p">,</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">effective_start_date</span><span class="p">,</span> <span class="n">effective_end_date</span><span class="p">):</span>
+<div class="viewcode-block" id="create_charge_array"><a class="viewcode-back" href="../../eeco.html#eeco.costs.create_charge_array">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">create_charge_array</span><span class="p">(</span><span class="n">charge</span><span class="p">,</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">effective_start_date</span><span class="p">,</span> <span class="n">effective_end_date</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a single charge array based on the given parameters.</span>
 
 <span class="sd">    Parameters</span>
@@ -251,7 +251,7 @@
     <span class="k">return</span> <span class="n">charge_array</span></div>
 
 
-<div class="viewcode-block" id="add_to_charge_array"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.add_to_charge_array">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">add_to_charge_array</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">):</span>
+<div class="viewcode-block" id="add_to_charge_array"><a class="viewcode-back" href="../../eeco.html#eeco.costs.add_to_charge_array">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">add_to_charge_array</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Add to an existing charge array, or an array of all zeros if this charge</span>
 <span class="sd">    array does not exist.</span>
 
@@ -287,7 +287,7 @@
     <span class="n">charge_dict</span><span class="p">[</span><span class="n">key_str</span><span class="p">]</span> <span class="o">=</span> <span class="n">old_charge_array</span> <span class="o">+</span> <span class="n">charge_array</span></div>
 
 
-<div class="viewcode-block" id="get_charge_dict"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_charge_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">):</span>
+<div class="viewcode-block" id="get_charge_dict"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_charge_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a dictionary where the values are charge arrays and keys are of the form</span>
 <span class="sd">    `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`</span>
 
@@ -465,7 +465,7 @@
     <span class="k">return</span> <span class="n">charge_dict</span></div>
 
 
-<div class="viewcode-block" id="get_charge_df"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_charge_df">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_df</span><span class="p">(</span>
+<div class="viewcode-block" id="get_charge_df"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_charge_df">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_df</span><span class="p">(</span>
     <span class="n">start_dt</span><span class="p">,</span>
     <span class="n">end_dt</span><span class="p">,</span>
     <span class="n">rate_data</span><span class="p">,</span>
@@ -593,7 +593,7 @@
     <span class="k">return</span> <span class="n">charge_df</span></div>
 
 
-<div class="viewcode-block" id="default_varstr_alias_func"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.default_varstr_alias_func">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">default_varstr_alias_func</span><span class="p">(</span>
+<div class="viewcode-block" id="default_varstr_alias_func"><a class="viewcode-back" href="../../eeco.html#eeco.costs.default_varstr_alias_func">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">default_varstr_alias_func</span><span class="p">(</span>
     <span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">charge_limit</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Default function for creating the variable name strings for each charge</span>
@@ -629,7 +629,7 @@
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_limit</span><span class="si">}</span><span class="s2">&quot;</span></div>
 
 
-<div class="viewcode-block" id="get_next_limit"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_next_limit">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_next_limit</span><span class="p">(</span><span class="n">key_substr</span><span class="p">,</span> <span class="n">current_limit</span><span class="p">,</span> <span class="n">keys</span><span class="p">):</span>
+<div class="viewcode-block" id="get_next_limit"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_next_limit">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_next_limit</span><span class="p">(</span><span class="n">key_substr</span><span class="p">,</span> <span class="n">current_limit</span><span class="p">,</span> <span class="n">keys</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Finds the next charge limit for the charge represented by `key`</span>
 
 <span class="sd">    Parameters</span>
@@ -660,7 +660,7 @@
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="calculate_demand_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_demand_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_demand_cost</span><span class="p">(</span>
+<div class="viewcode-block" id="calculate_demand_cost"><a class="viewcode-back" href="../../eeco.html#eeco.costs.calculate_demand_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_demand_cost</span><span class="p">(</span>
     <span class="n">charge_array</span><span class="p">,</span>
     <span class="n">consumption_data</span><span class="p">,</span>
     <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -810,7 +810,7 @@
         <span class="k">return</span> <span class="n">max_pos_val</span> <span class="o">*</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">max_pos_model</span></div>
 
 
-<div class="viewcode-block" id="calculate_energy_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_energy_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_energy_cost</span><span class="p">(</span>
+<div class="viewcode-block" id="calculate_energy_cost"><a class="viewcode-back" href="../../eeco.html#eeco.costs.calculate_energy_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_energy_cost</span><span class="p">(</span>
     <span class="n">charge_array</span><span class="p">,</span>
     <span class="n">consumption_data</span><span class="p">,</span>
     <span class="n">divisor</span><span class="p">,</span>
@@ -944,7 +944,7 @@
     <span class="k">return</span> <span class="n">cost</span><span class="p">,</span> <span class="n">model</span></div>
 
 
-<div class="viewcode-block" id="calculate_export_revenues"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_export_revenues">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_export_revenues</span><span class="p">(</span>
+<div class="viewcode-block" id="calculate_export_revenues"><a class="viewcode-back" href="../../eeco.html#eeco.costs.calculate_export_revenues">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_export_revenues</span><span class="p">(</span>
     <span class="n">charge_array</span><span class="p">,</span> <span class="n">export_data</span><span class="p">,</span> <span class="n">divisor</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates the export revenues for the given billing rate structure,</span>
@@ -988,7 +988,7 @@
     <span class="k">return</span> <span class="n">revenues</span> <span class="o">/</span> <span class="n">divisor</span><span class="p">,</span> <span class="n">model</span></div>
 
 
-<div class="viewcode-block" id="get_charge_array_duration"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.get_charge_array_duration">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_array_duration</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+<div class="viewcode-block" id="get_charge_array_duration"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_charge_array_duration">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_array_duration</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse a charge array key to determine the duration of the charge period.</span>
 
 <span class="sd">    Parameters</span>
@@ -1031,7 +1031,7 @@
     <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="calculate_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_cost</span><span class="p">(</span>
+<div class="viewcode-block" id="calculate_cost"><a class="viewcode-back" href="../../eeco.html#eeco.costs.calculate_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_cost</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
     <span class="n">consumption_data_dict</span><span class="p">,</span>
     <span class="n">electric_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">,</span>
@@ -1279,7 +1279,7 @@
     <span class="k">return</span> <span class="n">cost</span><span class="p">,</span> <span class="n">model</span></div>
 
 
-<div class="viewcode-block" id="build_pyomo_costing"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.build_pyomo_costing">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">build_pyomo_costing</span><span class="p">(</span>
+<div class="viewcode-block" id="build_pyomo_costing"><a class="viewcode-back" href="../../eeco.html#eeco.costs.build_pyomo_costing">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">build_pyomo_costing</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
     <span class="n">consumption_data_dict</span><span class="p">,</span>
     <span class="n">model</span><span class="p">,</span>
@@ -1420,7 +1420,7 @@
     <span class="k">return</span> <span class="n">model</span></div>
 
 
-<div class="viewcode-block" id="calculate_itemized_cost"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.calculate_itemized_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_itemized_cost</span><span class="p">(</span>
+<div class="viewcode-block" id="calculate_itemized_cost"><a class="viewcode-back" href="../../eeco.html#eeco.costs.calculate_itemized_cost">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_itemized_cost</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
     <span class="n">consumption_data_dict</span><span class="p">,</span>
     <span class="n">electric_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">,</span>
@@ -1586,7 +1586,7 @@
     <span class="k">return</span> <span class="n">results_dict</span><span class="p">,</span> <span class="n">model</span></div>
 
 
-<div class="viewcode-block" id="detect_charge_periods"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.detect_charge_periods">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">detect_charge_periods</span><span class="p">(</span>
+<div class="viewcode-block" id="detect_charge_periods"><a class="viewcode-back" href="../../eeco.html#eeco.costs.detect_charge_periods">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">detect_charge_periods</span><span class="p">(</span>
     <span class="n">rate_data</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="n">weekday</span><span class="p">,</span> <span class="n">resolution_minutes</span><span class="o">=</span><span class="mi">30</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Categorize charges into charge periods</span>
@@ -1715,7 +1715,7 @@
     <span class="k">return</span> <span class="n">period_categories</span><span class="p">,</span> <span class="n">avg_charge</span><span class="p">,</span> <span class="n">has_overlapping</span></div>
 
 
-<div class="viewcode-block" id="parametrize_rate_data"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.parametrize_rate_data">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parametrize_rate_data</span><span class="p">(</span>
+<div class="viewcode-block" id="parametrize_rate_data"><a class="viewcode-back" href="../../eeco.html#eeco.costs.parametrize_rate_data">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parametrize_rate_data</span><span class="p">(</span>
     <span class="n">rate_data</span><span class="p">,</span>
     <span class="n">scale_ratios</span><span class="o">=</span><span class="p">{},</span>
     <span class="n">shift_peak_hours_before</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -2047,7 +2047,7 @@
     <span class="k">return</span> <span class="n">variant_data</span></div>
 
 
-<div class="viewcode-block" id="parametrize_charge_dict"><a class="viewcode-back" href="../../electric_emission_cost.html#electric_emission_cost.costs.parametrize_charge_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parametrize_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">variants</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="parametrize_charge_dict"><a class="viewcode-back" href="../../eeco.html#eeco.costs.parametrize_charge_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parametrize_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">variants</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Takes in an existing charge_dict and varies it parametrically to create</span>
 <span class="sd">    alternative rate structures. Calls parametrize_rate_data to parametrize the</span>

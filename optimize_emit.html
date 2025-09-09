@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Optimize Scope 2 Emissions &mdash; EEC 0.0.5 documentation</title>
+  <title>Optimize Scope 2 Emissions &mdash; EECO 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
@@ -35,7 +35,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            EEC
+            EECO
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -91,7 +91,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">EEC</a>
+          <a href="index.html">EECO</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -132,8 +132,8 @@
 <li><p>The models are presented step-by-step to demonstrate the model-building process,
 but the complete models are available in the <cite>examples</cite> folder:</p>
 <ul>
-<li><p><a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py">pyomo_battery_model.py</a></p></li>
-<li><p><a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/examples/cvxpy_battery_model.py">cvxpy_battery_model.py</a></p></li>
+<li><p><a class="reference external" href="https://github.com/we3lab/eeco/blob/main/examples/pyomo_battery_model.py">pyomo_battery_model.py</a></p></li>
+<li><p><a class="reference external" href="https://github.com/we3lab/eeco/blob/main/examples/cvxpy_battery_model.py">cvxpy_battery_model.py</a></p></li>
 </ul>
 </li>
 </ul>
@@ -152,14 +152,14 @@ but the complete models are available in the <cite>examples</cite> folder:</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">emissions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">eeco.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">eeco</span><span class="w"> </span><span class="kn">import</span> <span class="n">emissions</span>
 </pre></div>
 </div>
 <ol class="arabic simple">
 <li><p>Load a Scope 2 emissions spreadsheet</p></li>
 </ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path_to_emissions_sheet</span> <span class="o">=</span> <span class="s2">&quot;electric_emission_cost/data/emissions.csv&quot;</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path_to_emissions_sheet</span> <span class="o">=</span> <span class="s2">&quot;eeco/data/emissions.csv&quot;</span>
 <span class="n">emission_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_to_emissions_sheet</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
 
 <span class="c1"># get the charge dictionary</span>
@@ -169,13 +169,13 @@ but the complete models are available in the <cite>examples</cite> folder:</p>
 </pre></div>
 </div>
 <p>We are going to evaluate the electricity consumption from only April 9th to April 10th since that is where our
-synthetic data comes from (<a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/consumption.csv">https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/consumption.csv</a>).
+synthetic data comes from (<a class="reference external" href="https://github.com/we3lab/eeco/blob/main/eeco/data/consumption.csv">https://github.com/we3lab/eeco/blob/main/eeco/data/consumption.csv</a>).
 You will also see that it is in 1-minute intervals, hence <cite>resolution=”1m”</cite>.</p>
 <ol class="arabic simple" start="2">
 <li><p>Configure an optimization model of the electricity consumer with system constraints</p></li>
 </ol>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># load historical consumption data</span>
-<span class="n">load_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;electric_emission_cost/data/consumption.csv&quot;</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Datetime&quot;</span><span class="p">])</span>
+<span class="n">load_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;eeco/data/consumption.csv&quot;</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Datetime&quot;</span><span class="p">])</span>
 
 <span class="c1"># set battery parameters</span>
 <span class="c1"># create variables for battery total energy, max charge and discharge power, and SOC limits</span>
@@ -338,15 +338,15 @@ Note how the optimized electricity profile shaves peaks to readuce time-of-use (
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">emissions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">eeco.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">eeco</span><span class="w"> </span><span class="kn">import</span> <span class="n">emissions</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">examples.pyomo_battery_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">BatteryPyomo</span>
 </pre></div>
 </div>
 <ol class="arabic simple">
 <li><p>Load a Scope 2 emissions spreadsheet</p></li>
 </ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path_to_emissions_sheet</span> <span class="o">=</span> <span class="s2">&quot;electric_emission_cost/data/emissions.csv&quot;</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path_to_emissions_sheet</span> <span class="o">=</span> <span class="s2">&quot;eeco/data/emissions.csv&quot;</span>
 <span class="n">emission_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_to_emissions_sheet</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
 
 <span class="c1"># get the carbon intensity</span>
@@ -360,7 +360,7 @@ Below, we will create synthetic <cite>baseload</cite> data for this month with 1
 <ol class="arabic simple" start="2">
 <li><p>Configure an optimization model of the electricity consumer with system constraints</p></li>
 </ol>
-<p>We rely on the virtual battery model in <a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py">pyomo_battery_model.py</a>.
+<p>We rely on the virtual battery model in <a class="reference external" href="https://github.com/we3lab/eeco/blob/main/examples/pyomo_battery_model.py">pyomo_battery_model.py</a>.
 We’re going to stick to the electricity cost calculation details, but we encourage you to go check out the code to better understand the model.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define the parameters for the battery model</span>
 <span class="n">battery_params</span> <span class="o">=</span> <span class="p">{</span>

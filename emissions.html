@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>emissions &mdash; EEC 0.0.5 documentation</title>
+  <title>emissions &mdash; EECO 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
@@ -35,7 +35,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            EEC
+            EECO
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -76,8 +76,8 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">emissions</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.emissions.calculate_grid_emissions"><code class="docutils literal notranslate"><span class="pre">calculate_grid_emissions()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.emissions.get_carbon_intensity"><code class="docutils literal notranslate"><span class="pre">get_carbon_intensity()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.emissions.calculate_grid_emissions"><code class="docutils literal notranslate"><span class="pre">calculate_grid_emissions()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.emissions.get_carbon_intensity"><code class="docutils literal notranslate"><span class="pre">get_carbon_intensity()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
@@ -91,7 +91,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">EEC</a>
+          <a href="index.html">EECO</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -118,10 +118,10 @@
 <section id="emissions">
 <span id="id1"></span><h1><a class="toc-backref" href="#id2" role="doc-backlink">emissions</a><a class="headerlink" href="#emissions" title="Permalink to this heading"></a></h1>
 <p>This module consists of code that computes Scope 2 emissions given an electricity consumption profile.</p>
-<span class="target" id="module-electric_emission_cost.emissions"></span><p>Functions to calculate emissions from electricity consumption data.</p>
+<span class="target" id="module-eeco.emissions"></span><p>Functions to calculate emissions from electricity consumption data.</p>
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.emissions.calculate_grid_emissions">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.emissions.</span></span><span class="sig-name descname"><span class="pre">calculate_grid_emissions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">carbon_intensity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissions_units=&lt;Unit('kilogram</span> <span class="pre">/</span> <span class="pre">megawatt_hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr=''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/emissions.html#calculate_grid_emissions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.emissions.calculate_grid_emissions" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.emissions.calculate_grid_emissions">
+<span class="sig-prename descclassname"><span class="pre">eeco.emissions.</span></span><span class="sig-name descname"><span class="pre">calculate_grid_emissions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">carbon_intensity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissions_units=&lt;Unit('kilogram</span> <span class="pre">/</span> <span class="pre">megawatt_hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr=''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/emissions.html#calculate_grid_emissions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.emissions.calculate_grid_emissions" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates the emissions for the given consumption information as a cvxpy object
 carbon intensity of electricity generation structure as a DataFrame.</p>
 <dl class="field-list simple">
@@ -149,8 +149,8 @@ The <cite>model</cite> object is only used for Pyomo, so by default it is <cite>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.emissions.get_carbon_intensity">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.emissions.</span></span><span class="sig-name descname"><span class="pre">get_carbon_intensity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissions_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissions_units=&lt;Unit('kilogram</span> <span class="pre">/</span> <span class="pre">megawatt_hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ei_varname='co2_eq_kg_per_MWh'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/emissions.html#get_carbon_intensity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.emissions.get_carbon_intensity" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.emissions.get_carbon_intensity">
+<span class="sig-prename descclassname"><span class="pre">eeco.emissions.</span></span><span class="sig-name descname"><span class="pre">get_carbon_intensity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissions_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissions_units=&lt;Unit('kilogram</span> <span class="pre">/</span> <span class="pre">megawatt_hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ei_varname='co2_eq_kg_per_MWh'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/emissions.html#get_carbon_intensity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.emissions.get_carbon_intensity" title="Permalink to this definition"></a></dt>
 <dd><p>Computes the emissions (as kilograms of CO2) of a horizon of data</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>

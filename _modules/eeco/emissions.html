@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>electric_emission_cost.emissions &mdash; EEC 0.0.5 documentation</title>
+  <title>eeco.emissions &mdash; EECO 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
@@ -32,7 +32,7 @@
           
           
           <a href="../../index.html" class="icon icon-home">
-            EEC
+            EECO
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -84,7 +84,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../index.html">EEC</a>
+          <a href="../../index.html">EECO</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -93,8 +93,8 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
-          <li class="breadcrumb-item"><a href="../electric_emission_cost.html">electric_emission_cost</a></li>
-      <li class="breadcrumb-item active">electric_emission_cost.emissions</li>
+          <li class="breadcrumb-item"><a href="../eeco.html">eeco</a></li>
+      <li class="breadcrumb-item active">eeco.emissions</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -103,7 +103,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>Source code for electric_emission_cost.emissions</h1><div class="highlight"><pre>
+  <h1>Source code for eeco.emissions</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Functions to calculate emissions from electricity consumption data.&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pint</span>
@@ -125,7 +125,7 @@
 <span class="n">EI_VARNAME</span> <span class="o">=</span> <span class="s2">&quot;co2_eq_kg_per_MWh&quot;</span>
 
 
-<div class="viewcode-block" id="calculate_grid_emissions"><a class="viewcode-back" href="../../emissions.html#electric_emission_cost.emissions.calculate_grid_emissions">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_grid_emissions</span><span class="p">(</span>
+<div class="viewcode-block" id="calculate_grid_emissions"><a class="viewcode-back" href="../../emissions.html#eeco.emissions.calculate_grid_emissions">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_grid_emissions</span><span class="p">(</span>
     <span class="n">carbon_intensity</span><span class="p">,</span>
     <span class="n">consumption_data</span><span class="p">,</span>
     <span class="n">emissions_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kg</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">MWh</span><span class="p">,</span>
@@ -201,7 +201,7 @@
         <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="get_carbon_intensity"><a class="viewcode-back" href="../../emissions.html#electric_emission_cost.emissions.get_carbon_intensity">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_carbon_intensity</span><span class="p">(</span>
+<div class="viewcode-block" id="get_carbon_intensity"><a class="viewcode-back" href="../../emissions.html#eeco.emissions.get_carbon_intensity">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_carbon_intensity</span><span class="p">(</span>
     <span class="n">start_dt</span><span class="p">,</span>
     <span class="n">end_dt</span><span class="p">,</span>
     <span class="n">emissions_data</span><span class="p">,</span>

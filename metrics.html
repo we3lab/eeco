@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>metrics &mdash; EEC 0.0.5 documentation</title>
+  <title>metrics &mdash; EECO 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
@@ -35,7 +35,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            EEC
+            EECO
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -77,10 +77,10 @@
 <li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">metrics</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.metrics.energy_capacity"><code class="docutils literal notranslate"><span class="pre">energy_capacity()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.metrics.net_present_value"><code class="docutils literal notranslate"><span class="pre">net_present_value()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.metrics.power_capacity"><code class="docutils literal notranslate"><span class="pre">power_capacity()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#electric_emission_cost.metrics.roundtrip_efficiency"><code class="docutils literal notranslate"><span class="pre">roundtrip_efficiency()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.metrics.energy_capacity"><code class="docutils literal notranslate"><span class="pre">energy_capacity()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.metrics.net_present_value"><code class="docutils literal notranslate"><span class="pre">net_present_value()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.metrics.power_capacity"><code class="docutils literal notranslate"><span class="pre">power_capacity()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.metrics.roundtrip_efficiency"><code class="docutils literal notranslate"><span class="pre">roundtrip_efficiency()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
@@ -93,7 +93,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">EEC</a>
+          <a href="index.html">EECO</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -120,10 +120,10 @@
 <section id="metrics">
 <span id="id1"></span><h1><a class="toc-backref" href="#id2" role="doc-backlink">metrics</a><a class="headerlink" href="#metrics" title="Permalink to this heading"></a></h1>
 <p>This module consists of code that computes virtual battery metrics associated with energy flexible operation.</p>
-<span class="target" id="module-electric_emission_cost.metrics"></span><p>Functions to estimate flexibility metrics from power consumption trajectories.</p>
+<span class="target" id="module-eeco.metrics"></span><p>Functions to estimate flexibility metrics from power consumption trajectories.</p>
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.metrics.energy_capacity">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.metrics.</span></span><span class="sig-name descname"><span class="pre">energy_capacity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flexible_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ec_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'discharging'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/metrics.html#energy_capacity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.metrics.energy_capacity" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.metrics.energy_capacity">
+<span class="sig-prename descclassname"><span class="pre">eeco.metrics.</span></span><span class="sig-name descname"><span class="pre">energy_capacity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flexible_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ec_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'discharging'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/metrics.html#energy_capacity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.metrics.energy_capacity" title="Permalink to this definition"></a></dt>
 <dd><p>Calculate the energy capacity of a virtual battery system.
 This approach implicitly assumes the system has completed a round-trip.</p>
 <dl class="field-list simple">
@@ -153,8 +153,8 @@ or absolute terms.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.metrics.net_present_value">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.metrics.</span></span><span class="sig-name descname"><span class="pre">net_present_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">capital_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electricity_savings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maintenance_diff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ancillary_service_benefit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_curtailment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_price</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">simulation_years</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upgrade_lifetime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interest_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.03</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/metrics.html#net_present_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.metrics.net_present_value" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.metrics.net_present_value">
+<span class="sig-prename descclassname"><span class="pre">eeco.metrics.</span></span><span class="sig-name descname"><span class="pre">net_present_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">capital_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electricity_savings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maintenance_diff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ancillary_service_benefit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_curtailment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_price</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">simulation_years</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upgrade_lifetime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interest_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.03</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/metrics.html#net_present_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.metrics.net_present_value" title="Permalink to this definition"></a></dt>
 <dd><p>Calculate the net present value of flexibility of a virtual battery system.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -193,8 +193,8 @@ ancillary service benefits are calculated for. Default is 1 year.</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.metrics.power_capacity">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.metrics.</span></span><span class="sig-name descname"><span class="pre">power_capacity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flexible_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pc_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'average'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/metrics.html#power_capacity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.metrics.power_capacity" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.metrics.power_capacity">
+<span class="sig-prename descclassname"><span class="pre">eeco.metrics.</span></span><span class="sig-name descname"><span class="pre">power_capacity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flexible_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pc_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'average'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/metrics.html#power_capacity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.metrics.power_capacity" title="Permalink to this definition"></a></dt>
 <dd><p>Calculate the power capacity of a virtual battery system.
 This approach implicitly assumes the system has completed a round-trip.</p>
 <dl class="field-list simple">
@@ -224,8 +224,8 @@ or absolute terms.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="electric_emission_cost.metrics.roundtrip_efficiency">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.metrics.</span></span><span class="sig-name descname"><span class="pre">roundtrip_efficiency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flexible_kW</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/metrics.html#roundtrip_efficiency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.metrics.roundtrip_efficiency" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.metrics.roundtrip_efficiency">
+<span class="sig-prename descclassname"><span class="pre">eeco.metrics.</span></span><span class="sig-name descname"><span class="pre">roundtrip_efficiency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flexible_kW</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/metrics.html#roundtrip_efficiency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.metrics.roundtrip_efficiency" title="Permalink to this definition"></a></dt>
 <dd><p>Calculate the round-trip efficiency of a flexibly operating power trajectory
 relative to a baseline.</p>
 <dl class="field-list simple">

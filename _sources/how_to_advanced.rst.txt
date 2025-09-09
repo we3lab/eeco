@@ -24,7 +24,7 @@ For example, using `billing_pge.csv`:
 
 .. code-block:: python
 
-    from electric_emission_cost import costs
+    from eeco import costs
 
     tariff_path = "tests/data/input/billing_pge.csv"
     start_dt = np.datetime64("2024-07-10")
@@ -93,7 +93,7 @@ Here are examples of each method in code, assuming that tariff data has already 
 
 .. code-block:: python
 
-    from electric_emission_cost import costs
+    from eeco import costs
 
     # load necessary data 
     start_dt = np.datetime64("2024-07-10")
@@ -143,7 +143,7 @@ but for now let's assume that we just want to scale the demand charge down by th
 
 .. code-block:: python
 
-    from electric_emission_cost import costs
+    from eeco import costs
     
     # load necessary data 
     start_dt = np.datetime64("2024-07-10")
@@ -182,7 +182,7 @@ For example, to change "gas" to "ng" in all the variable names:
 
 .. code-block:: python 
 
-    from electric_emission_cost import costs
+    from eeco import costs
 
     def custom_varstr_alias_func(
         utility, charge_type, name, start_date, end_date, charge_limit

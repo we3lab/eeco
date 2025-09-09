@@ -1,0 +1,53 @@
+eeco package
+============
+
+Submodules
+----------
+
+eeco.costs module
+-----------------
+
+.. automodule:: eeco.costs
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+eeco.emissions module
+---------------------
+
+.. automodule:: eeco.emissions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+eeco.metrics module
+-------------------
+
+.. automodule:: eeco.metrics
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+eeco.units module
+-----------------
+
+.. automodule:: eeco.units
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+eeco.utils module
+-----------------
+
+.. automodule:: eeco.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: eeco
+   :members:
+   :undoc-members:
+   :show-inheritance:

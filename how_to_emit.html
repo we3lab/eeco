@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>How to Calculate Emissions &mdash; EEC 0.0.5 documentation</title>
+  <title>How to Calculate Emissions &mdash; EECO 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
@@ -35,7 +35,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            EEC
+            EECO
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -98,7 +98,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">EEC</a>
+          <a href="index.html">EECO</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -156,8 +156,8 @@ you would simply dot product the two arrays to find the total emissions (i.e., m
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost.units</span> <span class="k">as</span> <span class="n">u</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">emissions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">eeco.units</span> <span class="k">as</span> <span class="n">u</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">eeco</span><span class="w"> </span><span class="kn">import</span> <span class="n">emissions</span>
 </pre></div>
 </div>
 </section>
@@ -167,7 +167,7 @@ you would simply dot product the two arrays to find the total emissions (i.e., m
 For example, we can use this function to get the carbon intensity as a 15-minute timeseries
 for the entire month of May 2025 from our sample emisisons data:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2025</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2025</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-<span class="n">emissions_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;electric_emission_cost/data/emissions.csv&quot;</span><span class="p">)</span>
+<span class="n">emissions_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;eeco/data/emissions.csv&quot;</span><span class="p">)</span>
 <span class="n">carbon_intensity</span> <span class="o">=</span> <span class="n">emissions</span><span class="o">.</span><span class="n">get_carbon_intensity</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">emissions_df</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -180,7 +180,7 @@ The default is <cite>“15m”</cite>, so the timeseries will be on 15-minute in
 <h2><a class="toc-backref" href="#id4" role="doc-backlink">Calculate Scope 2 Emissions</a><a class="headerlink" href="#calculate-scope-2-emissions" title="Permalink to this heading"></a></h2>
 <p>It is straightforward to compute Scope 2 emissions after retrieving the carbon intensity array.
 As with electricity bill calculations,
-we show an example in <cite>NumPy</cite>, <cite>CVXPY</cite>, and <cite>Pyomo</cite> since the EEC package supports all three libraries.</p>
+we show an example in <cite>NumPy</cite>, <cite>CVXPY</cite>, and <cite>Pyomo</cite> since EECO supports all three libraries.</p>
 <section id="numpy">
 <h3><a class="toc-backref" href="#id5" role="doc-backlink">NumPy</a><a class="headerlink" href="#numpy" title="Permalink to this heading"></a></h3>
 <p>Given a historical electricity consumption as a <cite>NumPy</cite> array:</p>
@@ -238,7 +238,7 @@ This entry in the tuple is reserved for the <cite>Pyomo</cite> model object.</p>
 </section>
 <section id="units">
 <h2><a class="toc-backref" href="#id8" role="doc-backlink">Units</a><a class="headerlink" href="#units" title="Permalink to this heading"></a></h2>
-<p>The EEC package uses <a class="reference external" href="https://pint.readthedocs.io/en/stable/">Pint</a> to handle nit conversions automaitcally.
+<p>EECO uses <a class="reference external" href="https://pint.readthedocs.io/en/stable/">Pint</a> to handle nit conversions automaitcally.
 The logic depends on the proper <cite>emissions_units</cite> and <cite>consumption_units</cite> arguments being provided.
 Based on the most common data sources we have used, the consumption units are in kW
 and emissions units in kg / MWh, so <cite>consumption_units=u.kW</cite> and <cite>emissions_units=u.kg / u.MWh</cite>.
