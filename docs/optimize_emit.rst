@@ -227,6 +227,7 @@ Pyomo
     import datetime
     import numpy as np 
     import pandas as pd
+    import pyomo.environ as pyo
     import matplotlib.pyplot as plt
     from electric_emission_cost.units import u
     from electric_emission_cost import emissions

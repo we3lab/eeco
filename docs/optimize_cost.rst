@@ -296,6 +296,7 @@ Pyomo
     import datetime
     import numpy as np 
     import pandas as pd
+    import pyomo.environ as pyo
     import matplotlib.pyplot as plt
     from electric_emission_cost import costs 
     from examples.pyomo_battery_model import BatteryPyomo

@@ -148,14 +148,14 @@ Always compute the ex-post cost using numpy due to the convex relaxations that w
 .. code-block:: python
 
     # NOTE: second entry of the tuple can be ignored since it's for Pyomo
-    baseline_electricity_emissions, _ = costs.calculate_grid_emissions(
+    baseline_electricity_emissions, _ = emissions.calculate_grid_emissions(
         carbon_intensity,
         load_df["Load [kW]"].values,
         resolution="1m",
         consumption_units=u.kW
     )
     # NOTE: second entry of the tuple can be ignored since it's for Pyomo
-    optimized_electricity_emissions, _ = costs.calculate_grid_emissions(
+    optimized_electricity_emissions, _ = emissions.calculate_grid_emissions(
         carbon_intensity,
         grid_demand_kW.value,
         resolution="1m",
@@ -176,27 +176,27 @@ Always compute the ex-post cost using numpy due to the convex relaxations that w
         desired_utility="electric",
     )
 
-    total_baseline_cost = baseline_electricity_cost + cost_of_carbon * baseline_electricity_emissions
-    total_optimized_cost = optimized_electricity_cost + cost_of_carbon * optimized_electricity_emissions
+    total_baseline_cost = baseline_electricity_cost + cost_of_carbon * baseline_electricity_emissions.magnitude
+    total_optimized_cost = optimized_electricity_cost + cost_of_carbon * optimized_electricity_emissions.magnitude
 
-
-If we print our results, we confirm that the optimal electricity profile has emissions of
-XX kg CO:sub:`2`-eq, YY kg CO:sub:`2`-eq less than the baseline emissions of ZZ kg CO:sub:`2`-eq.
+If we print our results, we confirm that the optimal electricity profile has daily emissions of
+10.57 kg CO:sub:`2`-eq, 0.12 kg CO:sub:`2`-eq less than the baseline emissions of 10.69 kg CO:sub:`2`-eq.
+It simultaneously lowers daily costs by $61.48 from $765.29 to $703.81.
 
 .. code-block:: python
 
     >>>print(f"Baseline Scope 2 Emissions: {baseline_electricity_emissions:.2f} kg CO_2-eq")
-    Baseline Scope 2 Emissions: XX kilogram kg CO_2-eq
+    Baseline Scope 2 Emissions: 10.69 kilogram kg CO_2-eq
     >>>print(f"Optimized Scope 2 Emissions: {optimized_electricity_emissions:.2f} kg CO_2-eq")
-    Optimized Scope 2 Emissions: YY kilogram kg CO_2-eq
+    Optimized Scope 2 Emissions: 10.57 kilogram kg CO_2-eq
     >>>print(f"Baseline Electricity Costs: ${baseline_electricity_cost:.2f}")
-    Baseline Scope 2 Emissions: XX kilogram kg CO_2-eq
+    Baseline Electricity Costs: $765.29
     >>>print(f"Optimized Electricity Costs: ${optimized_electricity_cost:.2f}")
-    Optimized Scope 2 Emissions: YY kilogram kg CO_2-eq
+    Optimized Electricity Costs: $703.81
     >>>print(f"Total Baseline Cost w/ $192/ton CO2-eq: ${total_baseline_cost:.2f}")
-    Baseline Scope 2 Emissions: XX kilogram kg CO_2-eq
+    Total Baseline Cost w/ $192/ton CO2-eq: $767.34
     >>>print(f"Total Optimized Cost w/ $192/ton CO2-eq: ${total_optimized_cost:.2f}")
-    Optimized Scope 2 Emissions: YY kilogram kg CO_2-eq
+    Total Optimized Cost w/ $192/ton CO2-eq: $705.84
     
 We could make similar plots to :ref:`tutorial-cost` and :ref:`tutorial-emit`, but we omitted them from these instructions for the sake of space.
 
@@ -212,6 +212,7 @@ Pyomo
     import datetime
     import numpy as np
     import pandas as pd
+    import pyomo.environ as pyo
     import matplotlib.pyplot as plt
     from electric_emission_cost.units import u
     from electric_emission_cost import costs
@@ -324,17 +325,17 @@ Always compute the ex-post cost using numpy due to the convex relaxations that w
     baseload = np.array([battery.model.baseload[t] for t in battery.model.t])
 
     # NOTE: second entry of the tuple can be ignored since it's for Pyomo
-    baseline_electricity_emissions, _ = costs.calculate_cost(
-        carbon_intensity,
-        baseload,
-        resolution="1m",
-        consumption_units=u.kW
-    )
+    baseline_electricity_emissions, _ = emissions.calculate_grid_emissions(
+    carbon_intensity,
+    baseload,
+    resolution="15m",
+    consumption_units=u.kW
+)
     optimized_electricity_emissions = pyo.value(battery.model.emissions)
 
     # NOTE: second entry of the tuple can be ignored since it's for Pyomo
     baseline_electricity_cost, _ = costs.calculate_cost(
-        carbon_intensity,
+        charge_dict,
         {"electric": baseload},
         resolution="15m",
         desired_utility="electric",
@@ -347,26 +348,26 @@ Always compute the ex-post cost using numpy due to the convex relaxations that w
         desired_utility="electric",
     )
 
-    total_baseline_cost = baseline_electricity_cost + cost_of_carbon * baseline_electricity_emissions
+total_baseline_cost = baseline_electricity_cost + cost_of_carbon * baseline_electricity_emissions.magnitude
     total_optimized_cost = optimized_electricity_cost + cost_of_carbon * optimized_electricity_emissions
 
-
-If we print our results, we confirm that the optimal electricity profile has emissions of
-XX kg CO:sub:`2`-eq, YY kg CO:sub:`2`-eq less than the baseline emissions of ZZ kg CO:sub:`2`-eq.
+If we print our results, we confirm that the optimal electricity profile has monthly emissions of
+276,142.32 kg CO:sub:`2`-eq, 111.82 kg CO:sub:`2`-eq less than the baseline emissions of 276,254.14 kg CO:sub:`2`-eq.
+It simultaneously lowers monthly costs by $2,901.69 from $11,6269.08 to $11,3367.39.
 
 .. code-block:: python
 
     >>>print(f"Baseline Scope 2 Emissions: {baseline_electricity_emissions:.2f} kg CO_2-eq")
-    Baseline Scope 2 Emissions: XX kilogram kg CO_2-eq
+    Baseline Scope 2 Emissions: 276254.14 kilogram kg CO_2-eq
     >>>print(f"Optimized Scope 2 Emissions: {optimized_electricity_emissions:.2f} kg CO_2-eq")
-    Optimized Scope 2 Emissions: YY kilogram kg CO_2-eq
+    Optimized Scope 2 Emissions: 276142.32 kilogram kg CO_2-eq
     >>>print(f"Baseline Electricity Costs: ${baseline_electricity_cost:.2f}")
-    Baseline Scope 2 Emissions: XX kilogram kg CO_2-eq
+    Baseline Electricity Costs: $116269.08
     >>>print(f"Optimized Electricity Costs: ${optimized_electricity_cost:.2f}")
-    Optimized Scope 2 Emissions: YY kilogram kg CO_2-eq
+    Optimized Electricity Costs: $113367.39
     >>>print(f"Total Baseline Cost w/ $192/ton CO2-eq: ${total_baseline_cost:.2f}")
-    Baseline Scope 2 Emissions: XX kilogram kg CO_2-eq
+    Total Baseline Cost w/ $192/ton CO2-eq: $169309.88
     >>>print(f"Total Optimized Cost w/ $192/ton CO2-eq: ${total_optimized_cost:.2f}")
-    Optimized Scope 2 Emissions: YY kilogram kg CO_2-eq
+    Total Optimized Cost w/ $192/ton CO2-eq: $166386.71
     
 We could make similar plots to :ref:`tutorial-cost` and :ref:`tutorial-emit`, but we omitted them from these instructions for the sake of space.
