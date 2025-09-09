@@ -34,8 +34,8 @@ To make this how-to guide clear, below are the import statements used throughout
     import numpy as np
     import pandas as pd
     import pyomo.environ as pyo
-    from electric_emission_cost.units as u
-    from electric_emission_cost import emissions
+    from eeco.units as u
+    from eeco import emissions
 
 ====================
 Get Carbon Intensity
@@ -48,7 +48,7 @@ for the entire month of May 2025 from our sample emisisons data:
 .. code-block:: python
 
     start_date, end_date = datetime.datetime(2025, 5, 1), datetime.datetime(2025, 6, 1)
-    emissions_df = pd.read_csv("electric_emission_cost/data/emissions.csv")
+    emissions_df = pd.read_csv("eeco/data/emissions.csv")
     carbon_intensity = emissions.get_carbon_intensity(start_date, end_date, emissions_df)
 
 The optional argument `resolution` should be used to specify the temporal resolution of the consumption data
@@ -62,7 +62,7 @@ Calculate Scope 2 Emissions
 
 It is straightforward to compute Scope 2 emissions after retrieving the carbon intensity array. 
 As with electricity bill calculations, 
-we show an example in `NumPy`, `CVXPY`, and `Pyomo` since the EEC package supports all three libraries.
+we show an example in `NumPy`, `CVXPY`, and `Pyomo` since EECO supports all three libraries.
 
 NumPy
 *****
@@ -137,7 +137,7 @@ We must pass in and retrieve the `Pyomo` model object for the eletricity bill to
 Units
 =====
 
-The EEC package uses `Pint <https://pint.readthedocs.io/en/stable/>`_ to handle nit conversions automaitcally. 
+EECO uses `Pint <https://pint.readthedocs.io/en/stable/>`_ to handle nit conversions automaitcally. 
 The logic depends on the proper `emissions_units` and `consumption_units` arguments being provided.
 Based on the most common data sources we have used, the consumption units are in kW
 and emissions units in kg / MWh, so `consumption_units=u.kW` and `emissions_units=u.kg / u.MWh`.

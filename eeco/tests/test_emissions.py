@@ -6,9 +6,9 @@ import pandas as pd
 import pyomo.environ as pyo
 from datetime import timedelta
 
-from electric_emission_cost.units import u
-from electric_emission_cost import emissions
-from electric_emission_cost import utils as ut
+from eeco.units import u
+from eeco import emissions
+from eeco import utils as ut
 
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

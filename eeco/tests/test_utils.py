@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import pyomo.environ as pyo
 
-from electric_emission_cost import utils as ut
+from eeco import utils as ut
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False

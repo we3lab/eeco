@@ -9,7 +9,7 @@ labels: 'bug, needs triage'
 
 - [ ] I have checked that this issue has not already been reported.
 
-- [ ] I have confirmed this bug exists on the latest version of electric_emission_cost.
+- [ ] I have confirmed this bug exists on the latest version of eeco.
 
 ---
 

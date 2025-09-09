@@ -49,9 +49,9 @@ build: ## run tox / run tests and lint
 	tox
 
 gen-docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/electric_emission_cost*.rst
+	rm -f docs/eeco*.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ electric_emission_cost **/tests/
+	sphinx-apidoc -o docs/ eeco **/tests/
 	$(MAKE) -C docs html
 
 docs: ## generate Sphinx HTML documentation, including API docs, and serve to browser

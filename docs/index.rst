@@ -1,7 +1,7 @@
 .. contents::
 
-Welcome to the Electric Emissions & Cost (EEC) documentation!
-=============================================================
+Welcome to the Electric Emissions & Cost Optimizer (EECO) documentation!
+========================================================================
 
 .. toctree::
    :maxdepth: 1

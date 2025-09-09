@@ -6,8 +6,8 @@ import pandas as pd
 import pyomo.environ as pyo
 import datetime
 
-from electric_emission_cost import costs
-from electric_emission_cost.costs import (
+from eeco import costs
+from eeco.costs import (
     CHARGE,
     TYPE,
     MONTH_START,
@@ -1722,7 +1722,7 @@ def test_calculate_export_revenues(charge_array, export_data, divisor, expected)
     ],
 )
 def test_get_charge_array_duration(key, expected):
-    from electric_emission_cost.costs import get_charge_array_duration
+    from eeco.costs import get_charge_array_duration
 
     assert get_charge_array_duration(key) == expected
 
