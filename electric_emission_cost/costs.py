@@ -1178,7 +1178,7 @@ def build_pyomo_costing(
     consumption_data_dict,
     model,
     electric_consumption_units=u.kW,
-    gas_consumption_units=u.meters**3 / u.day,
+    gas_consumption_units=u.meters**3 / u.hour,
     resolution="15m",
     prev_demand_dict=None,
     prev_consumption_dict=None,
