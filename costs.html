@@ -149,12 +149,12 @@ are billing as a single demand period.</p>
 <li><p><strong>charge_dict</strong> (<em>dict of numpy.ndarray</em>) – Dictionary of arrays with keys of the form
 <cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite>
 and values being the $ per kW (electric demand), kWh (electric energy/export),
-cubic meter / day (gas demand), cubic meter (gas energy),
+cubic meter / hour (gas demand), cubic meter (gas energy),
 or $ / month (customer)</p></li>
 <li><p><strong>key_str</strong> (<em>str</em>) – The key for the charge array we’d like to modify of the form
 <cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite></p></li>
 <li><p><strong>charge_array</strong> (<em>numpy.ndarray</em>) – Value of the charge to add in $ per kW (electric demand),
-kWh (electric energy/export), cubic meter / day (gas demand),
+kWh (electric energy/export), cubic meter / hour (gas demand),
 cubic meter (gas energy), or $ / month (customer)</p></li>
 </ul>
 </dd>
@@ -244,7 +244,7 @@ f”{utility}_{charge_type}_{name}_{charge_limit}”</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="electric_emission_cost.costs.calculate_cost">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">day')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#calculate_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.calculate_cost" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#calculate_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.calculate_cost" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates the cost of given charges (demand or energy) for the given
 billing rate structure, utility, and consumption information as a
 cvxpy expression or numpy array</p>
@@ -254,13 +254,13 @@ cvxpy expression or numpy array</p>
 <li><p><strong>charge_dict</strong> (<em>dict</em>) – dictionary of arrays with keys of the form
 <cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite>
 and values being the $ per kW (electric demand), kWh (electric energy/export),
-cubic meter / day (gas demand), cubic meter (gas energy),
+cubic meter / hour (gas demand), cubic meter (gas energy),
 or $ / month (customer)</p></li>
 <li><p><strong>consumption_data_dict</strong> (<em>dict</em>) – Baseline electrical and gas usage data as an optimization variable object
 with keys “electric” and “gas”. Values of the dictionary must be of type
 numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</p></li>
 <li><p><strong>electric_consumption_units</strong> (<em>pint.Unit</em>) – Units for the electricity consumption data. Default is kW</p></li>
-<li><p><strong>gas_consumption_units</strong> (<em>pint.Unit</em>) – Units for the natural gas consumption data. Default is cubic meters / day</p></li>
+<li><p><strong>gas_consumption_units</strong> (<em>pint.Unit</em>) – Units for the natural gas consumption data. Default is cubic meters / hour</p></li>
 <li><p><strong>resolution</strong> (<em>str</em>) – String of the form <cite>[int][str]</cite> giving the temporal resolution
 on which charges are assessed, the <cite>str</cite> portion corresponds to
 numpy.timedelta64 types for example ‘15m’ specifying demand charges
@@ -273,10 +273,13 @@ of zero for all charges.</p></li>
 to be used when starting the cost calculation partway into a billing period
 (e.g., while using a moving horizon that is shorter than a month).
 Default is None, resulting in an a prev_consumption of zero for all charges.</p></li>
-<li><p><strong>consumption_estimate</strong> (<em>float</em>) – Estimate of the total monthly demand or energy consumption from baseline data.
+<li><p><strong>consumption_estimate</strong> (<em>float, array, dict</em>) – Estimate of the total monthly demand or energy consumption from baseline data.
 Only used when <cite>consumption_data</cite> is cvxpy.Expression or pyomo.environ.Var
 for convex relaxation of tiered charges, while numpy.ndarray <cite>consumption_data</cite>
-will use actual consumption and ignore the estimate.</p></li>
+will use actual consumption and ignore the estimate. If consumption estimate is
+a float, int, it is assumed to carry units of kWh, therms OR m3. If consumption
+estimate is array-like it is assumed to carry units of kW, therms/hr OR m3/hr.
+If consumption estimate is a dict, it should have keys matching the charge dict.</p></li>
 <li><p><strong>desired_charge_type</strong> (<em>list or str</em>) – Name of desired charge type for itemized costs.
 Either ‘customer’, ‘energy’, ‘demand’, ‘export’, or a list of charge types.
 Default is None, meaning that all costs will be summed together.</p></li>
@@ -350,14 +353,14 @@ so the default is 0</p></li>
 <li><p><strong>prev_demand_cost</strong> (<em>float</em>) – The previous cost for this demand charge during the same billing period.
 Only used for optimizing on a horizon shorter than the billing period,
 so the default is 0</p></li>
-<li><p><strong>consumption_estimate</strong> (<em>float</em>) – Estimate of the total monthly demand or energy consumption from baseline data.
+<li><p><strong>consumption_estimate</strong> (<em>float, array</em>) – Estimate of the total consumption from baseline data in kW, therms/hr OR m3/hr.
 Only used when <cite>consumption_data</cite> is cvxpy.Expression or pyomo.environ.Var
 for convex relaxation of tiered charges, while numpy.ndarray <cite>consumption_data</cite>
 will use actual consumption and ignore the estimate.</p></li>
 <li><p><strong>scale_factor</strong> (<em>float</em>) – Optional factor for scaling demand charges relative to energy charges
 when the optimization/simulation period is not a full billing cycle.
 Applied to monthly charges where end_date - start_date &gt; 1 day.
-Default is 1</p></li>
+Default is 1.</p></li>
 <li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <li><p><strong>varstr</strong> (<em>str</em>) – Name of the variable to be created if using a Pyomo <cite>model</cite></p></li>
@@ -393,7 +396,8 @@ Default is float(‘inf’) indicating that there is no higher tier</p></li>
 <li><p><strong>prev_consumption</strong> (<em>float</em>) – Consumption from within this billing period but outside the horizon window
 (e.g., previously in the month). Necessary for moving-horizon optimization.
 Default is 0</p></li>
-<li><p><strong>consumption_estimate</strong> (<em>float</em>) – Estimate of the total monthly demand or energy consumption from baseline data.
+<li><p><strong>consumption_estimate</strong> (<em>float, array</em>) – Estimate of the total monthly energy consumption from baseline data
+in kWh, therms, or cubic meters.
 Only used when <cite>consumption_data</cite> is cvxpy.Expression or pyomo.environ.Var
 for convex relaxation of tiered charges, while numpy.ndarray <cite>consumption_data</cite>
 will use actual consumption and ignore the estimate.</p></li>
@@ -450,7 +454,7 @@ and the second entry being the pyomo model object (or None)</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="electric_emission_cost.costs.calculate_itemized_cost">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_itemized_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">day')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#calculate_itemized_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.calculate_itemized_cost" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_itemized_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#calculate_itemized_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.calculate_itemized_cost" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates itemized costs as a nested dictionary</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -458,13 +462,13 @@ and the second entry being the pyomo model object (or None)</p>
 <li><p><strong>charge_dict</strong> (<em>dict</em>) – dictionary of arrays with keys of the form
 <cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite>
 and values being the $ per kW (electric demand), kWh (electric energy/export),
-cubic meter / day (gas demand), cubic meter (gas energy),
+cubic meter / hour (gas demand), cubic meter (gas energy),
 or $ / month (customer)</p></li>
 <li><p><strong>consumption_data_dict</strong> (<em>dict</em>) – Baseline electrical and gas usage data as an optimization variable object
 with keys “electric” and “gas”. Values of the dictionary must be of type
 numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</p></li>
 <li><p><strong>electric_consumption_units</strong> (<em>pint.Unit</em>) – Units for the electricity consumption data. Default is kW</p></li>
-<li><p><strong>gas_consumption_units</strong> (<em>pint.Unit</em>) – Units for the natura gas consumption data. Default is cubic meters / day</p></li>
+<li><p><strong>gas_consumption_units</strong> (<em>pint.Unit</em>) – Units for the natura gas consumption data. Default is cubic meters / hour</p></li>
 <li><p><strong>resolution</strong> (<em>str</em>) – String of the form <cite>[int][str]</cite> giving the temporal resolution
 on which charges are assessed, the <cite>str</cite> portion corresponds to
 numpy.timedelta64 types for example ‘15m’ specifying demand charges
