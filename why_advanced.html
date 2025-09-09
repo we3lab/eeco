@@ -49,7 +49,6 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
@@ -65,6 +64,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
@@ -72,7 +72,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_cost.html">How to Calculate Costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_emit.html">How to Calculate Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
@@ -124,11 +124,6 @@
 </li>
 </ul>
 </nav>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Site under construction!
-Documentation incomplete :(</p>
-</div>
 <section id="why-do-the-advanced-features-exist">
 <span id="why-advanced"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">Why Do the Advanced Features Exist?</a><a class="headerlink" href="#why-do-the-advanced-features-exist" title="Permalink to this heading"></a></h1>
 <p>We know that the “advanced features” outlined in <a class="reference internal" href="how_to_advanced.html#how-to-advanced"><span class="std std-ref">How to Use Advanced Features</span></a> may be unintuitive,
@@ -137,15 +132,20 @@ so we assure you that we had very good reasons for writing each of them.</p>
 in a time window of only a few days for moving horizon optmization.</p>
 <section id="why-use-moving-horizon-optimization">
 <span id="why-moving-horizon"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">Why Use Moving Horizon Optimization?</a><a class="headerlink" href="#why-use-moving-horizon-optimization" title="Permalink to this heading"></a></h2>
-<ol class="arabic simple">
-<li><p>computational complexity</p></li>
-<li><p>avoid perfect foresight</p></li>
-</ol>
+<p>We believe the two main benefits to moving horizon optimization are (1) computational complexity and (2) avoiding perfect foresight.</p>
+<p>Sometimes running optimization for an entire billing period (usually a month) at the necessary control intervals is computationally infeasible.
+In those cases, moving horizon optimization allows an analyst to define a sliding window (the horizon period) and step through the entire billing period sequentially.</p>
+<p>Even when computationally feasible, running an entire billing period may be undesirable because it provides too much foresight to the model.
+Moving horizon optimization can be used to realistically simulated model-predictive control (MPC),
+which ensures that the benefits of improved control strategies are correctly quantified.</p>
 </section>
 <section id="what-is-the-purpose-of-prev-demand-dict-and-prev-consumption-dict">
 <span id="why-prev-consumption"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">What Is the Purpose of <cite>prev_demand_dict</cite> and <cite>prev_consumption_dict</cite>?</a><a class="headerlink" href="#what-is-the-purpose-of-prev-demand-dict-and-prev-consumption-dict" title="Permalink to this heading"></a></h2>
-<p>FILL IN STUB: when performing moving horizon optimization, we need to know the previous consumption and costs</p>
-<p>WHY BOTH?: for some demand charges there are different costs at different times, so we cannot just use the <cite>prev_consumption_dict</cite></p>
+<p>When performing moving horizon optimization, we need to know the previous consumption and costs from within the same billing period.
+For example, if I have already hit 100 kW of peak demand, then going up to 99 kW will not add any cost to the demand charge on my bill.</p>
+<p>Both <cite>prev_demand_dict</cite> and <cite>prev_consumption_dict</cite> are necessary due to the complexity of the tariffs.
+For some demand charges there are different costs at different times, so we cannot just use the <cite>prev_consumption_dict</cite> directly to compute
+the previous maximum charge billed.</p>
 </section>
 <section id="what-is-the-purpose-of-consumption-estimate">
 <span id="why-consumption-est"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">What Is the Purpose of <cite>consumption_estimate</cite>?</a><a class="headerlink" href="#what-is-the-purpose-of-consumption-estimate" title="Permalink to this heading"></a></h2>
@@ -159,10 +159,21 @@ However, in other applications this convex approxmiation may not fare as well.</
 </section>
 <section id="what-is-the-purpose-of-demand-scale-factor">
 <span id="why-scale-demand"></span><h2><a class="toc-backref" href="#id5" role="doc-backlink">What Is the Purpose of <cite>demand_scale_factor</cite>?</a><a class="headerlink" href="#what-is-the-purpose-of-demand-scale-factor" title="Permalink to this heading"></a></h2>
-<p>[cite Bolorinos ES&amp;T (2023) &amp; Chapin ES&amp;T (2025)]: gist is that it is necessary for moving horizon optimization
-because the certainty around demand charges and therefore relative weight between demand and energy charges
-varies throughout the month.</p>
-<p>TODO: INSERT FORMULATION FROM SI OF PAPER</p>
+<p>The demand scale factor was designed in our academic papers to balance demand and energy charges during moving horizon optimization.</p>
+<p>The basic concept is that the certainty around demand charges and therefore relative weight between demand and energy charges
+varies throughout the month. In other words, as time goes on the demand charge becomes more certain and should be given a higher weight.</p>
+<p>The specific mathematical formulation that we recommend is as follows, but the scale factor should be tuned for each application
+by adjusting <cite>lambda_energy</cite>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">n_billing</span> <span class="o">=</span> <span class="mi">4</span>  <span class="c1"># number of days in the horizon window</span>
+<span class="n">n_horizon</span> <span class="o">=</span> <span class="mi">31</span>  <span class="c1"># number of days in the billing period</span>
+<span class="n">lambda_energy</span> <span class="o">=</span> <span class="mf">0.7</span>  <span class="c1"># tunable parameter</span>
+<span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_billing</span><span class="p">):</span>
+    <span class="n">energy_scale_factor</span> <span class="o">=</span> <span class="n">lambda_energy</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_billing</span> <span class="o">-</span> <span class="n">d</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_horizon</span>
+    <span class="n">demand_scale_factor</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">energy_scale_factor</span>
+</pre></div>
+</div>
+<p>You can read more about this concept in “Integrated energy flexibility management at wastewater treatment facilities” [<a class="reference external" href="https://doi.org/10.1021/acs.est.3c00365">Bolorinos 𝐸𝑛𝑣𝑖𝑟𝑜𝑛. 𝑆𝑐𝑖. 𝑇𝑒𝑐ℎ𝑛𝑜𝑙. (2023)</a>]
+and “Load-Shifting Strategies for Cost-Effective Emission Reductions at Wastewater Facilities” [<a class="reference external" href="https://doi.org/10.1021/acs.est.4c09773">Chapin 𝐸𝑛𝑣𝑖𝑟𝑜𝑛. 𝑆𝑐𝑖. 𝑇𝑒𝑐ℎ𝑛𝑜𝑙. (2025)</a>].</p>
 </section>
 </section>
 

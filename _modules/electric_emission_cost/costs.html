@@ -46,7 +46,6 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../index.html">Table of Contents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../purpose.html">What is the Purpose of this Package?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../why_metrics.html">Why Use Flexibility Metrics?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
@@ -56,6 +55,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../optimize_cost.html">Optimize Electricity Costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../optimize_emit.html">Optimize Scope 2 Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../cooptimize.html">Co-optimize Costs and Emissions</a></li>
@@ -63,7 +63,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../data_format.html">How to Format Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../how_to_cost.html">How to Calculate Costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../how_to_emit.html">How to Calculate Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../how_to_metrics.html">How to Use Flexibility Metrics</a></li>
@@ -1284,7 +1284,7 @@
     <span class="n">consumption_data_dict</span><span class="p">,</span>
     <span class="n">model</span><span class="p">,</span>
     <span class="n">electric_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">,</span>
-    <span class="n">gas_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">meters</span><span class="o">**</span><span class="mi">3</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">day</span><span class="p">,</span>
+    <span class="n">gas_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">meters</span><span class="o">**</span><span class="mi">3</span> <span class="o">/</span> <span class="n">u</span><span class="o">.</span><span class="n">hour</span><span class="p">,</span>
     <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
     <span class="n">prev_demand_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">prev_consumption_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -1296,7 +1296,8 @@
     <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">default_varstr_alias_func</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Wrapper for calculate_cost to build the cost components into a Pyomo model.</span>
+<span class="sd">    Wrapper for `calculate_cost` to build the cost components into a Pyomo model.</span>
+<span class="sd">    An objective function will be created in `model.objective`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1304,7 +1305,7 @@
 <span class="sd">        dictionary of arrays with keys of the form</span>
 <span class="sd">        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`</span>
 <span class="sd">        and values being the $ per kW (electric demand), kWh (electric energy/export),</span>
-<span class="sd">        cubic meter / day (gas demand), cubic meter (gas energy),</span>
+<span class="sd">        cubic meter / hour (gas demand), cubic meter (gas energy),</span>
 <span class="sd">        or $ / month (customer)</span>
 
 <span class="sd">    consumption_data_dict : dict</span>
@@ -1319,7 +1320,7 @@
 <span class="sd">        Units for the electricity consumption data. Default is kW</span>
 
 <span class="sd">    gas_consumption_units : pint.Unit</span>
-<span class="sd">        Units for the natural gas consumption data. Default is cubic meters / day</span>
+<span class="sd">        Units for the natural gas consumption data. Default is cubic meters / hour</span>
 
 <span class="sd">    resolution : str</span>
 <span class="sd">        String of the form `[int][str]` giving the temporal resolution</span>
@@ -1411,11 +1412,11 @@
         <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">varstr_alias_func</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="n">model</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Objective</span><span class="p">(</span><span class="n">expr</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">electricity_cost</span><span class="p">,</span> <span class="n">sense</span><span class="o">=</span><span class="n">pyo</span><span class="o">.</span><span class="n">minimize</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">objective</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Objective</span><span class="p">(</span><span class="n">expr</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">electricity_cost</span><span class="p">,</span> <span class="n">sense</span><span class="o">=</span><span class="n">pyo</span><span class="o">.</span><span class="n">minimize</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">additional_objective_terms</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">additional_objective_terms</span><span class="p">:</span>
-            <span class="n">model</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">expr</span> <span class="o">+=</span> <span class="n">term</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">objective</span><span class="o">.</span><span class="n">expr</span> <span class="o">+=</span> <span class="n">term</span>
     <span class="k">return</span> <span class="n">model</span></div>
 
 

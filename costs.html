@@ -49,7 +49,6 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
@@ -59,6 +58,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
@@ -66,7 +66,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_cost.html">How to Calculate Costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_emit.html">How to Calculate Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
@@ -163,22 +163,23 @@ cubic meter (gas energy), or $ / month (customer)</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="electric_emission_cost.costs.build_pyomo_costing">
-<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">build_pyomo_costing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">day')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional_objective_terms=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#build_pyomo_costing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.build_pyomo_costing" title="Permalink to this definition"></a></dt>
-<dd><p>Wrapper for calculate_cost to build the cost components into a Pyomo model.</p>
+<span class="sig-prename descclassname"><span class="pre">electric_emission_cost.costs.</span></span><span class="sig-name descname"><span class="pre">build_pyomo_costing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional_objective_terms=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/electric_emission_cost/costs.html#build_pyomo_costing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#electric_emission_cost.costs.build_pyomo_costing" title="Permalink to this definition"></a></dt>
+<dd><p>Wrapper for <cite>calculate_cost</cite> to build the cost components into a Pyomo model.
+An objective function will be created in <cite>model.objective</cite>.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul>
 <li><p><strong>charge_dict</strong> (<em>dict</em>) – dictionary of arrays with keys of the form
 <cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite>
 and values being the $ per kW (electric demand), kWh (electric energy/export),
-cubic meter / day (gas demand), cubic meter (gas energy),
+cubic meter / hour (gas demand), cubic meter (gas energy),
 or $ / month (customer)</p></li>
 <li><p><strong>consumption_data_dict</strong> (<em>dict</em>) – Baseline electrical and gas usage data as an optimization variable object
 with keys “electric” and “gas”. Values of the dictionary must be of type
 numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</p></li>
 <li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.</p></li>
 <li><p><strong>electric_consumption_units</strong> (<em>pint.Unit</em>) – Units for the electricity consumption data. Default is kW</p></li>
-<li><p><strong>gas_consumption_units</strong> (<em>pint.Unit</em>) – Units for the natural gas consumption data. Default is cubic meters / day</p></li>
+<li><p><strong>gas_consumption_units</strong> (<em>pint.Unit</em>) – Units for the natural gas consumption data. Default is cubic meters / hour</p></li>
 <li><p><strong>resolution</strong> (<em>str</em>) – String of the form <cite>[int][str]</cite> giving the temporal resolution
 on which charges are assessed, the <cite>str</cite> portion corresponds to
 numpy.timedelta64 types for example ‘15m’ specifying demand charges

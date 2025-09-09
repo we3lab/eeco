@@ -9,7 +9,6 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
 
    Table of Contents <self>
    purpose
-   hello
    complexities
    why_metrics
    why_neutral
@@ -21,6 +20,7 @@ Welcome to the Electric Emissions & Cost (EEC) documentation!
    :maxdepth: 1
    :caption: Tutorials
 
+   hello
    optimize_cost
    optimize_emit
    cooptimize

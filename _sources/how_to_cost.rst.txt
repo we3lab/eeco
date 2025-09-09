@@ -176,18 +176,20 @@ By default, the combined costs across both utilities is calculated (i.e., `desir
 Units
 =====
 
-The EEC package uses `Pint <https://pint.readthedocs.io/en/stable/>`_ to handle nit conversions automaitcally. 
+The EEC package uses `Pint <https://pint.readthedocs.io/en/stable/>`_ to handle unit conversions automaitcally. 
 The logic depends on the proper `electric_consumption_units` and `gas_consumption_units` arguments being provided.
-Based on the most common data sources we have used, the electric consumption units are in kW
-and gas consumption units in cubic meters per hour, so `electric_consumption_units=u.kW` and `gas_consumption_units=u.m ** 3 / u.hour`.
+The electric consumption units are in kW and gas consumption units in cubic meters per hour,
+so `electric_consumption_units=u.kW` and `gas_consumption_units=u.m ** 3 / u.hour`,
+to be consistent with our published natural gas tariff dataset (:ref:`data-format-tariff`).
 
-For example:
+For example, if `electric_consumption_units` are in megawatts instead of the default kilowatts
+and `gas_consumption_units` are in cubic meters per day instead of per hour:
 
 .. code-block:: python
 
-    # TODO: INSERT CODE SNIPPET WITH VARIOUS UNITS
-    # THESE OPTIONAL ARGUMENTS STILL HAVE TO BE IMPLEMENTED
-    # https://github.com/we3lab/electric-emission-cost/issues/17
+    total_monthly_bill, _ = costs.calculate_cost(
+        charge_dict, consumption_data_dict, electric_consumption_units=u.MW, gas_consumption_units=u.m**3/u.day
+    )
 
 ================
 Itemized Charges

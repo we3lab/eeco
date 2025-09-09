@@ -23,7 +23,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="How to Calculate Emissions" href="how_to_emit.html" />
-    <link rel="prev" title="Data Formats" href="data_format.html" /> 
+    <link rel="prev" title="How to Format Data" href="data_format.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -49,7 +49,6 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
@@ -59,6 +58,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
@@ -66,7 +66,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">How to Calculate Costs</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#import-statements">Import Statements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#create-charge-dictionary">Create Charge Dictionary</a></li>
@@ -297,14 +297,16 @@ By default, the combined costs across both utilities is calculated (i.e., <cite>
 </section>
 <section id="units">
 <h2><a class="toc-backref" href="#id12" role="doc-backlink">Units</a><a class="headerlink" href="#units" title="Permalink to this heading"></a></h2>
-<p>The EEC package uses <a class="reference external" href="https://pint.readthedocs.io/en/stable/">Pint</a> to handle nit conversions automaitcally.
+<p>The EEC package uses <a class="reference external" href="https://pint.readthedocs.io/en/stable/">Pint</a> to handle unit conversions automaitcally.
 The logic depends on the proper <cite>electric_consumption_units</cite> and <cite>gas_consumption_units</cite> arguments being provided.
-Based on the most common data sources we have used, the electric consumption units are in kW
-and gas consumption units in cubic meters per hour, so <cite>electric_consumption_units=u.kW</cite> and <cite>gas_consumption_units=u.m ** 3 / u.hour</cite>.</p>
-<p>For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># TODO: INSERT CODE SNIPPET WITH VARIOUS UNITS</span>
-<span class="c1"># THESE OPTIONAL ARGUMENTS STILL HAVE TO BE IMPLEMENTED</span>
-<span class="c1"># https://github.com/we3lab/electric-emission-cost/issues/17</span>
+The electric consumption units are in kW and gas consumption units in cubic meters per hour,
+so <cite>electric_consumption_units=u.kW</cite> and <cite>gas_consumption_units=u.m ** 3 / u.hour</cite>,
+to be consistent with our published natural gas tariff dataset (<a class="reference internal" href="data_format.html#data-format-tariff"><span class="std std-ref">Electricity Tariffs</span></a>).</p>
+<p>For example, if <cite>electric_consumption_units</cite> are in megawatts instead of the default kilowatts
+and <cite>gas_consumption_units</cite> are in cubic meters per day instead of per hour:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">total_monthly_bill</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span> <span class="n">consumption_data_dict</span><span class="p">,</span> <span class="n">electric_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">MW</span><span class="p">,</span> <span class="n">gas_consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">m</span><span class="o">**</span><span class="mi">3</span><span class="o">/</span><span class="n">u</span><span class="o">.</span><span class="n">day</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -332,7 +334,7 @@ such as <cite>resolution</cite>, <cite>desired_utility</cite>, and <cite>consump
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="data_format.html" class="btn btn-neutral float-left" title="Data Formats" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="data_format.html" class="btn btn-neutral float-left" title="How to Format Data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="how_to_emit.html" class="btn btn-neutral float-right" title="How to Calculate Emissions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

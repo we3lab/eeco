@@ -49,7 +49,6 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
@@ -59,6 +58,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Optimize Scope 2 Emissions</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#cvxpy">CVXPY</a></li>
@@ -70,7 +70,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_cost.html">How to Calculate Costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_emit.html">How to Calculate Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
@@ -336,6 +336,7 @@ Note how the optimized electricity profile shaves peaks to readuce time-of-use (
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">emissions</span>
@@ -348,7 +349,7 @@ Note how the optimized electricity profile shaves peaks to readuce time-of-use (
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path_to_emissions_sheet</span> <span class="o">=</span> <span class="s2">&quot;electric_emission_cost/data/emissions.csv&quot;</span>
 <span class="n">emission_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_to_emissions_sheet</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
 
-<span class="c1"># get the charge dictionary</span>
+<span class="c1"># get the carbon intensity</span>
 <span class="n">carbon_intensity</span> <span class="o">=</span> <span class="n">emissions</span><span class="o">.</span><span class="n">get_carbon_intensity</span><span class="p">(</span>
     <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">emission_df</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span>
 <span class="p">)</span>
@@ -404,6 +405,8 @@ power capacity, and energy capacity.</p>
 <span class="p">)</span>
 </pre></div>
 </div>
+<p>There is also an optional <cite>emissions_units</cite> argument that we do not use in the above example.
+That is because <cite>get_carbon_intensity</cite> returns a <cite>pint.Quantity</cite> from which we can automatically parse the emissions units.</p>
 <ol class="arabic simple" start="4">
 <li><p>Minimize the Scope 2 emissions of this consumer given the system constraints and base load consumption</p></li>
 </ol>
@@ -428,7 +431,6 @@ Unlike <a class="reference internal" href="optimize_cost.html#tutorial-cost"><sp
     <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
     <span class="n">consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span>
 <span class="p">)</span>
-<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
 <span class="n">optimized_emissions</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">objective</span><span class="p">)</span>
 </pre></div>
 </div>

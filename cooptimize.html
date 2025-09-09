@@ -49,7 +49,6 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
@@ -59,14 +58,19 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Co-optimize Costs and Emissions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#cvxpy">CVXPY</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pyomo">Pyomo</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial_metrics.html">Flexibility Metrics as Constraints</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="data_format.html">Data Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_cost.html">How to Calculate Costs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_emit.html">How to Calculate Emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
@@ -108,16 +112,371 @@
   <nav class="contents" id="contents" role="doc-toc">
 <p class="topic-title">Contents</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="#co-optimize-costs-and-emissions" id="id1">Co-optimize Costs and Emissions</a></p></li>
+<li><p><a class="reference internal" href="#co-optimize-costs-and-emissions" id="id2">Co-optimize Costs and Emissions</a></p>
+<ul>
+<li><p><a class="reference internal" href="#cvxpy" id="id3">CVXPY</a></p></li>
+<li><p><a class="reference internal" href="#pyomo" id="id4">Pyomo</a></p></li>
+</ul>
+</li>
 </ul>
 </nav>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Site under construction!
-Documentation incomplete :(</p>
-</div>
 <section id="co-optimize-costs-and-emissions">
-<span id="tutorial-cooptimize"></span><h1><a class="toc-backref" href="#id1" role="doc-backlink">Co-optimize Costs and Emissions</a><a class="headerlink" href="#co-optimize-costs-and-emissions" title="Permalink to this heading"></a></h1>
+<span id="tutorial-cooptimize"></span><h1><a class="toc-backref" href="#id2" role="doc-backlink">Co-optimize Costs and Emissions</a><a class="headerlink" href="#co-optimize-costs-and-emissions" title="Permalink to this heading"></a></h1>
+<p>This tutorial will walk through how to co-optimize electricity bill savings and Scope 2 emissions for a simple battery model in either <a class="reference internal" href="#cvx-coopt"><span class="std std-ref">CVXPY</span></a> or <a class="reference internal" href="#pyo-coopt"><span class="std std-ref">Pyomo</span></a> by going through the following steps:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Load an electricity tariff spreadsheet and Scope 2 emissions data</p></li>
+<li><p>Configure an optimization model of the electricity consumer with system constraints</p>
+<ul class="simple">
+<li><p>Consider using flexibility metrics to encode system constraints (<a class="reference internal" href="tutorial_metrics.html#tutorial-metrics"><span class="std std-ref">Flexibility Metrics as Constraints</span></a>)!</p></li>
+<li><p>The models are presented step-by-step to demonstrate the model building process,
+but the complete models are available in the <cite>examples</cite> folder:</p>
+<ul>
+<li><p><a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py">pyomo_battery_model.py</a></p></li>
+<li><p><a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/examples/cvxpy_battery_model.py">cvxpy_battery_model.py</a></p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Create an objective function of electricity costs and emissions with carbon cost</p></li>
+<li><p>Minimize the electricity costs and emissions of this consumer, given the system constraints, base load consumption, and carbon cost</p></li>
+<li><p>Display the results to validate that the optimization is correct</p></li>
+</ol>
+</div></blockquote>
+<section id="cvxpy">
+<span id="cvx-coopt"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">CVXPY</a><a class="headerlink" href="#cvxpy" title="Permalink to this heading"></a></h2>
+<ol class="arabic simple" start="0">
+<li><p>Import dependencies</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">emissions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
+</pre></div>
+</div>
+<ol class="arabic simple">
+<li><p>Load a electricity tariff and Scope 2 emissions spreadsheet</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path_to_emissions_sheet</span> <span class="o">=</span> <span class="s2">&quot;electric_emission_cost/data/emissions.csv&quot;</span>
+<span class="n">emission_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_to_emissions_sheet</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+
+<span class="c1"># get the carbon intensity</span>
+<span class="n">carbon_intensity</span> <span class="o">=</span> <span class="n">emissions</span><span class="o">.</span><span class="n">get_carbon_intensity</span><span class="p">(</span>
+    <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span> <span class="n">emission_df</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span>
+<span class="p">)</span>
+
+<span class="n">path_to_tariff_sheet</span> <span class="o">=</span> <span class="s2">&quot;electric_emission_cost/data/tariff.csv&quot;</span>
+<span class="n">tariff_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_to_tariff_sheet</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+
+<span class="c1"># get the charge dictionary</span>
+<span class="n">charge_dict</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_dict</span><span class="p">(</span>
+    <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2023</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span> <span class="n">tariff_df</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>We are going to evaluate the electricity consumption from only April 9th to April 10th since that is where our
+synthetic data comes from (<a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/consumption.csv">https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/consumption.csv</a>).
+You will also see that it is in 1-minute intervals, hence <cite>resolution=”1m”</cite>.</p>
+<ol class="arabic simple" start="2">
+<li><p>Configure an optimization model of the electricity consumer with system constraints</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># load historical consumption data</span>
+<span class="n">load_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;electric_emission_cost/data/consumption.csv&quot;</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Datetime&quot;</span><span class="p">])</span>
+
+<span class="c1"># set battery parameters</span>
+<span class="c1"># create variables for battery total energy, max charge and discharge power, and SOC limits</span>
+<span class="n">total_capacity</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># kWh</span>
+<span class="n">min_soc</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">max_soc</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">init_soc</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">fin_soc</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">max_discharge</span> <span class="o">=</span> <span class="mi">5</span> <span class="c1"># kW</span>
+<span class="n">max_charge</span> <span class="o">=</span> <span class="mi">5</span> <span class="c1"># kW</span>
+<span class="n">T</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">load_df</span><span class="p">[</span><span class="s2">&quot;Datetime&quot;</span><span class="p">])</span>
+<span class="n">delta_t</span> <span class="o">=</span> <span class="p">((</span><span class="n">load_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;Datetime&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">load_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;Datetime&quot;</span><span class="p">])</span> <span class="o">/</span> <span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># initialize variables</span>
+<span class="n">battery_output_kW</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+<span class="n">battery_soc</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">T</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">grid_demand_kW</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+
+<span class="c1"># set constraints</span>
+<span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">battery_output_kW</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="n">max_discharge</span><span class="p">,</span>
+    <span class="n">battery_output_kW</span> <span class="o">&lt;=</span> <span class="n">max_charge</span><span class="p">,</span>
+    <span class="n">battery_soc</span> <span class="o">&gt;=</span> <span class="n">min_soc</span><span class="p">,</span>
+    <span class="n">battery_soc</span> <span class="o">&lt;=</span> <span class="n">max_soc</span><span class="p">,</span>
+    <span class="n">battery_soc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">init_soc</span><span class="p">,</span>
+    <span class="n">battery_soc</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">==</span> <span class="n">fin_soc</span><span class="p">,</span>
+    <span class="n">grid_demand_kW</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+<span class="p">]</span>
+<span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">T</span><span class="p">):</span>
+    <span class="n">constraints</span> <span class="o">+=</span> <span class="p">[</span>
+        <span class="n">battery_soc</span><span class="p">[</span><span class="n">t</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">battery_soc</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">battery_output_kW</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_t</span><span class="p">)</span> <span class="o">/</span> <span class="n">total_capacity</span><span class="p">,</span>
+        <span class="n">grid_demand_kW</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">load_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">t</span><span class="p">][</span><span class="s2">&quot;Load [kW]&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">battery_output_kW</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+    <span class="p">]</span>
+</pre></div>
+</div>
+<p>This is a standard battery model with energy (i.e., total charge) and power (i.e., discharge/charge rate) constraints.
+The round-trip efficiency is 1.0 since there is no penalty applied when discharging the battery,
+but that’s fine for these demonstration purposes.</p>
+<ol class="arabic simple" start="3">
+<li><p>Create an objective function of electricity costs and Scope 2 emissions with carbon cost</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># dollars per kg CO2 - converted from $192/metric ton CO2-eq</span>
+<span class="n">cost_of_carbon</span> <span class="o">=</span> <span class="mf">0.192</span>
+
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">emissions_obj</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">emissions</span><span class="o">.</span><span class="n">calculate_grid_emissions</span><span class="p">(</span>
+    <span class="n">carbon_intensity</span><span class="p">,</span>
+    <span class="n">grid_demand_kW</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">,</span>
+    <span class="n">consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span>
+<span class="p">)</span>
+<span class="c1"># requires a consumption dictionary in case there is natural gas in addition to electricity</span>
+<span class="n">consumption_data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">grid_demand_kW</span><span class="p">}</span>
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">cost_obj</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">grid_demand_kW</span><span class="p">},</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">,</span>
+    <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">load_df</span><span class="p">[</span><span class="s2">&quot;Load [kW]&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">obj</span> <span class="o">=</span> <span class="n">cost_obj</span> <span class="o">+</span> <span class="n">emissions_obj</span> <span class="o">*</span> <span class="n">cost_of_carbon</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Minimize the costs and emissions of this consumer, given the system constraints, base load consumption, and carbon cost</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># solve the CVX problem (objective variable should be named obj)</span>
+<span class="n">prob</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">Minimize</span><span class="p">(</span><span class="n">obj</span><span class="p">),</span> <span class="n">constraints</span><span class="p">)</span>
+<span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>Display the results to validate that the optimization is correct</p></li>
+</ol>
+<p>Always compute the ex-post cost using numpy due to the convex relaxations that we apply in our optimization code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">baseline_electricity_emissions</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">emissions</span><span class="o">.</span><span class="n">calculate_grid_emissions</span><span class="p">(</span>
+    <span class="n">carbon_intensity</span><span class="p">,</span>
+    <span class="n">load_df</span><span class="p">[</span><span class="s2">&quot;Load [kW]&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">,</span>
+    <span class="n">consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span>
+<span class="p">)</span>
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">optimized_electricity_emissions</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">emissions</span><span class="o">.</span><span class="n">calculate_grid_emissions</span><span class="p">(</span>
+    <span class="n">carbon_intensity</span><span class="p">,</span>
+    <span class="n">grid_demand_kW</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">,</span>
+    <span class="n">consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span>
+<span class="p">)</span>
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">baseline_electricity_cost</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">load_df</span><span class="p">[</span><span class="s2">&quot;Load [kW]&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">},</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">optimized_electricity_cost</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">grid_demand_kW</span><span class="o">.</span><span class="n">value</span><span class="p">},</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">total_baseline_cost</span> <span class="o">=</span> <span class="n">baseline_electricity_cost</span> <span class="o">+</span> <span class="n">cost_of_carbon</span> <span class="o">*</span> <span class="n">baseline_electricity_emissions</span><span class="o">.</span><span class="n">magnitude</span>
+<span class="n">total_optimized_cost</span> <span class="o">=</span> <span class="n">optimized_electricity_cost</span> <span class="o">+</span> <span class="n">cost_of_carbon</span> <span class="o">*</span> <span class="n">optimized_electricity_emissions</span><span class="o">.</span><span class="n">magnitude</span>
+</pre></div>
+</div>
+<p>If we print our results, we confirm that the optimal electricity profile has daily emissions of
+10.57 kg CO:sub:<cite>2</cite>-eq, 0.12 kg CO:sub:<cite>2</cite>-eq less than the baseline emissions of 10.69 kg CO:sub:<cite>2</cite>-eq.
+It simultaneously lowers daily costs by $61.48 from $765.29 to $703.81.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="go">&gt;&gt;&gt;print(f&quot;Baseline Scope 2 Emissions: {baseline_electricity_emissions:.2f} kg CO_2-eq&quot;)</span>
+<span class="go">Baseline Scope 2 Emissions: 10.69 kilogram kg CO_2-eq</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Optimized Scope 2 Emissions: {optimized_electricity_emissions:.2f} kg CO_2-eq&quot;)</span>
+<span class="go">Optimized Scope 2 Emissions: 10.57 kilogram kg CO_2-eq</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Baseline Electricity Costs: ${baseline_electricity_cost:.2f}&quot;)</span>
+<span class="go">Baseline Electricity Costs: $765.29</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Optimized Electricity Costs: ${optimized_electricity_cost:.2f}&quot;)</span>
+<span class="go">Optimized Electricity Costs: $703.81</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Total Baseline Cost w/ $192/ton CO2-eq: ${total_baseline_cost:.2f}&quot;)</span>
+<span class="go">Total Baseline Cost w/ $192/ton CO2-eq: $767.34</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Total Optimized Cost w/ $192/ton CO2-eq: ${total_optimized_cost:.2f}&quot;)</span>
+<span class="go">Total Optimized Cost w/ $192/ton CO2-eq: $705.84</span>
+</pre></div>
+</div>
+<p>We could make similar plots to <a class="reference internal" href="optimize_cost.html#tutorial-cost"><span class="std std-ref">Optimize Electricity Costs</span></a> and <a class="reference internal" href="optimize_emit.html#tutorial-emit"><span class="std std-ref">Optimize Scope 2 Emissions</span></a>, but we omitted them from these instructions for the sake of space.</p>
+</section>
+<section id="pyomo">
+<span id="pyo-coopt"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">Pyomo</a><a class="headerlink" href="#pyomo" title="Permalink to this heading"></a></h2>
+<ol class="arabic simple" start="0">
+<li><p>Import dependencies</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">emissions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">examples.pyomo_battery_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">BatteryPyomo</span>
+</pre></div>
+</div>
+<ol class="arabic simple">
+<li><p>Load a electricity tariff and Scope 2 emissions spreadsheet</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path_to_emissions_sheet</span> <span class="o">=</span> <span class="s2">&quot;electric_emission_cost/data/emissions.csv&quot;</span>
+<span class="n">emission_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_to_emissions_sheet</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+
+<span class="c1"># get the carbon intensity</span>
+<span class="n">carbon_intensity</span> <span class="o">=</span> <span class="n">emissions</span><span class="o">.</span><span class="n">get_carbon_intensity</span><span class="p">(</span>
+    <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">emission_df</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span>
+<span class="p">)</span>
+
+<span class="n">path_to_tariffsheet</span> <span class="o">=</span> <span class="s2">&quot;electric_emission_cost/data/tariff.csv&quot;</span>
+<span class="n">tariff_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_to_tariffsheet</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+
+<span class="c1"># get the charge dictionary</span>
+<span class="n">charge_dict</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_dict</span><span class="p">(</span>
+    <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">tariff_df</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>We are going to evaluate the electricity consumption for the entire month of July 2022.
+Below we will create synthetic <cite>baseload</cite> data for this month with 15-minute resolution, so <cite>resolution=”15m”</cite>.</p>
+<ol class="arabic simple" start="2">
+<li><p>Configure an optimization model of the electricity consumer with system constraints</p></li>
+</ol>
+<p>We rely on the virtual battery model in <a class="reference external" href="https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py">pyomo_battery_model.py</a>.
+We’re going to stick to the electricity cost calculation details, but we encourage you to go check out the code to better understand the model.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define the parameters for the battery model</span>
+<span class="n">battery_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;start_date&quot;</span><span class="p">:</span> <span class="s2">&quot;2022-07-01 00:00:00&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;end_date&quot;</span><span class="p">:</span> <span class="s2">&quot;2022-08-01 00:00:00&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timestep&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span>   <span class="c1"># 15 minutes defined in hours</span>
+    <span class="s2">&quot;rte&quot;</span><span class="p">:</span> <span class="mf">0.86</span><span class="p">,</span>
+    <span class="s2">&quot;energycapacity&quot;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+    <span class="s2">&quot;powercapacity&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="s2">&quot;soc_min&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="s2">&quot;soc_max&quot;</span><span class="p">:</span> <span class="mf">0.95</span><span class="p">,</span>
+    <span class="s2">&quot;soc_init&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># Create a sample baseload profile based on a sine wave</span>
+<span class="n">baseload</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">96</span><span class="p">))</span><span class="o">*</span><span class="mi">100</span> <span class="o">+</span> <span class="mi">1000</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">96</span><span class="p">)</span>
+
+<span class="c1"># Create an instance of the BatteryOpt class</span>
+<span class="n">battery</span> <span class="o">=</span> <span class="n">BatteryPyomo</span><span class="p">(</span><span class="n">battery_params</span><span class="p">,</span> <span class="n">baseload</span><span class="p">,</span> <span class="n">baseload_repeat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># create the model on the instance battery</span>
+<span class="n">battery</span><span class="o">.</span><span class="n">create_model</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The above code initializes the battery model with flexibility metrics like round-trip efficiency (RTE),
+power capacity, and energy capacity.</p>
+<ol class="arabic simple" start="3">
+<li><p>Create an objective function of electricity costs and Scope 2 emissions with carbon cost</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># dollars per kg CO2 - converted from $192/metric ton CO2-eq</span>
+<span class="n">cost_of_carbon</span> <span class="o">=</span> <span class="mf">0.192</span>
+
+<span class="c1"># compute Scope 2 emissions using Pyomo variable</span>
+<span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">emissions</span><span class="p">,</span> <span class="n">battery</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">emissions</span><span class="o">.</span><span class="n">calculate_grid_emissions</span><span class="p">(</span>
+    <span class="n">carbon_intensity</span><span class="p">,</span>
+    <span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">net_facility_load</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span>
+<span class="p">)</span>
+
+<span class="c1"># monthly total consumption - divided by 4 because of 15-min resolution</span>
+<span class="n">consumption_estimate</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">baseload</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+<span class="c1"># this example tariff only has electric utility types so we do not pass the gas key</span>
+<span class="n">consumption_data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">net_facility_load</span><span class="p">}</span>
+
+<span class="c1"># use the built-in helper function to add more terms to the objective</span>
+<span class="n">battery</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">build_pyomo_costing</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="n">consumption_data_dict</span><span class="p">,</span>
+    <span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+    <span class="n">additional_objective_terms</span><span class="o">=</span><span class="p">[</span><span class="n">cost_of_carbon</span> <span class="o">*</span> <span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">emissions</span><span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Minimize the costs and emissions of this consumer, given the system constraints, base load consumption, and carbon cost</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># use the glpk solver to solve the model - (any pyomo-supported LP solver will work here)</span>
+<span class="n">solver</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">SolverFactory</span><span class="p">(</span><span class="s2">&quot;glpk&quot;</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">tee</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># turn tee=True to see solver output</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>Display the results to validate that the optimization is correct</p></li>
+</ol>
+<p>Always compute the ex-post cost using numpy due to the convex relaxations that we apply in our optimization code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># retrieve outputs from Pyomo model</span>
+<span class="n">net_load</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">net_facility_load</span><span class="p">[</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">])</span>
+<span class="n">baseload</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">baseload</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">])</span>
+
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">baseline_electricity_emissions</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">emissions</span><span class="o">.</span><span class="n">calculate_grid_emissions</span><span class="p">(</span>
+    <span class="n">carbon_intensity</span><span class="p">,</span>
+    <span class="n">baseload</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">consumption_units</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">kW</span>
+<span class="p">)</span>
+<span class="n">optimized_electricity_emissions</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">battery</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">emissions</span><span class="p">)</span>
+
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">baseline_electricity_cost</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">baseload</span><span class="p">},</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># NOTE: second entry of the tuple can be ignored since it&#39;s for Pyomo</span>
+<span class="n">optimized_electricity_cost</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">net_load</span><span class="p">},</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;15m&quot;</span><span class="p">,</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt>total_baseline_cost = baseline_electricity_cost + cost_of_carbon * baseline_electricity_emissions.magnitude</dt><dd><p>total_optimized_cost = optimized_electricity_cost + cost_of_carbon * optimized_electricity_emissions</p>
+</dd>
+</dl>
+<p>If we print our results, we confirm that the optimal electricity profile has monthly emissions of
+276,142.32 kg CO:sub:<cite>2</cite>-eq, 111.82 kg CO:sub:<cite>2</cite>-eq less than the baseline emissions of 276,254.14 kg CO:sub:<cite>2</cite>-eq.
+It simultaneously lowers monthly costs by $2,901.69 from $11,6269.08 to $11,3367.39.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="go">&gt;&gt;&gt;print(f&quot;Baseline Scope 2 Emissions: {baseline_electricity_emissions:.2f} kg CO_2-eq&quot;)</span>
+<span class="go">Baseline Scope 2 Emissions: 276254.14 kilogram kg CO_2-eq</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Optimized Scope 2 Emissions: {optimized_electricity_emissions:.2f} kg CO_2-eq&quot;)</span>
+<span class="go">Optimized Scope 2 Emissions: 276142.32 kilogram kg CO_2-eq</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Baseline Electricity Costs: ${baseline_electricity_cost:.2f}&quot;)</span>
+<span class="go">Baseline Electricity Costs: $116269.08</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Optimized Electricity Costs: ${optimized_electricity_cost:.2f}&quot;)</span>
+<span class="go">Optimized Electricity Costs: $113367.39</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Total Baseline Cost w/ $192/ton CO2-eq: ${total_baseline_cost:.2f}&quot;)</span>
+<span class="go">Total Baseline Cost w/ $192/ton CO2-eq: $169309.88</span>
+<span class="go">&gt;&gt;&gt;print(f&quot;Total Optimized Cost w/ $192/ton CO2-eq: ${total_optimized_cost:.2f}&quot;)</span>
+<span class="go">Total Optimized Cost w/ $192/ton CO2-eq: $166386.71</span>
+</pre></div>
+</div>
+<p>We could make similar plots to <a class="reference internal" href="optimize_cost.html#tutorial-cost"><span class="std std-ref">Optimize Electricity Costs</span></a> and <a class="reference internal" href="optimize_emit.html#tutorial-emit"><span class="std std-ref">Optimize Scope 2 Emissions</span></a>, but we omitted them from these instructions for the sake of space.</p>
+</section>
 </section>
 
 
