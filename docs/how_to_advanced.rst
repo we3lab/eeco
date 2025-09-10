@@ -90,12 +90,15 @@ In `bibtex` format:
 
 .. _decompose-exports:
 
-How to Use `decompose_exports`
+How to Use `decomposition_type`
 ==============================
 
-The `decompose_exports` parameter allows you to decompose consumption data into positive (imports) and negative (exports) components. This is useful when you have export charges or credits in your rate structure.
+The `decomposition_type` parameter allows you to decompose consumption data into positive (imports) and negative (exports) components. This is useful when you have export charges or credits in your rate structure.
 
-By default, `decompose_exports=False`. Set to `True` when your charge dictionary contains export-related charges.
+Options:
+- Default `None`
+- `"binary_variable"`: To be implemented
+- `"absolute_value"`
 
 .. code-block:: python
 
@@ -115,12 +118,12 @@ By default, `decompose_exports=False`. Set to `True` when your charge dictionary
     result, model = costs.calculate_cost(
         charge_dict,
         consumption_data,
-        decompose_exports=True
+        decomposition_type="absolute_value"
     )
 
-When `decompose_exports=True`, the function creates separate variables for positive consumption (imports) and negative consumption (exports)
+When decomposition_type is not None the function creates separate variables for positive consumption (imports) and negative consumption (exports)
 and applies export charges only to the export component.
-For Pyomo models, decompose_exports adds a constraint total_consumption = imports - exports
+For Pyomo models, decomposition_type adds a constraint total_consumption = imports - exports
 
 
 .. _varstr-alias:

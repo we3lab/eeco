@@ -627,7 +627,7 @@ def calculate_demand_cost(
             warnings.warn(
                 "UserWarning: Demand calculation includes negative values. "
                 "Pass in only positive values or "
-                "run calculate_cost with decompose_exports=True"
+                "run calculate_cost with a decomposition_type"
             )
         if (ut.max(consumption_data)[0] >= limit) or (
             (prev_demand >= limit) and (prev_demand <= next_limit)
@@ -781,7 +781,7 @@ def calculate_energy_cost(
             warnings.warn(
                 "UserWarning: Energy calculation includes negative values. "
                 "Pass in only positive values or "
-                "run calculate_cost with decompose_exports=True"
+                "run calculate_cost with a decomposition_type"
             )
 
         energy = prev_consumption
@@ -891,7 +891,7 @@ def calculate_export_revenue(
             warnings.warn(
                 "UserWarning: Export revenue calculation includes negative values. "
                 "Pass in only positive values or "
-                "run calculate_cost with decompose_exports=True"
+                "run calculate_cost with a decomposition_type"
             )
         return np.sum(consumption_data * charge_array) / divisor, model
 
@@ -968,7 +968,7 @@ def calculate_cost(
     desired_charge_type=None,
     demand_scale_factor=1,
     model=None,
-    decompose_exports=False,
+    decomposition_type=None,
     varstr_alias_func=default_varstr_alias_func,
 ):
     """Calculates the cost of given charges (demand or energy) for the given
@@ -1053,9 +1053,11 @@ def calculate_cost(
         Can be a single pyomo Expression or a list of pyomo Expressions.
         Only used in the case of Pyomo, so `None` by default.
 
-    decompose_exports : indicates whether to add additional optimization variables
-        indicating positive or negative consumption. Set to "True" if electricity
-        or gas exports are possible. Default "False"
+    decomposition_type : str or None
+        Type of decomposition to use for consumption data.
+        - "absolute_value": Linear problem using absolute value
+        - "binary_variable": To be implemented
+        - Default None: No decomposition, treats all consumption as imports
 
     varstr_alias_func: function
         Function to generate variable name for pyomo,
@@ -1120,7 +1122,7 @@ def calculate_cost(
                 varstr=utility + "_converted",
             )
 
-            if decompose_exports:
+            if decomposition_type == "absolute_value":
                 # Decompose consumption data into positive and negative components
                 # with constraint that total = positive - negative
                 # (where negative is stored as positive magnitude)
@@ -1129,13 +1131,14 @@ def calculate_cost(
                     converted_consumption,
                     model=model,
                     varstr=utility,
+                    decomposition_type="absolute_value",
                 )
 
                 consumption_data_dict[utility] = {
                     "imports": imports,
                     "exports": exports,
                 }
-            else:
+            elif decomposition_type is None:
                 consumption_data_dict[utility] = {
                     "imports": converted_consumption,
                     "exports": converted_consumption,
@@ -1374,7 +1377,7 @@ def calculate_itemized_cost(
     desired_utility=None,
     demand_scale_factor=1,
     model=None,
-    decompose_exports=False,
+    decomposition_type=None,
     varstr_alias_func=default_varstr_alias_func,
 ):
     """Calculates itemized costs as a nested dictionary
@@ -1473,14 +1476,14 @@ def calculate_itemized_cost(
         }
 
     """
-    # Check if decompose_exports=True is used with CVXPY objects
+    # Check if decomposition_type is used with CVXPY objects
     # (not yet supported because imports - exports creates non-DCP issues)
-    if decompose_exports:
+    if decomposition_type is not None:
         for utility in consumption_data_dict.keys():
             if isinstance(consumption_data_dict[utility], cp.Variable):
                 raise ValueError(
-                    "decompose_exports=True is not supported with CVXPY objects. "
-                    "Use Pyomo instead for problems requiring decompose_exports."
+                    "decomposition types are not supported with CVXPY objects. "
+                    "Use Pyomo instead for problems requiring decomposition_type."
                 )
 
     total_cost = 0
@@ -1512,20 +1515,23 @@ def calculate_itemized_cost(
                 varstr=utility + "_converted",
             )
 
-            if decompose_exports:
+            if decomposition_type == "absolute_value":
                 # Decompose consumption data into positive and negative components
                 # with constraint that total = positive - negative
                 # (where negative is stored as positive magnitude)
                 pos_name, neg_name = ut._get_decomposed_var_names(utility)
                 imports, exports, model = ut.decompose_consumption(
-                    converted_consumption, model=model, varstr=utility
+                    converted_consumption,
+                    model=model,
+                    varstr=utility,
+                    decomposition_type="absolute_value",
                 )
 
                 consumption_data_dict[utility] = {
                     "imports": imports,
                     "exports": exports,
                 }
-            else:
+            elif decomposition_type is None:
                 consumption_data_dict[utility] = {
                     "imports": converted_consumption,
                     "exports": converted_consumption,
@@ -1548,7 +1554,7 @@ def calculate_itemized_cost(
                     desired_charge_type=charge_type,
                     demand_scale_factor=demand_scale_factor,
                     model=model,
-                    decompose_exports=decompose_exports,
+                    decomposition_type=decomposition_type,
                     varstr_alias_func=varstr_alias_func,
                 )
 
@@ -1574,7 +1580,7 @@ def calculate_itemized_cost(
                 desired_charge_type=charge_type,
                 demand_scale_factor=demand_scale_factor,
                 model=model,
-                decompose_exports=decompose_exports,
+                decomposition_type=decomposition_type,
                 varstr_alias_func=varstr_alias_func,
             )
 

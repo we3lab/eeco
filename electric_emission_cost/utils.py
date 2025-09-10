@@ -309,21 +309,41 @@ def max_pos(expression, model=None, varstr=None):
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
-        model.add_component(varstr, pyo.Var(bounds=(0, None)))
-        var = model.find_component(varstr)
+        # Check if expression is indexed
+        if hasattr(expression, "index_set"):
+            # Create indexed max_pos variable
+            model.add_component(
+                varstr, pyo.Var(expression.index_set(), bounds=(0, None))
+            )
+            var = model.find_component(varstr)
 
-        def const_rule(model, t):
-            return var >= expression[t]
+            def const_rule(model, *indices):
+                return var[indices] >= expression[indices]
 
-        constraint = pyo.Constraint(model.t, rule=const_rule)
-        model.add_component(varstr + "_constraint", constraint)
-        return (var, model)
+            constraint = pyo.Constraint(expression.index_set(), rule=const_rule)
+            model.add_component(varstr + "_constraint", constraint)
+            return (var, model)
+        else:
+            # Create scalar max_pos variable
+            model.add_component(varstr, pyo.Var(initialize=0, bounds=(0, None)))
+            var = model.find_component(varstr)
+
+            def const_rule(model):
+                return var >= expression
+
+            constraint = pyo.Constraint(rule=const_rule)
+            model.add_component(varstr + "_constraint", constraint)
+            return (var, model)
     elif isinstance(
         expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
     ):
         return (np.max(expression), model) if np.max(expression) > 0 else (0, model)
     elif isinstance(expression, cp.Expression):
-        return cp.max(cp.vstack([expression, 0])), None
+        # Check if expression is indexed
+        if expression.shape == ():  # Scalar
+            return cp.max(cp.vstack([expression, 0])), None
+        else:  # Vector
+            return cp.maximum(expression, 0), None
     else:
         raise TypeError(
             "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
@@ -430,7 +450,9 @@ def initialize_decomposed_pyo_vars(consumption_data_dict, model, charge_dict):
     return consumption_object_dict
 
 
-def decompose_consumption(expression, model=None, varstr=None):
+def decompose_consumption(
+    expression, model=None, varstr=None, decomposition_type="absolute_value"
+):
     """Decomposes consumption data into positive and negative components
     And adds constraint such that total consumption equals
     positive values minus negative values
@@ -455,6 +477,11 @@ def decompose_consumption(expression, model=None, varstr=None):
     varstr : str
         Name prefix for the variables to be created if using a Pyomo `model`
 
+    decomposition_type : str
+        Type of decomposition to use.
+        - "binary_variable": To be implemented
+        - "absolute_value": Creates nonlinear problem
+
     Returns
     -------
     tuple
@@ -463,75 +490,56 @@ def decompose_consumption(expression, model=None, varstr=None):
         with the constraint that total = positive - negative
     """
     if isinstance(expression, np.ndarray):
-        positive_values = np.maximum(expression, 0)
-        negative_values = np.maximum(-expression, 0)  # magnitude as positive
+        if decomposition_type == "absolute_value":
+            positive_values = np.maximum(expression, 0)
+            negative_values = np.maximum(-expression, 0)  # magnitude as positive
+        else:
+            pass
         return positive_values, negative_values, model
     elif isinstance(expression, cp.Expression):
-        positive_values = cp.maximum(expression, 0)
-        negative_values = cp.maximum(-expression, 0)  # magnitude as positive
+        if decomposition_type == "absolute_value":
+            positive_values, _ = max_pos(expression)
+            negative_values, _ = max_pos(-expression)  # magnitude as positive
+        else:
+            pass
         return positive_values, negative_values, model
     elif isinstance(expression, (pyo.Var, pyo.Param)):
-        # Create positive consumption variable
-        model.add_component(f"{varstr}_positive", pyo.Var(model.t, bounds=(0, None)))
-        positive_var = model.find_component(f"{varstr}_positive")
+        if decomposition_type == "absolute_value":
 
-        def positive_lower_bound_rule(model, t):
-            return positive_var[t] >= 0
+            # Use max_pos to create positive_var and negative_var
+            pos_name, neg_name = _get_decomposed_var_names(varstr)
+            positive_var, model = max_pos(expression, model, pos_name)
 
-        def positive_expr_bound_rule(model, t):
-            return positive_var[t] >= expression[t]
+            # Create negative expression since pyomo won't take -expression directly
+            def negative_rule(model, t):
+                return -expression[t]
 
-        model.add_component(
-            f"{varstr}_positive_lower_bound",
-            pyo.Constraint(model.t, rule=positive_lower_bound_rule),
-        )
-        model.add_component(
-            f"{varstr}_positive_expr_bound",
-            pyo.Constraint(model.t, rule=positive_expr_bound_rule),
-        )
+            negative_expr = pyo.Expression(model.t, rule=negative_rule)
+            model.add_component(f"{varstr}_negative_expr", negative_expr)
+            negative_var, model = max_pos(negative_expr, model, neg_name)
 
-        # Create negative consumption magnitude variable
-        model.add_component(f"{varstr}_negative", pyo.Var(model.t, bounds=(0, None)))
-        negative_var = model.find_component(f"{varstr}_negative")
+            # Add constraint to balance import and export decomposed values
+            def decomposition_rule(model, t):
+                return expression[t] == positive_var[t] - negative_var[t]
 
-        def negative_lower_bound_rule(model, t):
-            return negative_var[t] >= 0
+            model.add_component(
+                f"{varstr}_decomposition_constraint",
+                pyo.Constraint(model.t, rule=decomposition_rule),
+            )
 
-        def negative_expr_bound_rule(model, t):
-            return (
-                negative_var[t] >= -expression[t]
-            )  # Flips sign of the negative consumption component
+            # Add constraint to ensure positive_var + negative_var = |expression|
+            # This both variables becoming larger due to artificial arbitrage
+            def magnitude_rule(model, t):
+                return positive_var[t] + negative_var[t] == abs(expression[t])
 
-        model.add_component(
-            f"{varstr}_negative_lower_bound",
-            pyo.Constraint(model.t, rule=negative_lower_bound_rule),
-        )
-        model.add_component(
-            f"{varstr}_negative_expr_bound",
-            pyo.Constraint(model.t, rule=negative_expr_bound_rule),
-        )
+            model.add_component(
+                f"{varstr}_magnitude_constraint",
+                pyo.Constraint(model.t, rule=magnitude_rule),
+            )
 
-        # Add constraint: expression = positive_var - negative_var
-        # Balances import and export decomposed values
-        def decomposition_rule(model, t):
-            return expression[t] == positive_var[t] - negative_var[t]
-
-        model.add_component(
-            f"{varstr}_decomposition_constraint",
-            pyo.Constraint(model.t, rule=decomposition_rule),
-        )
-
-        # Add constraint to ensure positive_var + negative_var = |expression|
-        # This both variables becoming larger due to artificial arbitrage
-        def magnitude_rule(model, t):
-            return positive_var[t] + negative_var[t] == abs(expression[t])
-
-        model.add_component(
-            f"{varstr}_magnitude_constraint",
-            pyo.Constraint(model.t, rule=magnitude_rule),
-        )
-
-        return positive_var, negative_var, model
+            return positive_var, negative_var, model
+        else:
+            pass
     else:
         raise TypeError(
             "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."

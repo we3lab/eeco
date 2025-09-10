@@ -157,7 +157,16 @@ def test_max_pos_pyo(consumption_data, varstr, expected):
     model.obj = pyo.Objective(expr=0)
     solver = pyo.SolverFactory("gurobi")
     solver.solve(model)
+
     assert pyo.value(result) == expected
+
+    # # TODO: debug indexed issue
+    # if hasattr(result, 'index_set'):
+    #     total_value = sum(pyo.value(result[t]) for t in result.index_set())
+    # else:
+    #     total_value = pyo.value(result)
+    # assert total_value == expected
+
     assert model is not None
 
 
