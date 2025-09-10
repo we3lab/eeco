@@ -79,7 +79,7 @@ def setup_pyo_vars_constraints(consumption_data_dict):
 def solve_pyo_problem(
     model,
     objective,
-    decompose_exports=False,
+    decomposition_type=None,
     charge_dict=None,
     consumption_data_dict=None,
 ):
@@ -87,12 +87,12 @@ def solve_pyo_problem(
 
     # Initialize decomposed variables if needed
     # TODO: check if always needed
-    if decompose_exports and consumption_data_dict is not None:
+    if decomposition_type is not None and consumption_data_dict is not None:
         utils.initialize_decomposed_pyo_vars(consumption_data_dict, model, charge_dict)
 
     model.obj = pyo.Objective(expr=objective)
 
-    if decompose_exports:  # Nonlinear constraints when decompose_exports=True
+    if decomposition_type is not None:  # Nonlinear when decomposition_type used
         solver = pyo.SolverFactory("ipopt")
     else:  # Gurobi otherwise
         solver = pyo.SolverFactory("gurobi")
@@ -1123,7 +1123,8 @@ def test_calculate_cost_cvx(
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
-    "consumption_estimate, desired_utility, desired_charge_type, expected_cost",
+    "consumption_estimate, desired_utility, desired_charge_type, "
+    "decomposition_type, expected_cost",
     [
         # energy charge with charge limit
         (
@@ -1147,6 +1148,7 @@ def test_calculate_cost_cvx(
             "15m",
             None,
             2400,
+            None,
             None,
             None,
             pytest.approx(260),
@@ -1195,6 +1197,7 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
+            None,
             pytest.approx(138),
         ),
         # demand charge with no previous consumption
@@ -1239,6 +1242,7 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
+            None,
             pytest.approx(1188),
         ),
         # export charges
@@ -1255,6 +1259,7 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
+            "absolute_value",
             pytest.approx(-0.3),
         ),
         # energy and export charges
@@ -1272,6 +1277,7 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
+            "absolute_value",
             pytest.approx(0.6 - 0.3),  # 48*1*0.05/4 - 48*1*0.025/4 = 0.6 - 0.3 = 0.3
         ),
         # energy charge with charge limit and time-varying consumption estimate
@@ -1391,6 +1397,7 @@ def test_calculate_cost_pyo(
     consumption_estimate,
     desired_utility,
     desired_charge_type,
+    decomposition_type,
     expected_cost,
 ):
     model, pyo_vars = setup_pyo_vars_constraints(consumption_data_dict)
@@ -1404,12 +1411,11 @@ def test_calculate_cost_pyo(
         desired_utility=desired_utility,
         desired_charge_type=desired_charge_type,
         model=model,
-        decompose_exports=any("export" in key for key in charge_dict.keys()),
+        decomposition_type=decomposition_type,
     )
 
-    decompose_exports = any("export" in key for key in charge_dict.keys())
     solve_pyo_problem(
-        model, result, decompose_exports, charge_dict, consumption_data_dict
+        model, result, decomposition_type, charge_dict, consumption_data_dict
     )
     assert pyo.value(result) == expected_cost
     assert model is not None
@@ -2903,7 +2909,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
     "charge_dict, "
     "consumption_data_dict, "
     "resolution, "
-    "decompose_exports, "
+    "decomposition_type, "
     "expected_cost, "
     "expected_itemized",
     [
@@ -2912,7 +2918,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
             {ELECTRIC: np.ones(96), GAS: np.ones(96)},
             "15m",
-            False,
+            None,
             pytest.approx(1.2),
             {
                 "electric": {
@@ -2929,7 +2935,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
                 },
             },
         ),
-        # energy and export charges with decompose_exports=True
+        # energy and export charges with decomposition_type "absolute_value"
         (
             {
                 "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
@@ -2939,7 +2945,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
                 GAS: np.ones(96),
             },
             "15m",
-            True,
+            "absolute_value",
             pytest.approx(-1.5),
             {
                 "electric": {
@@ -2962,16 +2968,16 @@ def test_calculate_itemized_cost_np(
     charge_dict,
     consumption_data_dict,
     resolution,
-    decompose_exports,
+    decomposition_type,
     expected_cost,
     expected_itemized,
 ):
-    """Test calculate_itemized_cost with and without decompose_exports."""
+    """Test calculate_itemized_cost with and without decomposition_type."""
     result, model = costs.calculate_itemized_cost(
         charge_dict,
         consumption_data_dict,
         resolution=resolution,
-        decompose_exports=decompose_exports,
+        decomposition_type=decomposition_type,
     )
 
     assert result["total"] == expected_cost
@@ -2987,7 +2993,7 @@ def test_calculate_itemized_cost_np(
     "charge_dict, "
     "consumption_data_dict, "
     "resolution, "
-    "decompose_exports, "
+    "decomposition_type, "
     "expected_cost, "
     "expected_itemized",
     [
@@ -2996,7 +3002,7 @@ def test_calculate_itemized_cost_np(
             {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
             {ELECTRIC: np.ones(96), GAS: np.ones(96)},
             "15m",
-            False,
+            None,
             pytest.approx(1.2),
             {
                 "electric": {
@@ -3013,7 +3019,7 @@ def test_calculate_itemized_cost_np(
                 },
             },
         ),
-        # energy and export charges with decompose_exports=True (non-DCP as constructed)
+        # energy and export charges with decomposition_type="absolute_value" (non-DCP)
         (
             {
                 "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
@@ -3024,7 +3030,7 @@ def test_calculate_itemized_cost_np(
                 GAS: np.ones(96),
             },
             "15m",
-            True,
+            "absolute_value",
             None,  # No expected cost - should raise error
             None,  # No expected itemized - should raise error
         ),
@@ -3034,27 +3040,27 @@ def test_calculate_itemized_cost_cvx(
     charge_dict,
     consumption_data_dict,
     resolution,
-    decompose_exports,
+    decomposition_type,
     expected_cost,
     expected_itemized,
 ):
     """Test calculate_itemized_cost with CVXPY variables."""
     cvx_vars, constraints = setup_cvx_vars_constraints(consumption_data_dict)
 
-    if decompose_exports:
+    if decomposition_type:
         with pytest.raises(ValueError):
             costs.calculate_itemized_cost(
                 charge_dict,
                 cvx_vars,
                 resolution=resolution,
-                decompose_exports=decompose_exports,
+                decomposition_type=decomposition_type,
             )
     else:
         result, model = costs.calculate_itemized_cost(
             charge_dict,
             cvx_vars,
             resolution=resolution,
-            decompose_exports=decompose_exports,
+            decomposition_type=decomposition_type,
         )
         solve_cvx_problem(result["total"], constraints)
 
@@ -3073,7 +3079,7 @@ def test_calculate_itemized_cost_cvx(
     "charge_dict, "
     "consumption_data_dict, "
     "resolution, "
-    "decompose_exports, "
+    "decomposition_type, "
     "expected_cost, "
     "expected_itemized",
     [
@@ -3082,7 +3088,7 @@ def test_calculate_itemized_cost_cvx(
             {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
             {ELECTRIC: np.ones(96), GAS: np.ones(96)},
             "15m",
-            False,
+            None,
             pytest.approx(1.2),
             {
                 "electric": {
@@ -3110,7 +3116,7 @@ def test_calculate_itemized_cost_cvx(
                 GAS: np.ones(96),
             },
             "15m",
-            True,
+            "absolute_value",
             pytest.approx(6.0 - 1.5),  # 48*10*0.05/4 - 48*5*0.025/4 = 6.0 - 1.5 = 4.5
             {
                 "electric": {
@@ -3133,7 +3139,7 @@ def test_calculate_itemized_cost_pyo(
     charge_dict,
     consumption_data_dict,
     resolution,
-    decompose_exports,
+    decomposition_type,
     expected_cost,
     expected_itemized,
 ):
@@ -3143,11 +3149,11 @@ def test_calculate_itemized_cost_pyo(
         charge_dict,
         pyo_vars,
         resolution=resolution,
-        decompose_exports=decompose_exports,
+        decomposition_type=decomposition_type,
         model=model,
     )
     solve_pyo_problem(
-        model, result["total"], decompose_exports, charge_dict, consumption_data_dict
+        model, result["total"], decomposition_type, charge_dict, consumption_data_dict
     )
 
     assert pyo.value(result["total"]) == expected_cost
