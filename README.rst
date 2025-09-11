@@ -20,6 +20,12 @@ Electric Emissions & Cost Optimizer (EECO)
    :target: https://codecov.io/gh/we3lab/eeco
    :alt: Code Coverage
 
+.. image:: 
+  https://zenodo.org/badge/979642377.svg
+  :height: 30
+  :target: https://doi.org/10.5281/zenodo.17102024
+  :alt: Zenodo DOI
+
 A package for calculating electricity-related emissions and costs for optimization problem formulation and other computational analyses.
 
 Useful Commands
