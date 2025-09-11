@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If this software has been useful in your research, we encourage you to cite it using the provided metadata."
+authors:
+  - family-names: "Chapin"
+    given-names: "Fletcher T."
+    orcid: "https://orcid.org/0000-0002-2165-7963"
+  - family-names: "Rao"
+    given-names: "Akshay K."
+    orcid: "https://orcid.org/0000-0002-9054-476X"
+  - family-names: "Sakthivelu"
+    given-names: "Adhithyan"
+    orcid: "https://orcid.org/0000-0002-3826-8112"
+  - family-names: "Wettermark"
+    given-names: "Daly"
+    orcid: "https://orcid.org/0000-0001-7151-2765"
+  - family-names: "Musabandesu"
+    given-names: "Erin"
+    orcid: "https://orcid.org/0000-0001-8381-4656"
+  - family-names: "Jaminet"
+    given-names: "Anne"
+  - family-names: "Dudchenko"
+    given-names: "Alexander V."
+    orcid: "https://orcid.org/0000-0002-4808-6195"
+  - family-names: "Mauter"
+    given-names: "Meagan S."
+    orcid: "https://orcid.org/0000-0002-4932-890X"
+title: "Electric Emissions & Cost Optimizer (EECO)"
+version: 0.1.0
+type: software
+date-released: September 10, 2025
+doi: 10.5281/zenodo.17042020
+url: "https://github.com/we3lab/eeco"
