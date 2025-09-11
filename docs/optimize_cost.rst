@@ -11,15 +11,15 @@ This tutorial will walk through how to optimize electricity bill savings for a s
   #. Load an electricity tariff spreadsheet
 
      - We publish a nationwide tariff dataset: https://github.com/we3lab/industrial-electricity-tariffs
-     - In this case, we use `tariff.csv <https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/tariff.csv>`_ from the EEC `data` folder
+     - In this case, we use `tariff.csv <https://github.com/we3lab/eeco/blob/main/eeco/data/tariff.csv>`_ from the EECO `data` folder
   #. Configure an optimization model of the electricity consumer with system constraints
   
      - Consider using flexibility metrics to encode system constraints (:ref:`tutorial-metrics`)!
      - The models are presented step-by-step to demonstrate the model building process, 
        but the complete models are available in the `examples` folder:
 
-       - `pyomo_battery_model.py <https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py>`_
-       - `cvxpy_battery_model.py <https://github.com/we3lab/electric-emission-cost/blob/main/examples/cvxpy_battery_model.py>`_
+       - `pyomo_battery_model.py <https://github.com/we3lab/eeco/blob/main/examples/pyomo_battery_model.py>`_
+       - `cvxpy_battery_model.py <https://github.com/we3lab/eeco/blob/main/examples/cvxpy_battery_model.py>`_
   #. Create an objective function of electricity costs based on this tariff sheet
   #. Minimize the electricity costs of this consumer, given the system constraints and base load consumption
   #. Display the results to validate that the optimization is correct
@@ -37,13 +37,13 @@ CVXPY
     import cvxpy as cp
     import pandas as pd
     import matplotlib.pyplot as plt
-    from electric_emission_cost import costs 
+    from eeco import costs 
 
 1. Load an electricity tariff spreadsheet
 
 .. code-block:: python
    
-    path_to_tariff_sheet = "electric_emission_cost/data/tariff.csv"
+    path_to_tariff_sheet = "eeco/data/tariff.csv"
     tariff_df = pd.read_csv(path_to_tariff_sheet, sep=",")
    
     # get the charge dictionary
@@ -52,7 +52,7 @@ CVXPY
     )
 
 We are going to evaluate the electricity consumption from only April 9th to April 10th since that is where our 
-synthetic data comes from (https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/consumption.csv).
+synthetic data comes from (https://github.com/we3lab/eeco/blob/main/eeco/data/consumption.csv).
 You will also see that it is in 1-minute intervals, hence `resolution="1m"`.
 If you print `charge_dict`, then you should get the following:
 
@@ -89,7 +89,7 @@ If you print `charge_dict`, then you should get the following:
 .. code-block:: python
 
     # load historical consumption data
-    load_df = pd.read_csv("electric_emission_cost/data/consumption.csv", parse_dates=["Datetime"])
+    load_df = pd.read_csv("eeco/data/consumption.csv", parse_dates=["Datetime"])
 
     # set battery parameters
     # create variables for battery total energy, max charge and discharge power, and SOC limits
@@ -144,7 +144,7 @@ but that's fine for these demonstration purposes.
     )
 
 The charge and consumption dictionaries are relatively straightforward: 
-`charge_dict` comes from the EEC package and `consumption_data_dict` is either an optimization variable or
+`charge_dict` comes from EECO and `consumption_data_dict` is either an optimization variable or
 numpy array (in the case of historical analysis).
 The only caveat would be that an entry with key "gas" must be included to analyze natural gas consumption.
 
@@ -296,15 +296,16 @@ Pyomo
     import datetime
     import numpy as np 
     import pandas as pd
+    import pyomo.environ as pyo
     import matplotlib.pyplot as plt
-    from electric_emission_cost import costs 
+    from eeco import costs 
     from examples.pyomo_battery_model import BatteryPyomo
 
 1. Load an electricity tariff spreadsheet
 
 .. code-block:: python
    
-    path_to_tariffsheet = "electric_emission_cost/data/tariff.csv"
+    path_to_tariffsheet = "eeco/data/tariff.csv"
     tariff_df = pd.read_csv(path_to_tariffsheet, sep=",")
    
     # get the charge dictionary
@@ -345,7 +346,7 @@ If you print `charge_dict`, then you should get the following:
 
 2. Configure an optimization model of the electricity consumer with system constraints
 
-We rely on the virtual battery model in `pyomo_battery_model.py <https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py>`_.
+We rely on the virtual battery model in `pyomo_battery_model.py <https://github.com/we3lab/eeco/blob/main/examples/pyomo_battery_model.py>`_.
 We're going to stick to the electricity cost calculation details, but we encourage you to go check out the code to better understand the model.
 
 .. code-block:: python

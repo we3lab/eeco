@@ -15,8 +15,8 @@ This tutorial will walk through how to optimize Scope 2 emissions for a simple b
      - The models are presented step-by-step to demonstrate the model-building process, 
        but the complete models are available in the `examples` folder:
 
-       - `pyomo_battery_model.py <https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py>`_
-       - `cvxpy_battery_model.py <https://github.com/we3lab/electric-emission-cost/blob/main/examples/cvxpy_battery_model.py>`_
+       - `pyomo_battery_model.py <https://github.com/we3lab/eeco/blob/main/examples/pyomo_battery_model.py>`_
+       - `cvxpy_battery_model.py <https://github.com/we3lab/eeco/blob/main/examples/cvxpy_battery_model.py>`_
   #. Create an objective function of Scope 2 emissions using the emissions factors
   #. Minimize the Scope 2 emissions of this consumer, given the system constraints and base load consumption
   #. Display the results to validate that the optimization is correct
@@ -35,14 +35,14 @@ CVXPY
     import cvxpy as cp
     import pandas as pd
     import matplotlib.pyplot as plt
-    from electric_emission_cost.units import u
-    from electric_emission_cost import emissions
+    from eeco.units import u
+    from eeco import emissions
 
 1. Load a Scope 2 emissions spreadsheet
 
 .. code-block:: python
    
-    path_to_emissions_sheet = "electric_emission_cost/data/emissions.csv"
+    path_to_emissions_sheet = "eeco/data/emissions.csv"
     emission_df = pd.read_csv(path_to_emissions_sheet, sep=",")
    
     # get the charge dictionary
@@ -51,7 +51,7 @@ CVXPY
     )
 
 We are going to evaluate the electricity consumption from only April 9th to April 10th since that is where our 
-synthetic data comes from (https://github.com/we3lab/electric-emission-cost/blob/main/electric_emission_cost/data/consumption.csv).
+synthetic data comes from (https://github.com/we3lab/eeco/blob/main/eeco/data/consumption.csv).
 You will also see that it is in 1-minute intervals, hence `resolution="1m"`.
 
 2. Configure an optimization model of the electricity consumer with system constraints
@@ -59,7 +59,7 @@ You will also see that it is in 1-minute intervals, hence `resolution="1m"`.
 .. code-block:: python
 
     # load historical consumption data
-    load_df = pd.read_csv("electric_emission_cost/data/consumption.csv", parse_dates=["Datetime"])
+    load_df = pd.read_csv("eeco/data/consumption.csv", parse_dates=["Datetime"])
 
     # set battery parameters
     # create variables for battery total energy, max charge and discharge power, and SOC limits
@@ -227,19 +227,20 @@ Pyomo
     import datetime
     import numpy as np 
     import pandas as pd
+    import pyomo.environ as pyo
     import matplotlib.pyplot as plt
-    from electric_emission_cost.units import u
-    from electric_emission_cost import emissions
+    from eeco.units import u
+    from eeco import emissions
     from examples.pyomo_battery_model import BatteryPyomo
 
 1. Load a Scope 2 emissions spreadsheet
 
 .. code-block:: python
 
-    path_to_emissions_sheet = "electric_emission_cost/data/emissions.csv"
+    path_to_emissions_sheet = "eeco/data/emissions.csv"
     emission_df = pd.read_csv(path_to_emissions_sheet, sep=",")
    
-    # get the charge dictionary
+    # get the carbon intensity
     carbon_intensity = emissions.get_carbon_intensity(
         datetime.datetime(2022, 7, 1), datetime.datetime(2022, 8, 1), emission_df, resolution="15m"
     )
@@ -249,7 +250,7 @@ Below, we will create synthetic `baseload` data for this month with 15-minute re
 
 2. Configure an optimization model of the electricity consumer with system constraints
 
-We rely on the virtual battery model in `pyomo_battery_model.py <https://github.com/we3lab/electric-emission-cost/blob/main/examples/pyomo_battery_model.py>`_.
+We rely on the virtual battery model in `pyomo_battery_model.py <https://github.com/we3lab/eeco/blob/main/examples/pyomo_battery_model.py>`_.
 We're going to stick to the electricity cost calculation details, but we encourage you to go check out the code to better understand the model.
 
 .. code-block:: python
@@ -297,6 +298,9 @@ power capacity, and energy capacity.
         sense=pyo.minimize,
     )
 
+There is also an optional `emissions_units` argument that we do not use in the above example.
+That is because `get_carbon_intensity` returns a `pint.Quantity` from which we can automatically parse the emissions units.
+
 4. Minimize the Scope 2 emissions of this consumer given the system constraints and base load consumption
 
 .. code-block:: python
@@ -323,7 +327,6 @@ Unlike :ref:`tutorial-cost`, there are no convex relaxations during problem form
         resolution="15m",
         consumption_units=u.kW
     )
-    # NOTE: second entry of the tuple can be ignored since it's for Pyomo
     optimized_emissions = pyo.value(battery.model.objective)
 
 If we print our results, we confirm that the optimal electricity profile has emissions of

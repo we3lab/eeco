@@ -6,9 +6,9 @@ import pandas as pd
 import pyomo.environ as pyo
 from datetime import timedelta
 
-from electric_emission_cost.units import u
-from electric_emission_cost import emissions
-from electric_emission_cost import utils as ut
+from eeco.units import u
+from eeco import emissions
+from eeco import utils as ut
 
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -178,7 +178,7 @@ def test_calculate_grid_emissions_pyo(
         emissions_units=emissions_units,
         model=model,
     )
-    model.obj = pyo.Objective(expr=result)
+    model.objective = pyo.Objective(expr=result)
     solver = pyo.SolverFactory("ipopt")
     solver.solve(model)
     assert pyo.value(result) == expected

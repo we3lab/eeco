@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Main package for electric-emission-cost (EEC)."""
+"""Main package for Electric Emissions & Cost Optimizer (EECO)."""
 
 __author__ = "WE3Lab"
 __email__ = "fchapin@stanford.edu"
 # Do not edit this string manually, always use bumpversion
-# Details in CONTRIBUTING.md
-__version__ = "0.0.4"
+# Details in CONTRIBUTING.rst
+__version__ = "0.1.0"
 
 
 def get_module_version():

@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from electric_emission_cost import metrics
+from eeco import metrics
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False

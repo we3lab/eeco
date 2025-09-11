@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = python3 -msphinx
-SPHINXPROJ    = electric_emission_cost
+SPHINXPROJ    = eeco
 SOURCEDIR     = .
 BUILDDIR      = _build
 

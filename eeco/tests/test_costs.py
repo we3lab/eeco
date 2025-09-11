@@ -26,7 +26,6 @@ from eeco.costs import (
     OFF_PEAK,
     SUPER_OFF_PEAK,
 )
-from eeco.costs import get_charge_array_duration
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False
@@ -778,6 +777,189 @@ def test_calculate_cost_np(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
     "consumption_estimate, desired_utility, desired_charge_type, expected_cost",
     [
+        # demand charge with previous consumption
+        (
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": (
+                    np.concatenate(
+                        [
+                            np.ones(48) * 0,
+                            np.ones(24) * 1,
+                            np.ones(24) * 0,
+                        ]
+                    )
+                ),
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": (
+                    np.concatenate(
+                        [
+                            np.ones(34) * 0,
+                            np.ones(14) * 2,
+                            np.ones(24) * 0,
+                            np.ones(14) * 2,
+                            np.ones(10) * 0,
+                        ]
+                    )
+                ),
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": np.ones(96) * 10,
+            },
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
+            "15m",
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": 150,
+                    "cost": 150,
+                },
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": 40,
+                    "cost": 80,
+                },
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": {
+                    "demand": 90,
+                    "cost": 900,
+                },
+            },
+            0,
+            None,
+            None,
+            pytest.approx(140),
+        ),
+        # demand charge with no previous consumption
+        (
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(48) * 0,
+                        np.ones(24) * 1,
+                        np.ones(24) * 0,
+                    ]
+                ),
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": (
+                    np.concatenate(
+                        [
+                            np.ones(34) * 0,
+                            np.ones(14) * 2,
+                            np.ones(24) * 0,
+                            np.ones(14) * 2,
+                            np.ones(10) * 0,
+                        ]
+                    )
+                ),
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": np.ones(96) * 10,
+            },
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
+            "15m",
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": 0,
+                    "cost": 0,
+                },
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": 0,
+                    "cost": 0,
+                },
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": {
+                    "demand": 0,
+                    "cost": 0,
+                },
+            },
+            0,
+            None,
+            None,
+            pytest.approx(1191),
+        ),
+        # demand charge with consumption estimate as an array
+        (
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(48) * 0,
+                        np.ones(24) * 1,
+                        np.ones(24) * 0,
+                    ]
+                ),
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": (
+                    np.concatenate(
+                        [
+                            np.ones(34) * 0,
+                            np.ones(14) * 2,
+                            np.ones(24) * 0,
+                            np.ones(14) * 2,
+                            np.ones(10) * 0,
+                        ]
+                    )
+                ),
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": np.ones(96) * 10,
+            },
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
+            "15m",
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": 150,
+                    "cost": 150,
+                },
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": 40,
+                    "cost": 80,
+                },
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": {
+                    "demand": 90,
+                    "cost": 900,
+                },
+            },
+            np.arange(96),
+            None,
+            None,
+            pytest.approx(140),
+        ),
+        # demand charge with consumption estimate as an array and a charge tier
+        (
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(48) * 0,
+                        np.ones(24) * 1,
+                        np.ones(24) * 0,
+                    ]
+                ),
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": (
+                    np.concatenate(
+                        [
+                            np.ones(34) * 0,
+                            np.ones(14) * 2,
+                            np.ones(24) * 0,
+                            np.ones(14) * 2,
+                            np.ones(10) * 0,
+                        ]
+                    )
+                ),
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": np.ones(96) * 10,
+                "electric_demand_off-peak_2024-07-10_2024-07-10_90": np.ones(96) * 5,
+            },
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
+            "15m",
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": 150,
+                    "cost": 150,
+                },
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": 40,
+                    "cost": 80,
+                },
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": {
+                    "demand": 90,
+                    "cost": 900,
+                },
+                "electric_demand_off-peak_2024-07-10_2024-07-10_90": {
+                    "demand": 0,
+                    "cost": 0,
+                },
+            },
+            np.arange(96),
+            None,
+            None,
+            pytest.approx(115),
+        ),
         # energy charge with charge limit
         (
             {
@@ -803,7 +985,114 @@ def test_calculate_cost_np(
             None,
             None,
             260,
-        )
+        ),
+        # energy charge with charge limit and time-varying consumption estimate
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            np.ones(96) * 100,
+            None,
+            None,
+            260,
+        ),
+        # energy charge with charge limit and dictionary consumption estimate
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            None,
+            None,
+            260,
+        ),
+        # energy charge with charge limit and dictionary consumption estimate
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            {ELECTRIC: 2400, GAS: np.ones(96)},
+            None,
+            None,
+            260,
+        ),
+        # energy charge that won't hit charge limit + time-varying consumption estimate
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100000": np.concatenate(
+                    [np.ones(96)]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            2400,
+            None,
+            None,
+            260,
+        ),
     ],
 )
 def test_calculate_cost_cvx(
@@ -865,7 +1154,7 @@ def test_calculate_cost_cvx(
             None,
             pytest.approx(260),
         ),
-        # demand charges
+        # demand charge with previous consumption
         (
             {
                 "electric_demand_peak-summer_2024-07-10_2024-07-10_0": (
@@ -912,6 +1201,7 @@ def test_calculate_cost_cvx(
             None,
             pytest.approx(138),
         ),
+        # demand charge with no previous consumption
         (
             {
                 "electric_demand_peak-summer_2024-07-10_2024-07-10_0": np.concatenate(
@@ -990,6 +1280,113 @@ def test_calculate_cost_cvx(
             None,
             "absolute_value",
             pytest.approx(0.6 - 0.3),  # 48*1*0.05/4 - 48*1*0.025/4 = 0.6 - 0.3 = 0.3
+        ),
+        # energy charge with charge limit and time-varying consumption estimate
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            np.ones(96) * 100,
+            None,
+            None,
+            260,
+        ),
+        # energy charge with charge limit and dictionary consumption estimate
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            None,
+            None,
+            260,
+        ),
+        # energy charge with charge limit and dictionary consumption estimate
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            {ELECTRIC: 2400, GAS: np.ones(96)},
+            None,
+            None,
+            260,
+        ),
+        # energy charge that won't hit charge limit + time-varying consumption estimate
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100000": np.concatenate(
+                    [np.ones(96)]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            2400,
+            None,
+            None,
+            260,
         ),
     ],
 )
@@ -1129,8 +1526,8 @@ def test_build_pyomo_costing(
     solver.solve(model)
 
     assert model is not None
-    assert model.obj is not None
-    assert pyo.value(model.obj) == expected_cost
+    assert model.objective is not None
+    assert pyo.value(model.objective) == expected_cost
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1337,6 +1734,62 @@ def test_calculate_demand_costs(
             pytest.approx(140.916195),
         ),
         (
+            np.datetime64("2024-07-10"),  # Summer weekday
+            np.datetime64("2024-07-11"),  # Summer weekday
+            input_dir + "billing_pge.csv",
+            [ELECTRIC, GAS],
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
+            {
+                "gas_energy_0_20240710_20240710_0": 0,
+                "gas_energy_0_20240710_20240710_5000": 0,
+                "electric_customer_0_20240710_20240710_0": 0,
+                "electric_energy_0_20240710_20240710_0": 0,
+                "electric_energy_1_20240710_20240710_0": 0,
+                "electric_energy_2_20240710_20240710_0": 0,
+                "electric_energy_3_20240710_20240710_0": 0,
+                "electric_energy_4_20240710_20240710_0": 0,
+                "electric_energy_5_20240710_20240710_0": 0,
+                "electric_energy_6_20240710_20240710_0": 0,
+                "electric_energy_7_20240710_20240710_0": 0,
+                "electric_energy_8_20240710_20240710_0": 0,
+                "electric_energy_9_20240710_20240710_0": 0,
+                "electric_energy_10_20240710_20240710_0": 0,
+                "electric_energy_11_20240710_20240710_0": 0,
+                "electric_energy_12_20240710_20240710_0": 0,
+                "electric_energy_13_20240710_20240710_0": 0,
+            },
+            0,
+            pytest.approx(140.916195),
+        ),
+        (
+            np.datetime64("2024-07-10"),  # Summer weekday
+            np.datetime64("2024-07-11"),  # Summer weekday
+            input_dir + "billing_pge.csv",
+            [ELECTRIC, GAS],
+            {ELECTRIC: np.arange(96), GAS: np.repeat(np.array([5100 / 24]), 96)},
+            {
+                "gas_energy_0_20240710_20240710_0": 0,
+                "gas_energy_0_20240710_20240710_5000": 0,
+                "electric_customer_0_20240710_20240710_0": 0,
+                "electric_energy_0_20240710_20240710_0": 0,
+                "electric_energy_1_20240710_20240710_0": 0,
+                "electric_energy_2_20240710_20240710_0": 0,
+                "electric_energy_3_20240710_20240710_0": 0,
+                "electric_energy_4_20240710_20240710_0": 0,
+                "electric_energy_5_20240710_20240710_0": 0,
+                "electric_energy_6_20240710_20240710_0": 0,
+                "electric_energy_7_20240710_20240710_0": 0,
+                "electric_energy_8_20240710_20240710_0": 0,
+                "electric_energy_9_20240710_20240710_0": 0,
+                "electric_energy_10_20240710_20240710_0": 0,
+                "electric_energy_11_20240710_20240710_0": 0,
+                "electric_energy_12_20240710_20240710_0": 0,
+                "electric_energy_13_20240710_20240710_0": 0,
+            },
+            0,
+            pytest.approx(200.016195),
+        ),
+        (
             np.datetime64("2024-07-13"),  # Summer weekend
             np.datetime64("2024-07-14"),  # Summer weekend
             input_dir + "billing_pge.csv",
@@ -1381,7 +1834,7 @@ def test_calculate_demand_costs(
             np.datetime64("2024-03-10"),  # Winter weekend
             input_dir + "billing_pge.csv",
             GAS,
-            {ELECTRIC: np.arange(96), GAS: np.repeat(np.array([5100]), 96)},
+            {ELECTRIC: np.arange(96), GAS: np.repeat(np.array([5100 / 24]), 96)},
             None,
             0,
             pytest.approx(59.1),
@@ -1475,6 +1928,8 @@ def test_calculate_export_revenue(
     ],
 )
 def test_get_charge_array_duration(key, expected):
+    from eeco.costs import get_charge_array_duration
+
     assert get_charge_array_duration(key) == expected
 
 

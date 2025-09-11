@@ -8,5 +8,5 @@ units
 
 This module consists of the Pint unit dictionary.
 
-.. automodule:: electric_emission_cost.units
+.. automodule:: eeco.units
    :members:
