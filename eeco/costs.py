@@ -1109,6 +1109,7 @@ def calculate_cost(
     """
     cost = 0
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
+    n_per_day = n_per_hour * 24
 
     if consumption_estimate is None:
         consumption_estimate = 0
