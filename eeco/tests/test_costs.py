@@ -7,6 +7,7 @@ import pyomo.environ as pyo
 import datetime
 
 from eeco import costs
+from eeco import utils
 from eeco.costs import (
     CHARGE,
     TYPE,
@@ -31,6 +32,74 @@ skip_all_tests = False
 
 input_dir = "tests/data/input/"
 output_dir = "tests/data/output/"
+
+
+def setup_cvx_vars_constraints(consumption_data_dict):
+    """Helper to set up CVXPY variables and constraints."""
+    cvx_vars = {}
+    constraints = []
+    for key, val in consumption_data_dict.items():
+        cvx_vars[key] = cp.Variable(len(val))
+        constraints.append(cvx_vars[key] == val)
+    return cvx_vars, constraints
+
+
+def solve_cvx_problem(objective, constraints):
+    """Helper to solve CVXPY optimization problem."""
+    prob = cp.Problem(cp.Minimize(objective), constraints)
+    prob.solve()
+    return prob
+
+
+def setup_pyo_vars_constraints(consumption_data_dict):
+    """Helper function to set up Pyomo model, variables and constraints."""
+    model = pyo.ConcreteModel()
+    model.T = len(consumption_data_dict[ELECTRIC])
+    model.t = pyo.RangeSet(0, model.T - 1)
+    model.electric_consumption = pyo.Var(model.t, bounds=(None, None))
+    model.gas_consumption = pyo.Var(model.t, bounds=(None, None))
+
+    # Constrain variables to initialized values
+    def electric_constraint_rule(model, t):
+        return model.electric_consumption[t] == consumption_data_dict[ELECTRIC][t - 1]
+
+    def gas_constraint_rule(model, t):
+        return model.gas_consumption[t] == consumption_data_dict[GAS][t - 1]
+
+    model.electric_constraint = pyo.Constraint(model.t, rule=electric_constraint_rule)
+    model.gas_constraint = pyo.Constraint(model.t, rule=gas_constraint_rule)
+
+    pyo_vars = {
+        "electric": model.electric_consumption,
+        "gas": model.gas_consumption,
+    }
+
+    return model, pyo_vars
+
+
+def solve_pyo_problem(
+    model,
+    objective,
+    decomposition_type=None,
+    charge_dict=None,
+    consumption_data_dict=None,
+):
+    """Helper function to solve Pyomo optimization problem."""
+
+    # Initialize decomposed variables if needed
+    # TODO: check if always needed
+    if decomposition_type is not None and consumption_data_dict is not None:
+        utils.initialize_decomposed_pyo_vars(consumption_data_dict, model, charge_dict)
+
+    model.obj = pyo.Objective(expr=objective)
+
+    if decomposition_type is not None:  # Nonlinear when decomposition_type used
+        solver = pyo.SolverFactory("ipopt")
+    else:  # Gurobi otherwise
+        solver = pyo.SolverFactory("gurobi")
+
+    solver.solve(model)
+    return solver
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -535,7 +604,8 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
-    "consumption_estimate, desired_utility, desired_charge_type, expected_cost",
+    "consumption_estimate, desired_utility, desired_charge_type, expected_cost, "
+    "expect_warning, expect_error",
     [
         # single energy charge with flat consumption
         (
@@ -547,6 +617,8 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             None,
             None,
             pytest.approx(1.2),
+            False,
+            False,
         ),
         # single energy charge with increasing consumption
         (
@@ -558,6 +630,8 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             None,
             None,
             np.sum(np.arange(96)) * 0.05 / 4,
+            False,
+            False,
         ),
         # energy charge with charge limit
         (
@@ -584,6 +658,42 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             None,
             None,
             260,
+            False,
+            False,
+        ),
+        # single energy charge with negative consumption values - should warn
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
+            {
+                ELECTRIC: np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            pytest.approx(
+                3.0
+            ),  # (48*10 + 48*5) * 0.05 / 4 = 3.0 (negative values treated as magnitude)
+            True,
+            False,
+        ),
+        # list input instead of numpy array
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(4) * 0.05},
+            {
+                ELECTRIC: [1, 2, 3, 4],
+                GAS: [1, 1, 1, 1],
+            },  # Lists instead of numpy arrays
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            None,  # No expected cost
+            False,
+            True,
         ),
     ],
 )
@@ -596,18 +706,70 @@ def test_calculate_cost_np(
     desired_utility,
     desired_charge_type,
     expected_cost,
+    expect_warning,
+    expect_error,
 ):
-    result, model = costs.calculate_cost(
-        charge_dict,
-        consumption_data_dict,
-        resolution=resolution,
-        prev_demand_dict=prev_demand_dict,
-        consumption_estimate=consumption_estimate,
-        desired_utility=desired_utility,
-        desired_charge_type=desired_charge_type,
-    )
-    assert result == expected_cost
-    assert model is None
+    if expect_error:
+        if (
+            isinstance(consumption_data_dict.get(ELECTRIC), dict)
+            and "imports" in consumption_data_dict[ELECTRIC]
+        ):
+            # Import/export format with invalid list types
+            with pytest.raises(
+                AttributeError, match="'list' object has no attribute 'shape'"
+            ):
+                costs.calculate_cost(
+                    charge_dict,
+                    consumption_data_dict,
+                    resolution=resolution,
+                    prev_demand_dict=prev_demand_dict,
+                    consumption_estimate=consumption_estimate,
+                    desired_utility=desired_utility,
+                    desired_charge_type=desired_charge_type,
+                )
+        else:
+            # Invalid list types
+            with pytest.raises(
+                TypeError,
+                match="Only CVXPY or Pyomo variables and NumPy arrays "
+                "are currently supported",
+            ):
+                costs.calculate_cost(
+                    charge_dict,
+                    consumption_data_dict,
+                    resolution=resolution,
+                    prev_demand_dict=prev_demand_dict,
+                    consumption_estimate=consumption_estimate,
+                    desired_utility=desired_utility,
+                    desired_charge_type=desired_charge_type,
+                )
+    elif expect_warning:
+        with pytest.warns(
+            UserWarning, match="Energy calculation includes negative values"
+        ):
+            result, model = costs.calculate_cost(
+                charge_dict,
+                consumption_data_dict,
+                resolution=resolution,
+                prev_demand_dict=prev_demand_dict,
+                consumption_estimate=consumption_estimate,
+                desired_utility=desired_utility,
+                desired_charge_type=desired_charge_type,
+            )
+        assert result == expected_cost
+        assert model is None
+    else:
+        result, model = costs.calculate_cost(
+            charge_dict,
+            consumption_data_dict,
+            resolution=resolution,
+            prev_demand_dict=prev_demand_dict,
+            consumption_estimate=consumption_estimate,
+            desired_utility=desired_utility,
+            desired_charge_type=desired_charge_type,
+        )
+        assert result == expected_cost
+        assert model is None
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -943,11 +1105,7 @@ def test_calculate_cost_cvx(
     desired_charge_type,
     expected_cost,
 ):
-    cvx_vars = {}
-    constraints = []
-    for key, val in consumption_data_dict.items():
-        cvx_vars[key] = cp.Variable(len(val))
-        constraints.append(cvx_vars[key] == val)
+    cvx_vars, constraints = setup_cvx_vars_constraints(consumption_data_dict)
 
     result, model = costs.calculate_cost(
         charge_dict,
@@ -958,8 +1116,7 @@ def test_calculate_cost_cvx(
         desired_utility=desired_utility,
         desired_charge_type=desired_charge_type,
     )
-    prob = cp.Problem(cp.Minimize(result), constraints)
-    prob.solve()
+    solve_cvx_problem(result, constraints)
     assert result.value == expected_cost
     assert model is None
 
@@ -967,7 +1124,8 @@ def test_calculate_cost_cvx(
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
-    "consumption_estimate, desired_utility, desired_charge_type, expected_cost",
+    "consumption_estimate, desired_utility, desired_charge_type, "
+    "decomposition_type, expected_cost",
     [
         # energy charge with charge limit
         (
@@ -991,6 +1149,7 @@ def test_calculate_cost_cvx(
             "15m",
             None,
             2400,
+            None,
             None,
             None,
             pytest.approx(260),
@@ -1039,7 +1198,8 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
-            pytest.approx(140),
+            None,
+            pytest.approx(138),
         ),
         # demand charge with no previous consumption
         (
@@ -1083,7 +1243,43 @@ def test_calculate_cost_cvx(
             0,
             None,
             None,
-            pytest.approx(1191),
+            None,
+            pytest.approx(1188),
+        ),
+        # export charges
+        (
+            {
+                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+            },
+            {
+                ELECTRIC: np.concatenate([np.ones(48), -np.ones(48)]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            "absolute_value",
+            pytest.approx(-0.3),
+        ),
+        # energy and export charges
+        (
+            {
+                "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
+                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+            },
+            {
+                ELECTRIC: np.concatenate([np.ones(48), -np.ones(48)]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            "absolute_value",
+            pytest.approx(0.6 - 0.3),  # 48*1*0.05/4 - 48*1*0.025/4 = 0.6 - 0.3 = 0.3
         ),
         # energy charge with charge limit and time-varying consumption estimate
         (
@@ -1202,24 +1398,10 @@ def test_calculate_cost_pyo(
     consumption_estimate,
     desired_utility,
     desired_charge_type,
+    decomposition_type,
     expected_cost,
 ):
-    model = pyo.ConcreteModel()
-    model.T = len(consumption_data_dict["electric"])
-    model.t = range(model.T)
-    pyo_vars = {}
-    for key, val in consumption_data_dict.items():
-        var = pyo.Var(range(len(val)), initialize=np.zeros(len(val)), bounds=(0, None))
-        model.add_component(key, var)
-        pyo_vars[key] = var
-
-    @model.Constraint(model.t)
-    def electric_constraint(m, t):
-        return consumption_data_dict["electric"][t] == m.electric[t]
-
-    @model.Constraint(model.t)
-    def gas_constraint(m, t):
-        return consumption_data_dict["gas"][t] == m.gas[t]
+    model, pyo_vars = setup_pyo_vars_constraints(consumption_data_dict)
 
     result, model = costs.calculate_cost(
         charge_dict,
@@ -1230,11 +1412,12 @@ def test_calculate_cost_pyo(
         desired_utility=desired_utility,
         desired_charge_type=desired_charge_type,
         model=model,
+        decomposition_type=decomposition_type,
     )
 
-    model.objective = pyo.Objective(expr=result)
-    solver = pyo.SolverFactory("gurobi")
-    solver.solve(model)
+    solve_pyo_problem(
+        model, result, decomposition_type, charge_dict, consumption_data_dict
+    )
     assert pyo.value(result) == expected_cost
     assert model is not None
 
@@ -1698,13 +1881,36 @@ def test_calculate_energy_costs(
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "charge_array, export_data, divisor, expected",
+    "charge_array, export_data, divisor, expected, expect_warning",
     [
-        (np.ones(96), np.arange(96), 4, 1140),
+        (
+            np.ones(96),
+            np.arange(96),
+            4,
+            1140,
+            False,
+        ),  # positive values (export magnitude)
+        (
+            np.ones(96),
+            np.concatenate([np.ones(48), -np.ones(48)]),
+            4,
+            0,  # values treated as magnitude so expectation is 0
+            True,
+        ),  # negative values (export magnitude) - should warn
     ],
 )
-def test_calculate_export_revenues(charge_array, export_data, divisor, expected):
-    result, model = costs.calculate_export_revenues(charge_array, export_data, divisor)
+def test_calculate_export_revenue(
+    charge_array, export_data, divisor, expected, expect_warning
+):
+    if expect_warning:
+        with pytest.warns(UserWarning):
+            result, model = costs.calculate_export_revenue(
+                charge_array, export_data, divisor
+            )
+    else:
+        result, model = costs.calculate_export_revenue(
+            charge_array, export_data, divisor
+        )
     assert result == expected
     assert model is None
 
@@ -1835,7 +2041,7 @@ def test_detect_charge_periods(
         (
             "billing_pge.csv",
             {
-                "scale_ratios": {
+                "percent_change_dict": {
                     DEMAND: {
                         PEAK: 2.0,
                         HALF_PEAK: 2.0,
@@ -1865,7 +2071,7 @@ def test_detect_charge_periods(
         (
             "billing_pge.csv",
             {
-                "scale_ratios": {
+                "percent_change_dict": {
                     "demand": 1.5,
                     "energy": 1.0,
                 },
@@ -1884,7 +2090,7 @@ def test_detect_charge_periods(
         (
             "billing_demand_2.csv",
             {
-                "scale_ratios": {
+                "percent_change_dict": {
                     DEMAND: {
                         PEAK: 3.0,
                         HALF_PEAK: 1.0,
@@ -1910,7 +2116,7 @@ def test_detect_charge_periods(
         (
             "billing_demand_2.csv",
             {
-                "scale_ratios": {
+                "percent_change_dict": {
                     "demand": 1.0,
                     "energy": 2.0,
                 },
@@ -1926,7 +2132,7 @@ def test_detect_charge_periods(
         (
             "billing_pge.csv",
             {
-                "scale_ratios": {
+                "percent_change_dict": {
                     "electric_demand_peak-summer": 2.0,
                     "electric_energy_0": 3.0,
                     "electric_demand_all-day": 1.5,
@@ -1943,7 +2149,7 @@ def test_detect_charge_periods(
         (
             "billing_pge.csv",
             {
-                "scale_ratios": {
+                "percent_change_dict": {
                     "demand": 0.0,
                     "energy": -2.0,
                 },
@@ -1958,11 +2164,11 @@ def test_detect_charge_periods(
             None,
             False,
         ),
-        # Individual zero scale_ratios
+        # Individual zero percent_change_dict
         (
             "billing_pge.csv",
             {
-                "scale_ratios": {
+                "percent_change_dict": {
                     DEMAND: {
                         PEAK: 0.0,
                         HALF_PEAK: 0.0,
@@ -1991,7 +2197,7 @@ def test_detect_charge_periods(
         (
             "billing_pge.csv",
             {
-                "scale_ratios": {
+                "percent_change_dict": {
                     DEMAND: {
                         PEAK: 1.0,
                         HALF_PEAK: 1.0,
@@ -2073,7 +2279,7 @@ def test_detect_charge_periods(
         (
             "billing_pge.csv",
             {
-                "scale_ratios": {
+                "percent_change_dict": {
                     "electric_demand_nonexistent1": 2.0,
                     "electric_demand_nonexistent2": 3.0,
                     "electric_energy_nonexistent1": 1.5,
@@ -2094,7 +2300,7 @@ def test_detect_charge_periods(
         (
             "billing_pge.csv",
             {
-                "scale_ratios": {
+                "percent_change_dict": {
                     "electric_demand_peak-summer": 2.0,
                     DEMAND: 3.0,  # Conflicts with the exact key above
                 },
@@ -2128,7 +2334,7 @@ def test_detect_charge_periods(
         (
             "billing_energy_super_off_peak.csv",
             {
-                "scale_ratios": {
+                "percent_change_dict": {
                     "energy": {
                         "peak": 1.0,
                         "half_peak": 1.0,
@@ -2354,7 +2560,7 @@ def test_parametrize_rate_data(
         (
             [
                 {
-                    "scale_ratios": {
+                    "percent_change_dict": {
                         DEMAND: {
                             PEAK: 2.0,
                             HALF_PEAK: 2.0,
@@ -2383,7 +2589,7 @@ def test_parametrize_rate_data(
         (
             [
                 {
-                    "scale_ratios": {
+                    "percent_change_dict": {
                         "demand": 1.5,
                         "energy": 1.0,
                     },
@@ -2402,7 +2608,7 @@ def test_parametrize_rate_data(
         (
             [
                 {
-                    "scale_ratios": {
+                    "percent_change_dict": {
                         "electric_demand_peak-summer": 2.0,
                         "electric_energy_0": 3.0,
                         "electric_demand_all-day": 1.5,
@@ -2430,9 +2636,9 @@ def test_parametrize_rate_data(
         # Duplicate variant names
         (
             [
-                {"scale_ratios": {"demand": 2.0}, "variant_name": "test"},
+                {"percent_change_dict": {"demand": 2.0}, "variant_name": "test"},
                 {
-                    "scale_ratios": {"energy": 3.0},
+                    "percent_change_dict": {"energy": 3.0},
                     "variant_name": "test",
                 },  # Duplicate name
             ],
@@ -2447,8 +2653,8 @@ def test_parametrize_rate_data(
         # Variants without names
         (
             [
-                {"scale_ratios": {"demand": 2.0}},  # No variant_name
-                {"scale_ratios": {"energy": 3.0}},  # No variant_name
+                {"percent_change_dict": {"demand": 2.0}},  # No variant_name
+                {"percent_change_dict": {"energy": 3.0}},  # No variant_name
             ],
             "variant_0",
             {
@@ -2462,7 +2668,7 @@ def test_parametrize_rate_data(
         (
             [
                 {
-                    "scale_ratios": {"demand": 2.0},
+                    "percent_change_dict": {"demand": 2.0},
                     "variant_name": "double_demand",
                 }
             ],
@@ -2478,7 +2684,7 @@ def test_parametrize_rate_data(
         (
             [
                 {
-                    "scale_ratios": {"energy": 3.0},
+                    "percent_change_dict": {"energy": 3.0},
                     "variant_name": "triple_energy",
                 }
             ],
@@ -2494,15 +2700,15 @@ def test_parametrize_rate_data(
         (
             [
                 {
-                    "scale_ratios": {"demand": 2.0},
+                    "percent_change_dict": {"demand": 2.0},
                     "variant_name": "double_demand",
                 },
                 {
-                    "scale_ratios": {"energy": 3.0},
+                    "percent_change_dict": {"energy": 3.0},
                     "variant_name": "triple_energy",
                 },
                 {
-                    "scale_ratios": {
+                    "percent_change_dict": {
                         DEMAND: {
                             PEAK: 1.5,
                             HALF_PEAK: 1.0,
@@ -2649,12 +2855,12 @@ def test_parametrize_charge_dict(variant_params, key_subset, expected):
     "billing_file, variant_params",
     [
         # Test with different billing files
-        ("billing_energy_1.csv", {"scale_ratios": {"energy": 2.0}}),
-        ("billing_demand_2.csv", {"scale_ratios": {"demand": 2.0}}),
-        ("billing_export.csv", {"scale_ratios": {"energy": 1.5}}),
-        ("billing_customer.csv", {"scale_ratios": {"energy": 1.0}}),
+        ("billing_energy_1.csv", {"percent_change_dict": {"energy": 2.0}}),
+        ("billing_demand_2.csv", {"percent_change_dict": {"demand": 2.0}}),
+        ("billing_export.csv", {"percent_change_dict": {"energy": 1.5}}),
+        ("billing_customer.csv", {"percent_change_dict": {"energy": 1.0}}),
         # Test with complex rate structures
-        ("billing.csv", {"scale_ratios": {"demand": 2.0, "energy": 1.5}}),
+        ("billing.csv", {"percent_change_dict": {"demand": 2.0, "energy": 1.5}}),
     ],
 )
 def test_parametrize_rate_data_different_files(billing_file, variant_params):
@@ -2673,10 +2879,10 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
 
     # Check that at least some charges were modified if scaling was applied
     if (
-        "scale_ratios" in variant_params
-        and "demand" in variant_params["scale_ratios"]
-        and isinstance(variant_params["scale_ratios"]["demand"], (int, float))
-        and variant_params["scale_ratios"]["demand"] != 1.0
+        "percent_change_dict" in variant_params
+        and "demand" in variant_params["percent_change_dict"]
+        and isinstance(variant_params["percent_change_dict"]["demand"], (int, float))
+        and variant_params["percent_change_dict"]["demand"] != 1.0
     ):
         demand_charges = variant_data[variant_data[TYPE] == costs.DEMAND]
         if not demand_charges.empty:
@@ -2686,10 +2892,10 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             ), "Demand charges should be modified"
 
     if (
-        "scale_ratios" in variant_params
-        and "energy" in variant_params["scale_ratios"]
-        and isinstance(variant_params["scale_ratios"]["energy"], (int, float))
-        and variant_params["scale_ratios"]["energy"] != 1.0
+        "percent_change_dict" in variant_params
+        and "energy" in variant_params["percent_change_dict"]
+        and isinstance(variant_params["percent_change_dict"]["energy"], (int, float))
+        and variant_params["percent_change_dict"]["energy"] != 1.0
     ):
         energy_charges = variant_data[variant_data[TYPE] == costs.ENERGY]
         if not energy_charges.empty:
@@ -2699,7 +2905,264 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             ), "Energy charges should be modified"
 
 
-# TODO: write test_calculate_itemized_cost
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "charge_dict, "
+    "consumption_data_dict, "
+    "resolution, "
+    "decomposition_type, "
+    "expected_cost, "
+    "expected_itemized",
+    [
+        # single energy charge
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
+            {ELECTRIC: np.ones(96), GAS: np.ones(96)},
+            "15m",
+            None,
+            pytest.approx(1.2),
+            {
+                "electric": {
+                    "energy": pytest.approx(1.2),
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
+        ),
+        # energy and export charges with decomposition_type "absolute_value"
+        (
+            {
+                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+            },
+            {
+                ELECTRIC: np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            "absolute_value",
+            pytest.approx(-1.5),
+            {
+                "electric": {
+                    "energy": 0.0,
+                    "export": pytest.approx(-1.5),
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
+        ),
+    ],
+)
+def test_calculate_itemized_cost_np(
+    charge_dict,
+    consumption_data_dict,
+    resolution,
+    decomposition_type,
+    expected_cost,
+    expected_itemized,
+):
+    """Test calculate_itemized_cost with and without decomposition_type."""
+    result, model = costs.calculate_itemized_cost(
+        charge_dict,
+        consumption_data_dict,
+        resolution=resolution,
+        decomposition_type=decomposition_type,
+    )
+
+    assert result["total"] == expected_cost
+    for utility in expected_itemized:
+        for charge_type in expected_itemized[utility]:
+            expected_value = expected_itemized[utility][charge_type]
+            actual_value = result[utility][charge_type]
+            assert actual_value == expected_value
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "charge_dict, "
+    "consumption_data_dict, "
+    "resolution, "
+    "decomposition_type, "
+    "expected_cost, "
+    "expected_itemized",
+    [
+        # single energy charge
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
+            {ELECTRIC: np.ones(96), GAS: np.ones(96)},
+            "15m",
+            None,
+            pytest.approx(1.2),
+            {
+                "electric": {
+                    "energy": pytest.approx(1.2),
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
+        ),
+        # energy and export charges with decomposition_type="absolute_value" (non-DCP)
+        (
+            {
+                "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
+                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+            },
+            {
+                ELECTRIC: np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            "absolute_value",
+            None,  # No expected cost - should raise error
+            None,  # No expected itemized - should raise error
+        ),
+    ],
+)
+def test_calculate_itemized_cost_cvx(
+    charge_dict,
+    consumption_data_dict,
+    resolution,
+    decomposition_type,
+    expected_cost,
+    expected_itemized,
+):
+    """Test calculate_itemized_cost with CVXPY variables."""
+    cvx_vars, constraints = setup_cvx_vars_constraints(consumption_data_dict)
+
+    if decomposition_type:
+        with pytest.raises(ValueError):
+            costs.calculate_itemized_cost(
+                charge_dict,
+                cvx_vars,
+                resolution=resolution,
+                decomposition_type=decomposition_type,
+            )
+    else:
+        result, model = costs.calculate_itemized_cost(
+            charge_dict,
+            cvx_vars,
+            resolution=resolution,
+            decomposition_type=decomposition_type,
+        )
+        solve_cvx_problem(result["total"], constraints)
+
+        assert result["total"].value == expected_cost
+        for utility in expected_itemized:
+            for charge_type in expected_itemized[utility]:
+                expected_value = expected_itemized[utility][charge_type]
+                actual_value = result[utility][charge_type]
+                if hasattr(actual_value, "value"):
+                    actual_value = actual_value.value
+                assert actual_value == expected_value
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "charge_dict, "
+    "consumption_data_dict, "
+    "resolution, "
+    "decomposition_type, "
+    "expected_cost, "
+    "expected_itemized",
+    [
+        # single energy charge
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
+            {ELECTRIC: np.ones(96), GAS: np.ones(96)},
+            "15m",
+            None,
+            pytest.approx(1.2),
+            {
+                "electric": {
+                    "energy": pytest.approx(1.2),
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
+        ),
+        # energy and export charges
+        (
+            {
+                "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
+                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+            },
+            {
+                ELECTRIC: np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            "absolute_value",
+            pytest.approx(6.0 - 1.5),  # 48*10*0.05/4 - 48*5*0.025/4 = 6.0 - 1.5 = 4.5
+            {
+                "electric": {
+                    "energy": pytest.approx(6.0),  # 48*10*0.05/4 = 6.0
+                    "export": pytest.approx(-1.5),  # -48*5*0.025/4 = 1.5
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
+        ),
+    ],
+)
+def test_calculate_itemized_cost_pyo(
+    charge_dict,
+    consumption_data_dict,
+    resolution,
+    decomposition_type,
+    expected_cost,
+    expected_itemized,
+):
+    """Test calculate_itemized_cost with Pyomo variables."""
+    model, pyo_vars = setup_pyo_vars_constraints(consumption_data_dict)
+    result, model = costs.calculate_itemized_cost(
+        charge_dict,
+        pyo_vars,
+        resolution=resolution,
+        decomposition_type=decomposition_type,
+        model=model,
+    )
+    solve_pyo_problem(
+        model, result["total"], decomposition_type, charge_dict, consumption_data_dict
+    )
+
+    assert pyo.value(result["total"]) == expected_cost
+    for utility in expected_itemized:
+        for charge_type in expected_itemized[utility]:
+            expected_value = expected_itemized[utility][charge_type]
+            actual_value = pyo.value(result[utility][charge_type])
+            assert actual_value == expected_value
 
 
 @pytest.mark.parametrize(

@@ -163,6 +163,43 @@ but for now let's assume that we just want to scale the demand charge down by th
 
 .. _varstr-alias:
 
+
+How to Use `decomposition_type`
+==============================
+
+The `decomposition_type` parameter allows you to decompose consumption data into positive (imports) and negative (exports) components. This is useful when you have export charges or credits in your rate structure.
+
+Options:
+- Default `None`
+- `"binary_variable"`: To be implemented
+- `"absolute_value"`
+
+.. code-block:: python
+
+    from eeco import costs
+    
+    # Example with export charges
+    charge_dict = {
+        "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+    }
+    
+    consumption_data = {
+        "electric": np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
+        "gas": np.ones(96),
+    }
+    
+    # Decompose consumption into imports and exports
+    result, model = costs.calculate_cost(
+        charge_dict,
+        consumption_data,
+        decomposition_type="absolute_value"
+    )
+
+When decomposition_type is not None the function creates separate variables for positive consumption (imports) and negative consumption (exports)
+and applies export charges only to the export component.
+For Pyomo models, decomposition_type adds a constraint total_consumption = imports - exports
+
+
 How to Use `varstr_alias_func`
 ==============================
 
