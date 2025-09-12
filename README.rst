@@ -20,6 +20,12 @@ Electric Emissions & Cost Optimizer (EECO)
    :target: https://codecov.io/gh/we3lab/eeco
    :alt: Code Coverage
 
+.. image:: 
+  https://zenodo.org/badge/979642377.svg
+  :height: 30
+  :target: https://doi.org/10.5281/zenodo.17102024
+  :alt: Zenodo DOI
+
 A package for calculating electricity-related emissions and costs for optimization problem formulation and other computational analyses.
 
 Useful Commands
@@ -74,7 +80,30 @@ The views and opinions of authors expressed herein do not necessarily state or r
 Attribution
 ===========
 
-If you found this package useful, we encourage you to cite the following papers depending on which portion of the code you use:
+If you found this package useful, we encourage you to cite the papers below depending on which portion of the code you use.
+
+See the metadata in `CITATION.cff <https://github.com/we3lab/eeco/blob/main/CITATION.cff>`_, on `Zenodo <https://doi.org/10.5281/zenodo.17102024>`_, 
+or the following `BibTeX` format to cite the Python package in its entirety:
+
+.. code-block:: 
+
+  @software{chapin_2025_17102024,
+    author={Chapin, Fletcher T. and
+            Rao, Akshay K. and
+            Sakthivelu, Adhithyan and
+            Wettermark, Daly and
+            Musabandesu, Erin and
+            Jaminet, Anne and
+            Dudchenko, Alexander V. and
+            Mauter, Meagan S.},
+    title={Electric Emissions \& Cost Optimizer (EECO)},
+    month=sep,
+    year=2025,
+    publisher={Zenodo},
+    version={v0.1.0},
+    doi={10.5281/zenodo.17102025},
+    url={https://doi.org/10.5281/zenodo.17102025}
+  }
 
 Citing `costs.py`
 *****************
