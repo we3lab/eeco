@@ -258,8 +258,8 @@ def sum(expression, axis=0, model=None, varstr=None):
 
 
 def max_pos(expression, model=None, varstr=None):
-    """Returns the maximum positive scalar value of an expression.
-    I.e., max([x, 0]) where x is any element of the expression (if a matrix)
+    """Returns the element-wise maximum positive value of an expression.
+    Returns scalar for scalar input, indexed for indexed input.
 
     Parameters
     ----------
@@ -294,7 +294,8 @@ def max_pos(expression, model=None, varstr=None):
         [numpy.float, numpy.int, numpy.Array, cvxpy.Expression, or pyomo.environ.Var],
         pyomo.environ.Model
     )
-        Expression representing maximum positive scalar value of `expression`
+        Expression representing element-wise maximum positive value of `expression`.
+        Scalar input returns scalar output, indexed input returns indexed output.
     """
     if isinstance(
         expression, (LinearExpression, SumExpression, MonomialTermExpression, ScalarVar)
@@ -311,6 +312,7 @@ def max_pos(expression, model=None, varstr=None):
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
         # Check if expression is indexed
         if hasattr(expression, "index_set"):
+        # if hasattr(expression, "is_indexed") and expression.is_indexed():
             # Create indexed max_pos variable
             model.add_component(
                 varstr, pyo.Var(expression.index_set(), bounds=(0, None))
@@ -341,7 +343,7 @@ def max_pos(expression, model=None, varstr=None):
     elif isinstance(expression, cp.Expression):
         # Check if expression is indexed
         if expression.shape == ():  # Scalar
-            return cp.max(cp.vstack([expression, 0])), None
+            return cp.maximum(expression, 0), None
         else:  # Vector
             return cp.maximum(expression, 0), None
     else:

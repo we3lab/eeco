@@ -817,26 +817,29 @@ def calculate_energy_cost(
                 cost += max(energy - float(limit), 0) * charge_array[i]
 
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
-        # assume consumption is split evenly as an approximation
+        # For tiered charges, approximate extimated consumption being split evenly
         # NOTE: this convex approximation breaks global optimality guarantees
-        if isinstance(consumption_estimate, (float, int)):
-            consumption_per_timestep = consumption_estimate / n_steps
-            consumption_estimate = np.ones(n_steps) * consumption_per_timestep
+        # Apply tiered logic if we have a finite next_limit OR if limit > 0
+        # (indicating a tiered structure)
+        if not np.isinf(next_limit) or (not np.isinf(limit) and limit > 0):
+            if isinstance(consumption_estimate, (float, int)):
+                consumption_per_timestep = consumption_estimate / n_steps
+                consumption_estimate = np.ones(n_steps) * consumption_per_timestep
 
-        cumulative_consumption = np.cumsum(consumption_estimate) + prev_consumption
-        total_consumption = cumulative_consumption[-1]
+            cumulative_consumption = np.cumsum(consumption_estimate) + prev_consumption
+            total_consumption = cumulative_consumption[-1]
 
-        start_idx = np.argmax(cumulative_consumption >= float(limit))
-        # if not found argmax returns 0
-        if (start_idx == 0) and (total_consumption < float(limit)):
-            start_idx = -1
-        if np.isinf(next_limit) or (total_consumption < float(next_limit)):
-            end_idx = -1
-        else:
-            end_idx = np.argmax(cumulative_consumption > float(next_limit))
+            start_idx = np.argmax(cumulative_consumption >= float(limit))
+            # if not found argmax returns 0
+            if (start_idx == 0) and (total_consumption < float(limit)):
+                start_idx = -1
+            if np.isinf(next_limit) or (total_consumption < float(next_limit)):
+                end_idx = -1
+            else:
+                end_idx = np.argmax(cumulative_consumption > float(next_limit))
 
-        charge_array[:start_idx] = 0  # 0 for charge array before the start index
-        charge_array[end_idx:] = 0  # 0 for charge array after the end index
+            charge_array[:start_idx] = 0  # 0 for charge array before the start index
+            charge_array[end_idx:] = 0  # 0 for charge array after the end index
 
         charge_expr, model = ut.multiply(
             consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
@@ -922,6 +925,29 @@ def calculate_export_revenue(
             "consumption_data must be of type numpy.ndarray, "
             "cvxpy.Expression, or pyomo.environ.Var"
         )
+
+
+def calculate_conversion_factors(electric_consumption_units, gas_consumption_units):
+    """Calculate conversion factors for electric and gas utilities.
+    
+    Parameters
+    ----------
+    electric_consumption_units : pint.Unit
+        Units for the electricity consumption data
+    gas_consumption_units : pint.Unit
+        Units for the gas consumption data
+        
+    Returns
+    -------
+    dict
+        Dictionary with conversion factors for each utility type
+    """
+    conversion_factors = {}
+    conversion_factors[ELECTRIC] = (1 * electric_consumption_units).to(u.kW).magnitude
+    conversion_factors[GAS] = (
+        (1 * gas_consumption_units).to(u.meter**3 / u.hour).magnitude
+    )
+    return conversion_factors
 
 
 def get_charge_array_duration(key):
@@ -1115,11 +1141,9 @@ def calculate_cost(
         consumption_estimate = 0
 
     # Initialize definition of conversion factors for each utility type
-    conversion_factors = {}
-    conversion_factors[ELECTRIC] = (1 * electric_consumption_units).to(u.kW).magnitude
-    conversion_factors[GAS] = (
-        (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
-    )
+    conversion_factors = calculate_conversion_factors(
+        electric_consumption_units, gas_consumption_units
+        )
 
     # Ensure consumption_data_dict has imports/exports structure for each utility
     for utility in consumption_data_dict.keys():
@@ -1535,6 +1559,10 @@ def calculate_itemized_cost(
                     "Use Pyomo instead for problems requiring decomposition_type."
                 )
 
+    conversion_factors = calculate_conversion_factors(
+        electric_consumption_units, gas_consumption_units
+        )
+
     total_cost = 0
     results_dict = {}
 
@@ -1548,14 +1576,7 @@ def calculate_itemized_cost(
         ):
             continue
         else:  # create imports/exports
-            if utility == ELECTRIC:
-                conversion_factor = (1 * electric_consumption_units).to(u.kW).magnitude
-            elif utility == GAS:
-                conversion_factor = (
-                    (1 * gas_consumption_units).to(u.meter**3 / u.day).magnitude
-                )
-            else:
-                raise ValueError("Invalid utility: " + utility)
+            conversion_factor = conversion_factors[utility]
 
             converted_consumption, model = ut.multiply(
                 consumption_data_dict[utility],

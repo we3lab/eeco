@@ -130,8 +130,8 @@ def test_max_pyo(consumption_data, varstr, expected):
 @pytest.mark.parametrize(
     "consumption_data, varstr, expected",
     [
-        ({"electric": np.ones(96) * 45, "gas": np.ones(96) * -1}, "electric", 45),
-        ({"electric": np.ones(96) * 100, "gas": np.ones(96) * -1}, "gas", 0),
+        ({"electric": np.ones(96) * 45, "gas": np.ones(96) * -1}, "electric", np.ones(96) * 45),
+        ({"electric": np.ones(96) * 100, "gas": np.ones(96) * -1}, "gas", np.zeros(96)),
     ],
 )
 def test_max_pos_pyo(consumption_data, varstr, expected):
@@ -158,14 +158,12 @@ def test_max_pos_pyo(consumption_data, varstr, expected):
     solver = pyo.SolverFactory("gurobi")
     solver.solve(model)
 
-    assert pyo.value(result) == expected
+    # Check each element in returned vector
+    for t in result.index_set():
+        expected_element = expected[t]
+        assert pyo.value(result[t]) == expected_element
 
-    # # TODO: debug indexed issue
-    # if hasattr(result, 'index_set'):
-    #     total_value = sum(pyo.value(result[t]) for t in result.index_set())
-    # else:
-    #     total_value = pyo.value(result)
-    # assert total_value == expected
+    # TODO: add scalar test
 
     assert model is not None
 
