@@ -50,34 +50,6 @@ SUPER_OFF_PEAK = "super_off_peak"
 OFF_PEAK = "off_peak"
 
 
-def get_unique_row_name(charge, index=None):
-    """
-    Get a unique row name for each row of charge df.
-
-    Parameters
-    ----------
-    charge : dict or pandas.Series
-        The charge row data containing NAME and PERIOD fields
-    index : int, optional
-        Index to use if name is empty or None
-
-    Returns
-    -------
-    str
-        A unique name with underscores converted to dashes
-    """
-    try:
-        name = charge[NAME]
-    except KeyError:
-        name = charge[PERIOD]
-
-    # if no name was given just use the index to differentiate
-    if not (isinstance(name, str) and name != ""):
-        name = str(index) if index is not None else ""
-    # replace underscores with dashes for unique delimiter
-    return name.replace("_", "-")
-
-
 def create_charge_array(charge, datetime, effective_start_date, effective_end_date):
     """Creates a single charge array based on the given parameters.
 
@@ -295,7 +267,11 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                         limit_charges = effective_charges.loc[charge_limits == limit, :]
                     for i, idx in enumerate(limit_charges.index):
                         charge = limit_charges.loc[idx, :]
-                        name = get_unique_row_name(charge, i)
+
+                        try:
+                            name = charge[NAME]
+                        except KeyError:  # backward compatibility to "period"
+                            name = charge.get(PERIOD, None)
 
                         try:
                             assessed = charge[ASSESSED]
@@ -312,15 +288,14 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                     "and 'charge (imperial)' format",
                                     DeprecationWarning,
                                 )
-                            key_str = "_".join(
-                                (
-                                    utility,
-                                    charge_type,
-                                    name,
-                                    start.strftime("%Y%m%d"),
-                                    end.strftime("%Y%m%d"),
-                                    str(int(limit)),
-                                )
+                            key_str = default_varstr_alias_func(
+                                utility,
+                                charge_type,
+                                name,
+                                start.strftime("%Y%m%d"),
+                                end.strftime("%Y%m%d"),
+                                str(int(limit)),
+                                i,
                             )
                             add_to_charge_array(charge_dict, key_str, charge_array)
                         elif charge_type == DEMAND and assessed == "daily":
@@ -330,30 +305,28 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                 charge_array = create_charge_array(
                                     charge, datetime, new_start, new_end
                                 )
-                                key_str = "_".join(
-                                    (
-                                        utility,
-                                        charge_type,
-                                        name,
-                                        new_start.strftime("%Y%m%d"),
-                                        new_start.strftime("%Y%m%d"),
-                                        str(limit),
-                                    )
+                                key_str = default_varstr_alias_func(
+                                    utility,
+                                    charge_type,
+                                    name,
+                                    new_start.strftime("%Y%m%d"),
+                                    new_start.strftime("%Y%m%d"),
+                                    str(limit),
+                                    i,
                                 )
                                 add_to_charge_array(charge_dict, key_str, charge_array)
                         else:
                             charge_array = create_charge_array(
                                 charge, datetime, start, new_end
                             )
-                            key_str = "_".join(
-                                (
-                                    utility,
-                                    charge_type,
-                                    name,
-                                    start.strftime("%Y%m%d"),
-                                    end.strftime("%Y%m%d"),
-                                    str(int(limit)),
-                                )
+                            key_str = default_varstr_alias_func(
+                                utility,
+                                charge_type,
+                                name,
+                                start.strftime("%Y%m%d"),
+                                end.strftime("%Y%m%d"),
+                                str(int(limit)),
+                                i,
                             )
                             add_to_charge_array(charge_dict, key_str, charge_array)
     return charge_dict
@@ -488,7 +461,7 @@ def get_charge_df(
 
 
 def default_varstr_alias_func(
-    utility, charge_type, name, start_date, end_date, charge_limit
+    utility, charge_type, name, start_date, end_date, charge_limit, row_index
 ):
     """Default function for creating the variable name strings for each charge
     in the tariff sheet. Can be overwritten in the function call to `calculate_cost`
@@ -503,7 +476,8 @@ def default_varstr_alias_func(
         Name of the `charge_type` ('demand', 'energy', or 'customer')
 
     name : str
-        The name of the period for this charge (e.g., 'all-day' or 'on-peak')
+        The name of the period for this charge (e.g., 'all-day' or 'on-peak').
+        If empty or None, will use row_index for uniqueness.
 
     start_date
         The inclusive start date for this charge
@@ -514,13 +488,24 @@ def default_varstr_alias_func(
     charge_limit : str
         The consumption limit for this tier of charges converted to a string
 
+    row_index : int
+        Row index to use if name is empty or None
+
     Returns
     -------
     str
         Variable name of the form
         `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
     """
-    return f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
+    # Handle NaN values and None - float NaN values from df
+    # TODO: check why they are float
+    if name is None or (isinstance(name, float) and str(name).lower() == "nan"):
+        name = str(row_index)
+    name = str(name).replace("_", "")
+    name = str(name).replace("-", "")
+
+    key = f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
+    return ut.sanitize_varstr(key)
 
 
 def get_next_limit(key_substr, current_limit, keys):
@@ -1230,13 +1215,8 @@ def calculate_cost(
         consumption_data_dict, conversion_factors, decomposition_type, model
     )
 
-    for key, charge_array in charge_dict.items():
-        utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
-        varstr = ut.sanitize_varstr(
-            varstr_alias_func(
-                utility, charge_type, name, eff_start, eff_end, limit_str
-            )  # noqa: E501
-        )
+    for varstr, charge_array in charge_dict.items():
+        utility, charge_type, name, eff_start, eff_end, limit_str = varstr.split("_")
 
         # if we want itemized costs skip irrelvant portions of the bill
         if (desired_utility and utility not in desired_utility) or (
@@ -1249,13 +1229,13 @@ def calculate_cost(
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
 
         # Only apply demand_scale_factor if charge spans more than one day
-        charge_duration_days = get_charge_array_duration(key)
+        charge_duration_days = get_charge_array_duration(varstr)
         effective_scale_factor = demand_scale_factor if charge_duration_days > 1 else 1
 
         if charge_type == DEMAND:
             if prev_demand_dict is not None:
-                prev_demand = prev_demand_dict[key][DEMAND]
-                prev_demand_cost = prev_demand_dict[key]["cost"]
+                prev_demand = prev_demand_dict[varstr][DEMAND]
+                prev_demand_cost = prev_demand_dict[varstr]["cost"]
             else:
                 prev_demand = 0
                 prev_demand_cost = 0
@@ -1289,7 +1269,7 @@ def calculate_cost(
             cost += new_cost
         elif charge_type == ENERGY:
             if prev_consumption_dict is not None:
-                prev_consumption = prev_consumption_dict[key]
+                prev_consumption = prev_consumption_dict[varstr]
             else:
                 prev_consumption = 0
 
@@ -1977,15 +1957,28 @@ def parametrize_rate_data(
 
                     row = variant_data.loc[row_idx]
                     if has_exact_keys:  # Format 2: Exact charge key matching
-                        row_name = get_unique_row_name(row, row_idx)
+                        try:
+                            name = row[NAME]
+                        except KeyError:  # for backward compatibility
+                            name = row.get(PERIOD, None)
+
+                        if name is None or (
+                            isinstance(name, float) and str(name).lower() == "nan"
+                        ):
+                            name = str(row_idx)
+
+                        name = str(name).replace("_", "").replace("-", "")
+
                         for key_prefix, key_ratio in charge_ratios.items():
                             if key_prefix.startswith(
-                                f"{row[UTILITY]}_{row[TYPE]}_{row_name}"
+                                f"{row[UTILITY]}_{row[TYPE]}_{name}"
                             ):
                                 ratio = key_ratio
+                                # Remove dashes in the df when key is found
+                                variant_data.loc[row_idx, NAME] = name
                                 break
                         else:
-                            missing_keys.add(f"{row[UTILITY]}_{row[TYPE]}_{row_name}")
+                            missing_keys.add(f"{row[UTILITY]}_{row[TYPE]}_{name}")
                     elif charge_ratios:  # Format 1: Period-based approach
                         ratio = charge_ratios[period]
 
