@@ -312,7 +312,7 @@ def max_pos(expression, model=None, varstr=None):
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
         # Check if expression is indexed
         if hasattr(expression, "index_set"):
-        # if hasattr(expression, "is_indexed") and expression.is_indexed():
+            # if hasattr(expression, "is_indexed") and expression.is_indexed():
             # Create indexed max_pos variable
             model.add_component(
                 varstr, pyo.Var(expression.index_set(), bounds=(0, None))

@@ -929,14 +929,14 @@ def calculate_export_revenue(
 
 def calculate_conversion_factors(electric_consumption_units, gas_consumption_units):
     """Calculate conversion factors for electric and gas utilities.
-    
+
     Parameters
     ----------
     electric_consumption_units : pint.Unit
         Units for the electricity consumption data
     gas_consumption_units : pint.Unit
         Units for the gas consumption data
-        
+
     Returns
     -------
     dict
@@ -1129,15 +1129,13 @@ def calculate_cost(
     """
     cost = 0
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
-    n_per_day = n_per_hour * 24
 
     if consumption_estimate is None:
         consumption_estimate = 0
 
-    # Initialize definition of conversion factors for each utility type
     conversion_factors = calculate_conversion_factors(
         electric_consumption_units, gas_consumption_units
-        )
+    )
 
     # Ensure consumption_data_dict has imports/exports structure for each utility
     for utility in consumption_data_dict.keys():
@@ -1688,7 +1686,7 @@ def calculate_itemized_cost(
 
     conversion_factors = calculate_conversion_factors(
         electric_consumption_units, gas_consumption_units
-        )
+    )
 
     total_cost = 0
     results_dict = {}
