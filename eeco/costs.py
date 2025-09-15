@@ -806,9 +806,8 @@ def calculate_energy_cost(
 
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
         # For tiered charges, approximate extimated consumption being split evenly
+        # if we have a finite next_limit OR if limit > 0
         # NOTE: this convex approximation breaks global optimality guarantees
-        # Apply tiered logic if we have a finite next_limit OR if limit > 0
-        # (indicating a tiered structure)
         if not np.isinf(next_limit) or (not np.isinf(limit) and limit > 0):
             if isinstance(consumption_estimate, (float, int)):
                 consumption_per_timestep = consumption_estimate / n_steps
