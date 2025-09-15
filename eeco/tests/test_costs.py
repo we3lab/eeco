@@ -1092,6 +1092,17 @@ def test_calculate_cost_np(
             None,
             pytest.approx(260),
         ),
+        # energy charge without charge limits
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            pytest.approx(120.0),
+        ),
     ],
 )
 def test_calculate_cost_cvx(
@@ -2998,19 +3009,21 @@ def test_calculate_itemized_cost_np(
     "consumption_data_dict, "
     "resolution, "
     "decomposition_type, "
+    "consumption_estimate, "
     "expected_cost, "
     "expected_itemized",
     [
-        # single energy charge
+        # simple energy charge without charge limits
         (
             {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
-            {ELECTRIC: np.ones(96), GAS: np.ones(96)},
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
             "15m",
             None,
-            pytest.approx(1.2),
+            0,
+            pytest.approx(120.0),
             {
                 "electric": {
-                    "energy": pytest.approx(1.2),
+                    "energy": pytest.approx(120.0),
                     "export": 0.0,
                     "customer": 0.0,
                     "demand": 0.0,
@@ -3035,6 +3048,7 @@ def test_calculate_itemized_cost_np(
             },
             "15m",
             "absolute_value",
+            240,
             None,  # No expected cost - should raise error
             None,  # No expected itemized - should raise error
         ),
@@ -3045,6 +3059,7 @@ def test_calculate_itemized_cost_cvx(
     consumption_data_dict,
     resolution,
     decomposition_type,
+    consumption_estimate,
     expected_cost,
     expected_itemized,
 ):
@@ -3058,6 +3073,7 @@ def test_calculate_itemized_cost_cvx(
                 cvx_vars,
                 resolution=resolution,
                 decomposition_type=decomposition_type,
+                consumption_estimate=consumption_estimate,
             )
     else:
         result, model = costs.calculate_itemized_cost(
@@ -3065,6 +3081,7 @@ def test_calculate_itemized_cost_cvx(
             cvx_vars,
             resolution=resolution,
             decomposition_type=decomposition_type,
+            consumption_estimate=consumption_estimate,
         )
         solve_cvx_problem(result["total"], constraints)
 
@@ -3084,19 +3101,36 @@ def test_calculate_itemized_cost_cvx(
     "consumption_data_dict, "
     "resolution, "
     "decomposition_type, "
+    "consumption_estimate, "
     "expected_cost, "
     "expected_itemized",
     [
-        # single energy charge
+        # energy charge with charge limit
         (
-            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
-            {ELECTRIC: np.ones(96), GAS: np.ones(96)},
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_0": np.concatenate(
+                    [
+                        np.ones(64) * 0.05,
+                        np.ones(20) * 0.1,
+                        np.ones(12) * 0.05,
+                    ]
+                ),
+                "electric_energy_all-day_2024-07-10_2024-07-10_100": np.concatenate(
+                    [
+                        np.ones(64) * 0.1,
+                        np.ones(20) * 0.15,
+                        np.ones(12) * 0.1,
+                    ]
+                ),
+            },
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
             "15m",
             None,
-            pytest.approx(1.2),
+            2400,
+            pytest.approx(260),
             {
                 "electric": {
-                    "energy": pytest.approx(1.2),
+                    "energy": pytest.approx(260),
                     "export": 0.0,
                     "customer": 0.0,
                     "demand": 0.0,
@@ -3121,6 +3155,7 @@ def test_calculate_itemized_cost_cvx(
             },
             "15m",
             "absolute_value",
+            240,
             pytest.approx(6.0 - 1.5),  # 48*10*0.05/4 - 48*5*0.025/4 = 6.0 - 1.5 = 4.5
             {
                 "electric": {
@@ -3144,6 +3179,7 @@ def test_calculate_itemized_cost_pyo(
     consumption_data_dict,
     resolution,
     decomposition_type,
+    consumption_estimate,
     expected_cost,
     expected_itemized,
 ):
@@ -3155,6 +3191,7 @@ def test_calculate_itemized_cost_pyo(
         resolution=resolution,
         decomposition_type=decomposition_type,
         model=model,
+        consumption_estimate=consumption_estimate,
     )
     solve_pyo_problem(
         model, result["total"], decomposition_type, charge_dict, consumption_data_dict
