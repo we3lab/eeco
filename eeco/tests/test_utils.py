@@ -130,7 +130,11 @@ def test_max_pyo(consumption_data, varstr, expected):
 @pytest.mark.parametrize(
     "consumption_data, varstr, expected",
     [
-        ({"electric": np.ones(96) * 45, "gas": np.ones(96) * -1}, "electric", np.ones(96) * 45),
+        (
+            {"electric": np.ones(96) * 45, "gas": np.ones(96) * -1},
+            "electric",
+            np.ones(96) * 45,
+        ),
         ({"electric": np.ones(96) * 100, "gas": np.ones(96) * -1}, "gas", np.zeros(96)),
     ],
 )
