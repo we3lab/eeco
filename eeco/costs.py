@@ -50,6 +50,39 @@ SUPER_OFF_PEAK = "super_off_peak"
 OFF_PEAK = "off_peak"
 
 
+def get_charge_name(charge, index=None):
+    """
+    Get a unique row name for each row of charge df.
+
+    Parameters
+    ----------
+    charge : dict or pandas.Series
+        The charge row data containing NAME and PERIOD fields
+    index : int, optional
+        Index to use if name is empty or None
+
+    Returns
+    -------
+    str
+        A unique name with underscores converted to dashes
+    """
+    try:
+        name = charge[NAME]
+    except KeyError:
+        name = charge[PERIOD]
+        warnings.warn(
+            "Please update billing file to use 'name' column rather than 'period'",
+            DeprecationWarning,
+        )
+
+    # If no name was given, use the index to differentiate
+    if not (isinstance(name, str) and name != ""):
+        name = str(index) if index is not None else ""
+
+    # Replace underscores with dashes for unique delimiter
+    return name.replace("_", "-")
+
+
 def create_charge_array(charge, datetime, effective_start_date, effective_end_date):
     """Creates a single charge array based on the given parameters.
 
@@ -267,11 +300,7 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                         limit_charges = effective_charges.loc[charge_limits == limit, :]
                     for i, idx in enumerate(limit_charges.index):
                         charge = limit_charges.loc[idx, :]
-
-                        try:
-                            name = charge[NAME]
-                        except KeyError:  # backward compatibility to "period"
-                            name = charge.get(PERIOD, None)
+                        name = get_charge_name(charge, i)
 
                         try:
                             assessed = charge[ASSESSED]
@@ -295,7 +324,6 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                 start.strftime("%Y%m%d"),
                                 end.strftime("%Y%m%d"),
                                 str(int(limit)),
-                                i,
                             )
                             add_to_charge_array(charge_dict, key_str, charge_array)
                         elif charge_type == DEMAND and assessed == "daily":
@@ -312,7 +340,6 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                     new_start.strftime("%Y%m%d"),
                                     new_start.strftime("%Y%m%d"),
                                     str(limit),
-                                    i,
                                 )
                                 add_to_charge_array(charge_dict, key_str, charge_array)
                         else:
@@ -326,7 +353,6 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                 start.strftime("%Y%m%d"),
                                 end.strftime("%Y%m%d"),
                                 str(int(limit)),
-                                i,
                             )
                             add_to_charge_array(charge_dict, key_str, charge_array)
     return charge_dict
@@ -461,7 +487,7 @@ def get_charge_df(
 
 
 def default_varstr_alias_func(
-    utility, charge_type, name, start_date, end_date, charge_limit, row_index
+    utility, charge_type, name, start_date, end_date, charge_limit
 ):
     """Default function for creating the variable name strings for each charge
     in the tariff sheet. Can be overwritten in the function call to `calculate_cost`
@@ -476,8 +502,7 @@ def default_varstr_alias_func(
         Name of the `charge_type` ('demand', 'energy', or 'customer')
 
     name : str
-        The name of the period for this charge (e.g., 'all-day' or 'on-peak').
-        If empty or None, will use row_index for uniqueness.
+        The name of the period for this charge (e.g., 'all-day' or 'on-peak')
 
     start_date
         The inclusive start date for this charge
@@ -488,24 +513,13 @@ def default_varstr_alias_func(
     charge_limit : str
         The consumption limit for this tier of charges converted to a string
 
-    row_index : int
-        Row index to use if name is empty or None
-
     Returns
     -------
     str
         Variable name of the form
         `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
     """
-    # Handle NaN values and None - float NaN values from df
-    # TODO: check why they are float
-    if name is None or (isinstance(name, float) and str(name).lower() == "nan"):
-        name = str(row_index)
-    name = str(name).replace("_", "")
-    name = str(name).replace("-", "")
-
-    key = f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
-    return ut.sanitize_varstr(key)
+    return f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
 
 
 def get_next_limit(key_substr, current_limit, keys):
@@ -619,10 +633,10 @@ def calculate_demand_cost(
                 "Pass in only positive values or "
                 "run calculate_cost with a decomposition_type"
             )
-        if (ut.max(consumption_data)[0] >= limit) or (
+        if (np.max(consumption_data) >= limit) or (
             (prev_demand >= limit) and (prev_demand <= next_limit)
         ):
-            if ut.max(consumption_data)[0] >= next_limit:
+            if np.max(consumption_data) >= next_limit:
                 demand_charged, model = ut.multiply(next_limit - limit, charge_array)
             else:
                 demand_charged, model = ut.multiply(
@@ -683,6 +697,7 @@ def calculate_demand_cost(
             "consumption_data must be of type numpy.ndarray, "
             "cvxpy.Expression, or pyomo.environ.Var"
         )
+
     if model is None:
         max_var, _ = ut.max(demand_charged)
         max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
@@ -996,7 +1011,7 @@ def get_converted_consumption_data(
                 # Decompose consumption data into positive and negative components
                 # with constraint that total = positive - negative
                 # (where negative is stored as positive magnitude)
-                pos_name, neg_name = ut._get_decomposed_var_names(utility)
+                pos_name, neg_name = ut.get_decomposed_var_names(utility)
                 imports, exports, model = ut.decompose_consumption(
                     converted_consumption,
                     model=model,
@@ -1214,8 +1229,13 @@ def calculate_cost(
         consumption_data_dict, conversion_factors, decomposition_type, model
     )
 
-    for varstr, charge_array in charge_dict.items():
-        utility, charge_type, name, eff_start, eff_end, limit_str = varstr.split("_")
+    for key, charge_array in charge_dict.items():
+        utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
+        varstr = ut.sanitize_varstr(
+            varstr_alias_func(
+                utility, charge_type, name, eff_start, eff_end, limit_str
+            )  # noqa: E501
+        )
 
         # if we want itemized costs skip irrelvant portions of the bill
         if (desired_utility and utility not in desired_utility) or (
@@ -1228,13 +1248,13 @@ def calculate_cost(
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
 
         # Only apply demand_scale_factor if charge spans more than one day
-        charge_duration_days = get_charge_array_duration(varstr)
+        charge_duration_days = get_charge_array_duration(key)
         effective_scale_factor = demand_scale_factor if charge_duration_days > 1 else 1
 
         if charge_type == DEMAND:
             if prev_demand_dict is not None:
-                prev_demand = prev_demand_dict[varstr][DEMAND]
-                prev_demand_cost = prev_demand_dict[varstr]["cost"]
+                prev_demand = prev_demand_dict[key][DEMAND]
+                prev_demand_cost = prev_demand_dict[key]["cost"]
             else:
                 prev_demand = 0
                 prev_demand_cost = 0
@@ -1268,7 +1288,7 @@ def calculate_cost(
             cost += new_cost
         elif charge_type == ENERGY:
             if prev_consumption_dict is not None:
-                prev_consumption = prev_consumption_dict[varstr]
+                prev_consumption = prev_consumption_dict[key]
             else:
                 prev_consumption = 0
 
@@ -1955,29 +1975,19 @@ def parametrize_rate_data(
                         continue
 
                     row = variant_data.loc[row_idx]
+
                     if has_exact_keys:  # Format 2: Exact charge key matching
-                        try:
-                            name = row[NAME]
-                        except KeyError:  # for backward compatibility
-                            name = row.get(PERIOD, None)
-
-                        if name is None or (
-                            isinstance(name, float) and str(name).lower() == "nan"
-                        ):
-                            name = str(row_idx)
-
-                        name = str(name).replace("_", "").replace("-", "")
-
+                        row_name = get_charge_name(row, row_idx)
                         for key_prefix, key_ratio in charge_ratios.items():
                             if key_prefix.startswith(
-                                f"{row[UTILITY]}_{row[TYPE]}_{name}"
+                                f"{row[UTILITY]}_{row[TYPE]}_{row_name}"
                             ):
                                 ratio = key_ratio
                                 # Remove dashes in the df when key is found
-                                variant_data.loc[row_idx, NAME] = name
+                                variant_data.loc[row_idx, NAME] = row_name
                                 break
                         else:
-                            missing_keys.add(f"{row[UTILITY]}_{row[TYPE]}_{name}")
+                            missing_keys.add(f"{row[UTILITY]}_{row[TYPE]}_{row_name}")
                     elif charge_ratios:  # Format 1: Period-based approach
                         ratio = charge_ratios[period]
 
