@@ -312,7 +312,6 @@ def max_pos(expression, model=None, varstr=None):
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
         # Check if expression is indexed
         if hasattr(expression, "index_set"):
-            # if hasattr(expression, "is_indexed") and expression.is_indexed():
             # Create indexed max_pos variable
             model.add_component(
                 varstr, pyo.Var(expression.index_set(), bounds=(0, None))
@@ -341,207 +340,7 @@ def max_pos(expression, model=None, varstr=None):
     ):
         return (np.max(expression), model) if np.max(expression) > 0 else (0, model)
     elif isinstance(expression, cp.Expression):
-        # Check if expression is indexed
-        if expression.shape == ():  # Scalar
-            return cp.maximum(expression, 0), None
-        else:  # Vector
-            return cp.maximum(expression, 0), None
-    else:
-        raise TypeError(
-            "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
-        )
-
-
-def _get_decomposed_var_names(utility):
-    """Get consistent variable names for decomposed consumption variables."""
-    return f"{utility}_positive", f"{utility}_negative"
-
-
-def initialize_decomposed_pyo_vars(consumption_data_dict, model, charge_dict):
-    """Helper function to initialize Pyomo variables with baseline consumption values.
-
-    This function takes consumption data as numpy arrays, decomposes them using
-    the numpy version of decompose_consumption, and then initializes the corresponding
-    Pyomo variables with those values.
-
-    Parameters
-    ----------
-    consumption_data_dict : dict
-        Dictionary with keys "electric" and "gas" containing numpy arrays
-        of consumption data.
-
-    model : pyomo.environ.Model
-        The Pyomo model containing the variables to initialize.
-
-    charge_dict : dict
-        Dictionary containing charge arrays for different utilities and charge types.
-        Used to extract the correct charge rate for export calculations.
-
-    Returns
-    -------
-    dict
-        Dictionary with initialized consumption objects for each utility.
-    """
-    consumption_object_dict = {}
-
-    # Initialize the basic consumption variables and converted variables
-    for utility in consumption_data_dict.keys():
-        consumption_data = consumption_data_dict[utility]
-        consumption_var = model.find_component(f"{utility}_consumption")
-        if consumption_var is not None:
-            for t in model.t:
-                consumption_var[t].value = consumption_data[t - 1]  # Pyomo 1-indexed
-        converted_var = model.find_component(f"{utility}_converted")
-        if converted_var is not None:
-            for t in model.t:
-                converted_var[t].value = consumption_data[t - 1]
-
-        consumption_object_dict[utility] = {}
-        consumption_data = consumption_data_dict[utility]
-
-        # Decompose using numpy version
-        positive_values, negative_values, _ = decompose_consumption(consumption_data)
-
-        # Find and initialize the corresponding Pyomo variables
-        pos_name, neg_name = _get_decomposed_var_names(utility)
-        positive_var = model.find_component(pos_name)
-        negative_var = model.find_component(neg_name)
-
-        for t in model.t:
-            positive_var[t].value = positive_values[t - 1]
-            negative_var[t].value = negative_values[t - 1]
-
-        consumption_object_dict[utility]["imports"] = positive_var
-        consumption_object_dict[utility]["exports"] = negative_var
-
-    # # Initialize export-related variables created by calculate_export_revenue
-    for component_name in model.component_map():
-        if "_multiply" in component_name:
-            component = model.find_component(component_name)
-            if hasattr(component, "__iter__") and hasattr(
-                component[list(component.keys())[0]], "value"
-            ):
-                for i in component:
-                    export_var = model.find_component("electric_negative")
-                    if export_var is not None and hasattr(export_var[i], "value"):
-                        charge_rate = 0.0  # Default export
-                        if charge_dict is not None:
-                            export_keys = [
-                                key for key in charge_dict.keys() if "export" in key
-                            ]
-                            if export_keys:
-                                charge_rate = charge_dict[export_keys[0]][0]
-                        component[i].value = export_var[i].value * charge_rate
-                    else:
-                        component[i].value = 0.0
-        if "_sum" in component_name:
-            component = model.find_component(component_name)
-            if hasattr(component, "value"):
-                multiply_var = model.find_component(
-                    component_name.replace("_sum", "_multiply")
-                )
-                if multiply_var is not None and hasattr(multiply_var, "__iter__"):
-                    total = 0.0
-                    for i in multiply_var:
-                        if hasattr(multiply_var[i], "value"):
-                            total += multiply_var[i].value
-                    component.value = total
-                else:
-                    component.value = 0.0
-
-    return consumption_object_dict
-
-
-def decompose_consumption(
-    expression, model=None, varstr=None, decomposition_type="absolute_value"
-):
-    """Decomposes consumption data into positive and negative components
-    And adds constraint such that total consumption equals
-    positive values minus negative values
-    (where negative values are stored as positive magnitudes).
-
-    Parameters
-    ----------
-    expression : [
-        numpy.Array,
-        cvxpy.Expression,
-        pyomo.core.expr.numeric_expr.NumericExpression,
-        pyomo.core.expr.numeric_expr.NumericNDArray,
-        pyomo.environ.Param,
-        pyomo.environ.Var
-    ]
-        Expression representing consumption data
-
-    model : pyomo.environ.Model
-        The model object associated with the problem.
-        Only used in the case of Pyomo, so `None` by default.
-
-    varstr : str
-        Name prefix for the variables to be created if using a Pyomo `model`
-
-    decomposition_type : str
-        Type of decomposition to use.
-        - "binary_variable": To be implemented
-        - "absolute_value": Creates nonlinear problem
-
-    Returns
-    -------
-    tuple
-        (positive_values, negative_values, model) where
-        positive_values and negative_values are both positive
-        with the constraint that total = positive - negative
-    """
-    if isinstance(expression, np.ndarray):
-        if decomposition_type == "absolute_value":
-            positive_values = np.maximum(expression, 0)
-            negative_values = np.maximum(-expression, 0)  # magnitude as positive
-        else:
-            pass
-        return positive_values, negative_values, model
-    elif isinstance(expression, cp.Expression):
-        if decomposition_type == "absolute_value":
-            positive_values, _ = max_pos(expression)
-            negative_values, _ = max_pos(-expression)  # magnitude as positive
-        else:
-            pass
-        return positive_values, negative_values, model
-    elif isinstance(expression, (pyo.Var, pyo.Param)):
-        if decomposition_type == "absolute_value":
-
-            # Use max_pos to create positive_var and negative_var
-            pos_name, neg_name = _get_decomposed_var_names(varstr)
-            positive_var, model = max_pos(expression, model, pos_name)
-
-            # Create negative expression since pyomo won't take -expression directly
-            def negative_rule(model, t):
-                return -expression[t]
-
-            negative_expr = pyo.Expression(model.t, rule=negative_rule)
-            model.add_component(f"{varstr}_negative_expr", negative_expr)
-            negative_var, model = max_pos(negative_expr, model, neg_name)
-
-            # Add constraint to balance import and export decomposed values
-            def decomposition_rule(model, t):
-                return expression[t] == positive_var[t] - negative_var[t]
-
-            model.add_component(
-                f"{varstr}_decomposition_constraint",
-                pyo.Constraint(model.t, rule=decomposition_rule),
-            )
-
-            # Add constraint to ensure positive_var + negative_var = |expression|
-            # This both variables becoming larger due to artificial arbitrage
-            def magnitude_rule(model, t):
-                return positive_var[t] + negative_var[t] == abs(expression[t])
-
-            model.add_component(
-                f"{varstr}_magnitude_constraint",
-                pyo.Constraint(model.t, rule=magnitude_rule),
-            )
-
-            return positive_var, negative_var, model
-        else:
-            pass
+        return cp.maximum(expression, 0), None  # Works for scalar or vector
     else:
         raise TypeError(
             "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
@@ -652,6 +451,107 @@ def multiply(
         (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray),
     ):
         return (np.multiply(expression1, expression2), model)
+    else:
+        raise TypeError(
+            "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
+        )
+
+
+def get_decomposed_var_names(utility):
+    """Get consistent variable names for decomposed consumption variables."""
+    return f"{utility}_positive", f"{utility}_negative"
+
+
+def decompose_consumption(
+    expression, model=None, varstr=None, decomposition_type="absolute_value"
+):
+    """Decomposes consumption data into positive and negative components
+    And adds constraint such that total consumption equals
+    positive values minus negative values
+    (where negative values are stored as positive magnitudes).
+
+    Parameters
+    ----------
+    expression : [
+        numpy.Array,
+        cvxpy.Expression,
+        pyomo.core.expr.numeric_expr.NumericExpression,
+        pyomo.core.expr.numeric_expr.NumericNDArray,
+        pyomo.environ.Param,
+        pyomo.environ.Var
+    ]
+        Expression representing consumption data
+
+    model : pyomo.environ.Model
+        The model object associated with the problem.
+        Only used in the case of Pyomo, so `None` by default.
+
+    varstr : str
+        Name prefix for the variables to be created if using a Pyomo `model`
+
+    decomposition_type : str
+        Type of decomposition to use.
+        - "binary_variable": To be implemented
+        - "absolute_value": Creates nonlinear problem
+
+    Returns
+    -------
+    tuple
+        (positive_values, negative_values, model) where
+        positive_values and negative_values are both positive
+        with the constraint that total = positive - negative
+    """
+    if isinstance(expression, np.ndarray):
+        if decomposition_type == "absolute_value":
+            positive_values = np.maximum(expression, 0)
+            negative_values = np.maximum(-expression, 0)  # magnitude as positive
+        else:
+            pass
+        return positive_values, negative_values, model
+    elif isinstance(expression, cp.Expression):
+        if decomposition_type == "absolute_value":
+            positive_values, _ = max_pos(expression)
+            negative_values, _ = max_pos(-expression)  # magnitude as positive
+        else:
+            pass
+        return positive_values, negative_values, model
+    elif isinstance(expression, (pyo.Var, pyo.Param)):
+        if decomposition_type == "absolute_value":
+
+            # Use max_pos to create positive_var and negative_var
+            pos_name, neg_name = get_decomposed_var_names(varstr)
+            positive_var, model = max_pos(expression, model, pos_name)
+
+            # Create negative expression since pyomo won't take -expression directly
+            def negative_rule(model, t):
+                return -expression[t]
+
+            negative_expr = pyo.Expression(model.t, rule=negative_rule)
+            model.add_component(f"{varstr}_negative_expr", negative_expr)
+            negative_var, model = max_pos(negative_expr, model, neg_name)
+
+            # Add constraint to balance import and export decomposed values
+            def decomposition_rule(model, t):
+                return expression[t] == positive_var[t] - negative_var[t]
+
+            model.add_component(
+                f"{varstr}_decomposition_constraint",
+                pyo.Constraint(model.t, rule=decomposition_rule),
+            )
+
+            # Add constraint to ensure positive_var + negative_var = |expression|
+            # This both variables becoming larger due to artificial arbitrage
+            def magnitude_rule(model, t):
+                return positive_var[t] + negative_var[t] == abs(expression[t])
+
+            model.add_component(
+                f"{varstr}_magnitude_constraint",
+                pyo.Constraint(model.t, rule=magnitude_rule),
+            )
+
+            return positive_var, negative_var, model
+        else:
+            pass
     else:
         raise TypeError(
             "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."

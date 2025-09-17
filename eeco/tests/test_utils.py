@@ -5,6 +5,7 @@ import pyomo.environ as pyo
 import cvxpy as cp
 
 from eeco import utils as ut
+from eeco.tests.test_costs import setup_pyo_vars_constraints
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False
@@ -226,34 +227,20 @@ def test_decompose_consumption_cvx():
 def test_decompose_consumption_pyo(
     consumption_data, expected_positive_sum, expected_negative_sum
 ):
-    """Test decompose_consumption with pyomo variables."""
-    model = pyo.ConcreteModel()
-    model.T = len(consumption_data)
-    model.t = range(1, model.T + 1)  # Pyomo uses 1-indexed
-
-    model.electric_consumption = pyo.Var(model.t, initialize=0)
-    for t in model.t:
-        model.electric_consumption[t].value = consumption_data[t - 1]
-
-    positive_var, negative_var, model = ut.decompose_consumption(
-        model.electric_consumption, model=model, varstr="electric"
-    )
-
-    init_consumption_data = {
+    consumption_data_dict = {
         "electric": consumption_data,
+        "gas": np.zeros_like(consumption_data),
     }
-    ut.initialize_decomposed_pyo_vars(init_consumption_data, model, None)
-
-    # Verify expected sums
-    assert sum(pyo.value(positive_var[t]) for t in model.t) == pytest.approx(
-        expected_positive_sum
-    )
-    assert sum(pyo.value(negative_var[t]) for t in model.t) == pytest.approx(
-        expected_negative_sum
+    model, pyo_vars = setup_pyo_vars_constraints(consumption_data_dict)
+    positive_var, negative_var, model = ut.decompose_consumption(
+        pyo_vars["electric"], model=model, varstr="electric"
     )
 
-    # Verify decomposition constraint
-    for t in model.t:
-        assert pyo.value(model.electric_consumption[t]) == pytest.approx(
-            pyo.value(positive_var[t]) - pyo.value(negative_var[t])
-        )
+    # Check that variables exist and have the correct length
+    assert hasattr(model, "electric_positive")
+    assert hasattr(model, "electric_negative")
+    assert hasattr(model, "electric_decomposition_constraint")
+    assert hasattr(model, "electric_magnitude_constraint")
+    assert len(positive_var) == len(consumption_data)
+    assert len(negative_var) == len(consumption_data)
+    # Testing of values handled after solving problem in test_costs.py
