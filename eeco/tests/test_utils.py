@@ -134,28 +134,16 @@ def test_max_pyo(consumption_data, varstr, expected):
         (
             {"electric": np.ones(96) * 45, "gas": np.ones(96) * -1},
             "electric",
-            np.ones(96) * 45
+            np.ones(96) * 45,
         ),
-        (
-            {"electric": np.ones(96) * 100, "gas": np.ones(96) * -1},
-            "gas",
-            np.zeros(96)
-        ),
-        (
-            {"electric": 45.0, "gas": -10.0},
-            "electric",
-            45.0
-        ),
-        (
-            {"electric": 100.0, "gas": -5.0},
-            "gas",
-            0.0
-        ),
+        ({"electric": np.ones(96) * 100, "gas": np.ones(96) * -1}, "gas", np.zeros(96)),
+        ({"electric": 45.0, "gas": -10.0}, "electric", 45.0),
+        ({"electric": 100.0, "gas": -5.0}, "gas", 0.0),
     ],
 )
 def test_max_pos_pyo(consumption_data, varstr, expected):
     model = pyo.ConcreteModel()
-        
+
     if isinstance(consumption_data["electric"], (int, float)):
         # Scalar case
         pyo_vars = {}
@@ -173,7 +161,7 @@ def test_max_pos_pyo(consumption_data, varstr, expected):
             return consumption_data["gas"] == m.gas
 
         var = getattr(model, varstr)
-        expr = var - 0 # similar to max_var - prev_demand_cost
+        expr = var - 0  # similar to max_var - prev_demand_cost
         result, model = ut.max_pos(expr, model=model, varstr="test")
         model.objective = pyo.Objective(expr=0)
         solver = pyo.SolverFactory("gurobi")
