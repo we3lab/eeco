@@ -986,38 +986,52 @@ def get_converted_consumption_data(
         ):
             # Apply conversion if conversion factor is nonzero
             if conversion_factor != 1.0:
-                consumption_data_dict[utility]["imports"], model = ut.multiply(
-                    consumption_data_dict[utility]["imports"],
-                    conversion_factor,
-                    model=model,
-                    varstr=utility + "_imports_converted",
-                )
-                consumption_data_dict[utility]["exports"], model = ut.multiply(
-                    consumption_data_dict[utility]["exports"],
-                    conversion_factor,
-                    model=model,
-                    varstr=utility + "_exports_converted",
-                )
+                # Apply conversion if not already done
+                imports_varstr = utility + "_imports_converted"
+                if model is None or not hasattr(model, imports_varstr):
+                    consumption_data_dict[utility]["imports"], model = ut.multiply(
+                        consumption_data_dict[utility]["imports"],
+                        conversion_factor,
+                        model=model,
+                        varstr=imports_varstr,
+                    )
+                    consumption_data_dict[utility]["exports"], model = ut.multiply(
+                        consumption_data_dict[utility]["exports"],
+                        conversion_factor,
+                        model=model,
+                        varstr=utility + "_exports_converted",
+                    )
             continue
         else:  # create imports/exports
-            converted_consumption, model = ut.multiply(
-                consumption_data_dict[utility],
-                conversion_factor,
-                model=model,
-                varstr=utility + "_converted",
-            )
+            # Convert if not already done
+            converted_varstr = utility + "_converted"
+            if model is None or not hasattr(model, converted_varstr):
+                converted_consumption, model = ut.multiply(
+                    consumption_data_dict[utility],
+                    conversion_factor,
+                    model=model,
+                    varstr=converted_varstr,
+                )
+            else:
+                converted_consumption = getattr(model, converted_varstr)
 
             if decomposition_type == "absolute_value":
                 # Decompose consumption data into positive and negative components
                 # with constraint that total = positive - negative
                 # (where negative is stored as positive magnitude)
                 pos_name, neg_name = ut.get_decomposed_var_names(utility)
-                imports, exports, model = ut.decompose_consumption(
-                    converted_consumption,
-                    model=model,
-                    varstr=utility,
-                    decomposition_type="absolute_value",
-                )
+
+                # Decompose if not already done
+                if model is None or not hasattr(model, pos_name):
+                    imports, exports, model = ut.decompose_consumption(
+                        converted_consumption,
+                        model=model,
+                        varstr=utility,
+                        decomposition_type="absolute_value",
+                    )
+                else:
+                    imports = getattr(model, pos_name)
+                    exports = getattr(model, neg_name)
 
                 consumption_data_dict[utility] = {
                     "imports": imports,

@@ -120,6 +120,7 @@ def test_max_pyo(consumption_data, varstr, expected):
 
     var = getattr(model, varstr)
     result, model = ut.max(var, model=model, varstr="test")
+
     model.objective = pyo.Objective(expr=0)
     solver = pyo.SolverFactory("gurobi")
     solver.solve(model)
@@ -129,23 +130,35 @@ def test_max_pyo(consumption_data, varstr, expected):
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "consumption_data, varstr, expected",
+    "consumption_data, varstr, expected, expect_error",
     [
         (
             {"electric": np.ones(96) * 45, "gas": np.ones(96) * -1},
             "electric",
             np.ones(96) * 45,
+            False,
         ),
-        ({"electric": np.ones(96) * 100, "gas": np.ones(96) * -1}, "gas", np.zeros(96)),
-        ({"electric": 45.0, "gas": -10.0}, "electric", 45.0),
-        ({"electric": 100.0, "gas": -5.0}, "gas", 0.0),
+        (
+            {"electric": np.ones(96) * 100, "gas": np.ones(96) * -1},
+            "gas",
+            np.zeros(96),
+            False,
+        ),
+        ({"electric": 45.0, "gas": -10.0}, "electric", 45.0, False),
+        ({"electric": 100.0, "gas": -5.0}, "gas", 0.0, False),
+        ([1, 2, 3], None, None, True),  # invalid type
     ],
 )
-def test_max_pos_pyo(consumption_data, varstr, expected):
+def test_max_pos_pyo(consumption_data, varstr, expected, expect_error):
+    if expect_error:
+        with pytest.raises(TypeError):
+            ut.max_pos(consumption_data)
+        return
+
     model = pyo.ConcreteModel()
 
     if isinstance(consumption_data["electric"], (int, float)):
-        # Scalar case
+        # LinearExpression case
         pyo_vars = {}
         for key, val in consumption_data.items():
             var = pyo.Var(initialize=0)
@@ -161,7 +174,7 @@ def test_max_pos_pyo(consumption_data, varstr, expected):
             return consumption_data["gas"] == m.gas
 
         var = getattr(model, varstr)
-        expr = var - 0  # similar to max_var - prev_demand_cost
+        expr = var - 0  # like max_var - prev_demand_cost
         result, model = ut.max_pos(expr, model=model, varstr="test")
         model.objective = pyo.Objective(expr=0)
         solver = pyo.SolverFactory("gurobi")
@@ -202,33 +215,42 @@ def test_max_pos_pyo(consumption_data, varstr, expected):
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "consumption_data, expected_positive, expected_negative",
+    "consumption_data, expected_positive, expected_negative, expect_error",
     [
         (
             np.array([1, -2, 3, -4, 0]),
             np.array([1, 0, 3, 0, 0]),
             np.array([0, 2, 0, 4, 0]),
+            False,
         ),
         (
             np.array([5, 0, -3, 7, -1]),
             np.array([5, 0, 0, 7, 0]),
             np.array([0, 0, 3, 0, 1]),
+            False,
         ),
-        (np.array([0, 0, 0]), np.array([0, 0, 0]), np.array([0, 0, 0])),
-        (np.array([-10, -5, -1]), np.array([0, 0, 0]), np.array([10, 5, 1])),
-        (np.array([10, 5, 1]), np.array([10, 5, 1]), np.array([0, 0, 0])),
+        (np.array([0, 0, 0]), np.array([0, 0, 0]), np.array([0, 0, 0]), False),
+        (np.array([-10, -5, -1]), np.array([0, 0, 0]), np.array([10, 5, 1]), False),
+        (np.array([10, 5, 1]), np.array([10, 5, 1]), np.array([0, 0, 0]), False),
+        ([1, 2, 3], None, None, True),  # invalid type
     ],
 )
 def test_decompose_consumption_np(
-    consumption_data, expected_positive, expected_negative
+    consumption_data, expected_positive, expected_negative, expect_error
 ):
     """Test decompose_consumption with numpy arrays."""
-    positive_values, negative_values, model = ut.decompose_consumption(consumption_data)
+    if expect_error:
+        with pytest.raises(TypeError):
+            ut.decompose_consumption(consumption_data)
+    else:
+        positive_values, negative_values, model = ut.decompose_consumption(
+            consumption_data
+        )
 
-    assert np.array_equal(positive_values, expected_positive)
-    assert np.array_equal(negative_values, expected_negative)
-    assert model is None
-    assert np.array_equal(consumption_data, positive_values - negative_values)
+        assert np.array_equal(positive_values, expected_positive)
+        assert np.array_equal(negative_values, expected_negative)
+        assert model is None
+        assert np.array_equal(consumption_data, positive_values - negative_values)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -238,36 +260,63 @@ def test_decompose_consumption_cvx():
     positive_values, negative_values, model = ut.decompose_consumption(x)
     assert isinstance(positive_values, cp.Expression)
     assert isinstance(negative_values, cp.Expression)
-    # TODO: add value checks
+
+    # Test warning for unimplemented decomposition_type
+    with pytest.warns(UserWarning):
+        positive_values, negative_values, model = ut.decompose_consumption(
+            x, decomposition_type="unimplemented"
+        )
+    assert positive_values is None
+    assert negative_values is None
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "consumption_data, expected_positive_sum, expected_negative_sum",
+    "consumption_data, expected_positive_sum, expected_negative_sum, "
+    "decomposition_type, expect_warning",
     [
-        (np.array([1, -2, 3, -4, 0]), 4, 6),  # positive: 1+3=4, negative: 2+4=6
-        (np.array([0, 0, 0]), 0, 0),
-        (np.array([-10, -5, -1]), 0, 16),  # positive: 0, negative: 10+5+1=16
-        (np.array([10, 5, 1]), 16, 0),  # positive: 10+5+1=16, negative: 0
+        (np.array([1, -2, 3, -4, 0]), 4, 6, "absolute_value", False),
+        (np.array([0, 0, 0]), 0, 0, "absolute_value", False),
+        (np.array([-10, -5, -1]), 0, 16, "absolute_value", False),
+        (np.array([10, 5, 1]), 16, 0, "absolute_value", False),
+        (np.array([1, -2, 3]), 4, 2, "binary_variable", True),
     ],
 )
 def test_decompose_consumption_pyo(
-    consumption_data, expected_positive_sum, expected_negative_sum
+    consumption_data,
+    expected_positive_sum,
+    expected_negative_sum,
+    decomposition_type,
+    expect_warning,
 ):
     consumption_data_dict = {
         "electric": consumption_data,
         "gas": np.zeros_like(consumption_data),
     }
     model, pyo_vars = setup_pyo_vars_constraints(consumption_data_dict)
-    positive_var, negative_var, model = ut.decompose_consumption(
-        pyo_vars["electric"], model=model, varstr="electric"
-    )
 
-    # Check that variables exist and have the correct length
-    assert hasattr(model, "electric_positive")
-    assert hasattr(model, "electric_negative")
-    assert hasattr(model, "electric_decomposition_constraint")
-    assert hasattr(model, "electric_magnitude_constraint")
-    assert len(positive_var) == len(consumption_data)
-    assert len(negative_var) == len(consumption_data)
-    # Testing of values handled after solving problem in test_costs.py
+    if expect_warning:
+        with pytest.warns(UserWarning):
+            positive_var, negative_var, model = ut.decompose_consumption(
+                pyo_vars["electric"],
+                model=model,
+                varstr="electric",
+                decomposition_type=decomposition_type,
+            )
+        assert positive_var is None
+        assert negative_var is None
+    else:
+        positive_var, negative_var, model = ut.decompose_consumption(
+            pyo_vars["electric"],
+            model=model,
+            varstr="electric",
+            decomposition_type=decomposition_type,
+        )
+        # Check that variables exist and have the correct length
+        assert hasattr(model, "electric_positive")
+        assert hasattr(model, "electric_negative")
+        assert hasattr(model, "electric_decomposition_constraint")
+        assert hasattr(model, "electric_magnitude_constraint")
+        assert len(positive_var) == len(consumption_data)
+        assert len(negative_var) == len(consumption_data)
+        # Testing of values handled after solving problem in test_costs.py
