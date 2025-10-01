@@ -1012,8 +1012,6 @@ def get_converted_consumption_data(
                     model=model,
                     varstr=converted_varstr,
                 )
-            else:
-                converted_consumption = getattr(model, converted_varstr)
 
             if decomposition_type == "absolute_value":
                 # Decompose consumption data into positive and negative components
@@ -1029,9 +1027,6 @@ def get_converted_consumption_data(
                         varstr=utility,
                         decomposition_type="absolute_value",
                     )
-                else:
-                    imports = getattr(model, pos_name)
-                    exports = getattr(model, neg_name)
 
                 consumption_data_dict[utility] = {
                     "imports": imports,
