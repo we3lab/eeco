@@ -134,41 +134,80 @@ def test_max_pyo(consumption_data, varstr, expected):
         (
             {"electric": np.ones(96) * 45, "gas": np.ones(96) * -1},
             "electric",
-            np.ones(96) * 45,
+            np.ones(96) * 45
         ),
-        ({"electric": np.ones(96) * 100, "gas": np.ones(96) * -1}, "gas", np.zeros(96)),
+        (
+            {"electric": np.ones(96) * 100, "gas": np.ones(96) * -1},
+            "gas",
+            np.zeros(96)
+        ),
+        (
+            {"electric": 45.0, "gas": -10.0},
+            "electric",
+            45.0
+        ),
+        (
+            {"electric": 100.0, "gas": -5.0},
+            "gas",
+            0.0
+        ),
     ],
 )
 def test_max_pos_pyo(consumption_data, varstr, expected):
     model = pyo.ConcreteModel()
-    model.T = len(consumption_data["electric"])
-    model.t = range(model.T)
-    pyo_vars = {}
-    for key, val in consumption_data.items():
-        var = pyo.Var(model.t, initialize=np.zeros(len(val)))
-        model.add_component(key, var)
-        pyo_vars[key] = var
+        
+    if isinstance(consumption_data["electric"], (int, float)):
+        # Scalar case
+        pyo_vars = {}
+        for key, val in consumption_data.items():
+            var = pyo.Var(initialize=0)
+            model.add_component(key, var)
+            pyo_vars[key] = var
 
-    @model.Constraint(model.t)
-    def electric_constraint(m, t):
-        return consumption_data["electric"][t] == m.electric[t]
+        @model.Constraint()
+        def electric_constraint(m):
+            return consumption_data["electric"] == m.electric
 
-    @model.Constraint(model.t)
-    def gas_constraint(m, t):
-        return consumption_data["gas"][t] == m.gas[t]
+        @model.Constraint()
+        def gas_constraint(m):
+            return consumption_data["gas"] == m.gas
 
-    var = getattr(model, varstr)
-    result, model = ut.max_pos(var, model=model, varstr="test")
-    model.objective = pyo.Objective(expr=0)
-    solver = pyo.SolverFactory("gurobi")
-    solver.solve(model)
+        var = getattr(model, varstr)
+        expr = var - 0 # similar to max_var - prev_demand_cost
+        result, model = ut.max_pos(expr, model=model, varstr="test")
+        model.objective = pyo.Objective(expr=0)
+        solver = pyo.SolverFactory("gurobi")
+        solver.solve(model)
 
-    # Check each element in returned vector
-    for t in result.index_set():
-        expected_element = expected[t]
-        assert pyo.value(result[t]) == expected_element
+        assert pyo.value(result) == expected
+    else:
+        # Vector case
+        model.T = len(consumption_data["electric"])
+        model.t = range(model.T)
+        pyo_vars = {}
+        for key, val in consumption_data.items():
+            var = pyo.Var(model.t, initialize=np.zeros(len(val)))
+            model.add_component(key, var)
+            pyo_vars[key] = var
 
-    # TODO: add scalar test
+        @model.Constraint(model.t)
+        def electric_constraint(m, t):
+            return consumption_data["electric"][t] == m.electric[t]
+
+        @model.Constraint(model.t)
+        def gas_constraint(m, t):
+            return consumption_data["gas"][t] == m.gas[t]
+
+        var = getattr(model, varstr)
+        result, model = ut.max_pos(var, model=model, varstr="test")
+        model.objective = pyo.Objective(expr=0)
+        solver = pyo.SolverFactory("gurobi")
+        solver.solve(model)
+
+        # Check each element in returned vector
+        for t in result.index_set():
+            expected_element = expected[t]
+            assert pyo.value(result[t]) == expected_element
 
     assert model is not None
 

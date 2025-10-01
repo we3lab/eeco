@@ -28,7 +28,7 @@ requirements = [
     "pandas>=2.2.1",
     "numpy>=1.26.4",
     "cvxpy>=1.3.0",
-    "pyomo>=6.7",
+    "pyomo>=6.8",
     "gurobipy>=11.0",
     "pint>=0.19.2",
 ]
