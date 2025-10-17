@@ -629,9 +629,9 @@ def calculate_demand_cost(
     if isinstance(consumption_data, np.ndarray):
         if np.any(consumption_data < 0):
             warnings.warn(
-                "UserWarning: Demand calculation includes negative values. "
-                "Pass in only positive values or "
-                "run calculate_cost with a decomposition_type"
+                "Demand calculation includes negative values. Pass in "
+                "positive values or run calculate_cost with a decomposition_type",
+                UserWarning,
             )
         if (np.max(consumption_data) >= limit) or (
             (prev_demand >= limit) and (prev_demand <= next_limit)
@@ -786,9 +786,9 @@ def calculate_energy_cost(
     if isinstance(consumption_data, np.ndarray):
         if np.any(consumption_data < 0):
             warnings.warn(
-                "UserWarning: Energy calculation includes negative values. "
-                "Pass in only positive values or "
-                "run calculate_cost with a decomposition_type"
+                "Energy calculation includes negative values. Pass in "
+                "positive values or run calculate_cost with a decomposition_type",
+                UserWarning,
             )
 
         energy = prev_consumption
@@ -907,9 +907,9 @@ def calculate_export_revenue(
     if isinstance(consumption_data, np.ndarray):
         if np.any(consumption_data < 0):
             warnings.warn(
-                "UserWarning: Export revenue calculation includes negative values. "
-                "Pass in only positive values or "
-                "run calculate_cost with a decomposition_type"
+                "Export revenue calculation includes negative values. Pass in "
+                "positive values or run calculate_cost with a decomposition_type",
+                UserWarning,
             )
         return np.sum(consumption_data * charge_array) / n_per_hour, model
 
