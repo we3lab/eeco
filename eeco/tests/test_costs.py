@@ -929,7 +929,7 @@ def test_calculate_cost_np(
             2400,
             None,
             None,
-            260,
+            pytest.approx(260),
         ),
     ],
 )
