@@ -34,6 +34,18 @@ input_dir = "tests/data/input/"
 output_dir = "tests/data/output/"
 
 
+def obtain_data_array(csv_filename, colname=""):
+    """Helper to load data to dict from CSV file"""
+    csv_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "data", "input", csv_filename
+    )
+    df = pd.read_csv(csv_path)
+    if colname:
+        return df[colname].to_numpy()
+    else:
+        return df.to_numpy()
+
+
 def setup_cvx_vars_constraints(consumption_data_dict):
     """Helper to set up CVXPY variables and constraints."""
     cvx_vars = {}
@@ -713,6 +725,30 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
                     "imports": np.ones(96) * 2,
                     "exports": np.zeros(96),
                 },
+            },
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            pytest.approx(9.0),
+            False,
+            False,
+        ),
+        # negative values within tolerance (i.e., should be treated as zeros)
+        (
+            {
+                "electric_energy_0_2024-08-01_2024-08-31_0": np.ones(2976) * 0.05,
+                "gas_energy_0_2021-08-01_2024-08-31_0": np.ones(2976) * 0.570905,
+                "gas_energy_0_2021-08-01_2024-08-31_250": np.ones(2976) * 0.415764,
+                "gas_energy_0_2021-08-01_2024-08-31_4167": np.ones(2976) * 0.311744,
+            },
+            {
+                ELECTRIC: np.zeros(96),
+                GAS: obtain_data_array(
+                    "negative_purchases_within_tol.csv", 
+                    colname="wrrf_natural_gas_combust",
+                ),
             },
             "15m",
             None,
@@ -3086,6 +3122,39 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
                 },
             },
         ),
+        # negative values within tolerance (i.e., should be treated as zeros)
+        (
+            {
+                "electric_energy_0_2024-08-01_2024-08-31_0": np.ones(2976) * 0.05,
+                "gas_energy_0_2021-08-01_2024-08-31_0": np.ones(2976) * 0.570905,
+                "gas_energy_0_2021-08-01_2024-08-31_250": np.ones(2976) * 0.415764,
+                "gas_energy_0_2021-08-01_2024-08-31_4167": np.ones(2976) * 0.311744,
+            },
+            {
+                ELECTRIC: np.zeros(96),
+                GAS: obtain_data_array(
+                    "negative_purchases_within_tol.csv", 
+                    colname="wrrf_natural_gas_combust",
+                ),
+            },
+            "15m",
+            None,
+            pytest.approx(153276.17678277715),
+            {
+                "electric": {
+                    "energy": 0.0,
+                    "export": 0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
+        ),
     ],
 )
 def test_calculate_itemized_cost_np(
@@ -3102,11 +3171,14 @@ def test_calculate_itemized_cost_np(
         consumption_data_dict,
         resolution=resolution,
         decomposition_type=decomposition_type,
+        electric_consumption_units=u.kW,
+        gas_consumption_units=u.meter**3 / u.day,
     )
 
     assert result["total"] == expected_cost
     for utility in expected_itemized:
         for charge_type in expected_itemized[utility]:
+            print(f"utility: {utility} & charge_type: {charge_type}")
             expected_value = expected_itemized[utility][charge_type]
             actual_value = result[utility][charge_type]
             assert actual_value == expected_value
