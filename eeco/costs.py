@@ -836,12 +836,12 @@ def calculate_energy_cost(
             if (start_idx == 0) and (total_consumption <= float(limit)):
                 charge_array[:] = 0
             else:
-                charge_array[:start_idx] = 0  # 0 for charge array before the start index
+                charge_array[:start_idx] = 0  # 0 for charge array before start index
             end_idx = np.argmax(cumulative_consumption > float(next_limit))
             # before applying end_idx ensure (1) that next limit exists
             # and (2) that it is higher than total consumption
             if not (np.isinf(next_limit) or (total_consumption <= float(next_limit))):
-                charge_array[end_idx:] = 0  # 0 for charge array after the end index
+                charge_array[end_idx:] = 0  # 0 for charge array after end index
 
         charge_expr, model = ut.multiply(
             consumption_data, charge_array, model=model, varstr=varstr + "_multiply"

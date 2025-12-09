@@ -746,7 +746,7 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             {
                 ELECTRIC: np.zeros(96),
                 GAS: obtain_data_array(
-                    "negative_purchases_within_tol.csv", 
+                    "negative_purchases_within_tol.csv",
                     colname="wrrf_natural_gas_combust",
                 ),
             },
@@ -3133,7 +3133,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             {
                 ELECTRIC: np.zeros(96),
                 GAS: obtain_data_array(
-                    "negative_purchases_within_tol.csv", 
+                    "negative_purchases_within_tol.csv",
                     colname="wrrf_natural_gas_combust",
                 ),
             },
