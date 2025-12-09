@@ -130,7 +130,7 @@ def test_calculate_grid_emissions_cvx(
             "VirtualDemand_Electricity_InFlow",
             u.kg / u.kWh,
             "15m",
-            276375.8735600004,
+            pytest.approx(276375.8735600004),
         ),
     ],
 )
