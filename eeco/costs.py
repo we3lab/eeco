@@ -1630,8 +1630,6 @@ def calculate_itemized_cost(
                 cost, model = calculate_cost(
                     charge_dict,
                     consumption_data_dict,
-                    electric_consumption_units=electric_consumption_units,
-                    gas_consumption_units=gas_consumption_units,
                     resolution=resolution,
                     prev_demand_dict=prev_demand_dict,
                     consumption_estimate=consumption_estimate,
@@ -1655,8 +1653,6 @@ def calculate_itemized_cost(
             cost, model = calculate_cost(
                 charge_dict,
                 consumption_data_dict,
-                electric_consumption_units=electric_consumption_units,
-                gas_consumption_units=gas_consumption_units,
                 resolution=resolution,
                 prev_demand_dict=prev_demand_dict,
                 prev_consumption_dict=prev_consumption_dict,
