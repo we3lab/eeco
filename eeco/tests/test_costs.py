@@ -501,12 +501,14 @@ def test_create_charge_array(
                 "gas_energy_0_20231231_20240101_0": np.concatenate(
                     [
                         np.zeros(24),
-                        np.ones(24) * 0.10018787433608317,  # converted from 0.2837 therms
+                        np.ones(24)
+                        * 0.10018787433608317,  # converted from 0.2837 therms
                     ]
                 ),
                 "gas_energy_1_20231231_20240101_0": np.concatenate(
                     [
-                        np.ones(24) * 0.16032885071759523,  # converted from 0.454 therms
+                        np.ones(24)
+                        * 0.16032885071759523,  # converted from 0.454 therms
                         np.zeros(24),
                     ]
                 ),
@@ -743,17 +745,26 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
         (
             # dictionary manually converted from $/therm to $/m3
             {
-                "electric_energy_0_2024-08-01_2024-08-31_0": np.ones(2976) * 0.05 / 2.83168,
-                "gas_energy_0_2021-08-01_2024-08-31_0": np.ones(2976) * 0.570905 / 2.83168,
-                "gas_energy_0_2021-08-01_2024-08-31_708": np.ones(2976) * 0.415764 / 2.83168,
-                "gas_energy_0_2021-08-01_2024-08-31_11800": np.ones(2976) * 0.311744 / 2.83168,
+                "electric_energy_0_2024-08-01_2024-08-31_0": np.ones(2976)
+                * 0.05
+                / 2.83168,
+                "gas_energy_0_2021-08-01_2024-08-31_0": np.ones(2976)
+                * 0.570905
+                / 2.83168,
+                "gas_energy_0_2021-08-01_2024-08-31_708": np.ones(2976)
+                * 0.415764
+                / 2.83168,
+                "gas_energy_0_2021-08-01_2024-08-31_11800": np.ones(2976)
+                * 0.311744
+                / 2.83168,
             },
             {
                 ELECTRIC: np.zeros(96),
                 GAS: obtain_data_array(
                     "negative_purchases_within_tol.csv",
                     colname="wrrf_natural_gas_combust",
-                ) / 24,  # convert from cubic meters / day to cubic meters / hour
+                )
+                / 24,  # convert from cubic meters / day to cubic meters / hour
             },
             "15m",
             None,
@@ -1915,7 +1926,10 @@ def test_calculate_demand_costs(
             np.datetime64("2024-07-11"),  # Summer weekday
             input_dir + "billing_pge.csv",
             [ELECTRIC, GAS],
-            {ELECTRIC: np.arange(96), GAS: np.repeat(np.array([5100 * 2.83168 / 24]), 96)},
+            {
+                ELECTRIC: np.arange(96),
+                GAS: np.repeat(np.array([5100 * 2.83168 / 24]), 96),
+            },
             {
                 "gas_energy_0_20240710_20240710_0": 0,
                 "gas_energy_0_20240710_20240710_14158": 0,
@@ -1984,7 +1998,10 @@ def test_calculate_demand_costs(
             input_dir + "billing_pge.csv",
             GAS,
             # converted from therms to cubic meters
-            {ELECTRIC: np.arange(96), GAS: np.repeat(np.array([5100 * 2.83168 / 24]), 96)},
+            {
+                ELECTRIC: np.arange(96),
+                GAS: np.repeat(np.array([5100 * 2.83168 / 24]), 96),
+            },
             None,
             0,
             pytest.approx(59.18348),  # converted from therms to cubic meters
@@ -3132,10 +3149,18 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
         (
             # manually converted from therms to cubic meters to mimic automated conversion in `create_charge_array`
             {
-                "electric_energy_0_2024-08-01_2024-08-31_0": np.ones(2976) * 0.05 / 2.83168,
-                "gas_energy_0_2021-08-01_2024-08-31_0": np.ones(2976) * 0.570905 / 2.83168,
-                "gas_energy_0_2021-08-01_2024-08-31_708": np.ones(2976) * 0.415764 / 2.83168,
-                "gas_energy_0_2021-08-01_2024-08-31_11800": np.ones(2976) * 0.311744 / 2.83168,
+                "electric_energy_0_2024-08-01_2024-08-31_0": np.ones(2976)
+                * 0.05
+                / 2.83168,
+                "gas_energy_0_2021-08-01_2024-08-31_0": np.ones(2976)
+                * 0.570905
+                / 2.83168,
+                "gas_energy_0_2021-08-01_2024-08-31_708": np.ones(2976)
+                * 0.415764
+                / 2.83168,
+                "gas_energy_0_2021-08-01_2024-08-31_11800": np.ones(2976)
+                * 0.311744
+                / 2.83168,
             },
             {
                 ELECTRIC: np.zeros(96),
@@ -3477,11 +3502,17 @@ def test_calculate_itemized_cost_pyo(
 
     if decomposition_type == "binary_variable":
         with pytest.raises(NotImplementedError):
-            result, model = costs.calculate_itemized_cost(charge_dict, pyo_vars, **kwargs)
+            result, model = costs.calculate_itemized_cost(
+                charge_dict, pyo_vars, **kwargs
+            )
     else:
         result, model = costs.calculate_itemized_cost(charge_dict, pyo_vars, **kwargs)
         solve_pyo_problem(
-            model, result["total"], decomposition_type, charge_dict, consumption_data_dict
+            model,
+            result["total"],
+            decomposition_type,
+            charge_dict,
+            consumption_data_dict,
         )
 
         assert pyo.value(result["total"]) == expected_cost

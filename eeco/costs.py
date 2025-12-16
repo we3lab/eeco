@@ -83,7 +83,9 @@ def get_charge_name(charge, index=None):
     return name.replace("_", "-")
 
 
-def create_charge_array(charge, datetime, effective_start_date, effective_end_date, utility="electric"):
+def create_charge_array(
+    charge, datetime, effective_start_date, effective_end_date, utility="electric"
+):
     """Creates a single charge array based on the given parameters.
 
     Parameters
@@ -344,7 +346,11 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                 new_start = start + dt.timedelta(days=day)
                                 new_end = new_start + dt.timedelta(days=1)
                                 charge_array = create_charge_array(
-                                    charge, datetime, new_start, new_end, utility=utility
+                                    charge,
+                                    datetime,
+                                    new_start,
+                                    new_end,
+                                    utility=utility,
                                 )
                                 key_str = default_varstr_alias_func(
                                     utility,
