@@ -1,6 +1,7 @@
 import re
 import pytz
 import datetime
+import warnings
 import numpy as np
 import cvxpy as cp
 import pyomo.environ as pyo
@@ -240,10 +241,7 @@ def sum(expression, axis=0, model=None, varstr=None):
         var = model.find_component(varstr)
 
         def const_rule(model):
-            total = 0
-            for i in range(len(expression)):
-                total += expression[i]
-            return var == total
+            return var == pyo.summation(expression)
 
         constraint = pyo.Constraint(rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
@@ -261,8 +259,8 @@ def sum(expression, axis=0, model=None, varstr=None):
 
 
 def max_pos(expression, model=None, varstr=None):
-    """Returns the maximum positive scalar value of an expression.
-    I.e., max([x, 0]) where x is any element of the expression (if a matrix)
+    """Returns the element-wise maximum positive value of an expression.
+    Returns scalar for scalar input, indexed for indexed input.
 
     Parameters
     ----------
@@ -297,7 +295,8 @@ def max_pos(expression, model=None, varstr=None):
         [numpy.float, numpy.int, numpy.Array, cvxpy.Expression, or pyomo.environ.Var],
         pyomo.environ.Model
     )
-        Expression representing maximum positive scalar value of `expression`
+        Expression representing element-wise maximum positive value of `expression`.
+        Scalar input returns scalar output, indexed input returns indexed output.
     """
     if isinstance(
         expression, (LinearExpression, SumExpression, MonomialTermExpression, ScalarVar)
@@ -312,13 +311,14 @@ def max_pos(expression, model=None, varstr=None):
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
     elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
-        model.add_component(varstr, pyo.Var(bounds=(0, None)))
+        # Create indexed max_pos variable
+        model.add_component(varstr, pyo.Var(expression.index_set(), bounds=(0, None)))
         var = model.find_component(varstr)
 
-        def const_rule(model, t):
-            return var >= expression[t]
+        def const_rule(model, *indices):
+            return var[indices] >= expression[indices]
 
-        constraint = pyo.Constraint(model.t, rule=const_rule)
+        constraint = pyo.Constraint(expression.index_set(), rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
     elif isinstance(
@@ -326,7 +326,7 @@ def max_pos(expression, model=None, varstr=None):
     ):
         return (np.max(expression), model) if np.max(expression) > 0 else (0, model)
     elif isinstance(expression, cp.Expression):
-        return cp.max(cp.vstack([expression, 0])), None
+        return cp.maximum(expression, 0), None  # Works for scalar or vector
     else:
         raise TypeError(
             "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
@@ -437,6 +437,117 @@ def multiply(
         (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray),
     ):
         return (np.multiply(expression1, expression2), model)
+    else:
+        raise TypeError(
+            "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
+        )
+
+
+def get_decomposed_var_names(utility):
+    """Get consistent variable names for decomposed consumption variables."""
+    return f"{utility}_positive", f"{utility}_negative"
+
+
+def decompose_consumption(
+    expression, model=None, varstr=None, decomposition_type="absolute_value"
+):
+    """Decomposes consumption data into positive and negative components
+    And adds constraint such that total consumption equals
+    positive values minus negative values
+    (where negative values are stored as positive magnitudes).
+
+    Parameters
+    ----------
+    expression : [
+        numpy.Array,
+        cvxpy.Expression,
+        pyomo.core.expr.numeric_expr.NumericExpression,
+        pyomo.core.expr.numeric_expr.NumericNDArray,
+        pyomo.environ.Param,
+        pyomo.environ.Var
+    ]
+        Expression representing consumption data
+
+    model : pyomo.environ.Model
+        The model object associated with the problem.
+        Only used in the case of Pyomo, so `None` by default.
+
+    varstr : str
+        Name prefix for the variables to be created if using a Pyomo `model`
+
+    decomposition_type : str
+        Type of decomposition to use.
+        - "binary_variable": To be implemented
+        - "absolute_value": Creates nonlinear problem
+
+    Returns
+    -------
+    tuple
+        (positive_values, negative_values, model) where
+        positive_values and negative_values are both positive
+        with the constraint that total = positive - negative
+    """
+    if isinstance(expression, np.ndarray):
+        positive_values = np.maximum(expression, 0)
+        negative_values = np.maximum(-expression, 0)  # magnitude as positive
+        return positive_values, negative_values, model
+    elif isinstance(expression, cp.Expression):
+        if decomposition_type == "absolute_value":
+            positive_values, _ = max_pos(expression)
+            negative_values, _ = max_pos(-expression)  # magnitude as positive
+        else:
+            warnings.warn(
+                f"Decomposition type '{decomposition_type}' is not implemented yet. "
+                "Please use available type. Skipping decomposition.",
+                UserWarning,
+            )
+            positive_values = None
+            negative_values = None
+        return positive_values, negative_values, model
+    elif isinstance(expression, (pyo.Var, pyo.Param)):
+        if decomposition_type == "absolute_value":
+
+            # Use max_pos to create positive_var and negative_var
+            pos_name, neg_name = get_decomposed_var_names(varstr)
+            positive_var, model = max_pos(expression, model, pos_name)
+
+            # Create negative expression since pyomo won't take -expression directly
+            def negative_rule(model, t):
+                return -expression[t]
+
+            negative_expr = pyo.Expression(model.t, rule=negative_rule)
+            model.add_component(f"{varstr}_negative_expr", negative_expr)
+            negative_var, model = max_pos(negative_expr, model, neg_name)
+
+            # Add constraint to balance import and export decomposed values
+            def decomposition_rule(model, t):
+                return expression[t] == positive_var[t] - negative_var[t]
+
+            model.add_component(
+                f"{varstr}_decomposition_constraint",
+                pyo.Constraint(model.t, rule=decomposition_rule),
+            )
+
+            # Add constraint to ensure positive_var + negative_var = |expression|
+            # This both variables becoming larger due to artificial arbitrage
+            def magnitude_rule(model, t):
+                return positive_var[t] + negative_var[t] == abs(expression[t])
+
+            model.add_component(
+                f"{varstr}_magnitude_constraint",
+                pyo.Constraint(model.t, rule=magnitude_rule),
+            )
+
+            return positive_var, negative_var, model
+        else:
+            warnings.warn(
+                f"Decomposition type '{decomposition_type}' is not implemented yet. "
+                "Please use available type. Skipping decomposition.",
+                UserWarning,
+            )
+            positive_var = None
+            negative_var = None
+        return positive_var, negative_var, model
     else:
         raise TypeError(
             "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
