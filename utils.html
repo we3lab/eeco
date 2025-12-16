@@ -79,6 +79,8 @@
 <li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">utils</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.utils.convert_utc_to_timezone"><code class="docutils literal notranslate"><span class="pre">convert_utc_to_timezone()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.decompose_consumption"><code class="docutils literal notranslate"><span class="pre">decompose_consumption()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.get_decomposed_var_names"><code class="docutils literal notranslate"><span class="pre">get_decomposed_var_names()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.utils.get_freq_binsize_minutes"><code class="docutils literal notranslate"><span class="pre">get_freq_binsize_minutes()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.utils.idxparam_value"><code class="docutils literal notranslate"><span class="pre">idxparam_value()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.utils.max"><code class="docutils literal notranslate"><span class="pre">max()</span></code></a></li>
@@ -133,6 +135,48 @@ utc_hour (int): Hour in UTC (0-23).
 timezone_str (str): Timezone string, e.g., ‘America/New_York’.</p>
 <p>Returns:
 int: Corresponding hour in the specified timezone.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.decompose_consumption">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">decompose_consumption</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'absolute_value'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#decompose_consumption"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.decompose_consumption" title="Permalink to this definition"></a></dt>
+<dd><p>Decomposes consumption data into positive and negative components
+And adds constraint such that total consumption equals
+positive values minus negative values
+(where negative values are stored as positive magnitudes).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>expression</strong> (<em>[</em>) – numpy.Array,
+cvxpy.Expression,
+pyomo.core.expr.numeric_expr.NumericExpression,
+pyomo.core.expr.numeric_expr.NumericNDArray,
+pyomo.environ.Param,
+pyomo.environ.Var</p></li>
+<li><p><strong>]</strong> – Expression representing consumption data</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model</em>) – The model object associated with the problem.
+Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for the variables to be created if using a Pyomo <cite>model</cite></p></li>
+<li><p><strong>decomposition_type</strong> (<em>str</em>) – Type of decomposition to use.
+- “binary_variable”: To be implemented
+- “absolute_value”: Creates nonlinear problem</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(positive_values, negative_values, model) where
+positive_values and negative_values are both positive
+with the constraint that total = positive - negative</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.get_decomposed_var_names">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">get_decomposed_var_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">utility</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#get_decomposed_var_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.get_decomposed_var_names" title="Permalink to this definition"></a></dt>
+<dd><p>Get consistent variable names for decomposed consumption variables.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -212,8 +256,8 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.utils.max_pos">
 <span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">max_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#max_pos"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.max_pos" title="Permalink to this definition"></a></dt>
-<dd><p>Returns the maximum positive scalar value of an expression.
-I.e., max([x, 0]) where x is any element of the expression (if a matrix)</p>
+<dd><p>Returns the element-wise maximum positive value of an expression.
+Returns scalar for scalar input, indexed for indexed input.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -239,7 +283,8 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <dd class="field-odd"><p><ul class="simple">
 <li><p><em>(</em> – [numpy.float, numpy.int, numpy.Array, cvxpy.Expression, or pyomo.environ.Var],
 pyomo.environ.Model</p></li>
-<li><p><em>)</em> – Expression representing maximum positive scalar value of <cite>expression</cite></p></li>
+<li><p><em>)</em> – Expression representing element-wise maximum positive value of <cite>expression</cite>.
+Scalar input returns scalar output, indexed input returns indexed output.</p></li>
 </ul>
 </p>
 </dd>

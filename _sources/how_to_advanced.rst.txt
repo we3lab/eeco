@@ -135,31 +135,90 @@ the previous consumption during this billing period in conjunction with `consump
 How to Use `demand_scale_factor`
 ================================
 
-By default `demand_scale_factor=1`, meaning that there will be no modifications applied to the demand or energy charges.
-The purpose of the scale factor is to modify the demand charges proportional to energy charges when performing moving horizon optimization.
+The `demand_scale_factor` parameter allows you to scale demand charges to reflect shorter optimization horizons or to prioritize demand differently across sequential optimization horizons.
 
-There are various heuristics that could be used to calculate the scale factor (see :ref:`why-scale-demand`), 
-but for now let's assume that we just want to scale the demand charge down by the length of the horizon window proportional to billing period.
+By default, `demand_scale_factor=1.0`. Use values less than 1.0 when solving for a subset of the billing period, or to adjust demand charge weighting in sequential optimization.
+
+When `demand_scale_factor < 1.0`, demand charges are proportionally reduced to reflect the shorter optimization horizon. This is useful for:
+- Moving horizon optimization where you solve for sub-periods of the billing cycle
+- Sequential optimization where you want to reduce demand charge weighting as time goes on in the month
 
 .. code-block:: python
 
-    from eeco import costs
+    from electric_emission_cost import costs
     
-    # load necessary data 
-    start_dt = np.datetime64("2024-07-10")
-    end_dt = np.datetime64("2024-07-11")
-    charge_dict = costs.get_charge_dict(start_dt, end_dt, tariff_df)
-    num_timesteps_horizon = 96
-    num_timesteps_billing = 96 * 31
-
-    # this is just a CVXPY variable, but a user would provide constraints to the optimization problem
-    consumption_data_dict = {"electric": cp.Variable(num_timesteps), "gas": cp.Variable(num_timesteps)}
-
-    total_monthly_bill, _ = costs.calculate_costs(
+    # E.g. solving for 3 days out of a 30-day billing period
+    demand_scale_factor = 3 / 30
+    
+    result, model = costs.calculate_cost(
         charge_dict,
-        consumption_data_dict,
-        demand_scale_factor=num_timesteps_horizon/num_timesteps_billing
+        consumption_data,
+        demand_scale_factor=demand_scale_factor
+        # ...
     )
+
+For more details on applying the sequential optimization strategy, see:
+
+    Bolorinos, J., Mauter, M.S. & Rajagopal, R. Integrated Energy Flexibility Management at Wastewater Treatment Facilities. *Environ. Sci. Technol.* **57**, 46, 18362–18371 (2023). DOI: [10.1021/acs.est.3c00365](https://doi.org/10.1021/acs.est.3c00365)
+
+In `bibtex` format:
+
+.. code-block:: bibtex
+
+   @Article{Bolorinos2023,
+   author={Bolorinos, Jose
+   and Mauter, Meagan S.
+   and Rajagopal, Ram},
+   title={Integrated Energy Flexibility Management at Wastewater Treatment Facilities},
+   journal={Environmental Science & Technology},
+   year={2023},
+   month={Jun},
+   day={16},
+   volume={57},
+   number={46},
+   pages={18362--18371},
+   doi={10.1021/acs.est.3c00365},
+   url={https://doi.org/10.1021/acs.est.3c00365}
+   }
+
+
+.. _decompose-exports:
+
+How to Use `decomposition_type`
+===============================
+
+The `decomposition_type` parameter allows you to decompose consumption data into positive (imports) and negative (exports) components. This is useful when you have export charges or credits in your rate structure.
+Options include:
+
+- Default `None`
+- `"binary_variable"`: To be implemented
+- `"absolute_value"`
+
+.. code-block:: python
+
+    from electric_emission_cost import costs
+    
+    # Example with export charges
+    charge_dict = {
+        "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+    }
+    
+    consumption_data = {
+        "electric": np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
+        "gas": np.ones(96),
+    }
+    
+    # Decompose consumption into imports and exports
+    result, model = costs.calculate_cost(
+        charge_dict,
+        consumption_data,
+        decomposition_type="absolute_value"
+    )
+
+When decomposition_type is not None the function creates separate variables for positive consumption (imports) and negative consumption (exports)
+and applies export charges only to the export component.
+For Pyomo models, decomposition_type adds a constraint total_consumption = imports - exports
+
 
 .. _varstr-alias:
 

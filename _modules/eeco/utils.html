@@ -107,6 +107,7 @@
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pytz</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
@@ -346,10 +347,7 @@
         <span class="n">var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">)</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
-            <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">expression</span><span class="p">)):</span>
-                <span class="n">total</span> <span class="o">+=</span> <span class="n">expression</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="k">return</span> <span class="n">var</span> <span class="o">==</span> <span class="n">total</span>
+            <span class="k">return</span> <span class="n">var</span> <span class="o">==</span> <span class="n">pyo</span><span class="o">.</span><span class="n">summation</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
 
         <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
         <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
@@ -367,8 +365,8 @@
 
 
 <div class="viewcode-block" id="max_pos"><a class="viewcode-back" href="../../utils.html#eeco.utils.max_pos">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">max_pos</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the maximum positive scalar value of an expression.</span>
-<span class="sd">    I.e., max([x, 0]) where x is any element of the expression (if a matrix)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the element-wise maximum positive value of an expression.</span>
+<span class="sd">    Returns scalar for scalar input, indexed for indexed input.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -403,7 +401,8 @@
 <span class="sd">        [numpy.float, numpy.int, numpy.Array, cvxpy.Expression, or pyomo.environ.Var],</span>
 <span class="sd">        pyomo.environ.Model</span>
 <span class="sd">    )</span>
-<span class="sd">        Expression representing maximum positive scalar value of `expression`</span>
+<span class="sd">        Expression representing element-wise maximum positive value of `expression`.</span>
+<span class="sd">        Scalar input returns scalar output, indexed input returns indexed output.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span>
         <span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="n">LinearExpression</span><span class="p">,</span> <span class="n">SumExpression</span><span class="p">,</span> <span class="n">MonomialTermExpression</span><span class="p">,</span> <span class="n">ScalarVar</span><span class="p">)</span>
@@ -418,13 +417,14 @@
         <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="n">IndexedExpression</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">)):</span>
-        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)))</span>
+        <span class="c1"># Create indexed max_pos variable</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">expression</span><span class="o">.</span><span class="n">index_set</span><span class="p">(),</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)))</span>
         <span class="n">var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">)</span>
 
-        <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">var</span> <span class="o">&gt;=</span> <span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="o">*</span><span class="n">indices</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">var</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">expression</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span>
 
-        <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
+        <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">expression</span><span class="o">.</span><span class="n">index_set</span><span class="p">(),</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
         <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span>
@@ -432,7 +432,7 @@
     <span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">expression</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">cp</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">expression</span><span class="p">,</span> <span class="mi">0</span><span class="p">])),</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">cp</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="kc">None</span>  <span class="c1"># Works for scalar or vector</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
             <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>
@@ -543,6 +543,117 @@
         <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">),</span>
     <span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">expression1</span><span class="p">,</span> <span class="n">expression2</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_decomposed_var_names"><a class="viewcode-back" href="../../utils.html#eeco.utils.get_decomposed_var_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_decomposed_var_names</span><span class="p">(</span><span class="n">utility</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get consistent variable names for decomposed consumption variables.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_positive&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_negative&quot;</span></div>
+
+
+<div class="viewcode-block" id="decompose_consumption"><a class="viewcode-back" href="../../utils.html#eeco.utils.decompose_consumption">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">decompose_consumption</span><span class="p">(</span>
+    <span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">decomposition_type</span><span class="o">=</span><span class="s2">&quot;absolute_value&quot;</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Decomposes consumption data into positive and negative components</span>
+<span class="sd">    And adds constraint such that total consumption equals</span>
+<span class="sd">    positive values minus negative values</span>
+<span class="sd">    (where negative values are stored as positive magnitudes).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    expression : [</span>
+<span class="sd">        numpy.Array,</span>
+<span class="sd">        cvxpy.Expression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericExpression,</span>
+<span class="sd">        pyomo.core.expr.numeric_expr.NumericNDArray,</span>
+<span class="sd">        pyomo.environ.Param,</span>
+<span class="sd">        pyomo.environ.Var</span>
+<span class="sd">    ]</span>
+<span class="sd">        Expression representing consumption data</span>
+
+<span class="sd">    model : pyomo.environ.Model</span>
+<span class="sd">        The model object associated with the problem.</span>
+<span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
+
+<span class="sd">    varstr : str</span>
+<span class="sd">        Name prefix for the variables to be created if using a Pyomo `model`</span>
+
+<span class="sd">    decomposition_type : str</span>
+<span class="sd">        Type of decomposition to use.</span>
+<span class="sd">        - &quot;binary_variable&quot;: To be implemented</span>
+<span class="sd">        - &quot;absolute_value&quot;: Creates nonlinear problem</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        (positive_values, negative_values, model) where</span>
+<span class="sd">        positive_values and negative_values are both positive</span>
+<span class="sd">        with the constraint that total = positive - negative</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="n">positive_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">negative_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="o">-</span><span class="n">expression</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># magnitude as positive</span>
+        <span class="k">return</span> <span class="n">positive_values</span><span class="p">,</span> <span class="n">negative_values</span><span class="p">,</span> <span class="n">model</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">decomposition_type</span> <span class="o">==</span> <span class="s2">&quot;absolute_value&quot;</span><span class="p">:</span>
+            <span class="n">positive_values</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">max_pos</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
+            <span class="n">negative_values</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">max_pos</span><span class="p">(</span><span class="o">-</span><span class="n">expression</span><span class="p">)</span>  <span class="c1"># magnitude as positive</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Decomposition type &#39;</span><span class="si">{</span><span class="n">decomposition_type</span><span class="si">}</span><span class="s2">&#39; is not implemented yet. &quot;</span>
+                <span class="s2">&quot;Please use available type. Skipping decomposition.&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">positive_values</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">negative_values</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">positive_values</span><span class="p">,</span> <span class="n">negative_values</span><span class="p">,</span> <span class="n">model</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="p">(</span><span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">decomposition_type</span> <span class="o">==</span> <span class="s2">&quot;absolute_value&quot;</span><span class="p">:</span>
+
+            <span class="c1"># Use max_pos to create positive_var and negative_var</span>
+            <span class="n">pos_name</span><span class="p">,</span> <span class="n">neg_name</span> <span class="o">=</span> <span class="n">get_decomposed_var_names</span><span class="p">(</span><span class="n">varstr</span><span class="p">)</span>
+            <span class="n">positive_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">max_pos</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">pos_name</span><span class="p">)</span>
+
+            <span class="c1"># Create negative expression since pyomo won&#39;t take -expression directly</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">negative_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+                <span class="k">return</span> <span class="o">-</span><span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+
+            <span class="n">negative_expr</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Expression</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">negative_rule</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_negative_expr&quot;</span><span class="p">,</span> <span class="n">negative_expr</span><span class="p">)</span>
+            <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">max_pos</span><span class="p">(</span><span class="n">negative_expr</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">neg_name</span><span class="p">)</span>
+
+            <span class="c1"># Add constraint to balance import and export decomposed values</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">decomposition_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">positive_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">-</span> <span class="n">negative_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+
+            <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_decomposition_constraint&quot;</span><span class="p">,</span>
+                <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">decomposition_rule</span><span class="p">),</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Add constraint to ensure positive_var + negative_var = |expression|</span>
+            <span class="c1"># This both variables becoming larger due to artificial arbitrage</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">magnitude_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">positive_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="n">negative_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="nb">abs</span><span class="p">(</span><span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">])</span>
+
+            <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_magnitude_constraint&quot;</span><span class="p">,</span>
+                <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">magnitude_rule</span><span class="p">),</span>
+            <span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Decomposition type &#39;</span><span class="si">{</span><span class="n">decomposition_type</span><span class="si">}</span><span class="s2">&#39; is not implemented yet. &quot;</span>
+                <span class="s2">&quot;Please use available type. Skipping decomposition.&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">positive_var</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">negative_var</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
             <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>

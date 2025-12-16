@@ -74,6 +74,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#how-to-use-prev-demand-dict-and-prev-consumption-dict">How to Use <cite>prev_demand_dict</cite> and <cite>prev_consumption_dict</cite></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#how-to-use-consumption-estimate">How to Use <cite>consumption_estimate</cite></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#how-to-use-demand-scale-factor">How to Use <cite>demand_scale_factor</cite></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-use-decomposition-type">How to Use <cite>decomposition_type</cite></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#how-to-use-varstr-alias-func">How to Use <cite>varstr_alias_func</cite></a></li>
 </ul>
 </li>
@@ -119,7 +120,8 @@
 <li><p><a class="reference internal" href="#how-to-use-prev-demand-dict-and-prev-consumption-dict" id="id2">How to Use <cite>prev_demand_dict</cite> and <cite>prev_consumption_dict</cite></a></p></li>
 <li><p><a class="reference internal" href="#how-to-use-consumption-estimate" id="id3">How to Use <cite>consumption_estimate</cite></a></p></li>
 <li><p><a class="reference internal" href="#how-to-use-demand-scale-factor" id="id4">How to Use <cite>demand_scale_factor</cite></a></p></li>
-<li><p><a class="reference internal" href="#how-to-use-varstr-alias-func" id="id5">How to Use <cite>varstr_alias_func</cite></a></p></li>
+<li><p><a class="reference internal" href="#how-to-use-decomposition-type" id="id5">How to Use <cite>decomposition_type</cite></a></p></li>
+<li><p><a class="reference internal" href="#how-to-use-varstr-alias-func" id="id6">How to Use <cite>varstr_alias_func</cite></a></p></li>
 </ul>
 </li>
 </ul>
@@ -243,32 +245,82 @@ the previous consumption during this billing period in conjunction with <cite>co
 </section>
 <section id="how-to-use-demand-scale-factor">
 <span id="scale-demand"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">How to Use <cite>demand_scale_factor</cite></a><a class="headerlink" href="#how-to-use-demand-scale-factor" title="Permalink to this heading"></a></h2>
-<p>By default <cite>demand_scale_factor=1</cite>, meaning that there will be no modifications applied to the demand or energy charges.
-The purpose of the scale factor is to modify the demand charges proportional to energy charges when performing moving horizon optimization.</p>
-<p>There are various heuristics that could be used to calculate the scale factor (see <a class="reference internal" href="why_advanced.html#why-scale-demand"><span class="std std-ref">What Is the Purpose of demand_scale_factor?</span></a>),
-but for now let’s assume that we just want to scale the demand charge down by the length of the horizon window proportional to billing period.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">eeco</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
+<p>The <cite>demand_scale_factor</cite> parameter allows you to scale demand charges to reflect shorter optimization horizons or to prioritize demand differently across sequential optimization horizons.</p>
+<p>By default, <cite>demand_scale_factor=1.0</cite>. Use values less than 1.0 when solving for a subset of the billing period, or to adjust demand charge weighting in sequential optimization.</p>
+<p>When <cite>demand_scale_factor &lt; 1.0</cite>, demand charges are proportionally reduced to reflect the shorter optimization horizon. This is useful for:
+- Moving horizon optimization where you solve for sub-periods of the billing cycle
+- Sequential optimization where you want to reduce demand charge weighting as time goes on in the month</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
 
-<span class="c1"># load necessary data</span>
-<span class="n">start_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2024-07-10&quot;</span><span class="p">)</span>
-<span class="n">end_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2024-07-11&quot;</span><span class="p">)</span>
-<span class="n">charge_dict</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">tariff_df</span><span class="p">)</span>
-<span class="n">num_timesteps_horizon</span> <span class="o">=</span> <span class="mi">96</span>
-<span class="n">num_timesteps_billing</span> <span class="o">=</span> <span class="mi">96</span> <span class="o">*</span> <span class="mi">31</span>
+<span class="c1"># E.g. solving for 3 days out of a 30-day billing period</span>
+<span class="n">demand_scale_factor</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">30</span>
 
-<span class="c1"># this is just a CVXPY variable, but a user would provide constraints to the optimization problem</span>
-<span class="n">consumption_data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">),</span> <span class="s2">&quot;gas&quot;</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)}</span>
-
-<span class="n">total_monthly_bill</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_costs</span><span class="p">(</span>
+<span class="n">result</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
-    <span class="n">consumption_data_dict</span><span class="p">,</span>
-    <span class="n">demand_scale_factor</span><span class="o">=</span><span class="n">num_timesteps_horizon</span><span class="o">/</span><span class="n">num_timesteps_billing</span>
+    <span class="n">consumption_data</span><span class="p">,</span>
+    <span class="n">demand_scale_factor</span><span class="o">=</span><span class="n">demand_scale_factor</span>
+    <span class="c1"># ...</span>
 <span class="p">)</span>
 </pre></div>
 </div>
+<p>For more details on applying the sequential optimization strategy, see:</p>
+<blockquote>
+<div><p>Bolorinos, J., Mauter, M.S. &amp; Rajagopal, R. Integrated Energy Flexibility Management at Wastewater Treatment Facilities. <em>Environ. Sci. Technol.</em> <strong>57</strong>, 46, 18362–18371 (2023). DOI: [10.1021/acs.est.3c00365](<a class="reference external" href="https://doi.org/10.1021/acs.est.3c00365">https://doi.org/10.1021/acs.est.3c00365</a>)</p>
+</div></blockquote>
+<p>In <cite>bibtex</cite> format:</p>
+<div class="highlight-bibtex notranslate"><div class="highlight"><pre><span></span><span class="nc">@Article</span><span class="p">{</span><span class="nl">Bolorinos2023</span><span class="p">,</span>
+<span class="na">author</span><span class="p">=</span><span class="s">{Bolorinos, Jose</span>
+<span class="s">and Mauter, Meagan S.</span>
+<span class="s">and Rajagopal, Ram}</span><span class="p">,</span>
+<span class="na">title</span><span class="p">=</span><span class="s">{Integrated Energy Flexibility Management at Wastewater Treatment Facilities}</span><span class="p">,</span>
+<span class="na">journal</span><span class="p">=</span><span class="s">{Environmental Science &amp; Technology}</span><span class="p">,</span>
+<span class="na">year</span><span class="p">=</span><span class="s">{2023}</span><span class="p">,</span>
+<span class="na">month</span><span class="p">=</span><span class="s">{Jun}</span><span class="p">,</span>
+<span class="na">day</span><span class="p">=</span><span class="s">{16}</span><span class="p">,</span>
+<span class="na">volume</span><span class="p">=</span><span class="s">{57}</span><span class="p">,</span>
+<span class="na">number</span><span class="p">=</span><span class="s">{46}</span><span class="p">,</span>
+<span class="na">pages</span><span class="p">=</span><span class="s">{18362--18371}</span><span class="p">,</span>
+<span class="na">doi</span><span class="p">=</span><span class="s">{10.1021/acs.est.3c00365}</span><span class="p">,</span>
+<span class="na">url</span><span class="p">=</span><span class="s">{https://doi.org/10.1021/acs.est.3c00365}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="how-to-use-decomposition-type">
+<span id="decompose-exports"></span><h2><a class="toc-backref" href="#id5" role="doc-backlink">How to Use <cite>decomposition_type</cite></a><a class="headerlink" href="#how-to-use-decomposition-type" title="Permalink to this heading"></a></h2>
+<p>The <cite>decomposition_type</cite> parameter allows you to decompose consumption data into positive (imports) and negative (exports) components. This is useful when you have export charges or credits in your rate structure.
+Options include:</p>
+<ul class="simple">
+<li><p>Default <cite>None</cite></p></li>
+<li><p><cite>“binary_variable”</cite>: To be implemented</p></li>
+<li><p><cite>“absolute_value”</cite></p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
+
+<span class="c1"># Example with export charges</span>
+<span class="n">charge_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;electric_export_0_2024-07-10_2024-07-10_0&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">96</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.025</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">consumption_data</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">48</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">48</span><span class="p">)</span> <span class="o">*</span> <span class="mi">5</span><span class="p">]),</span>
+    <span class="s2">&quot;gas&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">96</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="c1"># Decompose consumption into imports and exports</span>
+<span class="n">result</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="n">consumption_data</span><span class="p">,</span>
+    <span class="n">decomposition_type</span><span class="o">=</span><span class="s2">&quot;absolute_value&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>When decomposition_type is not None the function creates separate variables for positive consumption (imports) and negative consumption (exports)
+and applies export charges only to the export component.
+For Pyomo models, decomposition_type adds a constraint total_consumption = imports - exports</p>
 </section>
 <section id="how-to-use-varstr-alias-func">
-<span id="varstr-alias"></span><h2><a class="toc-backref" href="#id5" role="doc-backlink">How to Use <cite>varstr_alias_func</cite></a><a class="headerlink" href="#how-to-use-varstr-alias-func" title="Permalink to this heading"></a></h2>
+<span id="varstr-alias"></span><h2><a class="toc-backref" href="#id6" role="doc-backlink">How to Use <cite>varstr_alias_func</cite></a><a class="headerlink" href="#how-to-use-varstr-alias-func" title="Permalink to this heading"></a></h2>
 <p>The software creates new variables when building the optimization problem.
 At times, users want control over what variable names are assigned to the new variables.
 By default, <cite>default_varstr_alias_func</cite> creates variable names of the following format:</p>

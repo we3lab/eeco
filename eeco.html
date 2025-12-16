@@ -140,7 +140,7 @@ cubic meter (gas energy), or $ / month (customer)</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.build_pyomo_costing">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">build_pyomo_costing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional_objective_terms=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#build_pyomo_costing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.build_pyomo_costing" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">build_pyomo_costing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional_objective_terms=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#build_pyomo_costing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.build_pyomo_costing" title="Permalink to this definition"></a></dt>
 <dd><p>Wrapper for <cite>calculate_cost</cite> to build the cost components into a Pyomo model.
 An objective function will be created in <cite>model.objective</cite>.</p>
 <dl class="field-list">
@@ -183,8 +183,13 @@ Default is None, meaning that all costs will be summed together.</p></li>
 when the optimization/simulation period is not a full billing cycle.
 Applied to monthly charges where end_date - start_date &gt; 1 day.
 Default is 1</p></li>
-<li><p><strong>additional_objective_terms</strong> (<em>list</em>) – Additional terms to be added to the objective function.
-Must be a list of pyomo Expressions.</p></li>
+<li><p><strong>additional_objective_terms</strong> (<em>pyomo.Expression, list</em>) – Additional terms to be added to the objective function.
+Can be a single pyomo Expression or a list of pyomo Expressions.
+Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
+<li><p><strong>decomposition_type</strong> (<em>str or None</em>) – Type of decomposition to use for consumption data.
+- “absolute_value”: Linear problem using absolute value
+- “binary_variable”: <cite>NotImplementedError</cite>
+- None (default): No decomposition, treats all consumption as imports</p></li>
 <li><p><strong>varstr_alias_func</strong> (<em>function</em>) – Function to generate variable name for pyomo,
 should take in a 6 inputs and generate a string output.
 The function will receive following six inputs:</p>
@@ -222,7 +227,7 @@ f”{utility}_{charge_type}_{name}_{charge_limit}”</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.calculate_cost">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_cost" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_cost" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates the cost of given charges (demand or energy) for the given
 billing rate structure, utility, and consumption information as a
 cvxpy expression or numpy array</p>
@@ -235,8 +240,17 @@ and values being the $ per kW (electric demand), kWh (electric energy/export),
 cubic meter / hour (gas demand), cubic meter (gas energy),
 or $ / month (customer)</p></li>
 <li><p><strong>consumption_data_dict</strong> (<em>dict</em>) – Baseline electrical and gas usage data as an optimization variable object
-with keys “electric” and “gas”. Values of the dictionary must be of type
-numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</p></li>
+with keys “electric” and “gas”. Supports two formats:</p>
+<dl class="simple">
+<dt>Default format:</dt><dd><p>Values are cumulative consumption data
+Example: {“electric”: np.array([]), “gas”: np.array([])}</p>
+</dd>
+<dt>Extended format for imports/exports:</dt><dd><p>Values are dictionaries with decomposed “imports” and “exports” keys
+Example: {“electric”: {“imports”: np.array([]), “exports”: np.array([])}}</p>
+</dd>
+</dl>
+<p>Values must be of type numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var.</p>
+</li>
 <li><p><strong>electric_consumption_units</strong> (<em>pint.Unit</em>) – Units for the electricity consumption data. Default is kW</p></li>
 <li><p><strong>gas_consumption_units</strong> (<em>pint.Unit</em>) – Units for the natural gas consumption data. Default is cubic meters / hour</p></li>
 <li><p><strong>resolution</strong> (<em>str</em>) – String of the form <cite>[int][str]</cite> giving the temporal resolution
@@ -270,9 +284,10 @@ Applied to monthly charges where end_date - start_date &gt; 1 day.
 Default is 1</p></li>
 <li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
-<li><p><strong>additional_objective_terms</strong> (<em>pyomo.Expression, list</em>) – Additional terms to be added to the objective function.
-Can be a single pyomo Expression or a list of pyomo Expressions.
-Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
+<li><p><strong>decomposition_type</strong> (<em>str or None</em>) – Type of decomposition to use for consumption data.
+- “absolute_value”: Linear problem using absolute value
+- “binary_variable”: <cite>NotImplementedError</cite>
+- None (default): No decomposition, treats all consumption as imports</p></li>
 <li><p><strong>varstr_alias_func</strong> (<em>function</em>) – Function to generate variable name for pyomo,
 should take in a 6 inputs and generate a string output.
 The function will receive following six inputs:</p>
@@ -358,7 +373,7 @@ and the second entry being the pyomo model object (or None)</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.calculate_energy_cost">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_energy_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divisor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_energy_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_energy_cost" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_energy_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_per_hour</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">next_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_energy_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_energy_cost" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates the cost of given energy charges for the given billing rate
 structure, utility, and consumption information.</p>
 <dl class="field-list simple">
@@ -366,7 +381,8 @@ structure, utility, and consumption information.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>charge_array</strong> (<em>numpy.ndarray</em>) – Array of the charges in $/kWh for electric and $/cubic meter for gas</p></li>
 <li><p><strong>consumption_data</strong> (<em>numpy.ndarray cvxpy.Expression, or pyomo.environ.Var</em>) – Baseline electrical or gas usage data as an optimization variable object</p></li>
-<li><p><strong>divisor</strong> (<em>int</em>) – Divisor for the energy charges, based on the timeseries resolution</p></li>
+<li><p><strong>n_per_hour</strong> (<em>int</em>) – Divisor for the indexed consumption data elements,
+based on the timeseries resolution</p></li>
 <li><p><strong>limit</strong> (<em>float</em>) – The total consumption, or limit, that this charge came into effect.
 Default is 0</p></li>
 <li><p><strong>next_limit</strong> (<em>float</em>) – The total consumption, or limit, that the next charge comes into effect.
@@ -375,7 +391,7 @@ Default is float(‘inf’) indicating that there is no higher tier</p></li>
 (e.g., previously in the month). Necessary for moving-horizon optimization.
 Default is 0</p></li>
 <li><p><strong>consumption_estimate</strong> (<em>float, array</em>) – Estimate of the total monthly energy consumption from baseline data
-in kWh, therms, or cubic meters.
+in kWh, therms OR cubic meters.
 Only used when <cite>consumption_data</cite> is cvxpy.Expression or pyomo.environ.Var
 for convex relaxation of tiered charges, while numpy.ndarray <cite>consumption_data</cite>
 will use actual consumption and ignore the estimate.</p></li>
@@ -401,8 +417,8 @@ and the second entry being the pyomo model object (or None)</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="eeco.costs.calculate_export_revenues">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_export_revenues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">export_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divisor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_export_revenues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_export_revenues" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="eeco.costs.calculate_export_revenue">
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_export_revenue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_per_hour</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_export_revenue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_export_revenue" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates the export revenues for the given billing rate structure,
 utility, and consumption information.</p>
 <p>Only flat rates for exports are supported (in $ / kWh).
@@ -411,28 +427,35 @@ Returns positive revenue values that should be subtracted from total cost.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>charge_array</strong> (<em>numpy.ndarray</em>) – array with price per kWh sold back to the grid</p></li>
-<li><p><strong>consumption_data</strong> (<em>numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</em>) – Baseline electrical or gas usage data as an optimization variable object</p></li>
-<li><p><strong>divisor</strong> (<em>int</em>) – Divisor for the export revenue, based on the timeseries resolution</p></li>
+<li><p><strong>consumption_data</strong> (<em>numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</em>) – Magnitude of exported electrical or gas usage data
+as an optimization variable object.
+Should be positive values.</p></li>
+<li><p><strong>n_per_hour</strong> (<em>int</em>) – Divisor for the indexed consumption data elements,
+based on the timeseries resolution</p></li>
 <li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <li><p><strong>varstr</strong> (<em>str</em>) – Name of the variable to be created if using a Pyomo <cite>model</cite></p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>tuple with the first entry being a float,
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+    is provided in <cite>charge_arrays</cite></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple with the first entry being a float,
 cvxpy Expression, or pyomo Var representing export revenues
-in USD for the given <cite>charge_array</cite> and <cite>consumption_data</cite>
+in USD for the given <cite>charge_array</cite> and <cite>export_data</cite>
 and the second entry being the pyomo model object (or None)</p>
 </dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a>), pyomo.Model</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a>), pyomo.Model</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.calculate_itemized_cost">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_itemized_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_itemized_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_itemized_cost" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_itemized_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_itemized_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_itemized_cost" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates itemized costs as a nested dictionary</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -444,9 +467,11 @@ cubic meter / hour (gas demand), cubic meter (gas energy),
 or $ / month (customer)</p></li>
 <li><p><strong>consumption_data_dict</strong> (<em>dict</em>) – Baseline electrical and gas usage data as an optimization variable object
 with keys “electric” and “gas”. Values of the dictionary must be of type
-numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</p></li>
+numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
+Positive values represent energy imports (consumption from the grid)
+Negative values represent energy exports (generation sent to the grid)</p></li>
 <li><p><strong>electric_consumption_units</strong> (<em>pint.Unit</em>) – Units for the electricity consumption data. Default is kW</p></li>
-<li><p><strong>gas_consumption_units</strong> (<em>pint.Unit</em>) – Units for the natura gas consumption data. Default is cubic meters / hour</p></li>
+<li><p><strong>gas_consumption_units</strong> (<em>pint.Unit</em>) – Units for the natural gas consumption data. Default is cubic meters / hour</p></li>
 <li><p><strong>resolution</strong> (<em>str</em>) – String of the form <cite>[int][str]</cite> giving the temporal resolution
 on which charges are assessed, the <cite>str</cite> portion corresponds to
 numpy.timedelta64 types for example ‘15m’ specifying demand charges
@@ -505,7 +530,7 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.create_charge_array">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">create_charge_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">effective_start_date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">effective_end_date</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#create_charge_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.create_charge_array" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">create_charge_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">effective_start_date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">effective_end_date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">utility</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'electric'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#create_charge_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.create_charge_array" title="Permalink to this definition"></a></dt>
 <dd><p>Creates a single charge array based on the given parameters.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -672,6 +697,69 @@ If False, they will not be scaled. Default is False.</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="eeco.costs.get_charge_name">
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">get_charge_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#get_charge_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.get_charge_name" title="Permalink to this definition"></a></dt>
+<dd><p>Get a unique row name for each row of charge df.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>charge</strong> (<em>dict or pandas.Series</em>) – The charge row data containing NAME and PERIOD fields</p></li>
+<li><p><strong>index</strong> (<em>int, optional</em>) – Index to use if name is empty or None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A unique name with underscores converted to dashes</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.costs.get_conversion_factors">
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">get_conversion_factors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">electric_consumption_units</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#get_conversion_factors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.get_conversion_factors" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate conversion factors for electric and gas utilities.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>electric_consumption_units</strong> (<em>pint.Unit</em>) – Units for the electricity consumption data</p></li>
+<li><p><strong>gas_consumption_units</strong> (<em>pint.Unit</em>) – Units for the gas consumption data</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dictionary with conversion factors for each utility type</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.costs.get_converted_consumption_data">
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">get_converted_consumption_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conversion_factors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#get_converted_consumption_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.get_converted_consumption_data" title="Permalink to this definition"></a></dt>
+<dd><p>Ensure consumption_data_dict has imports/exports structure
+with proper unit conversion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>consumption_data_dict</strong> (<em>dict</em>) – Dictionary with utility keys and consumption data values</p></li>
+<li><p><strong>conversion_factors</strong> (<em>dict</em>) – Dictionary with conversion factors for each utility type</p></li>
+<li><p><strong>decomposition_type</strong> (<em>str or None</em>) – Type of decomposition to apply (e.g., “absolute_value”)</p></li>
+<li><p><strong>model</strong> (<em>pyomo.Model, optional</em>) – Pyomo model object for optimization variables</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Updated consumption_data_dict with imports/exports structure</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.get_next_limit">
 <span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">get_next_limit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_substr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current_limit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keys</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#get_next_limit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.get_next_limit" title="Permalink to this definition"></a></dt>
 <dd><p>Finds the next charge limit for the charge represented by <cite>key</cite></p>
@@ -694,26 +782,6 @@ If False, they will not be scaled. Default is False.</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="eeco.costs.get_unique_row_name">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">get_unique_row_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#get_unique_row_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.get_unique_row_name" title="Permalink to this definition"></a></dt>
-<dd><p>Get a unique row name for each row of charge df.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>charge</strong> (<em>dict or pandas.Series</em>) – The charge row data containing NAME and PERIOD fields</p></li>
-<li><p><strong>index</strong> (<em>int, optional</em>) – Index to use if name is empty or None</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A unique name with underscores converted to dashes</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.parametrize_charge_dict">
 <span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">parametrize_charge_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variants</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#parametrize_charge_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.parametrize_charge_dict" title="Permalink to this definition"></a></dt>
 <dd><p>Takes in an existing charge_dict and varies it parametrically to create
@@ -726,7 +794,7 @@ billing csv file, then calls it on the dates specified.</p>
 <li><p><strong>end_dt</strong> (<em>datetime.datetime</em>) – last timestep to be included in the cost analysis</p></li>
 <li><p><strong>rate_data</strong> (<em>pandas.DataFrame</em>) – tariff data with required columns</p></li>
 <li><p><strong>variants</strong> (<em>list[dict]</em>) – List of dictionaries containing variation parameters with keys:
-- scale_ratios: dict for charge scaling (see parametrize_rate_data for options)
+- percent_change_dict: dict for charge scaling (see parametrize_rate_data)
 - shift_peak_hours_before: float to shift peak start, in hours
 - shift_peak_hours_after: float to shift peak end, in hours
 - variant_name: str (optional) variant name</p></li>
@@ -747,7 +815,7 @@ billing csv file, then calls it on the dates specified.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.parametrize_rate_data">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">parametrize_rate_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_ratios</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift_peak_hours_before</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift_peak_hours_after</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variant_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#parametrize_rate_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.parametrize_rate_data" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">parametrize_rate_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rate_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">percent_change_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift_peak_hours_before</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift_peak_hours_after</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variant_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#parametrize_rate_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.parametrize_rate_data" title="Permalink to this definition"></a></dt>
 <dd><p>Parametrize rate data by charge periods
 (peak, half-peak, off-peak, super-off-peak) or exact charge keys.
 Applies scaling and window shifting to create
@@ -756,7 +824,7 @@ alternative rate structures.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul>
 <li><p><strong>rate_data</strong> (<em>pandas.DataFrame</em>) – Tariff data with required columns</p></li>
-<li><p><strong>scale_ratios</strong> (<em>dict, optional</em>) – Dictionary for charge scaling. Can be one of three formats:</p>
+<li><p><strong>percent_change_dict</strong> (<em>dict, optional</em>) – Dictionary for charge scaling. Can be one of three formats:</p>
 <p>Format 1 - Nested dictionary with structure for charge scaling:</p>
 <blockquote>
 <div><p>{</p>
@@ -820,9 +888,9 @@ parametrized charges and windows</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If scale_ratios contains both period-based scaling and individual charge
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If percent_change_dict contains both period-based scaling and individual charge
     scaling for the same charge type</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – If scale_ratios contains exact charge keys that are not found in the data</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – If percent_change_dict contains exact charge keys that are not found in the data</p></li>
 </ul>
 </dd>
 </dl>
@@ -1082,6 +1150,48 @@ int: Corresponding hour in the specified timezone.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.decompose_consumption">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">decompose_consumption</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'absolute_value'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#decompose_consumption"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.decompose_consumption" title="Permalink to this definition"></a></dt>
+<dd><p>Decomposes consumption data into positive and negative components
+And adds constraint such that total consumption equals
+positive values minus negative values
+(where negative values are stored as positive magnitudes).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>expression</strong> (<em>[</em>) – numpy.Array,
+cvxpy.Expression,
+pyomo.core.expr.numeric_expr.NumericExpression,
+pyomo.core.expr.numeric_expr.NumericNDArray,
+pyomo.environ.Param,
+pyomo.environ.Var</p></li>
+<li><p><strong>]</strong> – Expression representing consumption data</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model</em>) – The model object associated with the problem.
+Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for the variables to be created if using a Pyomo <cite>model</cite></p></li>
+<li><p><strong>decomposition_type</strong> (<em>str</em>) – Type of decomposition to use.
+- “binary_variable”: To be implemented
+- “absolute_value”: Creates nonlinear problem</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(positive_values, negative_values, model) where
+positive_values and negative_values are both positive
+with the constraint that total = positive - negative</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.get_decomposed_var_names">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">get_decomposed_var_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">utility</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#get_decomposed_var_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.get_decomposed_var_names" title="Permalink to this definition"></a></dt>
+<dd><p>Get consistent variable names for decomposed consumption variables.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="eeco.utils.get_freq_binsize_minutes">
 <span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">get_freq_binsize_minutes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">freq</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#get_freq_binsize_minutes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.get_freq_binsize_minutes" title="Permalink to this definition"></a></dt>
 <dd><p>Gets size of a given time frequency expressed in units of minutes</p>
@@ -1158,8 +1268,8 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.utils.max_pos">
 <span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">max_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#max_pos"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.max_pos" title="Permalink to this definition"></a></dt>
-<dd><p>Returns the maximum positive scalar value of an expression.
-I.e., max([x, 0]) where x is any element of the expression (if a matrix)</p>
+<dd><p>Returns the element-wise maximum positive value of an expression.
+Returns scalar for scalar input, indexed for indexed input.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -1185,7 +1295,8 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <dd class="field-odd"><p><ul class="simple">
 <li><p><em>(</em> – [numpy.float, numpy.int, numpy.Array, cvxpy.Expression, or pyomo.environ.Var],
 pyomo.environ.Model</p></li>
-<li><p><em>)</em> – Expression representing maximum positive scalar value of <cite>expression</cite></p></li>
+<li><p><em>)</em> – Expression representing element-wise maximum positive value of <cite>expression</cite>.
+Scalar input returns scalar output, indexed input returns indexed output.</p></li>
 </ul>
 </p>
 </dd>
