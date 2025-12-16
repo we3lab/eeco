@@ -3147,7 +3147,8 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
         ),
         # negative values within tolerance (i.e., should be treated as zeros)
         (
-            # manually converted from therms to cubic meters to mimic automated conversion in `create_charge_array`
+            # manually converted from therms to cubic meters to 
+            # mimic automated conversion in `create_charge_array`
             {
                 "electric_energy_0_2024-08-01_2024-08-31_0": np.ones(2976)
                 * 0.05
