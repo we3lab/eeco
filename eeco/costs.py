@@ -83,7 +83,7 @@ def get_charge_name(charge, index=None):
     return name.replace("_", "-")
 
 
-def create_charge_array(charge, datetime, effective_start_date, effective_end_date):
+def create_charge_array(charge, datetime, effective_start_date, effective_end_date, utility="electric"):
     """Creates a single charge array based on the given parameters.
 
     Parameters
@@ -143,9 +143,15 @@ def create_charge_array(charge, datetime, effective_start_date, effective_end_da
         charge_array = apply_charge * charge[CHARGE_METRIC]
     except KeyError:
         warnings.warn(
-            "Please switch to new 'charge (metric)' and 'charge (imperial)' format",
+            "Please switch to new 'charge (metric)' and 'charge (imperial)' format. "
+            "Current behavior assumes units of therms (imperial) "
+            "and converts to cubic meters (metric) when unspecified.",
             DeprecationWarning,
         )
+        # if not specified, assume the old format (imperial units)
+        if utility == GAS:
+            # convert from therms to default units of cubic meters
+            charge[CHARGE] /= 2.83168  # therm per cubic meter of CH4
         charge_array = apply_charge * charge[CHARGE]
     return charge_array
 
@@ -287,9 +293,14 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                     charge_limits = effective_charges[BASIC_CHARGE_LIMIT]
                     warnings.warn(
                         "Please switch to new 'basic_charge_limit (metric)' "
-                        "and 'basic_charge_limit (imperial)' format",
+                        "and 'basic_charge_limit (imperial)' format. "
+                        "Current behavior assumes units of therms (imperial) "
+                        "and converts to cubic meters (metric) when unspecified.",
                         DeprecationWarning,
                     )
+                    if utility == GAS:
+                        # convert from therms to default units of cubic meters
+                        charge_limits *= 2.83168  # cubic meters per therm of CH4
                 for limit in np.unique(charge_limits):
                     if np.isnan(limit):
                         limit_charges = effective_charges.loc[
@@ -314,7 +325,9 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                 charge_array = np.array([charge[CHARGE]])
                                 warnings.warn(
                                     "Please switch to new 'charge (metric)' "
-                                    "and 'charge (imperial)' format",
+                                    "and 'charge (imperial)' format. Current behavior "
+                                    "assumes units of therms (imperial) and converts "
+                                    "to cubic meters (metric) when unspecified.",
                                     DeprecationWarning,
                                 )
                             key_str = default_varstr_alias_func(
@@ -331,7 +344,7 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                 new_start = start + dt.timedelta(days=day)
                                 new_end = new_start + dt.timedelta(days=1)
                                 charge_array = create_charge_array(
-                                    charge, datetime, new_start, new_end
+                                    charge, datetime, new_start, new_end, utility=utility
                                 )
                                 key_str = default_varstr_alias_func(
                                     utility,
@@ -344,7 +357,7 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                 add_to_charge_array(charge_dict, key_str, charge_array)
                         else:
                             charge_array = create_charge_array(
-                                charge, datetime, start, new_end
+                                charge, datetime, start, new_end, utility=utility
                             )
                             key_str = default_varstr_alias_func(
                                 utility,
@@ -751,7 +764,7 @@ def calculate_energy_cost(
 
     consumption_estimate : float, array
         Estimate of the total monthly energy consumption from baseline data
-        in kWh, therms, or cubic meters.
+        in kWh, therms OR cubic meters.
         Only used when `consumption_data` is cvxpy.Expression or pyomo.environ.Var
         for convex relaxation of tiered charges, while numpy.ndarray `consumption_data`
         will use actual consumption and ignore the estimate.
@@ -1606,8 +1619,8 @@ def calculate_itemized_cost(
     if decomposition_type is not None:
         for utility in consumption_data_dict.keys():
             if isinstance(consumption_data_dict[utility], cp.Variable):
-                raise ValueError(
-                    "decomposition types are not supported with CVXPY objects. "
+                raise NotImplementedError(
+                    "Decomposition types are not supported with CVXPY objects. "
                     "Use Pyomo instead for problems requiring decomposition_type."
                 )
 
