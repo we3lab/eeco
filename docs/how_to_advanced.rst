@@ -159,7 +159,7 @@ When `demand_scale_factor < 1.0`, demand charges are proportionally reduced to r
 
 For more details on applying the sequential optimization strategy, see:
 
-&nbsp; Bolorinos, J., Mauter, M.S. & Rajagopal, R. Integrated Energy Flexibility Management at Wastewater Treatment Facilities. *Environ. Sci. Technol.* **57**, 46, 18362–18371 (2023). DOI: [10.1021/acs.est.3c00365](https://doi.org/10.1021/acs.est.3c00365)
+    Bolorinos, J., Mauter, M.S. & Rajagopal, R. Integrated Energy Flexibility Management at Wastewater Treatment Facilities. *Environ. Sci. Technol.* **57**, 46, 18362–18371 (2023). DOI: [10.1021/acs.est.3c00365](https://doi.org/10.1021/acs.est.3c00365)
 
 In `bibtex` format:
 
@@ -185,11 +185,11 @@ In `bibtex` format:
 .. _decompose-exports:
 
 How to Use `decomposition_type`
-==============================
+===============================
 
 The `decomposition_type` parameter allows you to decompose consumption data into positive (imports) and negative (exports) components. This is useful when you have export charges or credits in your rate structure.
+Options include:
 
-Options:
 - Default `None`
 - `"binary_variable"`: To be implemented
 - `"absolute_value"`
