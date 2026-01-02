@@ -1032,7 +1032,7 @@ def get_converted_consumption_data(
                     varstr=converted_varstr,
                 )
 
-            if decomposition_type == "absolute_value":
+            if decomposition_type in ("absolute_value", "binary_big_M"):
                 # Decompose consumption data into positive and negative components
                 # with constraint that total = positive - negative
                 # (where negative is stored as positive magnitude)
@@ -1044,7 +1044,7 @@ def get_converted_consumption_data(
                         converted_consumption,
                         model=model,
                         varstr=utility,
-                        decomposition_type="absolute_value",
+                        decomposition_type=decomposition_type,
                     )
 
                 consumption_data_dict[utility] = {
@@ -1203,8 +1203,10 @@ def calculate_cost(
 
     decomposition_type : str or None
         Type of decomposition to use for consumption data.
-        - "absolute_value": Linear problem using absolute value
-        - "binary_variable": `NotImplementedError`
+        - "absolute_value": Uses max(x, 0) constraints. Creates nonlinear problem
+          for Pyomo due to abs() constraint.
+        - "binary_big_M": Uses binary indicator with Big-M constraints.
+          Creates a MILP (mixed-integer linear program) for Pyomo.
         - None (default): No decomposition, treats all consumption as imports
 
     varstr_alias_func: function
@@ -1451,8 +1453,10 @@ def build_pyomo_costing(
 
     decomposition_type : str or None
         Type of decomposition to use for consumption data.
-        - "absolute_value": Linear problem using absolute value
-        - "binary_variable": `NotImplementedError`
+        - "absolute_value": Uses max(x, 0) constraints. Creates nonlinear problem
+          for Pyomo due to abs() constraint.
+        - "binary_big_M": Uses binary indicator with Big-M constraints.
+          Creates a MILP (mixed-integer linear program) for Pyomo.
         - None (default): No decomposition, treats all consumption as imports
 
     varstr_alias_func: function
