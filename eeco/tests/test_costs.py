@@ -3636,10 +3636,7 @@ def test_calculate_itemized_cost_pyo(
             for charge_type in expected_itemized[utility]:
                 expected_value = expected_itemized[utility][charge_type]
                 actual_value = result[utility][charge_type]
-                if isinstance(actual_value, dict):
-                    actual_value = sum(pyo.value(v) for v in actual_value.values())
-                else:
-                    actual_value = pyo.value(actual_value)
+                actual_value = pyo.value(actual_value)
                 assert actual_value == expected_value
 
 
