@@ -3205,16 +3205,18 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             pytest.approx(1.2),
             {
                 "electric": {
-                    "energy": pytest.approx(1.2),
-                    "export": 0.0,
-                    "customer": 0.0,
-                    "demand": 0.0,
+                    "energy": {
+                        "electric_energy_0_2024-07-10_2024-07-10_0": pytest.approx(1.2)
+                    },
+                    "export": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "customer": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "demand": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
                 },
                 "gas": {
-                    "energy": 0.0,
-                    "export": 0.0,
-                    "customer": 0.0,
-                    "demand": 0.0,
+                    "energy": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "export": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "customer": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "demand": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
                 },
             },
         ),
@@ -3247,8 +3249,6 @@ def test_calculate_itemized_cost_np(
             print(f"utility: {utility} & charge_type: {charge_type}")
             expected_value = expected_itemized[utility][charge_type]
             actual_value = result[utility][charge_type]
-            if by_charge_key:
-                actual_value = sum(actual_value.values())
             assert actual_value == expected_value
 
 
@@ -3315,16 +3315,18 @@ def test_calculate_itemized_cost_np(
             pytest.approx(1.2),
             {
                 "electric": {
-                    "energy": pytest.approx(1.2),
-                    "export": 0.0,
-                    "customer": 0.0,
-                    "demand": 0.0,
+                    "energy": {
+                        "electric_energy_0_2024-07-10_2024-07-10_0": pytest.approx(1.2)
+                    },
+                    "export": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "customer": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "demand": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
                 },
                 "gas": {
-                    "energy": 0.0,
-                    "export": 0.0,
-                    "customer": 0.0,
-                    "demand": 0.0,
+                    "energy": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "export": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "customer": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "demand": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
                 },
             },
         ),
@@ -3376,9 +3378,10 @@ def test_calculate_itemized_cost_cvx(
                 expected_value = expected_itemized[utility][charge_type]
                 actual_value = result[utility][charge_type]
                 if by_charge_key:
-                    actual_value = sum(
-                        getattr(v, "value", v) for v in actual_value.values()
-                    )
+                    # Compare value for each key
+                    actual_value = {
+                        k: getattr(v, "value", v) for k, v in actual_value.items()
+                    }
                 else:
                     actual_value = getattr(actual_value, "value", actual_value)
                 assert actual_value == expected_value
@@ -3568,16 +3571,18 @@ def test_calculate_itemized_cost_cvx(
             pytest.approx(1.2),
             {
                 "electric": {
-                    "energy": pytest.approx(1.2),
-                    "export": 0.0,
-                    "customer": 0.0,
-                    "demand": 0.0,
+                    "energy": {
+                        "electric_energy_0_2024-07-10_2024-07-10_0": pytest.approx(1.2)
+                    },
+                    "export": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "customer": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "demand": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
                 },
                 "gas": {
-                    "energy": 0.0,
-                    "export": 0.0,
-                    "customer": 0.0,
-                    "demand": 0.0,
+                    "energy": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "export": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "customer": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
+                    "demand": {"electric_energy_0_2024-07-10_2024-07-10_0": 0.0},
                 },
             },
         ),
@@ -3603,6 +3608,7 @@ def test_calculate_itemized_cost_pyo(
         "decomposition_type": decomposition_type,
         "model": model,
         "consumption_estimate": consumption_estimate,
+        "by_charge_key": by_charge_key,
     }
     if electric_consumption_units is not None:
         kwargs["electric_consumption_units"] = electric_consumption_units
@@ -3636,8 +3642,12 @@ def test_calculate_itemized_cost_pyo(
             for charge_type in expected_itemized[utility]:
                 expected_value = expected_itemized[utility][charge_type]
                 actual_value = result[utility][charge_type]
-                actual_value = pyo.value(actual_value)
-                assert actual_value == expected_value
+                if by_charge_key:
+                    # Compare pyo.value for each key
+                    actual_value = {k: pyo.value(v) for k, v in actual_value.items()}
+                    assert actual_value == expected_value
+                else:
+                    assert pyo.value(actual_value) == expected_value
 
 
 @pytest.mark.parametrize(
