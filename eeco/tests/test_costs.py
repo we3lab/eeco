@@ -210,9 +210,6 @@ def test_create_charge_array(
         np.array([start_dt + np.timedelta64(i * 15, "m") for i in range(ntsteps)]),
         columns=["DateTime"],
     )
-    hours = datetime["DateTime"].dt.hour.astype(float).values
-    n_hours = int((end_dt - start_dt) / np.timedelta64(1, "h"))
-    hours += np.tile(np.arange(n_per_hour) / n_per_hour, n_hours)
 
     result = costs.create_charge_array(
         charge, datetime, effective_start_date, effective_end_date

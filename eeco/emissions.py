@@ -276,16 +276,24 @@ def get_carbon_intensity(
             # can assume start hour is zero since we are rolling over
             start_hour = 0
             if no_day_var:
-                start_index = emissions_data.loc[
-                    (emissions_data[HOUR_VARNAME] == start_hour)
-                    & (emissions_data[MONTH_VARNAME] == end_month)
-                ].idxmax()[0]
+                start_index = (
+                    emissions_data.loc[
+                        (emissions_data[HOUR_VARNAME] == start_hour)
+                        & (emissions_data[MONTH_VARNAME] == end_month)
+                    ]
+                    .idxmax()
+                    .iloc[0]
+                )
             else:
-                start_index = emissions_data.loc[
-                    (emissions_data[HOUR_VARNAME] == start_hour)
-                    & (emissions_data[DAY_VARNAME] == start_day)
-                    & (emissions_data[MONTH_VARNAME] == end_month)
-                ].idxmax()[0]
+                start_index = (
+                    emissions_data.loc[
+                        (emissions_data[HOUR_VARNAME] == start_hour)
+                        & (emissions_data[DAY_VARNAME] == start_day)
+                        & (emissions_data[MONTH_VARNAME] == end_month)
+                    ]
+                    .idxmax()
+                    .iloc[0]
+                )
             if i == int(old_end_day - 1):
                 # don't include last hour as it may not be a full hour
                 for j in range(0, int(end_hour)):

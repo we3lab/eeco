@@ -10,7 +10,6 @@ from eeco.units import u
 from eeco import emissions
 from eeco import utils as ut
 
-
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False
 

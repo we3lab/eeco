@@ -31,6 +31,7 @@ requirements = [
     "pyomo>=6.8",
     "gurobipy>=11.0",
     "pint>=0.19.2",
+    "pytz>=2025.1",
 ]
 
 extra_requirements = {
