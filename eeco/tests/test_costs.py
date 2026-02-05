@@ -104,6 +104,7 @@ def solve_pyo_problem(
     decomposition_type=None,
     charge_dict=None,
     consumption_data_dict=None,
+    by_charge_key=False,
 ):
     """Helper function to solve Pyomo optimization problem."""
     model.obj = pyo.Objective(expr=objective)
@@ -1513,7 +1514,12 @@ def test_calculate_cost_pyo(
     )
 
     solve_pyo_problem(
-        model, result, decomposition_type, charge_dict, consumption_data_dict
+        model,
+        result,
+        decomposition_type,
+        charge_dict,
+        consumption_data_dict,
+        by_charge_key=False,
     )
     assert pyo.value(result) == expected_cost
     assert model is not None
@@ -3090,6 +3096,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
     "consumption_data_dict, "
     "resolution, "
     "decomposition_type, "
+    "by_charge_key, "
     "expected_cost, "
     "expected_itemized",
     [
@@ -3099,6 +3106,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             {ELECTRIC: np.ones(96), GAS: np.ones(96)},
             "15m",
             None,
+            False,
             pytest.approx(1.2),
             {
                 "electric": {
@@ -3126,6 +3134,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             },
             "15m",
             "absolute_value",
+            False,
             pytest.approx(-1.5),
             {
                 "electric": {
@@ -3169,6 +3178,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             },
             "15m",
             None,
+            False,
             pytest.approx(2720.68223669),
             {
                 "electric": {
@@ -3185,6 +3195,29 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
                 },
             },
         ),
+        # by_charge_key=True
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
+            {ELECTRIC: np.ones(96), GAS: np.ones(96)},
+            "15m",
+            None,
+            True,
+            pytest.approx(1.2),
+            {
+                "electric": {
+                    "energy": pytest.approx(1.2),
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
+        ),
     ],
 )
 def test_calculate_itemized_cost_np(
@@ -3192,6 +3225,7 @@ def test_calculate_itemized_cost_np(
     consumption_data_dict,
     resolution,
     decomposition_type,
+    by_charge_key,
     expected_cost,
     expected_itemized,
 ):
@@ -3203,14 +3237,18 @@ def test_calculate_itemized_cost_np(
         decomposition_type=decomposition_type,
         electric_consumption_units=u.kW,
         gas_consumption_units=u.meter**3 / u.day,
+        by_charge_key=by_charge_key,
     )
 
-    assert result["total"] == expected_cost
+    total = sum(result["total"].values()) if by_charge_key else result["total"]
+    assert total == expected_cost
     for utility in expected_itemized:
         for charge_type in expected_itemized[utility]:
             print(f"utility: {utility} & charge_type: {charge_type}")
             expected_value = expected_itemized[utility][charge_type]
             actual_value = result[utility][charge_type]
+            if by_charge_key:
+                actual_value = sum(actual_value.values())
             assert actual_value == expected_value
 
 
@@ -3221,6 +3259,7 @@ def test_calculate_itemized_cost_np(
     "resolution, "
     "decomposition_type, "
     "consumption_estimate, "
+    "by_charge_key, "
     "expected_cost, "
     "expected_itemized",
     [
@@ -3231,6 +3270,7 @@ def test_calculate_itemized_cost_np(
             "15m",
             None,
             0,
+            False,
             pytest.approx(120.0),
             {
                 "electric": {
@@ -3260,8 +3300,33 @@ def test_calculate_itemized_cost_np(
             "15m",
             "absolute_value",
             240,
+            False,
             None,  # No expected cost - should raise NotImplementedError
             None,  # No expected itemized - should raise NotImplementedError
+        ),
+        # by_charge_key=True
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
+            {ELECTRIC: np.ones(96), GAS: np.ones(96)},
+            "15m",
+            None,
+            0,
+            True,
+            pytest.approx(1.2),
+            {
+                "electric": {
+                    "energy": pytest.approx(1.2),
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
         ),
     ],
 )
@@ -3271,6 +3336,7 @@ def test_calculate_itemized_cost_cvx(
     resolution,
     decomposition_type,
     consumption_estimate,
+    by_charge_key,
     expected_cost,
     expected_itemized,
 ):
@@ -3285,6 +3351,7 @@ def test_calculate_itemized_cost_cvx(
                 resolution=resolution,
                 decomposition_type=decomposition_type,
                 consumption_estimate=consumption_estimate,
+                by_charge_key=by_charge_key,
             )
     else:
         result, model = costs.calculate_itemized_cost(
@@ -3293,16 +3360,27 @@ def test_calculate_itemized_cost_cvx(
             resolution=resolution,
             decomposition_type=decomposition_type,
             consumption_estimate=consumption_estimate,
+            by_charge_key=by_charge_key,
         )
-        solve_cvx_problem(result["total"], constraints)
+        total_expr = sum(result["total"].values()) if by_charge_key else result["total"]
+        solve_cvx_problem(total_expr, constraints)
 
-        assert result["total"].value == expected_cost
+        total_value = (
+            sum(getattr(v, "value", v) for v in result["total"].values())
+            if by_charge_key
+            else getattr(result["total"], "value", result["total"])
+        )
+        assert total_value == expected_cost
         for utility in expected_itemized:
             for charge_type in expected_itemized[utility]:
                 expected_value = expected_itemized[utility][charge_type]
                 actual_value = result[utility][charge_type]
-                if hasattr(actual_value, "value"):
-                    actual_value = actual_value.value
+                if by_charge_key:
+                    actual_value = sum(
+                        getattr(v, "value", v) for v in actual_value.values()
+                    )
+                else:
+                    actual_value = getattr(actual_value, "value", actual_value)
                 assert actual_value == expected_value
 
 
@@ -3315,6 +3393,7 @@ def test_calculate_itemized_cost_cvx(
     "consumption_estimate, "
     "electric_consumption_units, "
     "gas_consumption_units, "
+    "by_charge_key, "
     "expected_cost, "
     "expected_itemized",
     [
@@ -3342,6 +3421,7 @@ def test_calculate_itemized_cost_cvx(
             2400,
             None,
             None,
+            False,
             pytest.approx(260),
             {
                 "electric": {
@@ -3373,6 +3453,7 @@ def test_calculate_itemized_cost_cvx(
             240,
             None,
             None,
+            False,
             pytest.approx(6.0 - 1.5),  # 48*10*0.05/4 - 48*5*0.025/4 = 6.0 - 1.5 = 4.5
             {
                 "electric": {
@@ -3406,6 +3487,7 @@ def test_calculate_itemized_cost_cvx(
             240,
             u.MW,
             u.meters**3 / u.hour,
+            False,
             pytest.approx(4.5),
             {
                 "electric": {
@@ -3437,6 +3519,7 @@ def test_calculate_itemized_cost_cvx(
             240,
             u.MW,
             u.meters**3 / u.hour,
+            False,
             pytest.approx(4500),
             {
                 "electric": {
@@ -3468,8 +3551,35 @@ def test_calculate_itemized_cost_cvx(
             240,
             None,
             None,
+            False,
             None,  # No expected cost - should raise NotImplementedError
-            None,  # No expected cost - should raise NotImplementedError
+            None,  # No expected itemized - should raise NotImplementedError
+        ),
+        # by_charge_key=True
+        (
+            {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
+            {ELECTRIC: np.ones(96), GAS: np.ones(96)},
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            True,
+            pytest.approx(1.2),
+            {
+                "electric": {
+                    "energy": pytest.approx(1.2),
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
         ),
     ],
 )
@@ -3481,6 +3591,7 @@ def test_calculate_itemized_cost_pyo(
     consumption_estimate,
     electric_consumption_units,
     gas_consumption_units,
+    by_charge_key,
     expected_cost,
     expected_itemized,
 ):
@@ -3505,19 +3616,30 @@ def test_calculate_itemized_cost_pyo(
             )
     else:
         result, model = costs.calculate_itemized_cost(charge_dict, pyo_vars, **kwargs)
+        total_expr = sum(result["total"].values()) if by_charge_key else result["total"]
         solve_pyo_problem(
             model,
-            result["total"],
+            total_expr,
             decomposition_type,
             charge_dict,
             consumption_data_dict,
+            by_charge_key,
         )
 
-        assert pyo.value(result["total"]) == expected_cost
+        total_value = (
+            sum(pyo.value(v) for v in result["total"].values())
+            if by_charge_key
+            else pyo.value(result["total"])
+        )
+        assert total_value == expected_cost
         for utility in expected_itemized:
             for charge_type in expected_itemized[utility]:
                 expected_value = expected_itemized[utility][charge_type]
-                actual_value = pyo.value(result[utility][charge_type])
+                actual_value = result[utility][charge_type]
+                if isinstance(actual_value, dict):
+                    actual_value = sum(pyo.value(v) for v in actual_value.values())
+                else:
+                    actual_value = pyo.value(actual_value)
                 assert actual_value == expected_value
 
 
