@@ -10,7 +10,6 @@ from eeco.units import u
 from eeco import emissions
 from eeco import utils as ut
 
-
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False
 
@@ -200,6 +199,14 @@ def test_calculate_grid_emissions_pyo(
             np.datetime64("2024-07-31T00:00"),  # Summer weekday
             np.datetime64("2024-08-02T00:00"),  # Summer weekday
             "data/emissions.csv",
+            "1h",
+            output_dir + "july_aug_len2d_res1h.csv",
+        ),
+        # Same dates / expected output as previous, but datetime input format
+        (
+            np.datetime64("2024-07-31T00:00"),
+            np.datetime64("2024-08-02T00:00"),
+            "data/emissions_datetime_local.csv",
             "1h",
             output_dir + "july_aug_len2d_res1h.csv",
         ),

@@ -31,7 +31,7 @@ A package for calculating electricity-related emissions and costs for optimizati
 Useful Commands
 ===============
 
-1. ``pip install -e .``
+1. ``pip install -e .`` (or ``pip install -e .[test]`` for development)
 
   This will install your package in editable mode.
 

@@ -124,10 +124,11 @@ def create_charge_array(
     # calculate months, days, and hours
     weekdays = datetime.dt.weekday.values
     months = datetime.dt.month.values
-    hours = datetime.dt.hour.astype(float).values
     # Make sure hours are being incremented by XX-minute increments
-    minutes = datetime.dt.minute.astype(float).values
-    hours += minutes / 60
+    hours = (
+        datetime.dt.hour.astype(float).values
+        + datetime.dt.minute.astype(float).values / 60
+    )
 
     # create an empty charge array
     apply_charge = (
@@ -153,6 +154,7 @@ def create_charge_array(
         # if not specified, assume the old format (imperial units)
         if utility == GAS:
             # convert from therms to default units of cubic meters
+            charge = charge.copy()
             charge[CHARGE] /= 2.83168  # therm per cubic meter of CH4
         charge_array = apply_charge * charge[CHARGE]
     return charge_array
@@ -246,10 +248,6 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
             ),
             columns=[DATETIME],
         )
-    hours = datetime[DATETIME].dt.hour.astype(float).values
-    # Make sure hours are being incremented by XX-minute increments
-    minutes = datetime[DATETIME].dt.minute.astype(float).values
-    hours += minutes / 60
 
     for utility in [GAS, ELECTRIC]:
         for charge_type in [CUSTOMER, ENERGY, DEMAND, EXPORT]:
@@ -1063,7 +1061,7 @@ def get_converted_consumption_data(
 
 
 def get_charge_array_duration(key):
-    """Parse a charge array key to determine the duration of the charge period.
+    """Parse a charge array key to determine the duration of the charge period in days.
 
     Parameters
     ----------
@@ -1095,7 +1093,7 @@ def get_charge_array_duration(key):
         try:
             start_date = dt.datetime.strptime(start_date_str, date_format)
             end_date = dt.datetime.strptime(end_date_str, date_format)
-            return (end_date - start_date).days
+            return (end_date - start_date).days + 1
         except ValueError:
             continue
 
@@ -1526,6 +1524,7 @@ def calculate_itemized_cost(
     demand_scale_factor=1,
     model=None,
     decomposition_type=None,
+    by_charge_key=False,
     varstr_alias_func=default_varstr_alias_func,
 ):
     """Calculates itemized costs as a nested dictionary
@@ -1586,6 +1585,15 @@ def calculate_itemized_cost(
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
 
+    decomposition_type : str or None
+        Type of decomposition to use for consumption data.
+        - "absolute_value": Linear problem using absolute value
+        - "binary_variable": `NotImplementedError`
+        - None (default): No decomposition, treats all consumption as imports
+
+    by_charge_key : bool
+        Whether to further itemize the results by charge key. Default is False.
+
     Returns
     -------
     dict
@@ -1593,33 +1601,33 @@ def calculate_itemized_cost(
 
             "electric": {
 
-                "customer": `float`
+                "customer": `float` or dict (key -> cost) if by_charge_key
 
-                "energy": `float`
+                "energy": `float` or dict (key -> cost) if by_charge_key
 
-                "demand": `float`
+                "demand": `float` or dict (key -> cost) if by_charge_key
 
-                "export": `float`
+                "export": `float` or dict (key -> cost) if by_charge_key
 
-                "total": `float`
+                "total": `float` or dict (key -> cost) if by_charge_key
 
             }
 
             "gas": {
 
-                "customer": `float`,
+                "customer": `float` or dict (key -> cost) if by_charge_key
 
-                "energy": `float`
+                "energy": `float` or dict (key -> cost) if by_charge_key
 
-                "demand": `float`
+                "demand": `float` or dict (key -> cost) if by_charge_key
 
-                "export": `float`
+                "export": `float` or dict (key -> cost) if by_charge_key
 
-                "total": `float`
+                "total": `float` or dict (key -> cost) if by_charge_key
 
             }
 
-            "total": `float`
+            "total": `float` or dict (key -> cost) if by_charge_key
 
         }
 
@@ -1642,19 +1650,25 @@ def calculate_itemized_cost(
         consumption_data_dict, conversion_factors, decomposition_type, model
     )
 
-    total_cost = 0
     results_dict = {}
+    utilities = [ELECTRIC, GAS] if desired_utility is None else [desired_utility]
+    charge_types = [CUSTOMER, ENERGY, DEMAND, EXPORT]
+    charge_items = list(charge_dict.items()) if by_charge_key else [(None, charge_dict)]
 
-    if desired_utility is None:
-        for utility in [ELECTRIC, GAS]:
-            results_dict[utility] = {}
-            total_utility_cost = 0
-            for charge_type in [CUSTOMER, ENERGY, DEMAND, EXPORT]:
+    for utility in utilities:
+        results_dict[utility] = {}
+        for charge_type in charge_types:
+            if by_charge_key:
+                results_dict[utility][charge_type] = {}
+
+            for charge_key, charges in charge_items:
+                charge_input = charges if charge_key is None else {charge_key: charges}
                 cost, model = calculate_cost(
-                    charge_dict,
+                    charge_input,
                     consumption_data_dict,
                     resolution=resolution,
                     prev_demand_dict=prev_demand_dict,
+                    prev_consumption_dict=prev_consumption_dict,
                     consumption_estimate=consumption_estimate,
                     desired_utility=utility,
                     desired_charge_type=charge_type,
@@ -1663,38 +1677,35 @@ def calculate_itemized_cost(
                     decomposition_type=decomposition_type,
                     varstr_alias_func=varstr_alias_func,
                 )
+                if by_charge_key:
+                    results_dict[utility][charge_type][charge_key] = cost
+                else:
+                    results_dict[utility][charge_type] = cost
 
-                results_dict[utility][charge_type] = cost
-                total_utility_cost += cost
-
-            results_dict[utility]["total"] = total_utility_cost
-            total_cost += total_utility_cost
-    else:
-        results_dict[desired_utility] = {}
-        total_utility_cost = 0
-        for charge_type in [CUSTOMER, ENERGY, DEMAND, EXPORT]:
-            cost, model = calculate_cost(
-                charge_dict,
-                consumption_data_dict,
-                resolution=resolution,
-                prev_demand_dict=prev_demand_dict,
-                prev_consumption_dict=prev_consumption_dict,
-                consumption_estimate=consumption_estimate,
-                desired_utility=desired_utility,
-                desired_charge_type=charge_type,
-                demand_scale_factor=demand_scale_factor,
-                model=model,
-                decomposition_type=decomposition_type,
-                varstr_alias_func=varstr_alias_func,
+        if by_charge_key:
+            results_dict[utility]["total"] = {}
+            for charge_type in charge_types:
+                for charge_key, cost in results_dict[utility][charge_type].items():
+                    results_dict[utility]["total"][charge_key] = (
+                        results_dict[utility]["total"].get(charge_key, 0) + cost
+                    )
+        else:
+            results_dict[utility]["total"] = sum(
+                results_dict[utility][charge_type] for charge_type in charge_types
             )
 
-            results_dict[desired_utility][charge_type] = cost
-            total_utility_cost += cost
+    if by_charge_key:
+        results_dict["total"] = {}
+        for utility in utilities:
+            for charge_key, cost in results_dict[utility]["total"].items():
+                results_dict["total"][charge_key] = (
+                    results_dict["total"].get(charge_key, 0) + cost
+                )
+    else:
+        results_dict["total"] = sum(
+            results_dict[utility]["total"] for utility in utilities
+        )
 
-        results_dict[desired_utility]["total"] = total_utility_cost
-        total_cost += total_utility_cost
-
-    results_dict["total"] = total_cost
     return results_dict, model
 
 
