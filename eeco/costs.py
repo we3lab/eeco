@@ -1061,7 +1061,7 @@ def get_converted_consumption_data(
 
 
 def get_charge_array_duration(key):
-    """Parse a charge array key to determine the duration of the charge period.
+    """Parse a charge array key to determine the duration of the charge period in days.
 
     Parameters
     ----------
@@ -1093,7 +1093,7 @@ def get_charge_array_duration(key):
         try:
             start_date = dt.datetime.strptime(start_date_str, date_format)
             end_date = dt.datetime.strptime(end_date_str, date_format)
-            return (end_date - start_date).days
+            return (end_date - start_date).days + 1
         except ValueError:
             continue
 
