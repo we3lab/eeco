@@ -3605,7 +3605,6 @@ def test_calculate_itemized_cost_cvx(
                     "demand": 0.0,
                 },
             },
-            None,  # No expected itemized
         ),
         # by_charge_key=True
         (
