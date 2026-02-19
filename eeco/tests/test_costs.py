@@ -2105,11 +2105,11 @@ def test_calculate_export_revenue(
     "key, expected",
     [
         # YYYYMMDD format
-        ("electric_demand_peak_20240710_20240710_100", 0),
-        ("electric_demand_peak_20240710_20240731_100", 21),
+        ("electric_demand_peak_20240710_20240710_100", 1),
+        ("electric_demand_peak_20240710_20240731_100", 22),
         # YYYY-MM-DD format
-        ("electric_energy_0_2024-07-10_2024-07-10_0", 0),
-        ("electric_energy_0_2024-07-10_2024-07-31_0", 21),
+        ("electric_energy_0_2024-07-10_2024-07-10_0", 1),
+        ("electric_energy_0_2024-07-10_2024-07-31_0", 22),
     ],
 )
 def test_get_charge_array_duration(key, expected):
