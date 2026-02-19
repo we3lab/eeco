@@ -217,8 +217,8 @@ def get_carbon_intensity(
     rollover = (
         end_month != start_month
     )  # should we extend this for multiple months/years?
+    old_end_day = end_day
     if rollover:
-        old_end_day = end_day
         end_day = calendar.monthrange(start_year, start_month)[1]
         old_end_hour = end_hour
         end_hour = 24
@@ -275,17 +275,27 @@ def get_carbon_intensity(
             # reset start index to first hour of the month
             # can assume start hour is zero since we are rolling over
             start_hour = 0
+            end_month_day = i + 1
             if no_day_var:
-                start_index = emissions_data.loc[
-                    (emissions_data[HOUR_VARNAME] == start_hour)
-                    & (emissions_data[MONTH_VARNAME] == end_month)
-                ].idxmax()[0]
+                start_index = (
+                    emissions_data.loc[
+                        (emissions_data[HOUR_VARNAME] == start_hour)
+                        & (emissions_data[MONTH_VARNAME] == end_month)
+                    ]
+                    .idxmax()
+                    .iloc[0]
+                )
             else:
-                start_index = emissions_data.loc[
-                    (emissions_data[HOUR_VARNAME] == start_hour)
-                    & (emissions_data[DAY_VARNAME] == start_day)
-                    & (emissions_data[MONTH_VARNAME] == end_month)
-                ].idxmax()[0]
+                start_index = (
+                    emissions_data.loc[
+                        (emissions_data[HOUR_VARNAME] == start_hour)
+                        # & (emissions_data[DAY_VARNAME] == start_day)
+                        & (emissions_data[DAY_VARNAME] == end_month_day)
+                        & (emissions_data[MONTH_VARNAME] == end_month)
+                    ]
+                    .idxmax()
+                    .iloc[0]
+                )
             if i == int(old_end_day - 1):
                 # don't include last hour as it may not be a full hour
                 for j in range(0, int(end_hour)):
@@ -310,6 +320,8 @@ def get_carbon_intensity(
     leftover = (ntsteps - num_first_min) % n_per_hour
     if leftover == 0:
         leftover = n_per_hour
+    # use last day of range if there is rollover
+    last_day = old_end_day if rollover else end_day
     if no_day_var:
         end_index = (
             emissions_data.loc[
@@ -323,7 +335,7 @@ def get_carbon_intensity(
         end_index = (
             emissions_data.loc[
                 (emissions_data[HOUR_VARNAME] == end_hour)
-                & (emissions_data[DAY_VARNAME] == end_day)
+                & (emissions_data[DAY_VARNAME] == last_day)
                 & (emissions_data[MONTH_VARNAME] == end_month)
             ]
             .idxmax()
