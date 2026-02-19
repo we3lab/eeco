@@ -145,7 +145,7 @@ When `demand_scale_factor < 1.0`, demand charges are proportionally reduced to r
 
 .. code-block:: python
 
-    from electric_emission_cost import costs
+    from eeco import costs
     
     # E.g. solving for 3 days out of a 30-day billing period
     demand_scale_factor = 3 / 30
@@ -190,34 +190,67 @@ How to Use `decomposition_type`
 The `decomposition_type` parameter allows you to decompose consumption data into positive (imports) and negative (exports) components. This is useful when you have export charges or credits in your rate structure.
 Options include:
 
-- Default `None`
-- `"binary_variable"`: To be implemented
-- `"absolute_value"`
+- Default `None`: No decomposition, consumption treated as imports only.
+- `"binary_big_M"`: Uses binary variable with Big-M constraints. Creates a MILP requiring a MIP solver (e.g., Gurobi). Supported for both CVXPY and Pyomo.
+- `"absolute_value"`: Uses absolute value constraints. Creates a nonlinear problem for Pyomo. **Not supported for CVXPY** (not DCP-compliant).
+
+For numpy arrays, `decomposition_type` is ignored since decomposition is a direct calculation.
+
+**Using Pyomo**
 
 .. code-block:: python
 
-    from electric_emission_cost import costs
+    from eeco import costs
+    import pyomo.environ as pyo
     
-    # Example with export charges
+    # Example with export charges using Pyomo
     charge_dict = {
+        "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
         "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
     }
     
+    # Create Pyomo model with consumption variable
+    model = pyo.ConcreteModel()
+    model.t = pyo.RangeSet(0, 95)
+    model.consumption = pyo.Var(model.t, bounds=(None, None))
+    
     consumption_data = {
-        "electric": np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
-        "gas": np.ones(96),
+        "electric": model.consumption,
+        "gas": pyo.Param(model.t, initialize=1),
     }
     
     # Decompose consumption into imports and exports
     result, model = costs.calculate_cost(
         charge_dict,
         consumption_data,
-        decomposition_type="absolute_value"
+        decomposition_type="binary_big_M",  # or "absolute_value" for Pyomo
+        model=model,
     )
 
-When decomposition_type is not None the function creates separate variables for positive consumption (imports) and negative consumption (exports)
-and applies export charges only to the export component.
-For Pyomo models, decomposition_type adds a constraint total_consumption = imports - exports
+**Using CVXPY**
+
+.. code-block:: python
+
+    from eeco import costs, utils
+    import cvxpy as cp
+    
+    # Create CVXPY variable for consumption
+    consumption = cp.Variable(96)
+    
+    # Decompose into imports/exports (returns constraints for CVXPY)
+    imports, exports, decomp_constraints = utils.decompose_consumption(
+        consumption, decomposition_type="binary_big_M"
+    )
+    
+    # Build your optimization problem with decomposition constraints
+    objective = cp.Minimize(...)  # your objective
+    constraints = decomp_constraints + [...]  # add other constraints
+    
+    prob = cp.Problem(objective, constraints)
+    prob.solve(solver=cp.GUROBI)  # requires MIP solver
+
+When `decomposition_type` is not `None`, the function creates separate variables for positive consumption (imports) and negative consumption (exports), applying export charges only to the export component.
+A constraint `total_consumption = imports - exports` is added to balance the decomposition.
 
 
 .. _varstr-alias:
