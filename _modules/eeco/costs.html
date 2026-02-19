@@ -1167,7 +1167,7 @@
 
 
 <div class="viewcode-block" id="get_charge_array_duration"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_charge_array_duration">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_array_duration</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse a charge array key to determine the duration of the charge period.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse a charge array key to determine the duration of the charge period in days.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1199,7 +1199,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="n">start_date</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">start_date_str</span><span class="p">,</span> <span class="n">date_format</span><span class="p">)</span>
             <span class="n">end_date</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">end_date_str</span><span class="p">,</span> <span class="n">date_format</span><span class="p">)</span>
-            <span class="k">return</span> <span class="p">(</span><span class="n">end_date</span> <span class="o">-</span> <span class="n">start_date</span><span class="p">)</span><span class="o">.</span><span class="n">days</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">end_date</span> <span class="o">-</span> <span class="n">start_date</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
             <span class="k">continue</span>
 
