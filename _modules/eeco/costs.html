@@ -230,10 +230,11 @@
     <span class="c1"># calculate months, days, and hours</span>
     <span class="n">weekdays</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">weekday</span><span class="o">.</span><span class="n">values</span>
     <span class="n">months</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="o">.</span><span class="n">values</span>
-    <span class="n">hours</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
     <span class="c1"># Make sure hours are being incremented by XX-minute increments</span>
-    <span class="n">minutes</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">minute</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
-    <span class="n">hours</span> <span class="o">+=</span> <span class="n">minutes</span> <span class="o">/</span> <span class="mi">60</span>
+    <span class="n">hours</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">datetime</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">minute</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="mi">60</span>
+    <span class="p">)</span>
 
     <span class="c1"># create an empty charge array</span>
     <span class="n">apply_charge</span> <span class="o">=</span> <span class="p">(</span>
@@ -259,6 +260,7 @@
         <span class="c1"># if not specified, assume the old format (imperial units)</span>
         <span class="k">if</span> <span class="n">utility</span> <span class="o">==</span> <span class="n">GAS</span><span class="p">:</span>
             <span class="c1"># convert from therms to default units of cubic meters</span>
+            <span class="n">charge</span> <span class="o">=</span> <span class="n">charge</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
             <span class="n">charge</span><span class="p">[</span><span class="n">CHARGE</span><span class="p">]</span> <span class="o">/=</span> <span class="mf">2.83168</span>  <span class="c1"># therm per cubic meter of CH4</span>
         <span class="n">charge_array</span> <span class="o">=</span> <span class="n">apply_charge</span> <span class="o">*</span> <span class="n">charge</span><span class="p">[</span><span class="n">CHARGE</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">charge_array</span></div>
@@ -352,10 +354,6 @@
             <span class="p">),</span>
             <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">DATETIME</span><span class="p">],</span>
         <span class="p">)</span>
-    <span class="n">hours</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">[</span><span class="n">DATETIME</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
-    <span class="c1"># Make sure hours are being incremented by XX-minute increments</span>
-    <span class="n">minutes</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">[</span><span class="n">DATETIME</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">minute</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
-    <span class="n">hours</span> <span class="o">+=</span> <span class="n">minutes</span> <span class="o">/</span> <span class="mi">60</span>
 
     <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="p">[</span><span class="n">GAS</span><span class="p">,</span> <span class="n">ELECTRIC</span><span class="p">]:</span>
         <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="p">[</span><span class="n">CUSTOMER</span><span class="p">,</span> <span class="n">ENERGY</span><span class="p">,</span> <span class="n">DEMAND</span><span class="p">,</span> <span class="n">EXPORT</span><span class="p">]:</span>
@@ -1628,6 +1626,7 @@
     <span class="n">demand_scale_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">decomposition_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">by_charge_key</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">default_varstr_alias_func</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculates itemized costs as a nested dictionary</span>
@@ -1688,6 +1687,15 @@
 <span class="sd">        The model object associated with the problem.</span>
 <span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
 
+<span class="sd">    decomposition_type : str or None</span>
+<span class="sd">        Type of decomposition to use for consumption data.</span>
+<span class="sd">        - &quot;absolute_value&quot;: Linear problem using absolute value</span>
+<span class="sd">        - &quot;binary_variable&quot;: `NotImplementedError`</span>
+<span class="sd">        - None (default): No decomposition, treats all consumption as imports</span>
+
+<span class="sd">    by_charge_key : bool</span>
+<span class="sd">        Whether to further itemize the results by charge key. Default is False.</span>
+
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    dict</span>
@@ -1695,33 +1703,33 @@
 
 <span class="sd">            &quot;electric&quot;: {</span>
 
-<span class="sd">                &quot;customer&quot;: `float`</span>
+<span class="sd">                &quot;customer&quot;: `float` or dict (key -&gt; cost) if by_charge_key</span>
 
-<span class="sd">                &quot;energy&quot;: `float`</span>
+<span class="sd">                &quot;energy&quot;: `float` or dict (key -&gt; cost) if by_charge_key</span>
 
-<span class="sd">                &quot;demand&quot;: `float`</span>
+<span class="sd">                &quot;demand&quot;: `float` or dict (key -&gt; cost) if by_charge_key</span>
 
-<span class="sd">                &quot;export&quot;: `float`</span>
+<span class="sd">                &quot;export&quot;: `float` or dict (key -&gt; cost) if by_charge_key</span>
 
-<span class="sd">                &quot;total&quot;: `float`</span>
+<span class="sd">                &quot;total&quot;: `float` or dict (key -&gt; cost) if by_charge_key</span>
 
 <span class="sd">            }</span>
 
 <span class="sd">            &quot;gas&quot;: {</span>
 
-<span class="sd">                &quot;customer&quot;: `float`,</span>
+<span class="sd">                &quot;customer&quot;: `float` or dict (key -&gt; cost) if by_charge_key</span>
 
-<span class="sd">                &quot;energy&quot;: `float`</span>
+<span class="sd">                &quot;energy&quot;: `float` or dict (key -&gt; cost) if by_charge_key</span>
 
-<span class="sd">                &quot;demand&quot;: `float`</span>
+<span class="sd">                &quot;demand&quot;: `float` or dict (key -&gt; cost) if by_charge_key</span>
 
-<span class="sd">                &quot;export&quot;: `float`</span>
+<span class="sd">                &quot;export&quot;: `float` or dict (key -&gt; cost) if by_charge_key</span>
 
-<span class="sd">                &quot;total&quot;: `float`</span>
+<span class="sd">                &quot;total&quot;: `float` or dict (key -&gt; cost) if by_charge_key</span>
 
 <span class="sd">            }</span>
 
-<span class="sd">            &quot;total&quot;: `float`</span>
+<span class="sd">            &quot;total&quot;: `float` or dict (key -&gt; cost) if by_charge_key</span>
 
 <span class="sd">        }</span>
 
@@ -1744,19 +1752,25 @@
         <span class="n">consumption_data_dict</span><span class="p">,</span> <span class="n">conversion_factors</span><span class="p">,</span> <span class="n">decomposition_type</span><span class="p">,</span> <span class="n">model</span>
     <span class="p">)</span>
 
-    <span class="n">total_cost</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">results_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">utilities</span> <span class="o">=</span> <span class="p">[</span><span class="n">ELECTRIC</span><span class="p">,</span> <span class="n">GAS</span><span class="p">]</span> <span class="k">if</span> <span class="n">desired_utility</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="n">desired_utility</span><span class="p">]</span>
+    <span class="n">charge_types</span> <span class="o">=</span> <span class="p">[</span><span class="n">CUSTOMER</span><span class="p">,</span> <span class="n">ENERGY</span><span class="p">,</span> <span class="n">DEMAND</span><span class="p">,</span> <span class="n">EXPORT</span><span class="p">]</span>
+    <span class="n">charge_items</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="k">if</span> <span class="n">by_charge_key</span> <span class="k">else</span> <span class="p">[(</span><span class="kc">None</span><span class="p">,</span> <span class="n">charge_dict</span><span class="p">)]</span>
 
-    <span class="k">if</span> <span class="n">desired_utility</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="p">[</span><span class="n">ELECTRIC</span><span class="p">,</span> <span class="n">GAS</span><span class="p">]:</span>
-            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="n">total_utility_cost</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="p">[</span><span class="n">CUSTOMER</span><span class="p">,</span> <span class="n">ENERGY</span><span class="p">,</span> <span class="n">DEMAND</span><span class="p">,</span> <span class="n">EXPORT</span><span class="p">]:</span>
+    <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="n">utilities</span><span class="p">:</span>
+        <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="n">charge_types</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">by_charge_key</span><span class="p">:</span>
+                <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="k">for</span> <span class="n">charge_key</span><span class="p">,</span> <span class="n">charges</span> <span class="ow">in</span> <span class="n">charge_items</span><span class="p">:</span>
+                <span class="n">charge_input</span> <span class="o">=</span> <span class="n">charges</span> <span class="k">if</span> <span class="n">charge_key</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{</span><span class="n">charge_key</span><span class="p">:</span> <span class="n">charges</span><span class="p">}</span>
                 <span class="n">cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_cost</span><span class="p">(</span>
-                    <span class="n">charge_dict</span><span class="p">,</span>
+                    <span class="n">charge_input</span><span class="p">,</span>
                     <span class="n">consumption_data_dict</span><span class="p">,</span>
                     <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">,</span>
                     <span class="n">prev_demand_dict</span><span class="o">=</span><span class="n">prev_demand_dict</span><span class="p">,</span>
+                    <span class="n">prev_consumption_dict</span><span class="o">=</span><span class="n">prev_consumption_dict</span><span class="p">,</span>
                     <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
                     <span class="n">desired_utility</span><span class="o">=</span><span class="n">utility</span><span class="p">,</span>
                     <span class="n">desired_charge_type</span><span class="o">=</span><span class="n">charge_type</span><span class="p">,</span>
@@ -1765,38 +1779,35 @@
                     <span class="n">decomposition_type</span><span class="o">=</span><span class="n">decomposition_type</span><span class="p">,</span>
                     <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">varstr_alias_func</span><span class="p">,</span>
                 <span class="p">)</span>
+                <span class="k">if</span> <span class="n">by_charge_key</span><span class="p">:</span>
+                    <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">][</span><span class="n">charge_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">cost</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">cost</span>
 
-                <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">cost</span>
-                <span class="n">total_utility_cost</span> <span class="o">+=</span> <span class="n">cost</span>
-
-            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_utility_cost</span>
-            <span class="n">total_cost</span> <span class="o">+=</span> <span class="n">total_utility_cost</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">results_dict</span><span class="p">[</span><span class="n">desired_utility</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">total_utility_cost</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="p">[</span><span class="n">CUSTOMER</span><span class="p">,</span> <span class="n">ENERGY</span><span class="p">,</span> <span class="n">DEMAND</span><span class="p">,</span> <span class="n">EXPORT</span><span class="p">]:</span>
-            <span class="n">cost</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">calculate_cost</span><span class="p">(</span>
-                <span class="n">charge_dict</span><span class="p">,</span>
-                <span class="n">consumption_data_dict</span><span class="p">,</span>
-                <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">,</span>
-                <span class="n">prev_demand_dict</span><span class="o">=</span><span class="n">prev_demand_dict</span><span class="p">,</span>
-                <span class="n">prev_consumption_dict</span><span class="o">=</span><span class="n">prev_consumption_dict</span><span class="p">,</span>
-                <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">consumption_estimate</span><span class="p">,</span>
-                <span class="n">desired_utility</span><span class="o">=</span><span class="n">desired_utility</span><span class="p">,</span>
-                <span class="n">desired_charge_type</span><span class="o">=</span><span class="n">charge_type</span><span class="p">,</span>
-                <span class="n">demand_scale_factor</span><span class="o">=</span><span class="n">demand_scale_factor</span><span class="p">,</span>
-                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-                <span class="n">decomposition_type</span><span class="o">=</span><span class="n">decomposition_type</span><span class="p">,</span>
-                <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">varstr_alias_func</span><span class="p">,</span>
+        <span class="k">if</span> <span class="n">by_charge_key</span><span class="p">:</span>
+            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="n">charge_types</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">charge_key</span><span class="p">,</span> <span class="n">cost</span> <span class="ow">in</span> <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">][</span><span class="n">charge_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">charge_key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">cost</span>
+                    <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+                <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span> <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="n">charge_types</span>
             <span class="p">)</span>
 
-            <span class="n">results_dict</span><span class="p">[</span><span class="n">desired_utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">cost</span>
-            <span class="n">total_utility_cost</span> <span class="o">+=</span> <span class="n">cost</span>
+    <span class="k">if</span> <span class="n">by_charge_key</span><span class="p">:</span>
+        <span class="n">results_dict</span><span class="p">[</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="n">utilities</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">charge_key</span><span class="p">,</span> <span class="n">cost</span> <span class="ow">in</span> <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">results_dict</span><span class="p">[</span><span class="s2">&quot;total&quot;</span><span class="p">][</span><span class="n">charge_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">results_dict</span><span class="p">[</span><span class="s2">&quot;total&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">charge_key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">cost</span>
+                <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">results_dict</span><span class="p">[</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="n">utilities</span>
+        <span class="p">)</span>
 
-        <span class="n">results_dict</span><span class="p">[</span><span class="n">desired_utility</span><span class="p">][</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_utility_cost</span>
-        <span class="n">total_cost</span> <span class="o">+=</span> <span class="n">total_utility_cost</span>
-
-    <span class="n">results_dict</span><span class="p">[</span><span class="s2">&quot;total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_cost</span>
     <span class="k">return</span> <span class="n">results_dict</span><span class="p">,</span> <span class="n">model</span></div>
 
 

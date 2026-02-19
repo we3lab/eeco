@@ -480,7 +480,7 @@ and the second entry being the pyomo model object (or None)</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.calculate_itemized_cost">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_itemized_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_itemized_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_itemized_cost" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_itemized_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">by_charge_key=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_itemized_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_itemized_cost" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates itemized costs as a nested dictionary</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -519,6 +519,11 @@ Applied to monthly charges where end_date - start_date &gt; 1 day.
 Default is 1</p></li>
 <li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
+<li><p><strong>decomposition_type</strong> (<em>str or None</em>) – Type of decomposition to use for consumption data.
+- “absolute_value”: Linear problem using absolute value
+- “binary_variable”: <cite>NotImplementedError</cite>
+- None (default): No decomposition, treats all consumption as imports</p></li>
+<li><p><strong>by_charge_key</strong> (<em>bool</em>) – Whether to further itemize the results by charge key. Default is False.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -526,23 +531,23 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <blockquote>
 <div><p>“electric”: {</p>
 <blockquote>
-<div><p>“customer”: <cite>float</cite></p>
-<p>”energy”: <cite>float</cite></p>
-<p>”demand”: <cite>float</cite></p>
-<p>”export”: <cite>float</cite></p>
-<p>”total”: <cite>float</cite></p>
+<div><p>“customer”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
+<p>”energy”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
+<p>”demand”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
+<p>”export”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
+<p>”total”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
 </div></blockquote>
 <p>}</p>
 <p>”gas”: {</p>
 <blockquote>
-<div><p>“customer”: <cite>float</cite>,</p>
-<p>”energy”: <cite>float</cite></p>
-<p>”demand”: <cite>float</cite></p>
-<p>”export”: <cite>float</cite></p>
-<p>”total”: <cite>float</cite></p>
+<div><p>“customer”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
+<p>”energy”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
+<p>”demand”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
+<p>”export”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
+<p>”total”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
 </div></blockquote>
 <p>}</p>
-<p>”total”: <cite>float</cite></p>
+<p>”total”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
 </div></blockquote>
 <p>}</p>
 </p>
@@ -690,7 +695,7 @@ If False, they will not be scaled. Default is False.</p></li>
 <dd class="field-even"><p>DataFrame of charge arrays</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)">pandas.DataFrame</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.1)">pandas.DataFrame</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -909,7 +914,7 @@ Must be multiple of 0.25 hours. Default 0</p></li>
 parametrized charges and windows</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)">pandas.DataFrame</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.1)">pandas.DataFrame</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
