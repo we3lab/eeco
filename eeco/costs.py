@@ -638,7 +638,9 @@ def calculate_demand_cost(
         in USD for the given `charge_array` and `consumption_data`
         and the second entry being the pyomo model object (or None)
     """
-    if isinstance(consumption_estimate, (float, int)):
+    if isinstance(prev_demand, cp.Expression):  # for cp.Parameter
+        consumption_max = None  # evaluate later for parameterized prev_demand
+    elif isinstance(consumption_estimate, (float, int)):
         consumption_max = max(float(consumption_estimate), prev_demand)
     else:
         consumption_max = max(max(consumption_estimate), prev_demand)
@@ -692,17 +694,18 @@ def calculate_demand_cost(
         else:
             demand_charged = np.array([0])
     elif isinstance(consumption_data, cp.Expression):
-        if consumption_max >= limit:
-            if consumption_max <= next_limit:
+        _use_param = consumption_max is None  # True when prev_demand is a cp.Parameter
+        if _use_param or consumption_max >= limit:
+            if not _use_param and consumption_max > next_limit:
                 demand_charged, model = ut.multiply(
-                    consumption_data - limit,
+                    next_limit - limit,
                     charge_array,
                     model=model,
                     varstr=varstr + "_multiply",
                 )
             else:
                 demand_charged, model = ut.multiply(
-                    next_limit - limit,
+                    consumption_data - limit,
                     charge_array,
                     model=model,
                     varstr=varstr + "_multiply",
@@ -1286,14 +1289,22 @@ def calculate_cost(
 
             if isinstance(consumption_estimate, (float, int)):
                 # convert single kWh to the equivalent kW per timestep
-                demand_consumption_estimate = (
-                    consumption_estimate * n_per_hour / len(charge_array)
+                _n = (
+                    charge_array.size
+                    if isinstance(charge_array, cp.Expression)
+                    else len(charge_array)
                 )
+                demand_consumption_estimate = consumption_estimate * n_per_hour / _n
             elif isinstance(consumption_estimate, (dict)):
                 demand_consumption_estimate = consumption_estimate[utility]
                 if isinstance(demand_consumption_estimate, (float, int)):
+                    _n = (
+                        charge_array.size
+                        if isinstance(charge_array, cp.Expression)
+                        else len(charge_array)
+                    )
                     demand_consumption_estimate = (
-                        demand_consumption_estimate * n_per_hour / len(charge_array)
+                        demand_consumption_estimate * n_per_hour / _n
                     )
             else:
                 demand_consumption_estimate = consumption_estimate
