@@ -109,9 +109,9 @@ def solve_pyo_problem(
     """Helper function to solve Pyomo optimization problem."""
     model.obj = pyo.Objective(expr=objective)
 
-    if decomposition_type is not None:  # Nonlinear when decomposition_type used
+    if decomposition_type == "absolute_value":  # Nonlinear due to abs() constraint
         solver = pyo.SolverFactory("ipopt")
-    else:  # Gurobi otherwise
+    else:  # MILP or LP can use Gurobi
         solver = pyo.SolverFactory("gurobi")
 
     solver.solve(model)
@@ -800,7 +800,7 @@ def test_calculate_cost_np(
             )
     elif expect_warning:
         with pytest.warns(UserWarning):
-            result, model = costs.calculate_cost(
+            result, model, _ = costs.calculate_cost(
                 charge_dict,
                 consumption_data_dict,
                 resolution=resolution,
@@ -812,7 +812,7 @@ def test_calculate_cost_np(
         assert result == expected_cost
         assert model is None
     else:
-        result, model = costs.calculate_cost(
+        result, model, _ = costs.calculate_cost(
             charge_dict,
             consumption_data_dict,
             resolution=resolution,
@@ -1171,7 +1171,7 @@ def test_calculate_cost_cvx(
 ):
     cvx_vars, constraints = setup_cvx_vars_constraints(consumption_data_dict)
 
-    result, model = costs.calculate_cost(
+    result, model, _ = costs.calculate_cost(
         charge_dict,
         cvx_vars,
         resolution=resolution,
@@ -1480,6 +1480,41 @@ def test_calculate_cost_cvx(
             None,
             pytest.approx(9.0),
         ),
+        # binary_big_M decomposition: export charges only
+        (
+            {
+                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+            },
+            {
+                ELECTRIC: np.concatenate([np.ones(48), -np.ones(48)]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            "binary_big_M",
+            pytest.approx(-0.3),
+        ),
+        # binary_big_M decomposition: energy and export charges
+        (
+            {
+                "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
+                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+            },
+            {
+                ELECTRIC: np.concatenate([np.ones(48), -np.ones(48)]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            "binary_big_M",
+            pytest.approx(0.6 - 0.3),  # 48*1*0.05/4 - 48*1*0.025/4 = 0.6 - 0.3 = 0.3
+        ),
     ],
 )
 def test_calculate_cost_pyo(
@@ -1501,7 +1536,7 @@ def test_calculate_cost_pyo(
     else:
         consumption_input = pyo_vars
 
-    result, model = costs.calculate_cost(
+    result, model, _ = costs.calculate_cost(
         charge_dict,
         consumption_input,
         resolution=resolution,
@@ -1840,7 +1875,7 @@ def test_calculate_demand_costs(
     )
     if expect_warning:
         with pytest.warns(UserWarning):
-            result, model = costs.calculate_cost(
+            result, model, _ = costs.calculate_cost(
                 charge_dict,
                 consumption_data_dict,
                 prev_demand_dict=prev_demand_dict,
@@ -1850,7 +1885,7 @@ def test_calculate_demand_costs(
                 demand_scale_factor=scale_factor,
             )
     else:
-        result, model = costs.calculate_cost(
+        result, model, _ = costs.calculate_cost(
             charge_dict,
             consumption_data_dict,
             prev_demand_dict=prev_demand_dict,
@@ -2037,7 +2072,7 @@ def test_calculate_energy_costs(
         end_dt,
         billing_data,
     )
-    result, model = costs.calculate_cost(
+    result, model, _ = costs.calculate_cost(
         charge_dict,
         consumption_data_dict,
         prev_consumption_dict=prev_consumption_dict,
@@ -3232,7 +3267,7 @@ def test_calculate_itemized_cost_np(
     expected_itemized,
 ):
     """Test calculate_itemized_cost with and without decomposition_type."""
-    result, model = costs.calculate_itemized_cost(
+    result, model, _ = costs.calculate_itemized_cost(
         charge_dict,
         consumption_data_dict,
         resolution=resolution,
@@ -3356,7 +3391,7 @@ def test_calculate_itemized_cost_cvx(
                 by_charge_key=by_charge_key,
             )
     else:
-        result, model = costs.calculate_itemized_cost(
+        result, model, cvxpy_constraints = costs.calculate_itemized_cost(
             charge_dict,
             cvx_vars,
             resolution=resolution,
@@ -3539,7 +3574,7 @@ def test_calculate_itemized_cost_cvx(
                 },
             },
         ),
-        # `binary_variable` for `decomposition_type` should raise `NotImplementedError`
+        # binary_big_M decomposition (MILP)
         (
             {
                 "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
@@ -3550,13 +3585,26 @@ def test_calculate_itemized_cost_cvx(
                 GAS: np.ones(96),
             },
             "15m",
-            "binary_variable",
+            "binary_big_M",
             240,
             None,
             None,
             False,
-            None,  # No expected cost - should raise NotImplementedError
-            None,  # No expected itemized - should raise NotImplementedError
+            pytest.approx(6.0 - 1.5),  # 48*10*0.05/4 - 48*5*0.025/4 = 6.0 - 1.5 = 4.5
+            {
+                "electric": {
+                    "energy": pytest.approx(6.0),  # 48*10*0.05/4 = 6.0
+                    "export": pytest.approx(-1.5),  # -48*5*0.025/4 = 1.5
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
         ),
         # by_charge_key=True
         (
@@ -3617,11 +3665,13 @@ def test_calculate_itemized_cost_pyo(
 
     if decomposition_type == "binary_variable":
         with pytest.raises(NotImplementedError):
-            result, model = costs.calculate_itemized_cost(
+            result, model, _ = costs.calculate_itemized_cost(
                 charge_dict, pyo_vars, **kwargs
             )
     else:
-        result, model = costs.calculate_itemized_cost(charge_dict, pyo_vars, **kwargs)
+        result, model, _ = costs.calculate_itemized_cost(
+            charge_dict, pyo_vars, **kwargs
+        )
         total_expr = sum(result["total"].values()) if by_charge_key else result["total"]
         solve_pyo_problem(
             model,
@@ -3676,7 +3726,7 @@ def test_individual_charge(charge_list, expected_result):
         tariff_df,
     )
 
-    cost, _ = costs.calculate_cost(
+    cost, _, _ = costs.calculate_cost(
         charge_dict,
         {"electric": baseload, "gas": np.zeros_like(baseload)},
         resolution="15m",
