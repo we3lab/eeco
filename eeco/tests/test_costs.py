@@ -800,7 +800,7 @@ def test_calculate_cost_np(
             )
     elif expect_warning:
         with pytest.warns(UserWarning):
-            result, model = costs.calculate_cost(
+            result, model, _ = costs.calculate_cost(
                 charge_dict,
                 consumption_data_dict,
                 resolution=resolution,
@@ -812,7 +812,7 @@ def test_calculate_cost_np(
         assert result == expected_cost
         assert model is None
     else:
-        result, model = costs.calculate_cost(
+        result, model, _ = costs.calculate_cost(
             charge_dict,
             consumption_data_dict,
             resolution=resolution,
@@ -1171,7 +1171,7 @@ def test_calculate_cost_cvx(
 ):
     cvx_vars, constraints = setup_cvx_vars_constraints(consumption_data_dict)
 
-    result, model = costs.calculate_cost(
+    result, model, _ = costs.calculate_cost(
         charge_dict,
         cvx_vars,
         resolution=resolution,
@@ -1536,7 +1536,7 @@ def test_calculate_cost_pyo(
     else:
         consumption_input = pyo_vars
 
-    result, model = costs.calculate_cost(
+    result, model, _ = costs.calculate_cost(
         charge_dict,
         consumption_input,
         resolution=resolution,
@@ -1875,7 +1875,7 @@ def test_calculate_demand_costs(
     )
     if expect_warning:
         with pytest.warns(UserWarning):
-            result, model = costs.calculate_cost(
+            result, model, _ = costs.calculate_cost(
                 charge_dict,
                 consumption_data_dict,
                 prev_demand_dict=prev_demand_dict,
@@ -1885,7 +1885,7 @@ def test_calculate_demand_costs(
                 demand_scale_factor=scale_factor,
             )
     else:
-        result, model = costs.calculate_cost(
+        result, model, _ = costs.calculate_cost(
             charge_dict,
             consumption_data_dict,
             prev_demand_dict=prev_demand_dict,
@@ -2072,7 +2072,7 @@ def test_calculate_energy_costs(
         end_dt,
         billing_data,
     )
-    result, model = costs.calculate_cost(
+    result, model, _ = costs.calculate_cost(
         charge_dict,
         consumption_data_dict,
         prev_consumption_dict=prev_consumption_dict,
@@ -3267,7 +3267,7 @@ def test_calculate_itemized_cost_np(
     expected_itemized,
 ):
     """Test calculate_itemized_cost with and without decomposition_type."""
-    result, model = costs.calculate_itemized_cost(
+    result, model, _ = costs.calculate_itemized_cost(
         charge_dict,
         consumption_data_dict,
         resolution=resolution,
@@ -3391,7 +3391,7 @@ def test_calculate_itemized_cost_cvx(
                 by_charge_key=by_charge_key,
             )
     else:
-        result, model = costs.calculate_itemized_cost(
+        result, model, cvxpy_constraints = costs.calculate_itemized_cost(
             charge_dict,
             cvx_vars,
             resolution=resolution,
@@ -3665,11 +3665,13 @@ def test_calculate_itemized_cost_pyo(
 
     if decomposition_type == "binary_variable":
         with pytest.raises(NotImplementedError):
-            result, model = costs.calculate_itemized_cost(
+            result, model, _ = costs.calculate_itemized_cost(
                 charge_dict, pyo_vars, **kwargs
             )
     else:
-        result, model = costs.calculate_itemized_cost(charge_dict, pyo_vars, **kwargs)
+        result, model, _ = costs.calculate_itemized_cost(
+            charge_dict, pyo_vars, **kwargs
+        )
         total_expr = sum(result["total"].values()) if by_charge_key else result["total"]
         solve_pyo_problem(
             model,
@@ -3724,7 +3726,7 @@ def test_individual_charge(charge_list, expected_result):
         tariff_df,
     )
 
-    cost, _ = costs.calculate_cost(
+    cost, _, _ = costs.calculate_cost(
         charge_dict,
         {"electric": baseload, "gas": np.zeros_like(baseload)},
         resolution="15m",

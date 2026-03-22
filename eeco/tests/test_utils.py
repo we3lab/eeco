@@ -243,13 +243,14 @@ def test_decompose_consumption_np(
         with pytest.raises(TypeError):
             ut.decompose_consumption(consumption_data)
     else:
-        positive_values, negative_values, model = ut.decompose_consumption(
+        positive_values, negative_values, model, constraints = ut.decompose_consumption(
             consumption_data
         )
 
         assert np.array_equal(positive_values, expected_positive)
         assert np.array_equal(negative_values, expected_negative)
         assert model is None
+        assert constraints == []
         assert np.array_equal(consumption_data, positive_values - negative_values)
 
 
@@ -302,11 +303,12 @@ def test_decompose_consumption_cvx(
             else:
                 ut.decompose_consumption(x, decomposition_type=decomposition_type)
     else:
-        positive_var, negative_var, constraints = ut.decompose_consumption(
+        positive_var, negative_var, model, constraints = ut.decompose_consumption(
             x, decomposition_type=decomposition_type
         )
         assert isinstance(positive_var, cp.Variable)
         assert isinstance(negative_var, cp.Variable)
+        assert model is None
         assert isinstance(constraints, list)
         assert len(constraints) == 3  # decomposition + 2 Big-M constraints
 
@@ -349,7 +351,7 @@ def test_decompose_consumption_pyo(
 
     if expect_warning:
         with pytest.warns(UserWarning):
-            positive_var, negative_var, model = ut.decompose_consumption(
+            positive_var, negative_var, model, constraints = ut.decompose_consumption(
                 pyo_vars["electric"],
                 model=model,
                 varstr="electric",
@@ -357,13 +359,15 @@ def test_decompose_consumption_pyo(
             )
         assert positive_var is None
         assert negative_var is None
+        assert constraints == []
     else:
-        positive_var, negative_var, model = ut.decompose_consumption(
+        positive_var, negative_var, model, constraints = ut.decompose_consumption(
             pyo_vars["electric"],
             model=model,
             varstr="electric",
             decomposition_type=decomposition_type,
         )
+        assert constraints == []
         # Check that variables exist and have the correct length
         assert hasattr(model, "electric_positive")
         assert hasattr(model, "electric_negative")

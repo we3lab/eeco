@@ -651,19 +651,22 @@ def decompose_consumption(
     Returns
     -------
     tuple
-        - numpy: (positive_values, negative_values, None)
-        - Pyomo: (positive_var, negative_var, model) - constraints added to model
-        - CVXPY: (positive_var, negative_var, constraints) - list of constraints
-          that must be added to the Problem
+        - numpy: (positive_values, negative_values, model, [])
+        - Pyomo: (positive_var, negative_var, model, []) - constraints added to model
+        - CVXPY: (positive_var, negative_var, None, constraints) - list of constraints
+          that must be added to the Problem; model is always None for CVXPY
     """
     if isinstance(expression, np.ndarray):
         positive_values = np.maximum(expression, 0)
         negative_values = np.maximum(-expression, 0)  # magnitude as positive
-        return positive_values, negative_values, model
+        return positive_values, negative_values, model, []
 
     elif isinstance(expression, cp.Expression):
         if decomposition_type == "binary_big_M":
-            return _decompose_binary_cvx(expression, big_m)
+            positive_var, negative_var, constraints = _decompose_binary_cvx(
+                expression, big_m
+            )
+            return positive_var, negative_var, None, constraints
         else:
             raise NotImplementedError(
                 f"Decomposition type '{decomposition_type}' not supported for CVXPY. "
@@ -688,7 +691,7 @@ def decompose_consumption(
                 "Skipping decomposition.",
                 UserWarning,
             )
-            return None, None, model
+            return None, None, model, []
 
         # Add common decomposition constraint: expression = imports - exports
         def decomposition_rule(model, t):
@@ -699,7 +702,7 @@ def decompose_consumption(
             pyo.Constraint(model.t, rule=decomposition_rule),
         )
 
-        return positive_var, negative_var, model
+        return positive_var, negative_var, model, []
 
     else:
         raise TypeError(
