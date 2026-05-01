@@ -1047,7 +1047,7 @@ def get_converted_consumption_data(
                         model=model,
                         varstr=utility,
                         decomposition_type=decomposition_type,
-                        big_m=big_m
+                        big_m=big_m,
                     )
                     cvxpy_constraints.extend(new_constraints)
 
@@ -1259,7 +1259,11 @@ def calculate_cost(
     )
 
     consumption_data_dict, model, cvxpy_constraints = get_converted_consumption_data(
-        consumption_data_dict, conversion_factors, decomposition_type, model, big_m=big_m
+        consumption_data_dict,
+        conversion_factors,
+        decomposition_type,
+        model,
+        big_m=big_m,
     )
 
     for key, charge_array in charge_dict.items():
@@ -1605,7 +1609,8 @@ def calculate_itemized_cost(
     decomposition_type : str or None
         Type of decomposition to use for consumption data.
         - "absolute_value": Linear problem using absolute value
-        - "binary_variable": `NotImplementedError`
+        - "binary_big_M": Uses binary indicator with Big-M constraints.
+          Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.
         - None (default): No decomposition, treats all consumption as imports
 
     by_charge_key : bool
@@ -1654,7 +1659,11 @@ def calculate_itemized_cost(
     )
 
     consumption_data_dict, model, cvxpy_constraints = get_converted_consumption_data(
-        consumption_data_dict, conversion_factors, decomposition_type, model, big_m=big_m
+        consumption_data_dict,
+        conversion_factors,
+        decomposition_type,
+        model,
+        big_m=big_m,
     )
 
     results_dict = {}
