@@ -243,31 +243,82 @@ def test_decompose_consumption_np(
         with pytest.raises(TypeError):
             ut.decompose_consumption(consumption_data)
     else:
-        positive_values, negative_values, model = ut.decompose_consumption(
+        positive_values, negative_values, model, constraints = ut.decompose_consumption(
             consumption_data
         )
 
         assert np.array_equal(positive_values, expected_positive)
         assert np.array_equal(negative_values, expected_negative)
         assert model is None
+        assert constraints == []
         assert np.array_equal(consumption_data, positive_values - negative_values)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_decompose_consumption_cvx():
-    """Test decompose_consumption with cvxpy expressions."""
-    x = cp.Variable(5)
-    positive_values, negative_values, model = ut.decompose_consumption(x)
-    assert isinstance(positive_values, cp.Expression)
-    assert isinstance(negative_values, cp.Expression)
+@pytest.mark.parametrize(
+    "consumption_data, expected_positive, expected_negative, "
+    "decomposition_type, expect_error",
+    [
+        # absolute_value not DCP-compliant, raises NotImplementedError
+        (np.array([1, -2, 3]), None, None, "absolute_value", True),
+        (np.array([1, -2, 3]), None, None, None, True),  # default is absolute_value
+        # binary_big_M works with MIP solver
+        (
+            np.array([10, -5, 3, -2, 0]),
+            np.array([10, 0, 3, 0, 0]),
+            np.array([0, 5, 0, 2, 0]),
+            "binary_big_M",
+            False,
+        ),
+        (
+            np.array([0, 0, 0]),
+            np.array([0, 0, 0]),
+            np.array([0, 0, 0]),
+            "binary_big_M",
+            False,
+        ),
+        (
+            np.array([-10, -5, -1]),
+            np.array([0, 0, 0]),
+            np.array([10, 5, 1]),
+            "binary_big_M",
+            False,
+        ),
+    ],
+)
+def test_decompose_consumption_cvx(
+    consumption_data,
+    expected_positive,
+    expected_negative,
+    decomposition_type,
+    expect_error,
+):
+    """Test decompose_consumption with CVXPY expressions."""
+    x = cp.Variable(len(consumption_data))
 
-    # Test warning for unimplemented decomposition_type
-    with pytest.warns(UserWarning):
-        positive_values, negative_values, model = ut.decompose_consumption(
-            x, decomposition_type="unimplemented"
+    if expect_error:
+        with pytest.raises(NotImplementedError):
+            if decomposition_type is None:
+                ut.decompose_consumption(x)
+            else:
+                ut.decompose_consumption(x, decomposition_type=decomposition_type)
+    else:
+        positive_var, negative_var, model, constraints = ut.decompose_consumption(
+            x, decomposition_type=decomposition_type
         )
-    assert positive_values is None
-    assert negative_values is None
+        assert isinstance(positive_var, cp.Variable)
+        assert isinstance(negative_var, cp.Variable)
+        assert model is None
+        assert isinstance(constraints, list)
+        assert len(constraints) == 3  # decomposition + 2 Big-M constraints
+
+        # Solve with Gurobi and verify values
+        constraints.append(x == consumption_data)
+        prob = cp.Problem(cp.Minimize(0), constraints)
+        prob.solve(solver=cp.GUROBI)
+
+        np.testing.assert_array_almost_equal(positive_var.value, expected_positive)
+        np.testing.assert_array_almost_equal(negative_var.value, expected_negative)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -279,7 +330,10 @@ def test_decompose_consumption_cvx():
         (np.array([0, 0, 0]), 0, 0, "absolute_value", False),
         (np.array([-10, -5, -1]), 0, 16, "absolute_value", False),
         (np.array([10, 5, 1]), 16, 0, "absolute_value", False),
-        (np.array([1, -2, 3]), 4, 2, "binary_variable", True),
+        (np.array([1, -2, 3]), 4, 2, "binary_big_M", False),
+        (np.array([-10, -5, -1]), 0, 16, "binary_big_M", False),
+        (np.array([10, 5, 1]), 16, 0, "binary_big_M", False),
+        (np.array([1, -2, 3]), 4, 2, "unsupported_type", True),
     ],
 )
 def test_decompose_consumption_pyo(
@@ -297,7 +351,7 @@ def test_decompose_consumption_pyo(
 
     if expect_warning:
         with pytest.warns(UserWarning):
-            positive_var, negative_var, model = ut.decompose_consumption(
+            positive_var, negative_var, model, constraints = ut.decompose_consumption(
                 pyo_vars["electric"],
                 model=model,
                 varstr="electric",
@@ -305,18 +359,25 @@ def test_decompose_consumption_pyo(
             )
         assert positive_var is None
         assert negative_var is None
+        assert constraints == []
     else:
-        positive_var, negative_var, model = ut.decompose_consumption(
+        positive_var, negative_var, model, constraints = ut.decompose_consumption(
             pyo_vars["electric"],
             model=model,
             varstr="electric",
             decomposition_type=decomposition_type,
         )
+        assert constraints == []
         # Check that variables exist and have the correct length
         assert hasattr(model, "electric_positive")
         assert hasattr(model, "electric_negative")
         assert hasattr(model, "electric_decomposition_constraint")
-        assert hasattr(model, "electric_magnitude_constraint")
+        if decomposition_type == "absolute_value":
+            assert hasattr(model, "electric_magnitude_constraint")
+        elif decomposition_type == "binary_big_M":
+            assert hasattr(model, "electric_is_importing")
+            assert hasattr(model, "electric_import_bigm_constraint")
+            assert hasattr(model, "electric_export_bigm_constraint")
         assert len(positive_var) == len(consumption_data)
         assert len(negative_var) == len(consumption_data)
         # Testing of values handled after solving problem in test_costs.py
