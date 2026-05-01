@@ -1157,6 +1157,28 @@ def test_calculate_cost_np(
             None,
             pytest.approx(120.0),
         ),
+        (
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": np.concatenate(
+                    [np.ones(48)*0, np.ones(24)*1, np.ones(24)*0]
+                ),
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": np.concatenate(
+                    [np.ones(34)*0, np.ones(14)*2, np.ones(24)*0, np.ones(14)*2, np.ones(10)*0]
+                ),
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": np.ones(96) * 10,
+            },
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
+            "15m",
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0":   {"demand": cp.Parameter(nonneg=True, value=0), "cost": 0},
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": {"demand": cp.Parameter(nonneg=True, value=0), "cost": 0},
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0":      {"demand": cp.Parameter(nonneg=True, value=0), "cost": 0},
+            },
+            0,       # consumption_estimate
+            None,    # desired_utility
+            None,    # desired_charge_type
+            pytest.approx(1191),  # same expected as float-zero version
+        ),
     ],
 )
 def test_calculate_cost_cvx(
@@ -1514,6 +1536,23 @@ def test_calculate_cost_cvx(
             None,
             "binary_big_M",
             pytest.approx(0.6 - 0.3),  # 48*1*0.05/4 - 48*1*0.025/4 = 0.6 - 0.3 = 0.3
+        ),
+        (
+            {
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0":  np.ones(96) * 10,
+                "electric_demand_off-peak_2024-07-10_2024-07-10_90": np.ones(96) * 5,
+            },
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
+            "15m",
+            {
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0":  {"demand": 100, "cost": 0},
+                "electric_demand_off-peak_2024-07-10_2024-07-10_90": {"demand": 0,   "cost": 0},
+            },
+            0,    # consumption_estimate
+            None, # desired_utility
+            None, # desired_charge_type
+            None, # decomposition_type
+            pytest.approx(900),
         ),
     ],
 )

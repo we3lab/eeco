@@ -974,7 +974,7 @@ def get_conversion_factors(electric_consumption_units, gas_consumption_units):
 
 
 def get_converted_consumption_data(
-    consumption_data_dict, conversion_factors, decomposition_type, model=None
+    consumption_data_dict, conversion_factors, decomposition_type, model=None, big_m=1e6
 ):
     """Ensure consumption_data_dict has imports/exports structure
     with proper unit conversion.
@@ -1047,6 +1047,7 @@ def get_converted_consumption_data(
                         model=model,
                         varstr=utility,
                         decomposition_type=decomposition_type,
+                        big_m=big_m
                     )
                     cvxpy_constraints.extend(new_constraints)
 
@@ -1122,6 +1123,7 @@ def calculate_cost(
     demand_scale_factor=1,
     model=None,
     decomposition_type=None,
+    big_m=1e6,
     varstr_alias_func=default_varstr_alias_func,
 ):
     """Calculates the cost of given charges (demand or energy) for the given
@@ -1209,7 +1211,7 @@ def calculate_cost(
         - "absolute_value": Uses max(x, 0) constraints. Creates nonlinear problem
           for Pyomo due to abs() constraint.
         - "binary_big_M": Uses binary indicator with Big-M constraints.
-          Creates a MILP (mixed-integer linear program) for Pyomo.
+          Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.
         - None (default): No decomposition, treats all consumption as imports
 
     varstr_alias_func: function
@@ -1257,7 +1259,7 @@ def calculate_cost(
     )
 
     consumption_data_dict, model, cvxpy_constraints = get_converted_consumption_data(
-        consumption_data_dict, conversion_factors, decomposition_type, model
+        consumption_data_dict, conversion_factors, decomposition_type, model, big_m=big_m
     )
 
     for key, charge_array in charge_dict.items():
@@ -1468,7 +1470,7 @@ def build_pyomo_costing(
         - "absolute_value": Uses max(x, 0) constraints. Creates nonlinear problem
           for Pyomo due to abs() constraint.
         - "binary_big_M": Uses binary indicator with Big-M constraints.
-          Creates a MILP (mixed-integer linear program) for Pyomo.
+          Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.
         - None (default): No decomposition, treats all consumption as imports
 
     varstr_alias_func: function
@@ -1538,6 +1540,7 @@ def calculate_itemized_cost(
     demand_scale_factor=1,
     model=None,
     decomposition_type=None,
+    big_m=1e6,
     by_charge_key=False,
     varstr_alias_func=default_varstr_alias_func,
 ):
@@ -1651,7 +1654,7 @@ def calculate_itemized_cost(
     )
 
     consumption_data_dict, model, cvxpy_constraints = get_converted_consumption_data(
-        consumption_data_dict, conversion_factors, decomposition_type, model
+        consumption_data_dict, conversion_factors, decomposition_type, model, big_m=big_m
     )
 
     results_dict = {}
@@ -1679,6 +1682,7 @@ def calculate_itemized_cost(
                     demand_scale_factor=demand_scale_factor,
                     model=model,
                     decomposition_type=decomposition_type,
+                    big_m=big_m,
                     varstr_alias_func=varstr_alias_func,
                 )
                 if by_charge_key:
