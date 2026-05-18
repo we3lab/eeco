@@ -17,7 +17,7 @@ jobs:
     - name: Install Dependencies
       shell: bash -el {0}
       run: |
-        conda install ipopt
+        conda install ipopt pip
         python -m pip install --upgrade pip
         pip install .[test]
     - name: Test with pytest
