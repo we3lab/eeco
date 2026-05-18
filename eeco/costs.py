@@ -503,6 +503,56 @@ def get_charge_df(
     return charge_df
 
 
+def get_prev_demand_dict(
+    charge_dict,
+    usage_data,
+    start_dt,
+    billing_period_starts,
+    prev_dict=None,
+):
+    """Compute a new or updated previous max demand charge dict for use in costing.
+
+    For each charge in charge_dict, resets the tracked maximum to zero at the
+    start of the relevant timeframe. Then accumulates the running maximum.
+
+    Parameters
+    ----------
+    charge_dict : dict
+        Maps charge key strings to charge arrays (numpy arrays or cp.Expression).
+
+    usage_data : numpy.ndarray
+        Array of consumption values for the current timestep window.
+
+    start_dt : datetime-like
+        Start datetime of the current optimization window.
+
+    billing_period_starts : list
+        List of datetimes marking the start of each billing period.
+
+    prev_dict : dict, optional
+        Existing previous-max dict to update. Defaults to empty dict.
+
+    Returns
+    -------
+    dict
+        Updated mapping of charge key to previous maximum demand value.
+    """
+    prev_dict = dict(prev_dict or {})
+    for charge_name, charge_array in charge_dict.items():
+        prev_dict.setdefault(charge_name, 0)
+        if start_dt in billing_period_starts or (
+            get_charge_array_duration(charge_name) == 1
+            and pd.Timestamp(start_dt).hour == 0
+        ):
+            prev_dict[charge_name] = 0
+        else:
+            prev_dict[charge_name] = max(
+                prev_dict[charge_name],
+                np.max(usage_data * charge_array),
+            )
+    return prev_dict
+
+
 def default_varstr_alias_func(
     utility, charge_type, name, start_date, end_date, charge_limit
 ):
