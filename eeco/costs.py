@@ -1042,8 +1042,9 @@ def get_converted_consumption_data(
 
     Returns
     -------
-    dict
-        Updated consumption_data_dict with imports/exports structure
+    tuple
+        - consumption_data_dict with imports/exports structure
+        - pyomo ConcreteModel, list of cvxpy constraints, or None
     """
     cvxpy_constraints = []
     for utility in consumption_data_dict.keys():
@@ -1113,7 +1114,7 @@ def get_converted_consumption_data(
             else:
                 raise NotImplementedError
 
-    return consumption_data_dict, model, cvxpy_constraints
+    return consumption_data_dict, model or cvxpy_constraints or None
 
 
 def get_charge_array_duration(key):
@@ -1294,9 +1295,8 @@ def calculate_cost(
     tuple
         - First entry: float, cvxpy Expression, or pyomo Var representing energy
           charge costs in USD for the given `charge_array` and `consumption_data`
-        - Second entry: pyomo model object (or None)
-        - Third entry: list of cvxpy constraints from decomposition (empty for
-          numpy/pyomo, non-empty for cvxpy when decomposition_type is set)
+        - Second entry: pyomo ConcreteModel (pyomo path), list of cvxpy constraints
+          from decomposition (cvxpy + decomposition_type path), or None otherwise
     """
     cost = 0
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
@@ -1308,7 +1308,7 @@ def calculate_cost(
         electric_consumption_units, gas_consumption_units
     )
 
-    consumption_data_dict, model, cvxpy_constraints = get_converted_consumption_data(
+    consumption_data_dict, model_objects = get_converted_consumption_data(
         consumption_data_dict,
         conversion_factors,
         decomposition_type,
@@ -1427,7 +1427,7 @@ def calculate_cost(
         else:
             raise ValueError("Invalid charge_type: " + charge_type)
 
-    return cost, model, cvxpy_constraints
+    return cost, model_objects
 
 
 def build_pyomo_costing(
@@ -1557,7 +1557,7 @@ def build_pyomo_costing(
     pyomo.Model
         The model object associated with the problem with costing components added.
     """
-    model.electricity_cost, model, _ = calculate_cost(
+    model.electricity_cost, model = calculate_cost(
         charge_dict=charge_dict,
         consumption_data_dict=consumption_data_dict,
         electric_consumption_units=electric_consumption_units,
@@ -1703,12 +1703,15 @@ def calculate_itemized_cost(
 
         }
 
+    model_objects : pyomo ConcreteModel, list of cvxpy constraints, or None
+        Same as the second return value of `calculate_cost`.
+
     """
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )
 
-    consumption_data_dict, model, cvxpy_constraints = get_converted_consumption_data(
+    consumption_data_dict, model_objects = get_converted_consumption_data(
         consumption_data_dict,
         conversion_factors,
         decomposition_type,
@@ -1729,7 +1732,7 @@ def calculate_itemized_cost(
 
             for charge_key, charges in charge_items:
                 charge_input = charges if charge_key is None else {charge_key: charges}
-                cost, model, _ = calculate_cost(
+                cost, _ = calculate_cost(
                     charge_input,
                     consumption_data_dict,
                     resolution=resolution,
@@ -1740,8 +1743,6 @@ def calculate_itemized_cost(
                     desired_charge_type=charge_type,
                     demand_scale_factor=demand_scale_factor,
                     model=model,
-                    decomposition_type=decomposition_type,
-                    big_m=big_m,
                     varstr_alias_func=varstr_alias_func,
                 )
                 if by_charge_key:
@@ -1773,7 +1774,7 @@ def calculate_itemized_cost(
             results_dict[utility]["total"] for utility in utilities
         )
 
-    return results_dict, model, cvxpy_constraints
+    return results_dict, model_objects
 
 
 def detect_charge_periods(
