@@ -395,6 +395,13 @@ def multiply(
     ) or isinstance(
         expression2, (SumExpression, IndexedExpression, pyo.Param, pyo.Var)
     ):
+        pos = {t: i for i, t in enumerate(model.t)}
+
+        def at(expr, t):
+            # numpy operands are positional (length T); Pyomo operands are
+            # indexed by time-set member. Map the member to its position.
+            return expr[pos[t]] if isinstance(expr, np.ndarray) else expr[t]
+
         if (not isinstance(expression1, (int, float))) and (len(expression1) > 1):
             if (not isinstance(expression2, (int, float))) and (len(expression2) > 1):
                 # TODO: replace model.t with better way to get dimensions
@@ -402,7 +409,7 @@ def multiply(
                 var = model.find_component(varstr)
 
                 def const_rule(model, t):
-                    return var[t] == expression1[t] * expression2[t]
+                    return var[t] == at(expression1, t) * at(expression2, t)
 
                 constraint = pyo.Constraint(model.t, rule=const_rule)
                 model.add_component(varstr + "_constraint", constraint)
@@ -412,7 +419,7 @@ def multiply(
                 var = model.find_component(varstr)
 
                 def const_rule(model, t):
-                    return var[t] == expression1[t] * expression2
+                    return var[t] == at(expression1, t) * expression2
 
                 constraint = pyo.Constraint(model.t, rule=const_rule)
                 model.add_component(varstr + "_constraint", constraint)
@@ -422,7 +429,7 @@ def multiply(
             var = model.find_component(varstr)
 
             def const_rule(model, t):
-                return var[t] == expression1 * expression2[t]
+                return var[t] == expression1 * at(expression2, t)
 
             constraint = pyo.Constraint(model.t, rule=const_rule)
             model.add_component(varstr + "_constraint", constraint)

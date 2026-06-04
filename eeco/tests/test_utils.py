@@ -53,41 +53,46 @@ def test_sum_pyo(consumption_data, varstr, expected):
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "consumption_data, varstr1, varstr2, expected",
+    "consumption_data, varstr1, varstr2, time_set, expected",
     [
         (
             {"electric": np.ones(96) * 100, "gas": np.ones(96)},
             "electric",
             "gas",
+            None,
             np.ones(96) * 100,
+        ),
+        # non-range (float seconds) index set: the numpy charge_array must be
+        # indexed by position and the Pyomo var by member. Regression for
+        # IndexError under numpy >= 1.24 (float index into a numpy array).
+        (
+            {"electric": np.array([100.0, 200.0, 300.0, 400.0])},
+            "electric",
+            np.array([0.1, 0.2, 0.3, 0.4]),
+            [0.0, 900.0, 1800.0, 2700.0],
+            np.array([10.0, 40.0, 90.0, 160.0]),
         ),
     ],
 )
-def test_multiply_pyo(consumption_data, varstr1, varstr2, expected):
+def test_multiply_pyo(consumption_data, varstr1, varstr2, time_set, expected):
     model = pyo.ConcreteModel()
-    model.T = len(consumption_data["electric"])
-    model.t = range(model.T)
-    pyo_vars = {}
+    model.T = len(consumption_data[varstr1])
+    model.t = range(model.T) if time_set is None else time_set
+    pos = {t: i for i, t in enumerate(model.t)}
     for key, val in consumption_data.items():
-        var = pyo.Var(model.t, initialize=np.zeros(len(val)), bounds=(0, None))
+        var = pyo.Var(model.t, bounds=(None, None))
         model.add_component(key, var)
-        pyo_vars[key] = var
-
-    @model.Constraint(model.t)
-    def electric_constraint(m, t):
-        return consumption_data["electric"][t] == m.electric[t]
-
-    @model.Constraint(model.t)
-    def gas_constraint(m, t):
-        return consumption_data["gas"][t] == m.gas[t]
+        for t in model.t:
+            var[t].fix(float(val[pos[t]]))
 
     var1 = getattr(model, varstr1)
-    var2 = getattr(model, varstr2)
+    # second operand: a Pyomo var (by name) or a numpy charge_array passed directly
+    var2 = getattr(model, varstr2) if isinstance(varstr2, str) else varstr2
     result, model = ut.multiply(var1, var2, model=model, varstr="test")
     model.objective = pyo.Objective(expr=0)
     solver = pyo.SolverFactory("ipopt")
     solver.solve(model)
-    assert np.allclose([pyo.value(result[i]) for i in range(len(result))], expected)
+    assert np.allclose([pyo.value(result[t]) for t in model.t], expected)
     assert model is not None
 
 
