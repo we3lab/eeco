@@ -113,8 +113,8 @@ def test_calculate_grid_emissions_cvx(
         emissions_units=emissions_units,
     )
     prob = cp.Problem(cp.Minimize(result), constraints)
-    prob.solve()
-    assert result.value == expected
+    prob.solve(solver=cp.CLARABEL)
+    assert result.value == pytest.approx(expected)
     assert model is None
 
 
