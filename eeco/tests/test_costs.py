@@ -110,7 +110,7 @@ def setup_pyo_vars_with_non_standard_indexing_constraints(consumption_data_dict)
         electric_data = consumption_data_dict[ELECTRIC]
         gas_data = consumption_data_dict[GAS]
 
-    model.T = [60*t for t in len(electric_data)] # imitate indexing by seconds
+    model.T = [60 * t for t in len(electric_data)]  # imitate indexing by seconds
     model.t = pyo.RangeSet(0, model.T - 1)
     model.electric_consumption = pyo.Var(model.t, bounds=(None, None))
     model.gas_consumption = pyo.Var(model.t, bounds=(None, None))
@@ -131,6 +131,7 @@ def setup_pyo_vars_with_non_standard_indexing_constraints(consumption_data_dict)
     }
 
     return model, pyo_vars
+
 
 def solve_pyo_problem(
     model,
@@ -1867,7 +1868,9 @@ def test_calculate_cost_pyo_non_standard_index(
     decomposition_type,
     expected_cost,
 ):
-    model, pyo_vars = setup_pyo_vars_with_non_standard_indexing_constraints(consumption_data_dict)
+    model, pyo_vars = setup_pyo_vars_with_non_standard_indexing_constraints(
+        consumption_data_dict
+    )
 
     if isinstance(consumption_data_dict[ELECTRIC], dict):
         # Extended format: pass full consumption data
@@ -1897,6 +1900,7 @@ def test_calculate_cost_pyo_non_standard_index(
     )
     assert pyo.value(result) == expected_cost
     assert model is not None
+
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
