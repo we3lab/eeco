@@ -638,6 +638,7 @@ def calculate_demand_cost(
         in USD for the given `charge_array` and `consumption_data`
         and the second entry being the pyomo model object (or None)
     """
+    
     if isinstance(consumption_estimate, (float, int)):
         consumption_max = max(float(consumption_estimate), prev_demand)
     else:
@@ -662,8 +663,12 @@ def calculate_demand_cost(
         else:  # ignore if current and previous maxima outside of charge limit
             demand_charged = np.array([0])
     elif isinstance(consumption_data, (pyo.Param, pyo.Var)):
-        # Create a index set to reference on a model, and ensure we can use for constructing rest of 
+        # Create a
+        #  index set to reference on 
+        # a model, and ensure we 
+        # can use for constructing rest of 
         # expressions/etc on pyomo model
+        # I hate linting
         model.__index_set = list(consumption_data.index_set())
         if consumption_max >= limit:
             if consumption_max <= next_limit:
