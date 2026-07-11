@@ -183,7 +183,7 @@ def max(expression, model=None, varstr=None):
         def const_rule(model, t):
             return var >= expression[t]
 
-        constraint = pyo.Constraint(model.t, rule=const_rule)
+        constraint = pyo.Constraint(model.__index_set, rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
     elif isinstance(
@@ -398,33 +398,33 @@ def multiply(
         if (not isinstance(expression1, (int, float))) and (len(expression1) > 1):
             if (not isinstance(expression2, (int, float))) and (len(expression2) > 1):
                 # TODO: replace model.t with better way to get dimensions
-                model.add_component(varstr, pyo.Var(model.t))
+                model.add_component(varstr, pyo.Var(model.__index_set))
                 var = model.find_component(varstr)
 
                 def const_rule(model, t):
                     return var[t] == expression1[t] * expression2[t]
 
-                constraint = pyo.Constraint(model.t, rule=const_rule)
+                constraint = pyo.Constraint(model.__index_set, rule=const_rule)
                 model.add_component(varstr + "_constraint", constraint)
                 return (var, model)
             else:
-                model.add_component(varstr, pyo.Var(model.t))
+                model.add_component(varstr, pyo.Var(model.__index_set))
                 var = model.find_component(varstr)
 
                 def const_rule(model, t):
                     return var[t] == expression1[t] * expression2
 
-                constraint = pyo.Constraint(model.t, rule=const_rule)
+                constraint = pyo.Constraint(model.__index_set, rule=const_rule)
                 model.add_component(varstr + "_constraint", constraint)
                 return (var, model)
         elif (not isinstance(expression2, (int, float))) and (len(expression2) > 1):
-            model.add_component(varstr, pyo.Var(model.t))
+            model.add_component(varstr, pyo.Var(model.__index_set))
             var = model.find_component(varstr)
 
             def const_rule(model, t):
                 return var[t] == expression1 * expression2[t]
 
-            constraint = pyo.Constraint(model.t, rule=const_rule)
+            constraint = pyo.Constraint(model.__index_set, rule=const_rule)
             model.add_component(varstr + "_constraint", constraint)
             return (var, model)
         else:

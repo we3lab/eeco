@@ -667,19 +667,21 @@ def calculate_demand_cost(
         else:  # ignore if current and previous maxima outside of charge limit
             demand_charged = np.array([0])
     elif isinstance(consumption_data, (pyo.Param, pyo.Var)):
-        index_set=consumption_data.index_set()
+        ## Create a index set to reference on a model, and ensure we can use for constructing rest of 
+        ## expressions/etc on pyomo model
+        model.__index_set=list(consumption_data.index_set())
         if consumption_max >= limit:
             if consumption_max <= next_limit:
                 model.add_component(
                     varstr + "_limit",
-                    pyo.Var(index_set, initialize=0, bounds=(None, None)),
+                    pyo.Var(model.__index_set, initialize=0, bounds=(None, None)),
                 )
                 var = model.find_component(varstr + "_limit")
 
                 def const_rule(model, t):
                     return var[t] == consumption_data[t] - limit
 
-                constraint = pyo.Constraint(index_set, rule=const_rule)
+                constraint = pyo.Constraint(model.__index_set, rule=const_rule)
                 model.add_component(varstr + "_limit_constraint", constraint)
 
                 demand_charged, model = ut.multiply(
