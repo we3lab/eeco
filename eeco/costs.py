@@ -580,7 +580,6 @@ def calculate_demand_cost(
     consumption_estimate=0,
     scale_factor=1,
     model=None,
-    model_time_var=None,
     varstr="",
 ):
     """Calculates the cost of given demand charges for the given billing rate structure,
@@ -628,10 +627,6 @@ def calculate_demand_cost(
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
     
-    model_time_var : pyomo.Var
-        The time variable on pyomo model to use for constructing the demand charge. 
-        The variable should be share same indexing as consumption_data, while values should be absolute time steps with units.
-
     varstr : str
         Name of the variable to be created if using a Pyomo `model`
 
@@ -667,9 +662,9 @@ def calculate_demand_cost(
         else:  # ignore if current and previous maxima outside of charge limit
             demand_charged = np.array([0])
     elif isinstance(consumption_data, (pyo.Param, pyo.Var)):
-        ## Create a index set to reference on a model, and ensure we can use for constructing rest of 
-        ## expressions/etc on pyomo model
-        model.__index_set=list(consumption_data.index_set())
+        # Create a index set to reference on a model, and ensure we can use for constructing rest of 
+        # expressions/etc on pyomo model
+        model.__index_set = list(consumption_data.index_set())
         if consumption_max >= limit:
             if consumption_max <= next_limit:
                 model.add_component(
