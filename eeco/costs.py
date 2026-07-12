@@ -535,20 +535,25 @@ def get_prev_demand_dict(
     Returns
     -------
     dict
-        Updated mapping of charge key to previous maximum demand value.
+        Mapping of charge key to {"demand": running peak demand,
+        "cost": running max of usage * charge}
     """
     prev_dict = dict(prev_dict or {})
+    usage_data = np.asarray(usage_data, dtype=float)
     for charge_name, charge_array in charge_dict.items():
-        prev_dict.setdefault(charge_name, 0)
+        entry = prev_dict.get(charge_name) or {DEMAND: 0.0, "cost": 0.0}
         if start_dt in billing_period_starts or (
             get_charge_array_duration(charge_name) == 1
             and pd.Timestamp(start_dt).hour == 0
         ):
-            prev_dict[charge_name] = 0
-        prev_dict[charge_name] = max(
-            prev_dict[charge_name],
-            np.max(usage_data * charge_array),
-        )
+            entry = {DEMAND: 0.0, "cost": 0.0}
+        charge_array = np.asarray(charge_array, dtype=float)
+        active = charge_array > 0
+        window_demand = float(np.max(usage_data[active])) if active.any() else 0.0
+        prev_dict[charge_name] = {
+            DEMAND: max(entry[DEMAND], window_demand),
+            "cost": max(entry["cost"], float(np.max(usage_data * charge_array))),
+        }
     return prev_dict
 
 
