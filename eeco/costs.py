@@ -545,11 +545,10 @@ def get_prev_demand_dict(
             and pd.Timestamp(start_dt).hour == 0
         ):
             prev_dict[charge_name] = 0
-        else:
-            prev_dict[charge_name] = max(
-                prev_dict[charge_name],
-                np.max(usage_data * charge_array),
-            )
+        prev_dict[charge_name] = max(
+            prev_dict[charge_name],
+            np.max(usage_data * charge_array),
+        )
     return prev_dict
 
 

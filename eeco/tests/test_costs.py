@@ -3801,7 +3801,7 @@ def test_individual_charge(charge_list, expected_result):
             np.datetime64("2024-07-10"),
             [np.datetime64("2024-07-10")],
             {"electric_demand_peak_20240710_20240731_100": 5.0},
-            {"electric_demand_peak_20240710_20240731_100": 0},
+            {"electric_demand_peak_20240710_20240731_100": 3.0},
         ),
         # start_dt not in billing_period_starts, multi-day key -> accumulate max
         (
