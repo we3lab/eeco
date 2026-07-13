@@ -626,7 +626,7 @@ def calculate_demand_cost(
     model : pyomo.Model
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
-    
+
     varstr : str
         Name of the variable to be created if using a Pyomo `model`
 
@@ -1251,8 +1251,8 @@ def calculate_cost(
 
     if consumption_estimate is None:
         consumption_estimate = 0
-    
-    if model is not None and hasattr(model, "__index_set")==False:
+
+    if model is not None and hasattr(model, "__index_set") == False:
         # Assumes vars for diff utilities share same index set
         for key, var in consumption_data_dict.items():
             if isinstance(var, dict):
@@ -1260,10 +1260,10 @@ def calculate_cost(
                     if isinstance(var, (cp.Expression, pyo.Var, pyo.Param)):
                         ut.create_pyomo_model_index_ref(model, svar)
                         break
-            else:          
+            else:
                 if isinstance(var, (cp.Expression, pyo.Var, pyo.Param)):
-                    ut.create_pyomo_model_index_ref(model, var)  
-                    break   
+                    ut.create_pyomo_model_index_ref(model, var)
+                    break
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )

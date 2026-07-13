@@ -405,11 +405,11 @@ def multiply(
                     if isinstance(expression1, (pyo.Param, pyo.Var)):
                         exp1 = expression1[t]
                     else:
-                        exp1= expression1[model._var_index_ref[t]]
+                        exp1 = expression1[model._var_index_ref[t]]
                     if isinstance(expression2, (pyo.Param, pyo.Var)):
                         exp2 = expression2[t]
                     else:
-                        exp2= expression2[model._var_index_ref[t]]
+                        exp2 = expression2[model._var_index_ref[t]]
                     return var[t] == exp1 * exp2
 
                 constraint = pyo.Constraint(model._var_index, rule=const_rule)
@@ -661,6 +661,7 @@ def sanitize_varstr(varstr):
     """
     return re.sub(r"[^a-zA-Z0-9_]", "_", varstr).replace(" ", "_")
 
-def create_pyomo_model_index_ref(model, var):    
-    model._var_index_ref = {idx:i for i, idx in enumerate(var.index_set())}
-    model._var_index=list(var.index_set())
+
+def create_pyomo_model_index_ref(model, var):
+    model._var_index_ref = {idx: i for i, idx in enumerate(var.index_set())}
+    model._var_index = list(var.index_set())
