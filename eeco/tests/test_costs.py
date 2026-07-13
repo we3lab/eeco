@@ -147,8 +147,8 @@ def solve_pyo_problem(
 
     if decomposition_type is not None:  # Nonlinear when decomposition_type used
         solver = pyo.SolverFactory("ipopt")
-    else:  # Gurobi otherwise
-        solver = pyo.SolverFactory("gurobi")
+    else:  # scip otherwise
+        solver = pyo.SolverFactory("scip")
 
     solver.solve(model)
     return solver
@@ -2003,7 +2003,7 @@ def test_calculate_cost_pyo_non_standard_index(
 #         desired_charge_type=None,
 #         additional_objective_terms=additional_objective_terms,
 #     )
-#     solver = pyo.SolverFactory("gurobi")
+#     solver = pyo.SolverFactory("scip")
 #     solver.solve(model)
 
 #     assert model is not None
