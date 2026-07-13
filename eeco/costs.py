@@ -1252,7 +1252,7 @@ def calculate_cost(
     if consumption_estimate is None:
         consumption_estimate = 0
 
-    if model is not None and hasattr(model, "__index_set") == False:
+    if model is not None and hasattr(model, "__index_set") is False:
         # Assumes vars for diff utilities share same index set
         for key, var in consumption_data_dict.items():
             if isinstance(var, dict):

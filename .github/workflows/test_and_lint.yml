@@ -19,6 +19,7 @@ jobs:
       run: |
         conda install ipopt
         conda install pip
+        conda install scip
         pip install .[test]
     - name: Test with pytest
       shell: bash -el {0}
