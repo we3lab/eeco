@@ -32,11 +32,9 @@ jobs:
         # unlike the other jobs, we don't need to install all the dev dependencies,
         # but we still want to specify the Black version to use in setup.py for local development
         # so we extract the relevant line and pass it to a simple `pip install`
-        run: |
-          black_requirement="$(grep '^black>=' setup.py)"
-          pip install "$black_requirement"
-          flake8_requirement="$(grep '^flake8>=' setup.py)"
-          pip install "$flake8_requirement"
+        run: |         
+          pip install black
+          pip install flake8\
       - name: Run Black to verify that the committed code is formatted
         run: |
           black --check .
