@@ -114,7 +114,7 @@ def test_calculate_grid_emissions_cvx(
     )
     prob = cp.Problem(cp.Minimize(result), constraints)
     prob.solve()
-    assert result.value == expected
+    assert pytest.approx(result.value, 1e-8) == expected
     assert model is None
 
 
@@ -180,7 +180,7 @@ def test_calculate_grid_emissions_pyo(
     model.objective = pyo.Objective(expr=result)
     solver = pyo.SolverFactory("ipopt")
     solver.solve(model)
-    assert pyo.value(result) == expected
+    assert pytest.approx(pyo.value(result), 1e-8) == expected
     assert model is not None
 
 

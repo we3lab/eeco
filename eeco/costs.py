@@ -638,7 +638,7 @@ def calculate_demand_cost(
         in USD for the given `charge_array` and `consumption_data`
         and the second entry being the pyomo model object (or None)
     """
-    
+
     if isinstance(consumption_estimate, (float, int)):
         consumption_max = max(float(consumption_estimate), prev_demand)
     else:
@@ -664,24 +664,24 @@ def calculate_demand_cost(
             demand_charged = np.array([0])
     elif isinstance(consumption_data, (pyo.Param, pyo.Var)):
         # Create a
-        #  index set to reference on 
-        # a model, and ensure we 
-        # can use for constructing rest of 
+        # index set to reference on
+        # a model, and ensure we
+        # can use for constructing rest of
         # expressions/etc on pyomo model
         # I hate linting
-        model.__index_set = list(consumption_data.index_set())
+        # model.__index_set = list(consumption_data.index_set())
         if consumption_max >= limit:
             if consumption_max <= next_limit:
                 model.add_component(
                     varstr + "_limit",
-                    pyo.Var(model.__index_set, initialize=0, bounds=(None, None)),
+                    pyo.Var(model._var_index, initialize=0, bounds=(None, None)),
                 )
                 var = model.find_component(varstr + "_limit")
 
                 def const_rule(model, t):
                     return var[t] == consumption_data[t] - limit
 
-                constraint = pyo.Constraint(model.__index_set, rule=const_rule)
+                constraint = pyo.Constraint(model._var_index, rule=const_rule)
                 model.add_component(varstr + "_limit_constraint", constraint)
 
                 demand_charged, model = ut.multiply(
@@ -1251,7 +1251,19 @@ def calculate_cost(
 
     if consumption_estimate is None:
         consumption_estimate = 0
-
+    
+    if model is not None and hasattr(model, "__index_set")==False:
+        # Assumes vars for diff utilities share same index set
+        for key, var in consumption_data_dict.items():
+            if isinstance(var, dict):
+                for sk, svar in var.items():
+                    if isinstance(var, (cp.Expression, pyo.Var, pyo.Param)):
+                        ut.create_pyomo_model_index_ref(model, svar)
+                        break
+            else:          
+                if isinstance(var, (cp.Expression, pyo.Var, pyo.Param)):
+                    ut.create_pyomo_model_index_ref(model, var)  
+                    break   
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )

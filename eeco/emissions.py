@@ -78,6 +78,8 @@ def calculate_grid_emissions(
         )
         return total_emissions.to(u.kg), None
     elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
+        if isinstance(consumption_data, (pyo.Var, pyo.Param)):
+            ut.create_pyomo_model_index_ref(model, consumption_data)
         conversion_factor = (
             (1 * consumption_units * emissions_units * u.hour).to(u.kg).magnitude
         )
