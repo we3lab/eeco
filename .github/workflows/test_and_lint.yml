@@ -34,7 +34,7 @@ jobs:
         # so we extract the relevant line and pass it to a simple `pip install`
         run: |         
           pip install black
-          pip install flake8\
+          pip install flake8
       - name: Run Black to verify that the committed code is formatted
         run: |
           black --check .
