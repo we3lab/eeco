@@ -523,7 +523,7 @@ def decompose_consumption(
             def negative_rule(model, t):
                 return -expression[t]
 
-            negative_expr = pyo.Expression(model.t, rule=negative_rule)
+            negative_expr = pyo.Expression(model._var_index, rule=negative_rule)
             model.add_component(f"{varstr}_negative_expr", negative_expr)
             negative_var, model = max_pos(negative_expr, model, neg_name)
 
@@ -533,7 +533,7 @@ def decompose_consumption(
 
             model.add_component(
                 f"{varstr}_decomposition_constraint",
-                pyo.Constraint(model.t, rule=decomposition_rule),
+                pyo.Constraint(model._var_index, rule=decomposition_rule),
             )
 
             # Add constraint to ensure positive_var + negative_var = |expression|
@@ -543,7 +543,7 @@ def decompose_consumption(
 
             model.add_component(
                 f"{varstr}_magnitude_constraint",
-                pyo.Constraint(model.t, rule=magnitude_rule),
+                pyo.Constraint(model._var_index, rule=magnitude_rule),
             )
 
             return positive_var, negative_var, model
