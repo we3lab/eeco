@@ -113,7 +113,7 @@ def test_calculate_grid_emissions_cvx(
         emissions_units=emissions_units,
     )
     prob = cp.Problem(cp.Minimize(result), constraints)
-    prob.solve(solver='scip')
+    prob.solve()
     assert pytest.approx(result.value, 1e-8) == expected
     assert model is None
 
