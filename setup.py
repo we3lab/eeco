@@ -29,9 +29,10 @@ requirements = [
     "numpy>=1.26.4",
     "cvxpy>=1.3.0",
     "pyomo>=6.8",
-    "scippy>=11.0",
+    "gurobi>=11.0",
     "pint>=0.19.2",
     "pytz>=2025.1",
+    "scip>=0.1.12",
 ]
 
 extra_requirements = {
