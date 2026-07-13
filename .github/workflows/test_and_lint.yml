@@ -78,7 +78,6 @@ jobs:
         - if: matrix.install-mode == 'dev'
           name: Install via conda.yaml
           run: |
-            git config --system core.longpaths true
             conda install scip pip
             pip list
             pip install -e .[dev]
