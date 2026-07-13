@@ -41,53 +41,53 @@ jobs:
       - name: Lint with flake8
         run: |
           flake8 eeco --count --verbose --show-source --statistics
-pytest-dev:
-  name: pytest (${{ matrix.os }}/${{ matrix.python-version }}/${{ matrix.install-mode }}/${{ matrix.pytest_folders }})
-  runs-on: ${{ matrix.os-version }}
-  needs: [code-formatting]
-  strategy:
-    fail-fast: false
-    matrix:
-      install-mode:
-        - dev
-        - standard
-      python-version:
-        - "3.11"
-        - "3.12"
-        - "3.13"
-      os:
-        - linux
-        - win64
-      include:
-        - os: linux
-          os-version: ubuntu-latest
-        - os: win64
-          os-version: windows-2022
-        - install-mode: dev
-          python-version: "3.12"  # choice of Python version is arbitrary among those in matrix
-          coverage: "true"
-  steps:                        
-      - if: matrix.install-mode == 'dev'
-        uses: actions/checkout@v4
-      - uses: conda-incubator/setup-miniconda@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-          miniforge-version: latest
-          channels: conda-forge
-          activate-environment: eeco
-      - if: matrix.install-mode == 'dev'
-        name: Install via conda.yaml
-        run: |
-          git config --system core.longpaths true
-          conda install scip pip
-          pip list
-          pip install -e .[dev]
-      - if: matrix.install-mode == 'standard'
-        name: Install (standard)
-        run: |
-          conda install scip pip
-          pip install "git+${{ format('{0}/{1}@{2}', github.server_url, github.repository, github.ref) }}"
-      - name: Test with pytest
-        shell: bash -el {0}
-        run: |
-          pytest --cov-report xml --cov=eeco eeco/tests/ -vv
+  pytest:
+    name: pytest (${{ matrix.os }}/${{ matrix.python-version }}/${{ matrix.install-mode }}/${{ matrix.pytest_folders }})
+    runs-on: ${{ matrix.os-version }}
+    needs: [code-formatting]
+    strategy:
+      fail-fast: false
+      matrix:
+        install-mode:
+          - dev
+          - standard
+        python-version:
+          - "3.11"
+          - "3.12"
+          - "3.13"
+        os:
+          - linux
+          - win64
+        include:
+          - os: linux
+            os-version: ubuntu-latest
+          - os: win64
+            os-version: windows-2022
+          - install-mode: dev
+            python-version: "3.12"  # choice of Python version is arbitrary among those in matrix
+            coverage: "true"
+    steps:                        
+        - if: matrix.install-mode == 'dev'
+          uses: actions/checkout@v4
+        - uses: conda-incubator/setup-miniconda@v3
+          with:
+            python-version: ${{ matrix.python-version }}
+            miniforge-version: latest
+            channels: conda-forge
+            activate-environment: eeco
+        - if: matrix.install-mode == 'dev'
+          name: Install via conda.yaml
+          run: |
+            git config --system core.longpaths true
+            conda install scip pip
+            pip list
+            pip install -e .[dev]
+        - if: matrix.install-mode == 'standard'
+          name: Install (standard)
+          run: |
+            conda install scip pip
+            pip install "git+${{ format('{0}/{1}@{2}', github.server_url, github.repository, github.ref) }}"
+        - name: Test with pytest
+          shell: bash -el {0}
+          run: |
+            pytest --cov-report xml --cov=eeco eeco/tests/ -vv
