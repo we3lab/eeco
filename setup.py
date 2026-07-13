@@ -21,7 +21,7 @@ dev_requirements = [
     "sphinx-rtd-theme==2.0.0",
     "tox>=3.24.5",
     "matplotlib>=3.8.4",
-    "ipykernel"
+    "ipykernel",
 ]
 
 requirements = [
