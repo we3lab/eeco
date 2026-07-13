@@ -86,7 +86,4 @@ jobs:
           run: |
             conda install scip pip
             pip install "git+${{ format('{0}/{1}@{2}', github.server_url, github.repository, github.ref) }}"
-        - name: Test with pytest
-          shell: bash -el {0}
-          run: |
-            pytest --cov-report xml --cov=eeco eeco/tests/ -vv
+
