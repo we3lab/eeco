@@ -401,11 +401,11 @@ def multiply(
                 var = model.find_component(varstr)
 
                 def const_rule(model, t):
-                    if isinstance(expression1, (pyo.Param, pyo.Var)):
+                    if check_indexed_pyomo_type(expression1):
                         exp1 = expression1[t]
                     else:
                         exp1 = expression1[model._var_index_ref[t]]
-                    if isinstance(expression2, (pyo.Param, pyo.Var)):
+                    if check_indexed_pyomo_type(expression2):
                         exp2 = expression2[t]
                     else:
                         exp2 = expression2[model._var_index_ref[t]]
