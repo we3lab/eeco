@@ -11,7 +11,7 @@ from pyomo.core.expr.numeric_expr import (
     MonomialTermExpression,
 )
 from pyomo.core.base.var import ScalarVar
-from pyomo.core.base.expression import IndexedExpression
+from pyomo.core.base.expression import ExpressionData
 
 # Dictionary mapping region types to timezone strings
 TIMEZONE_DICT = {
@@ -164,9 +164,7 @@ def max(expression, model=None, varstr=None):
     ([numpy.Array, cvxpy.Expression, pyomo.environ.Var], pyomo.environ.Model)
         Expression representing max of `expression`
     """
-    if isinstance(
-        expression, (LinearExpression, SumExpression, MonomialTermExpression, ScalarVar)
-    ):
+    if check_nonindexed_pyomo_type(expression):
         model.add_component(varstr, pyo.Var())
         var = model.find_component(varstr)
 
@@ -176,7 +174,7 @@ def max(expression, model=None, varstr=None):
         constraint = pyo.Constraint(rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
+    elif check_indexed_pyomo_type(expression):
         model.add_component(varstr, pyo.Var())
         var = model.find_component(varstr)
 
@@ -186,11 +184,11 @@ def max(expression, model=None, varstr=None):
         constraint = pyo.Constraint(model._var_index, rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif isinstance(
-        expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
+    elif check_indexed_python_type(expression) or check_nonindexed_python_type(
+        expression
     ):
         return (np.max(expression), model)
-    elif isinstance(expression, cp.Expression):
+    elif check_cvx_type(expression):
         return (cp.max(expression), None)
     else:
         raise TypeError(
@@ -236,7 +234,7 @@ def sum(expression, axis=0, model=None, varstr=None):
     [numpy.Array, cvxpy.Expression, pyomo.environ.Expression]
         Expression representing sum of `expression` along `axis`
     """
-    if isinstance(expression, (SumExpression, IndexedExpression, pyo.Param, pyo.Var)):
+    if check_indexed_pyomo_type(expression):
         model.add_component(varstr, pyo.Var())
         var = model.find_component(varstr)
 
@@ -246,11 +244,11 @@ def sum(expression, axis=0, model=None, varstr=None):
         constraint = pyo.Constraint(rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif isinstance(
-        expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
+    elif check_indexed_python_type(expression) or check_nonindexed_python_type(
+        expression
     ):
         return (np.sum(expression, axis=axis), model)
-    elif isinstance(expression, cp.Expression):
+    elif check_cvx_type(expression):
         return (cp.sum(expression, axis=axis), None)
     else:
         raise TypeError(
@@ -298,9 +296,7 @@ def max_pos(expression, model=None, varstr=None):
         Expression representing element-wise maximum positive value of `expression`.
         Scalar input returns scalar output, indexed input returns indexed output.
     """
-    if isinstance(
-        expression, (LinearExpression, SumExpression, MonomialTermExpression, ScalarVar)
-    ) or (hasattr(expression, "is_variable_type") and expression.is_variable_type()):
+    if check_nonindexed_pyomo_type(expression):
         model.add_component(varstr, pyo.Var(initialize=0, bounds=(0, None)))
         var = model.find_component(varstr)
 
@@ -310,7 +306,7 @@ def max_pos(expression, model=None, varstr=None):
         constraint = pyo.Constraint(rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
+    elif check_indexed_pyomo_type(expression):
         # Create indexed max_pos variable
         model.add_component(varstr, pyo.Var(expression.index_set(), bounds=(0, None)))
         var = model.find_component(varstr)
@@ -321,11 +317,11 @@ def max_pos(expression, model=None, varstr=None):
         constraint = pyo.Constraint(expression.index_set(), rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif isinstance(
-        expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
+    elif check_indexed_python_type(expression) or check_nonindexed_python_type(
+        expression
     ):
         return (np.max(expression), model) if np.max(expression) > 0 else (0, model)
-    elif isinstance(expression, cp.Expression):
+    elif check_cvx_type(expression):
         return cp.maximum(expression, 0), None  # Works for scalar or vector
     else:
         raise TypeError(
@@ -388,15 +384,18 @@ def multiply(
     ]
         result from elementwise multiplication of `expression1` and `expression2`
     """
-    if isinstance(expression1, cp.Expression) or isinstance(expression2, cp.Expression):
+    if check_cvx_type(expression1) or check_cvx_type(expression2):
         return (cp.multiply(expression1, expression2), None)
-    elif isinstance(
-        expression1, (SumExpression, IndexedExpression, pyo.Param, pyo.Var)
-    ) or isinstance(
-        expression2, (SumExpression, IndexedExpression, pyo.Param, pyo.Var)
+    elif (
+        check_nonindexed_pyomo_type(expression1)
+        or check_nonindexed_pyomo_type(expression2)
+        or check_indexed_pyomo_type(expression1)
+        or check_indexed_pyomo_type(expression2)
     ):
-        if (not isinstance(expression1, (int, float))) and (len(expression1) > 1):
-            if (not isinstance(expression2, (int, float))) and (len(expression2) > 1):
+        if (not check_nonindexed_python_type(expression1)) and (len(expression1) > 1):
+            if (not check_nonindexed_python_type(expression2)) and (
+                len(expression2) > 1
+            ):
                 # TODO: replace model.t with better way to get dimensions
                 model.add_component(varstr, pyo.Var(model._var_index))
                 var = model.find_component(varstr)
@@ -425,7 +424,7 @@ def multiply(
                 constraint = pyo.Constraint(model._var_index, rule=const_rule)
                 model.add_component(varstr + "_constraint", constraint)
                 return (var, model)
-        elif (not isinstance(expression2, (int, float))) and (len(expression2) > 1):
+        elif (not check_nonindexed_pyomo_type(expression2)) and (len(expression2) > 1):
             model.add_component(varstr, pyo.Var(model._var_index))
             var = model.find_component(varstr)
 
@@ -437,12 +436,14 @@ def multiply(
             return (var, model)
         else:
             return (expression1 * expression2, model)
-    elif isinstance(
-        expression1,
-        (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray),
-    ) and isinstance(
-        expression2,
-        (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray),
+    elif (
+        check_indexed_python_type(expression1)
+        or check_nonindexed_python_type(expression1)
+    ) and (
+        (
+            check_indexed_python_type(expression2)
+            or check_nonindexed_python_type(expression2)
+        )
     ):
         return (np.multiply(expression1, expression2), model)
     else:
@@ -495,11 +496,11 @@ def decompose_consumption(
         positive_values and negative_values are both positive
         with the constraint that total = positive - negative
     """
-    if isinstance(expression, np.ndarray):
+    if check_indexed_python_type(expression):
         positive_values = np.maximum(expression, 0)
         negative_values = np.maximum(-expression, 0)  # magnitude as positive
         return positive_values, negative_values, model
-    elif isinstance(expression, cp.Expression):
+    elif check_cvx_type(expression):
         if decomposition_type == "absolute_value":
             positive_values, _ = max_pos(expression)
             negative_values, _ = max_pos(-expression)  # magnitude as positive
@@ -512,7 +513,7 @@ def decompose_consumption(
             positive_values = None
             negative_values = None
         return positive_values, negative_values, model
-    elif isinstance(expression, (pyo.Var, pyo.Param)):
+    elif check_indexed_pyomo_type(expression):
         if decomposition_type == "absolute_value":
 
             # Use max_pos to create positive_var and negative_var
@@ -709,7 +710,86 @@ def create_pyomo_model_index_ref(model, var, overwrite=False):
         model._var_index = list(var.index_set())
     else:
         warnings.warn(
-            f"`_var_index` already exists, so `create_pyomo_model_index_ref`"
+            "`_var_index` already exists, so `create_pyomo_model_index_ref`"
             "was ignored. Please set `overwrite=True` to enforce updating the index.",
             UserWarning,
         )
+
+
+def check_indexed_pyomo_type(input_var):
+    """Checks if input is am indexed Pyomo variable, expression, or parameter.
+    If indiex var/param/expresion returns false
+
+    Parameters
+    ----------
+    input_var: input paramter to check
+
+    Returns
+    -------
+    boolean
+    """
+    return isinstance(input_var, (pyo.Var, pyo.Param, pyo.Expression))
+
+
+def check_nonindexed_pyomo_type(input_var):
+    """Checks if input is non idnexed Pyomo variable, expression, or parameter.
+    If indiex var/param/expresion returns false
+
+    Parameters
+    ----------
+    input_var: input paramter to check
+
+    Returns
+    -------
+    boolean
+    """
+    return isinstance(
+        input_var,
+        (
+            ExpressionData,
+            LinearExpression,
+            SumExpression,
+            MonomialTermExpression,
+            ScalarVar,
+        ),
+    ) or (hasattr(input_var, "is_variable_type") and input_var.is_variable_type())
+
+
+def check_cvx_type(input_var):
+    """Checks if input is a cvx variable, expression, or parameter.
+    Parameters
+    ----------
+    input_var: input paramter to check
+
+    Returns
+    -------
+    boolean
+    """
+    return isinstance(input_var, (cp.Expression, cp.Variable))
+
+
+def check_nonindexed_python_type(input_var):
+    """Checks if input is a general int/float variable, expression, or parameter.
+        Parameters
+    ----------
+    input_var: input paramter to check
+    idexable: checks if input can be index (e.g list/array)
+    Returns
+    -------
+    boolean
+    """
+    return isinstance(
+        input_var, (int, float, np.int32, np.int64, np.float32, np.float64)
+    )
+
+
+def check_indexed_python_type(input_var):
+    """Checks if input is a general int/float variable, expression, or parameter.
+        Parameters
+    ----------
+    input_var: input paramter to check
+    Returns
+    -------
+    boolean
+    """
+    return isinstance(input_var, (np.ndarray))
