@@ -626,7 +626,7 @@ def convert_utc_to_timezone(utc_hour, timezone_str):
     ----------
     utc_hour : int
         Hour in UTC (0-23).
-        
+
     timezone_str : str
         Timezone string, e.g., 'America/New_York'.
 
@@ -681,18 +681,18 @@ def create_pyomo_model_index_ref(model, var, overwrite=False):
         The Pyomo model (or Block) to attach the index bookkeeping to.
 
     var : : pyomo.environ.Param or pyomo.environ.Var
-        A Pyomo indexed component (e.g. an indexed Var) whose 
+        A Pyomo indexed component (e.g. an indexed Var) whose
         `index_set()` will be enumerated.
 
     overwrite : bool
-        Ignored if index does not exist yet. 
+        Ignored if index does not exist yet.
         If index exists, must be set to True for updates to take effect.
         If False, no changes are made to the index and a warning is raised.
 
     Raises
     ------
     UserWarning
-        When the index already exists and `overwrite` is False, 
+        When the index already exists and `overwrite` is False,
         then the function with a warning to the user to set `overwrite` to True
         if they'd like to enforce index updates.
 
@@ -709,7 +709,7 @@ def create_pyomo_model_index_ref(model, var, overwrite=False):
         model._var_index = list(var.index_set())
     else:
         warnings.warn(
-            f"`_var_index` already exists, so `create_pyomo_model_index_ref`" 
+            f"`_var_index` already exists, so `create_pyomo_model_index_ref`"
             "was ignored. Please set `overwrite=True` to enforce updating the index.",
             UserWarning,
         )
