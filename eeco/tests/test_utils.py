@@ -396,15 +396,15 @@ def test_python_types():
     x = 1
     y = 1.1
     z = np.array([1, 2, 3])
-    l = [1, 2, 3, 4]
+    ls = [1, 2, 3, 4]
     t = (1, 2, 3, 4)
     assert ut.check_nonindexed_python_type(x)
     assert ut.check_nonindexed_python_type(y)
     assert ut.check_indexed_python_type(z)
 
     # We do not support lists or tuples
-    assert ut.check_indexed_python_type(l) is False
-    assert ut.check_nonindexed_python_type(l) is False
+    assert ut.check_indexed_python_type(ls) is False
+    assert ut.check_nonindexed_python_type(ls) is False
 
     assert ut.check_indexed_python_type(t) is False
     assert ut.check_nonindexed_python_type(t) is False
