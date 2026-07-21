@@ -352,29 +352,29 @@ def test_pyomo_type():
 
     assert ut.check_indexed_pyomo_type(m.x)
     assert ut.check_indexed_pyomo_type(m.x_i)
-    assert ut.check_indexed_pyomo_type(m.x_i[1]) == False
+    assert ut.check_indexed_pyomo_type(m.x_i[1]) is False
 
     assert ut.check_nonindexed_pyomo_type(m.x_i[1])
 
     assert ut.check_indexed_pyomo_type(m.e)
     assert ut.check_indexed_pyomo_type(m.e_i)
-    assert ut.check_indexed_pyomo_type(m.e_i[1]) == False
+    assert ut.check_indexed_pyomo_type(m.e_i[1]) is False
 
     assert ut.check_nonindexed_pyomo_type(m.e_i[1])
 
     assert ut.check_indexed_pyomo_type(m.p)
-    assert ut.check_indexed_pyomo_type(m.p_i[1]) == False
+    assert ut.check_indexed_pyomo_type(m.p_i[1]) is False
     # this will be false as pyomo returns an in for params
-    assert ut.check_nonindexed_pyomo_type(m.p_i[1]) == False
+    assert ut.check_nonindexed_pyomo_type(m.p_i[1]) is False
 
-    assert ut.check_cvx_type(m.x) == False
-    assert ut.check_cvx_type(m.x_i) == False
-    assert ut.check_cvx_type(m.x_i[1]) == False
-    assert ut.check_cvx_type(m.e) == False
-    assert ut.check_cvx_type(m.e_i) == False
-    assert ut.check_cvx_type(m.e_i[1]) == False
-    assert ut.check_cvx_type(m.p) == False
-    assert ut.check_cvx_type(m.p_i[1]) == False
+    assert ut.check_cvx_type(m.x) is False
+    assert ut.check_cvx_type(m.x_i) is False
+    assert ut.check_cvx_type(m.x_i[1]) is False
+    assert ut.check_cvx_type(m.e) is False
+    assert ut.check_cvx_type(m.e_i) is False
+    assert ut.check_cvx_type(m.e_i[1]) is False
+    assert ut.check_cvx_type(m.p) is False
+    assert ut.check_cvx_type(m.p_i[1]) is False
 
 
 def test_cvx_type():
@@ -385,11 +385,11 @@ def test_cvx_type():
     assert ut.check_cvx_type(ce)
     assert ut.check_cvx_type(cv)
 
-    assert ut.check_nonindexed_pyomo_type(ce) == False
-    assert ut.check_nonindexed_pyomo_type(cv) == False
+    assert ut.check_nonindexed_pyomo_type(ce) is False
+    assert ut.check_nonindexed_pyomo_type(cv) is False
 
-    assert ut.check_indexed_pyomo_type(ce) == False
-    assert ut.check_indexed_pyomo_type(cv) == False
+    assert ut.check_indexed_pyomo_type(ce) is False
+    assert ut.check_indexed_pyomo_type(cv) is False
 
 
 def test_python_types():
@@ -403,26 +403,26 @@ def test_python_types():
     assert ut.check_indexed_python_type(z)
 
     # We do not support lists or tuples
-    assert ut.check_indexed_python_type(l) == False
-    assert ut.check_nonindexed_python_type(l) == False
+    assert ut.check_indexed_python_type(l) is False
+    assert ut.check_nonindexed_python_type(l) is False
 
-    assert ut.check_indexed_python_type(t) == False
-    assert ut.check_nonindexed_python_type(t) == False
+    assert ut.check_indexed_python_type(t) is False
+    assert ut.check_nonindexed_python_type(t) is False
 
-    assert ut.check_nonindexed_python_type(z) == False
+    assert ut.check_nonindexed_python_type(z) is False
     assert ut.check_nonindexed_python_type(z[0])
 
-    assert ut.check_cvx_type(x) == False
-    assert ut.check_cvx_type(y) == False
-    assert ut.check_cvx_type(z) == False
-    assert ut.check_cvx_type(z[0]) == False
+    assert ut.check_cvx_type(x) is False
+    assert ut.check_cvx_type(y) is False
+    assert ut.check_cvx_type(z) is False
+    assert ut.check_cvx_type(z[0]) is False
 
-    assert ut.check_indexed_pyomo_type(x) == False
-    assert ut.check_indexed_pyomo_type(y) == False
-    assert ut.check_indexed_pyomo_type(z) == False
-    assert ut.check_indexed_pyomo_type(z[0]) == False
+    assert ut.check_indexed_pyomo_type(x) is False
+    assert ut.check_indexed_pyomo_type(y) is False
+    assert ut.check_indexed_pyomo_type(z) is False
+    assert ut.check_indexed_pyomo_type(z[0]) is False
 
-    assert ut.check_nonindexed_pyomo_type(x) == False
-    assert ut.check_nonindexed_pyomo_type(y) == False
-    assert ut.check_nonindexed_pyomo_type(z) == False
-    assert ut.check_nonindexed_pyomo_type(z[0]) == False
+    assert ut.check_nonindexed_pyomo_type(x) is False
+    assert ut.check_nonindexed_pyomo_type(y) is False
+    assert ut.check_nonindexed_pyomo_type(z) is False
+    assert ut.check_nonindexed_pyomo_type(z[0]) is False
