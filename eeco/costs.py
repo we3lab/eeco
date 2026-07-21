@@ -1245,11 +1245,11 @@ def calculate_cost(
     if consumption_estimate is None:
         consumption_estimate = 0
 
-    if model is not None and hasattr(model, "_var_index") is False:
+    if model is not None and not hasattr(model, "_var_index"):
         # Assumes vars for diff utilities share same index set
         for key, var in consumption_data_dict.items():
             if isinstance(var, dict):
-                for sk, svar in var.items():
+                for svar in var.values():
                     if isinstance(var, (cp.Expression, pyo.Var, pyo.Param)):
                         ut.create_pyomo_model_index_ref(model, svar)
                         break
@@ -1650,11 +1650,11 @@ def calculate_itemized_cost(
                     "Decomposition types are not supported with CVXPY objects. "
                     "Use Pyomo instead for problems requiring decomposition_type."
                 )
-    if model is not None and hasattr(model, "_var_index") is False:
+    if model is not None and not hasattr(model, "_var_index"):
         # Assumes vars for diff utilities share same index set
         for key, var in consumption_data_dict.items():
             if isinstance(var, dict):
-                for sk, svar in var.items():
+                for svar in var.values():
                     if isinstance(var, (cp.Expression, pyo.Var, pyo.Param)):
                         ut.create_pyomo_model_index_ref(model, svar)
                         break

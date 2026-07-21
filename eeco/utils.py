@@ -567,7 +567,7 @@ def parse_freq(freq):
 
     Parameters
     ----------
-    freq: str
+    freq : str
         a string of the form [type][freq_binsize], where type corresponds to a
         numpy.timedelta64 encoding and freq binsize is an integer giving the number
         of increments of `type` of one binned increment of our time variable
@@ -588,7 +588,7 @@ def get_freq_binsize_minutes(freq):
 
     Parameters
     ----------
-    freq: str
+    freq : str
         a string of the form [type][freq_binsize], where type corresponds to a
         numpy.timedelta64 encoding and freq binsize is an integer giving the number
         of increments of `type` of one binned increment of our time variable
@@ -622,9 +622,13 @@ def convert_utc_to_timezone(utc_hour, timezone_str):
     """
     Convert UTC hour (0-23) to the corresponding hour in a specified timezone.
 
-    Parameters:
-    utc_hour (int): Hour in UTC (0-23).
-    timezone_str (str): Timezone string, e.g., 'America/New_York'.
+    Parameters
+    ----------
+    utc_hour : int
+        Hour in UTC (0-23).
+        
+    timezone_str : str
+        Timezone string, e.g., 'America/New_York'.
 
     Returns:
     int: Corresponding hour in the specified timezone.
@@ -662,6 +666,50 @@ def sanitize_varstr(varstr):
     return re.sub(r"[^a-zA-Z0-9_]", "_", varstr).replace(" ", "_")
 
 
-def create_pyomo_model_index_ref(model, var):
-    model._var_index_ref = {idx: i for i, idx in enumerate(var.index_set())}
-    model._var_index = list(var.index_set())
+def create_pyomo_model_index_ref(model, var, overwrite=False):
+    """Attach time index to the model for Pyomo variables and expressions.
+
+    Builds a mapping between the entries in `var`'s index set and their
+    positional order, and stores both on the model as private attributes.
+    This makes it easy to translate between a Pyomo indexed variable's index
+    values and plain integer positions (e.g. when aligning with a NumPy
+    array or another positional data structure).
+
+    Parameters
+    ----------
+    model : pyomo.environ.Model
+        The Pyomo model (or Block) to attach the index bookkeeping to.
+
+    var : : pyomo.environ.Param or pyomo.environ.Var
+        A Pyomo indexed component (e.g. an indexed Var) whose 
+        `index_set()` will be enumerated.
+
+    overwrite : bool
+        Ignored if index does not exist yet. 
+        If index exists, must be set to True for updates to take effect.
+        If False, no changes are made to the index and a warning is raised.
+
+    Raises
+    ------
+    UserWarning
+        When the index already exists and `overwrite` is False, 
+        then the function with a warning to the user to set `overwrite` to True
+        if they'd like to enforce index updates.
+
+    Returns
+    -------
+    None. Sets the following attributes on `model`:
+        - `_var_index_ref` (dict): maps each index value in
+            `var.index_set()` to its integer position.
+        - `_var_index` (list): the index values of `var.index_set()`,
+            in enumeration order.
+    """
+    if not hasattr(model, "_var_index") or overwrite:
+        model._var_index_ref = {idx: i for i, idx in enumerate(var.index_set())}
+        model._var_index = list(var.index_set())
+    else:
+        warnings.warn(
+            f"`_var_index` already exists, so `create_pyomo_model_index_ref`" 
+            "was ignored. Please set `overwrite=True` to enforce updating the index.",
+            UserWarning,
+        )
