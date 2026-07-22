@@ -43,9 +43,10 @@ def test_sum_pyo(consumption_data, varstr, expected):
         return consumption_data["gas"][t] == m.gas[t]
 
     var = getattr(model, varstr)
+    ut.create_pyomo_model_index_ref(model, var)
     result, model = ut.sum(var, model=model, varstr="test")
     model.objective = pyo.Objective(expr=0)
-    solver = pyo.SolverFactory("gurobi")
+    solver = pyo.SolverFactory("scip")
     solver.solve(model)
     assert pyo.value(result) == expected
     assert model is not None
@@ -83,6 +84,8 @@ def test_multiply_pyo(consumption_data, varstr1, varstr2, expected):
 
     var1 = getattr(model, varstr1)
     var2 = getattr(model, varstr2)
+
+    ut.create_pyomo_model_index_ref(model, var1)
     result, model = ut.multiply(var1, var2, model=model, varstr="test")
     model.objective = pyo.Objective(expr=0)
     solver = pyo.SolverFactory("ipopt")
@@ -119,10 +122,12 @@ def test_max_pyo(consumption_data, varstr, expected):
         return consumption_data["gas"][t] == m.gas[t]
 
     var = getattr(model, varstr)
+
+    ut.create_pyomo_model_index_ref(model, var)
     result, model = ut.max(var, model=model, varstr="test")
 
     model.objective = pyo.Objective(expr=0)
-    solver = pyo.SolverFactory("gurobi")
+    solver = pyo.SolverFactory("scip")
     solver.solve(model)
     assert pyo.value(result) == expected
     assert model is not None
@@ -174,10 +179,12 @@ def test_max_pos_pyo(consumption_data, varstr, expected, expect_error):
             return consumption_data["gas"] == m.gas
 
         var = getattr(model, varstr)
+        ut.create_pyomo_model_index_ref(model, var)
+
         expr = var - 0  # like max_var - prev_demand_cost
         result, model = ut.max_pos(expr, model=model, varstr="test")
         model.objective = pyo.Objective(expr=0)
-        solver = pyo.SolverFactory("gurobi")
+        solver = pyo.SolverFactory("scip")
         solver.solve(model)
 
         assert pyo.value(result) == expected
@@ -200,9 +207,11 @@ def test_max_pos_pyo(consumption_data, varstr, expected, expect_error):
             return consumption_data["gas"][t] == m.gas[t]
 
         var = getattr(model, varstr)
+
+        ut.create_pyomo_model_index_ref(model, var)
         result, model = ut.max_pos(var, model=model, varstr="test")
         model.objective = pyo.Objective(expr=0)
-        solver = pyo.SolverFactory("gurobi")
+        solver = pyo.SolverFactory("scip")
         solver.solve(model)
 
         # Check each element in returned vector

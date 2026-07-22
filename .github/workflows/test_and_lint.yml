@@ -1,46 +1,89 @@
-name: Test and Lint
+name: Checks
+on:
+  push:
+    branches: [main]
+    tags: ['*']
+  pull_request:
+    branches: [main]
 
-on: pull_request
+concurrency: 
+  group: ${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
+env:
+  PYTEST_ADDOPTS: --color=yes
+  PIP_PROGRESS_BAR: "off"
+  KERNEL_NAME: eeco
+defaults:
+  run:
+    # -l: login shell, needed when using Conda:
+    shell: bash -l {0} 
 jobs:
-  test:
+  code-formatting:
+    name: Check code is formatted (Black/Lint)
+    # OS and/or Python version don't make a difference, so we choose ubuntu and 3.12 as defaults
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v1
-    - name: Install Conda
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        auto-update-conda: true
-        python-version: 3.13
-        channels: conda-forge
-    - name: Install Dependencies
-      shell: bash -el {0}
-      run: |
-        conda install ipopt pip
-        python -m pip install --upgrade pip
-        pip install .[test]
-    - name: Test with pytest
-      shell: bash -el {0}
-      run: |
-        pytest --cov-report xml --cov=eeco eeco/tests/ -vv
-        codecov -t ${{ secrets.CODECOV_TOKEN }}
-  lint:
-    runs-on: ubuntu-latest
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Black
+        # unlike the other jobs, we don't need to install all the dev dependencies,
+        # but we still want to specify the Black version to use in setup.py for local development
+        # so we extract the relevant line and pass it to a simple `pip install`
+        run: |         
+          pip install black
+          pip install flake8
+      - name: Run Black to verify that the committed code is formatted
+        run: |
+          black --check .
+      - name: Lint with flake8
+        run: |
+          flake8 eeco --count --verbose --show-source --statistics
+  pytest:
+    name: pytest (${{ matrix.os }}/${{ matrix.python-version }}/${{ matrix.install-mode }}/${{ matrix.pytest_folders }})
+    runs-on: ${{ matrix.os-version }}
+    needs: [code-formatting]
+    strategy:
+      fail-fast: false
+      matrix:
+        install-mode:
+          - dev
+          - standard
+        python-version:
+          - "3.11"
+          - "3.12"
+          - "3.13"
+        os:
+          - linux
+          - win64
+        include:
+          - os: linux
+            os-version: ubuntu-latest
+          - os: win64
+            os-version: windows-2022
+          - install-mode: dev
+            python-version: "3.12"  # choice of Python version is arbitrary among those in matrix
+            coverage: "true"
+    steps:                        
+        - if: matrix.install-mode == 'dev'
+          uses: actions/checkout@v4
+        - uses: conda-incubator/setup-miniconda@v3
+          with:
+            python-version: ${{ matrix.python-version }}
+            miniforge-version: latest
+            channels: conda-forge
+            activate-environment: eeco
+        - if: matrix.install-mode == 'dev'
+          name: Install via conda.yaml
+          run: |
+            conda install scip pip
+            pip list
+            pip install -e .[dev]
+        - if: matrix.install-mode == 'standard'
+          name: Install (standard)
+          run: |
+            conda install scip pip
+            pip install "git+${{ format('{0}/{1}@{2}', github.server_url, github.repository, github.ref) }}"
 
-    steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python 3.13
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.13
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install .[test]
-    - name: Lint with flake8
-      run: |
-        flake8 eeco --count --verbose --show-source --statistics
-    - name: Check with black
-      run: |
-        black --check eeco

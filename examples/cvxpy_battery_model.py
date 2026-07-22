@@ -22,9 +22,7 @@ charge_dict = costs.get_charge_dict(
 )
 
 # load historical consumption data
-load_df = pd.read_csv(
-    "eeco/data/consumption.csv", parse_dates=["Datetime"]
-)
+load_df = pd.read_csv("eeco/data/consumption.csv", parse_dates=["Datetime"])
 
 # set battery parameters
 # create variables for battery total energy, max charge and discharge power, and SOC limits
@@ -152,17 +150,17 @@ emission_df = pd.read_csv(path_to_emissions_sheet, sep=",")
 
 # get the charge dictionary
 carbon_intensity = emissions.get_carbon_intensity(
-    datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11), emission_df, resolution="1m"
+    datetime.datetime(2023, 4, 9),
+    datetime.datetime(2023, 4, 11),
+    emission_df,
+    resolution="1m",
 )
 
 # NOTE: skipped model initialization as we can re-use battery model from cost optimization
 
 # NOTE: second entry of the tuple can be ignored since it's for Pyomo
 obj, _ = emissions.calculate_grid_emissions(
-    carbon_intensity,
-    grid_demand_kW,
-    resolution="1m",
-    consumption_units=u.kW
+    carbon_intensity, grid_demand_kW, resolution="1m", consumption_units=u.kW
 )
 
 # solve the CVX problem (objective variable should be named obj)
@@ -174,7 +172,7 @@ baseline_emissions, _ = emissions.calculate_grid_emissions(
     carbon_intensity,
     load_df["Load [kW]"].values,
     resolution="1m",
-    consumption_units=u.kW
+    consumption_units=u.kW,
 )
 # NOTE: second entry of the tuple can be ignored since it's for Pyomo
 optimized_emissions = obj.value
@@ -187,23 +185,33 @@ fig, ax = plt.subplots()
 # plot the emissions factors
 ax.plot(load_df["Datetime"], carbon_intensity.to(u.kg / u.MWh))
 ax.set(
-    xlabel="DateTime", 
-    ylabel="Carbon Intensity (kg CO$_2$ / MWh)", 
-    xlim=(datetime.datetime(2023, 4, 9), 
-    datetime.datetime(2023, 4, 11)), 
-    ylim=[0,500]
+    xlabel="DateTime",
+    ylabel="Carbon Intensity (kg CO$_2$ / MWh)",
+    xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11)),
+    ylim=[0, 500],
 )
 
 fig.align_ylabels()
 fig.tight_layout()
-fig.suptitle("Scope 2 Emissions Factors",y=1.02, fontsize=16)
+fig.suptitle("Scope 2 Emissions Factors", y=1.02, fontsize=16)
 plt.savefig("cvx-carbon-intensity.png", bbox_inches="tight")
 
 # plot the model outputs
 fig, ax = plt.subplots()
 ax.step(load_df["Datetime"], grid_demand_kW.value, color="C0", lw=2, label="Net Load")
-ax.step(load_df["Datetime"], load_df["Load [kW]"].values, color="k", lw=1, ls='--', label="Baseload")
-ax.set(xlabel="DateTime", ylabel="Power (kW)", xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11)))
+ax.step(
+    load_df["Datetime"],
+    load_df["Load [kW]"].values,
+    color="k",
+    lw=1,
+    ls="--",
+    label="Baseload",
+)
+ax.set(
+    xlabel="DateTime",
+    ylabel="Power (kW)",
+    xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11)),
+)
 plt.xticks(rotation=45)
 fig.tight_layout()
 plt.legend()
@@ -211,12 +219,14 @@ plt.savefig("cvx-emit-model-out.png", bbox_inches="tight")
 
 # plot the battery charge
 fig, ax = plt.subplots()
-ax.step(load_df["Datetime"], battery_soc.value[1:], color="C1", lw=2, label="Battery SOC")
+ax.step(
+    load_df["Datetime"], battery_soc.value[1:], color="C1", lw=2, label="Battery SOC"
+)
 ax.set(
-    xlabel="Time", 
-    ylabel="Battery SOC", 
-    ylim=[0,1], 
-    xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11))
+    xlabel="Time",
+    ylabel="Battery SOC",
+    ylim=[0, 1],
+    xlim=(datetime.datetime(2023, 4, 9), datetime.datetime(2023, 4, 11)),
 )
 plt.xticks(rotation=45)
 plt.savefig("cvx-emit-battery-soc.png", bbox_inches="tight")
