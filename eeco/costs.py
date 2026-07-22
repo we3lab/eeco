@@ -1118,7 +1118,9 @@ def get_converted_consumption_data(
             else:
                 raise NotImplementedError
 
-    return consumption_data_dict, model or cvxpy_constraints or None
+    if model is not None:
+        return consumption_data_dict, model
+    return consumption_data_dict, cvxpy_constraints or None
 
 
 def get_charge_array_duration(key):
