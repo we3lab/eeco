@@ -1722,7 +1722,7 @@ def calculate_itemized_cost(
     model_objects : pyomo ConcreteModel, list of cvxpy constraints, or None
         Same as the second return value of `calculate_cost`.
 
-    """    
+    """
     if model is not None and hasattr(model, "_var_index") is False:
         # Assumes vars for diff utilities share same index set
         for key, var in consumption_data_dict.items():
