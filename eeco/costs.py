@@ -1254,7 +1254,7 @@ def calculate_cost(
         for key, var in consumption_data_dict.items():
             if isinstance(var, dict):
                 for svar in var.values():
-                    if isinstance(var, (cp.Expression, pyo.Var, pyo.Param)):
+                    if isinstance(svar, (cp.Expression, pyo.Var, pyo.Param)):
                         ut.create_pyomo_model_index_ref(model, svar)
                         break
             else:
