@@ -10,7 +10,8 @@ from pyomo.core.expr.numeric_expr import (
     LinearExpression,
     MonomialTermExpression,
 )
-from pyomo.core.base.var import ScalarVar
+from pyomo.core.base.var import ScalarVar, IndexedVar
+from pyomo.core.base.param import ScalarParam, IndexedParam
 from pyomo.core.base.expression import ExpressionData
 from pyomo.core.base.expression import IndexedExpression
 
@@ -721,7 +722,7 @@ def check_indexed_pyomo_type(input_var):
     -------
     boolean
     """
-    return isinstance(input_var, (pyo.Var, pyo.Param, IndexedExpression))
+    return isinstance(input_var, (IndexedVar, IndexedParam, IndexedExpression))
 
 
 def check_nonindexed_pyomo_type(input_var):
@@ -738,7 +739,7 @@ def check_nonindexed_pyomo_type(input_var):
     """
     return isinstance(
         input_var,
-        (
+        (   ScalarParam,
             ExpressionData,
             LinearExpression,
             SumExpression,

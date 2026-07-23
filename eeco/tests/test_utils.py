@@ -350,10 +350,10 @@ def test_pyomo_type():
     m.p_i = pyo.Param([1, 2], mutable=False, initialize={1: 1, 2: 2})
     m.p = pyo.Param(initialize=1)
 
-    assert ut.check_indexed_pyomo_type(m.x)
+    assert ut.check_indexed_pyomo_type(m.x) is False
+    assert ut.check_nonindexed_pyomo_type(m.x)
     assert ut.check_indexed_pyomo_type(m.x_i)
     assert ut.check_indexed_pyomo_type(m.x_i[1]) is False
-
     assert ut.check_nonindexed_pyomo_type(m.x_i[1])
 
     assert ut.check_indexed_pyomo_type(m.e) is False
@@ -362,9 +362,10 @@ def test_pyomo_type():
     assert ut.check_indexed_pyomo_type(m.e_i[1]) is False
     assert ut.check_nonindexed_pyomo_type(m.e_i[1])
 
-    assert ut.check_indexed_pyomo_type(m.p)
+    assert ut.check_indexed_pyomo_type(m.p) is False    
+    assert ut.check_nonindexed_pyomo_type(m.p)
     assert ut.check_indexed_pyomo_type(m.p_i[1]) is False
-    # this will be false as pyomo returns an in for params
+    # this will be false as pyomo returns an int for params
     assert ut.check_nonindexed_pyomo_type(m.p_i[1]) is False
 
     assert ut.check_cvx_type(m.x) is False
