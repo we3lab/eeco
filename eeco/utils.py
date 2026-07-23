@@ -693,10 +693,11 @@ def create_pyomo_model_index_ref(model, var, overwrite=False):
 
     Returns
     -------
-    None. Sets the following attributes on `model`:
+    None
+        Sets the following attributes on `model`:
         - `_var_index_ref` (dict): maps each index value in
             `var.index_set()` to its integer position.
-        - `_var_index` (list): the index values of `var.index_set()`,
+        - `_var_index` (list): the index values of `var.index_set()`
             in enumeration order.
     """
     if not hasattr(model, "_var_index") or overwrite:
@@ -711,12 +712,13 @@ def create_pyomo_model_index_ref(model, var, overwrite=False):
 
 
 def check_indexed_pyomo_type(input_var):
-    """Checks if input is am indexed Pyomo variable, expression, or parameter.
-    If indiex var/param/expresion returns false
+    """Checks if input is an indexed Pyomo variable, expression, or parameter.
+    Returns `False` if a non-indexed variable, parameter, or expression (or non-Pyomo type).
 
     Parameters
     ----------
-    input_var: input paramter to check
+    input_var : object
+        Input parameter to check
 
     Returns
     -------
@@ -726,16 +728,17 @@ def check_indexed_pyomo_type(input_var):
 
 
 def check_nonindexed_pyomo_type(input_var):
-    """Checks if input is non idnexed Pyomo variable, expression, or parameter.
-    If indiex var/param/expresion returns false
+    """Checks if input is a non-idnexed Pyomo variable, expression, or parameter.
+    Returns `False` if an indexed variable, parameter, or expression (or non-Pyomo type).
 
     Parameters
     ----------
-    input_var: input paramter to check
+    input_var : object
+        Input parameter to check
 
     Returns
     -------
-    boolean
+    bool
     """
     return isinstance(
         input_var,
@@ -751,27 +754,32 @@ def check_nonindexed_pyomo_type(input_var):
 
 
 def check_cvx_type(input_var):
-    """Checks if input is a cvx variable, expression, or parameter.
+    """Checks if input is a CVXPY variable, expression, or parameter.
+
     Parameters
     ----------
-    input_var: input paramter to check
+    input_var : object
+        Input parameter to check
 
     Returns
     -------
-    boolean
+    bool
     """
     return isinstance(input_var, (cp.Expression, cp.Variable))
 
 
 def check_nonindexed_python_type(input_var):
-    """Checks if input is a general int/float variable, expression, or parameter.
-        Parameters
+    """Checks if input is a general int/float variable, expression, or parameter
+    (e.g., `np.int32` or `np.float64`)
+    
+    Parameters
     ----------
-    input_var: input paramter to check
-    idexable: checks if input can be index (e.g list/array)
+    input_var : object
+        Input parameter to check
+
     Returns
     -------
-    boolean
+    bool
     """
     return isinstance(
         input_var, (int, float, np.int32, np.int64, np.float32, np.float64)
@@ -779,12 +787,15 @@ def check_nonindexed_python_type(input_var):
 
 
 def check_indexed_np_array(input_var):
-    """Checks if input is a general int/float variable, expression, or parameter.
-        Parameters
+    """Checks if input is an array-like type (e.g., `np.ndarray`).
+    
+    Parameters
     ----------
-    input_var: input paramter to check
+    input_var : object
+        Input parameter to check
+
     Returns
     -------
-    boolean
+    bool
     """
     return isinstance(input_var, (np.ndarray))

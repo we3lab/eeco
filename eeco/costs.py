@@ -1210,7 +1210,7 @@ def calculate_cost(
         - "binary_variable": `NotImplementedError`
         - None (default): No decomposition, treats all consumption as imports
 
-    varstr_alias_func: function
+    varstr_alias_func : function
         Function to generate variable name for pyomo,
         should take in a 6 inputs and generate a string output.
         The function will receive following six inputs:
@@ -2198,8 +2198,7 @@ def parametrize_rate_data(
 
 
 def parametrize_charge_dict(start_dt, end_dt, rate_data, variants=None):
-    """
-    Takes in an existing charge_dict and varies it parametrically to create
+    """Takes in an existing charge_dict and varies it parametrically to create
     alternative rate structures. Calls parametrize_rate_data to parametrize the
     billing csv file, then calls it on the dates specified.
 
@@ -2207,16 +2206,19 @@ def parametrize_charge_dict(start_dt, end_dt, rate_data, variants=None):
     ----------
     start_dt : datetime.datetime
         first timestep to be included in the cost analysis
+
     end_dt : datetime.datetime
         last timestep to be included in the cost analysis
+
     rate_data : pandas.DataFrame
         tariff data with required columns
+
     variants : list[dict]
         List of dictionaries containing variation parameters with keys:
         - percent_change_dict: dict for charge scaling (see parametrize_rate_data)
         - shift_peak_hours_before: float to shift peak start, in hours
-        - shift_peak_hours_after: float to shift peak end, in hours
-        - variant_name: str (optional) variant name
+        - `shift_peak_hours_after` (float) : shift peak end, in hours
+        - `variant_name` (str, optional) : variant name
 
     Returns
     -------
