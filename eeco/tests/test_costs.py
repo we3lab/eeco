@@ -112,10 +112,10 @@ def setup_pyo_vars_with_non_standard_indexing_constraints(consumption_data_dict)
         gas_data = consumption_data_dict[GAS]
 
     model.T = len(electric_data)
-    model.t = pyo.Set(initialize=[60 * t for t in range(len(electric_data))])
-    data_ref = {idx: i for i, idx in enumerate(model.t)}
-    model.electric_consumption = pyo.Var(model.t, bounds=(None, None))
-    model.gas_consumption = pyo.Var(model.t, bounds=(None, None))
+    model.dummy_t = pyo.Set(initialize=[60 * t for t in range(len(electric_data))])
+    data_ref = {idx: i for i, idx in enumerate(model.dummy_t)}
+    model.electric_consumption = pyo.Var(model.dummy_t, bounds=(None, None))
+    model.gas_consumption = pyo.Var(model.dummy_t, bounds=(None, None))
 
     # Constrain variables to initialized values
     def electric_constraint_rule(model, t):
@@ -124,8 +124,8 @@ def setup_pyo_vars_with_non_standard_indexing_constraints(consumption_data_dict)
     def gas_constraint_rule(model, t):
         return model.gas_consumption[t] == gas_data[data_ref[t] - 1]
 
-    model.electric_constraint = pyo.Constraint(model.t, rule=electric_constraint_rule)
-    model.gas_constraint = pyo.Constraint(model.t, rule=gas_constraint_rule)
+    model.electric_constraint = pyo.Constraint(model.dummy_t, rule=electric_constraint_rule)
+    model.gas_constraint = pyo.Constraint(model.dummy_t, rule=gas_constraint_rule)
 
     pyo_vars = {
         "electric": model.electric_consumption,
