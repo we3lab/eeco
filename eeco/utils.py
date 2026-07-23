@@ -13,6 +13,7 @@ from pyomo.core.expr.numeric_expr import (
 from pyomo.core.base.var import ScalarVar
 from pyomo.core.base.expression import ExpressionData
 from pyomo.core.base.expression import IndexedExpression
+
 # Dictionary mapping region types to timezone strings
 TIMEZONE_DICT = {
     "iso_rto_code": {
@@ -184,9 +185,7 @@ def max(expression, model=None, varstr=None):
         constraint = pyo.Constraint(model._var_index, rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif check_indexed_np_array(expression) or check_nonindexed_python_type(
-        expression
-    ):
+    elif check_indexed_np_array(expression) or check_nonindexed_python_type(expression):
         return (np.max(expression), model)
     elif check_cvx_type(expression):
         return (cp.max(expression), None)
@@ -244,9 +243,7 @@ def sum(expression, axis=0, model=None, varstr=None):
         constraint = pyo.Constraint(rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif check_indexed_np_array(expression) or check_nonindexed_python_type(
-        expression
-    ):
+    elif check_indexed_np_array(expression) or check_nonindexed_python_type(expression):
         return (np.sum(expression, axis=axis), model)
     elif check_cvx_type(expression):
         return (cp.sum(expression, axis=axis), None)
@@ -317,9 +314,7 @@ def max_pos(expression, model=None, varstr=None):
         constraint = pyo.Constraint(expression.index_set(), rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif check_indexed_np_array(expression) or check_nonindexed_python_type(
-        expression
-    ):
+    elif check_indexed_np_array(expression) or check_nonindexed_python_type(expression):
         return (np.max(expression), model) if np.max(expression) > 0 else (0, model)
     elif check_cvx_type(expression):
         return cp.maximum(expression, 0), None  # Works for scalar or vector
@@ -395,7 +390,7 @@ def multiply(
         if (not check_nonindexed_python_type(expression1)) and (len(expression1) > 1):
             if (not check_nonindexed_python_type(expression2)) and (
                 len(expression2) > 1
-            ):                
+            ):
                 model.add_component(varstr, pyo.Var(model._var_index))
                 var = model.find_component(varstr)
 
@@ -436,8 +431,7 @@ def multiply(
         else:
             return (expression1 * expression2, model)
     elif (
-        check_indexed_np_array(expression1)
-        or check_nonindexed_python_type(expression1)
+        check_indexed_np_array(expression1) or check_nonindexed_python_type(expression1)
     ) and (
         (
             check_indexed_np_array(expression2)
