@@ -660,44 +660,44 @@ def sanitize_varstr(varstr):
     """
     return re.sub(r"[^a-zA-Z0-9_]", "_", varstr).replace(" ", "_")
 
-def createa_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
 
+def createa_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
     """Attach time index to the model for Pyomo variables and expressions.
 
-        Builds a mapping between the entries in `var`'s index set and their
-        positional order, and stores both on the model as private attributes.
-        This makes it easy to translate between a Pyomo indexed variable's index
-        values and plain integer positions (e.g. when aligning with a NumPy
-        array or another positional data structure).
+    Builds a mapping between the entries in `var`'s index set and their
+    positional order, and stores both on the model as private attributes.
+    This makes it easy to translate between a Pyomo indexed variable's index
+    values and plain integer positions (e.g. when aligning with a NumPy
+    array or another positional data structure).
 
-        Parameters
-        ----------
-        model : pyomo.environ.Model
-            The Pyomo model (or Block) to attach the index bookkeeping to.
+    Parameters
+    ----------
+    model : pyomo.environ.Model
+        The Pyomo model (or Block) to attach the index bookkeeping to.
 
-        dict : dict that contains {key: pyomo.environ.Param or pyomo.environ.Var} or 
-            dict of dicts that contains {key: {key: pyomo.environ.Param or pyomo.environ.Var}},
-            can also be an indexed pyomo var, experssion or param
+    dict : dict that contains {key: pyomo.environ.Param or pyomo.environ.Var} or
+        dict of dicts that contains {key: {key: pyomo.environ.Param or pyomo.environ.Var}},
+        can also be an indexed pyomo var, experssion or param
 
-        overwrite : bool
-            Ignored if index does not exist yet.
-            If index exists, must be set to True for updates to take effect.
-            If False, no changes are made to the index and a warning is raised.
+    overwrite : bool
+        Ignored if index does not exist yet.
+        If index exists, must be set to True for updates to take effect.
+        If False, no changes are made to the index and a warning is raised.
 
-        Raises
-        ------
-        TypeError
-            When pyomo var is not found in supplied dict, will raise an error 
+    Raises
+    ------
+    TypeError
+        When pyomo var is not found in supplied dict, will raise an error
 
-        Returns
-        -------
-        None
-            Sets the following attributes on `model`:
-            - `_var_index_ref` (dict): maps each index value in
-                `var.index_set()` to its integer position.
-            - `_var_index` (list): the index values of `var.index_set()`
-                in enumeration order.
-        """    
+    Returns
+    -------
+    None
+        Sets the following attributes on `model`:
+        - `_var_index_ref` (dict): maps each index value in
+            `var.index_set()` to its integer position.
+        - `_var_index` (list): the index values of `var.index_set()`
+            in enumeration order.
+    """
 
     def find_pyo_var(posible_dict):
         if isinstance(posible_dict, dict):
@@ -707,13 +707,15 @@ def createa_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
         elif check_indexed_pyomo_type(posible_dict):
             create_pyomo_model_index_ref(model, posible_dict, overwrite=overwrite)
             return True
-        return False   
+        return False
 
     find_pyo_var(input_dict)
     if not hasattr(model, "_var_index"):
-        raise(TypeError(f'Could not find a pyomo variable in supplied dict: {input_dict}'))
+        raise (
+            TypeError(f"Could not find a pyomo variable in supplied dict: {input_dict}")
+        )
 
-    
+
 def create_pyomo_model_index_ref(model, var, overwrite=False):
     """Attach time index to the model for Pyomo variables and expressions.
 
@@ -824,7 +826,7 @@ def check_cvx_type(input_var):
 def check_nonindexed_python_type(input_var):
     """Checks if input is a general int/float variable, expression, or parameter
     (e.g., `np.int32` or `np.float64`)
-    
+
     Parameters
     ----------
     input_var : object
@@ -841,7 +843,7 @@ def check_nonindexed_python_type(input_var):
 
 def check_indexed_np_array(input_var):
     """Checks if input is an array-like type (e.g., `np.ndarray`).
-    
+
     Parameters
     ----------
     input_var : object
