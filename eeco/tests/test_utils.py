@@ -143,6 +143,50 @@ def test_max_pyo(consumption_data, varstr, expected):
     assert model is not None
 
 
+@pytest.mark.parametrize(
+    "dict_type", ["pyovar", "normal", "nested", "multi_input", "empty"]
+)
+def test_create_pyomo_model_index_ref_from_dict(dict_type):
+    model = pyo.ConcreteModel()
+    model.e = pyo.Var(range(10), initialize=1)
+    if dict_type == "normal":
+        input_dict = {"electric": model.e}
+    elif dict_type == "pyovar":
+        input_dict = model.e
+    elif dict_type == "nested":
+        input_dict = {"nest_test": {"electric": model.e}}
+    elif dict_type == "multi_input":
+        input_dict = {
+            "nest_test": {"electric": model.e, "another_entery": np.arange(10)},
+            "electric": np.arange(10),
+        }
+    elif dict_type == "empty":
+        input_dict = {"nest_test": {"electric": np.arange(10)}}
+
+    if dict_type == "empty":
+        with pytest.raises(TypeError):
+            ut.createa_pyomo_model_index_from_dict(model, input_dict)
+        assert not hasattr(model, "_var_index_ref")
+        assert not hasattr(model, "_var_index")
+    else:
+        ut.createa_pyomo_model_index_from_dict(model, input_dict)
+        assert hasattr(model, "_var_index_ref")
+        assert hasattr(model, "_var_index")
+        assert model._var_index_ref == {
+            0: 0,
+            1: 1,
+            2: 2,
+            3: 3,
+            4: 4,
+            5: 5,
+            6: 6,
+            7: 7,
+            8: 8,
+            9: 9,
+        }
+        assert model._var_index == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "consumption_data, varstr, expected, expect_error",
@@ -313,7 +357,7 @@ def test_decompose_consumption_pyo(
         "gas": np.zeros_like(consumption_data),
     }
     model, pyo_vars = setup_pyo_vars_constraints(consumption_data_dict)
-
+    ut.createa_pyomo_model_index_from_dict(model, pyo_vars)
     if expect_warning:
         with pytest.warns(UserWarning):
             positive_var, negative_var, model = ut.decompose_consumption(

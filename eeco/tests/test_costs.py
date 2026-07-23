@@ -71,15 +71,16 @@ def setup_pyo_vars_constraints(consumption_data_dict):
         # Extended format
         electric_data = consumption_data_dict[ELECTRIC]["imports"]
         gas_data = consumption_data_dict[GAS]["imports"]
+
+        pyo_vars = {ELECTRIC: {}, GAS: {}}
     else:
         electric_data = consumption_data_dict[ELECTRIC]
         gas_data = consumption_data_dict[GAS]
 
     model.T = len(electric_data)
-    model.t = pyo.RangeSet(0, model.T - 1)
-    model.electric_consumption = pyo.Var(model.t, bounds=(None, None))
-    model.gas_consumption = pyo.Var(model.t, bounds=(None, None))
-    ut.create_pyomo_model_index_ref(model, model.electric_consumption)
+    model.dummy_t = pyo.RangeSet(0, model.T - 1)
+    model.electric_consumption = pyo.Var(model.dummy_t, bounds=(None, None))
+    model.gas_consumption = pyo.Var(model.dummy_t, bounds=(None, None))
 
     # Constrain variables to initialized values
     def electric_constraint_rule(model, t):
@@ -88,25 +89,58 @@ def setup_pyo_vars_constraints(consumption_data_dict):
     def gas_constraint_rule(model, t):
         return model.gas_consumption[t] == gas_data[t - 1]
 
-    model.electric_constraint = pyo.Constraint(model.t, rule=electric_constraint_rule)
-    model.gas_constraint = pyo.Constraint(model.t, rule=gas_constraint_rule)
+    model.electric_constraint = pyo.Constraint(
+        model.dummy_t, rule=electric_constraint_rule
+    )
+    model.gas_constraint = pyo.Constraint(model.dummy_t, rule=gas_constraint_rule)
+    # recast as pyomo vars.
+    if isinstance(consumption_data_dict[ELECTRIC], dict):
+        pyo_vars[ELECTRIC]["imports"] = model.electric_consumption
+        pyo_vars[GAS]["imports"] = model.gas_consumption
+        if "exports" in consumption_data_dict[ELECTRIC]:
+            model.electric_consumption_exports = pyo.Var(
+                model.dummy_t, bounds=(None, None)
+            )
+            model.gas_consumption_exports = pyo.Var(model.dummy_t, bounds=(None, None))
 
-    pyo_vars = {
-        "electric": model.electric_consumption,
-        "gas": model.gas_consumption,
-    }
+            # Constrain variables to initialized values
+            def electric_constraint_rule(model, t):
+                return (
+                    model.electric_consumption_exports[t]
+                    == consumption_data_dict[ELECTRIC]["exports"][t - 1]
+                )
 
+            def gas_constraint_rule(model, t):
+                return (
+                    model.gas_consumption_exports[t]
+                    == consumption_data_dict[GAS]["exports"][t - 1]
+                )
+
+            model.electric_constraint_export = pyo.Constraint(
+                model.dummy_t, rule=electric_constraint_rule
+            )
+            model.gas_constraint_export = pyo.Constraint(
+                model.dummy_t, rule=gas_constraint_rule
+            )
+            pyo_vars[ELECTRIC]["exports"] = model.electric_consumption_exports
+            pyo_vars[GAS]["exports"] = model.gas_consumption_exports
+    else:
+        pyo_vars = {
+            "gas": model.gas_consumption,
+            "electric": model.electric_consumption,
+        }
     return model, pyo_vars
 
 
 def setup_pyo_vars_with_non_standard_indexing_constraints(consumption_data_dict):
     """Helper function to set up Pyomo model, variables and constraints."""
     model = pyo.ConcreteModel()
-
+    pyo_vars = {}
     if isinstance(consumption_data_dict[ELECTRIC], dict):
         # Extended format
         electric_data = consumption_data_dict[ELECTRIC]["imports"]
         gas_data = consumption_data_dict[GAS]["imports"]
+        pyo_vars = {ELECTRIC: {}, GAS: {}}
     else:
         electric_data = consumption_data_dict[ELECTRIC]
         gas_data = consumption_data_dict[GAS]
@@ -124,14 +158,46 @@ def setup_pyo_vars_with_non_standard_indexing_constraints(consumption_data_dict)
     def gas_constraint_rule(model, t):
         return model.gas_consumption[t] == gas_data[data_ref[t] - 1]
 
-    model.electric_constraint = pyo.Constraint(model.dummy_t, rule=electric_constraint_rule)
+    model.electric_constraint = pyo.Constraint(
+        model.dummy_t, rule=electric_constraint_rule
+    )
     model.gas_constraint = pyo.Constraint(model.dummy_t, rule=gas_constraint_rule)
 
-    pyo_vars = {
-        "electric": model.electric_consumption,
-        "gas": model.gas_consumption,
-    }
+    if isinstance(consumption_data_dict[ELECTRIC], dict):
+        pyo_vars[ELECTRIC]["imports"] = model.electric_consumption
+        pyo_vars[GAS]["imports"] = model.gas_consumption
+        if "exports" in consumption_data_dict[ELECTRIC]:
+            model.electric_consumption_exports = pyo.Var(
+                model.dummy_t, bounds=(None, None)
+            )
+            model.gas_consumption_exports = pyo.Var(model.dummy_t, bounds=(None, None))
 
+            # Constrain variables to initialized values
+            def electric_constraint_rule(model, t):
+                return (
+                    model.electric_consumption_exports[t]
+                    == consumption_data_dict[ELECTRIC]["exports"][data_ref[t] - 1]
+                )
+
+            def gas_constraint_rule(model, t):
+                return (
+                    model.gas_consumption_exports[t]
+                    == consumption_data_dict[GAS]["exports"][data_ref[t] - 1]
+                )
+
+            model.electric_constraint_export = pyo.Constraint(
+                model.dummy_t, rule=electric_constraint_rule
+            )
+            model.gas_constraint_export = pyo.Constraint(
+                model.dummy_t, rule=gas_constraint_rule
+            )
+            pyo_vars[ELECTRIC]["exports"] = model.electric_consumption_exports
+            pyo_vars[GAS]["exports"] = model.gas_consumption_exports
+    else:
+        pyo_vars = {
+            "gas": model.gas_consumption,
+            "electric": model.electric_consumption,
+        }
     return model, pyo_vars
 
 
@@ -1533,13 +1599,7 @@ def test_calculate_cost_pyo(
     decomposition_type,
     expected_cost,
 ):
-    model, pyo_vars = setup_pyo_vars_constraints(consumption_data_dict)
-
-    if isinstance(consumption_data_dict[ELECTRIC], dict):
-        # Extended format: pass full consumption data
-        consumption_input = consumption_data_dict
-    else:
-        consumption_input = pyo_vars
+    model, consumption_input = setup_pyo_vars_constraints(consumption_data_dict)
 
     result, model = costs.calculate_cost(
         charge_dict,
@@ -1583,15 +1643,9 @@ def test_calculate_cost_pyo_non_standard_index(
     decomposition_type,
     expected_cost,
 ):
-    model, pyo_vars = setup_pyo_vars_with_non_standard_indexing_constraints(
+    model, consumption_input = setup_pyo_vars_with_non_standard_indexing_constraints(
         consumption_data_dict
     )
-
-    if isinstance(consumption_data_dict[ELECTRIC], dict):
-        # Extended format: pass full consumption data
-        consumption_input = consumption_data_dict
-    else:
-        consumption_input = pyo_vars
 
     result, model = costs.calculate_cost(
         charge_dict,

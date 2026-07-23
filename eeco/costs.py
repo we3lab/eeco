@@ -1250,17 +1250,7 @@ def calculate_cost(
         consumption_estimate = 0
 
     if model is not None and not hasattr(model, "_var_index"):
-        # Assumes vars for diff utilities share same index set
-        for key, var in consumption_data_dict.items():
-            if isinstance(var, dict):
-                for svar in var.values():
-                    if ut.check_indexed_pyomo_type(svar):
-                        ut.create_pyomo_model_index_ref(model, svar)
-                        break
-            else:
-                if ut.check_indexed_pyomo_type(var):
-                    ut.create_pyomo_model_index_ref(model, var)
-                    break
+        ut.createa_pyomo_model_index_from_dict(model, consumption_data_dict)
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )
@@ -1656,16 +1646,7 @@ def calculate_itemized_cost(
                 )
     if model is not None and not hasattr(model, "_var_index"):
         # Assumes vars for diff utilities share same index set
-        for key, var in consumption_data_dict.items():
-            if isinstance(var, dict):
-                for svar in var.values():
-                    if ut.check_indexed_pyomo_type(var):
-                        ut.create_pyomo_model_index_ref(model, svar)
-                        break
-            else:
-                if ut.check_indexed_pyomo_type(var):
-                    ut.create_pyomo_model_index_ref(model, var)
-                    break
+        ut.createa_pyomo_model_index_from_dict(model, consumption_data_dict)
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )

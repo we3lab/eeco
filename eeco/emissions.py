@@ -79,7 +79,7 @@ def calculate_grid_emissions(
         consumption_data
     ):
         if ut.check_indexed_pyomo_type(consumption_data):
-            ut.create_pyomo_model_index_ref(model, consumption_data)
+            ut.createa_pyomo_model_index_from_dict(model, consumption_data)
         conversion_factor = (
             (1 * consumption_units * emissions_units * u.hour).to(u.kg).magnitude
         )
