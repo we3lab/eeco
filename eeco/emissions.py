@@ -66,7 +66,7 @@ def calculate_grid_emissions(
         emissions_units = carbon_intensity.units
         carbon_intensity = carbon_intensity.magnitude
 
-    if ut.check_indexed_python_type(consumption_data):
+    if ut.check_indexed_np_array(consumption_data):
         total_emissions = (
             np.sum(consumption_data * carbon_intensity)
             * consumption_units

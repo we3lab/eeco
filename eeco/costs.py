@@ -114,7 +114,7 @@ def create_charge_array(
     panda.Series
         timeseries of the cost of the charge with irrelevant timesteps zeroed out
     """
-    if ut.check_indexed_python_type(datetime):
+    if ut.check_indexed_np_array(datetime):
         datetime = pd.to_datetime(datetime)
     elif isinstance(datetime, pd.DataFrame):
         datetime = datetime[DATETIME]
@@ -644,7 +644,7 @@ def calculate_demand_cost(
     else:
         consumption_max = max(max(consumption_estimate), prev_demand)
 
-    if ut.check_indexed_python_type(consumption_data):
+    if ut.check_indexed_np_array(consumption_data):
         if np.any(consumption_data < 0):
             warnings.warn(
                 "Demand calculation includes negative values. Pass in "
@@ -801,7 +801,7 @@ def calculate_energy_cost(
     else:  # Pyomo does not support shape attribute
         n_steps = len(consumption_data)
 
-    if ut.check_indexed_python_type(consumption_data):
+    if ut.check_indexed_np_array(consumption_data):
         if np.any(consumption_data < 0):
             warnings.warn(
                 "Energy calculation includes negative values. Pass in "
@@ -924,7 +924,7 @@ def calculate_export_revenue(
         in USD for the given `charge_array` and `export_data`
         and the second entry being the pyomo model object (or None)
     """
-    if ut.check_indexed_python_type(consumption_data):
+    if ut.check_indexed_np_array(consumption_data):
         if np.any(consumption_data < 0):
             warnings.warn(
                 "Export revenue calculation includes negative values. Pass in "
@@ -1254,11 +1254,11 @@ def calculate_cost(
         for key, var in consumption_data_dict.items():
             if isinstance(var, dict):
                 for svar in var.values():
-                    if isinstance(svar, (cp.Expression, pyo.Var, pyo.Param)):
+                    if ut.check_indexed_pyomo_type(svar):
                         ut.create_pyomo_model_index_ref(model, svar)
                         break
             else:
-                if isinstance(var, (cp.Expression, pyo.Var, pyo.Param)):
+                if ut.check_indexed_pyomo_type(var):
                     ut.create_pyomo_model_index_ref(model, var)
                     break
     conversion_factors = get_conversion_factors(

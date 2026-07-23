@@ -356,10 +356,10 @@ def test_pyomo_type():
 
     assert ut.check_nonindexed_pyomo_type(m.x_i[1])
 
-    assert ut.check_indexed_pyomo_type(m.e)
+    assert ut.check_indexed_pyomo_type(m.e) is False
+    assert ut.check_nonindexed_pyomo_type(m.e)
     assert ut.check_indexed_pyomo_type(m.e_i)
     assert ut.check_indexed_pyomo_type(m.e_i[1]) is False
-
     assert ut.check_nonindexed_pyomo_type(m.e_i[1])
 
     assert ut.check_indexed_pyomo_type(m.p)
@@ -400,13 +400,13 @@ def test_python_types():
     t = (1, 2, 3, 4)
     assert ut.check_nonindexed_python_type(x)
     assert ut.check_nonindexed_python_type(y)
-    assert ut.check_indexed_python_type(z)
+    assert ut.check_indexed_np_array(z)
 
     # We do not support lists or tuples
-    assert ut.check_indexed_python_type(ls) is False
+    assert ut.check_indexed_np_array(ls) is False
     assert ut.check_nonindexed_python_type(ls) is False
 
-    assert ut.check_indexed_python_type(t) is False
+    assert ut.check_indexed_np_array(t) is False
     assert ut.check_nonindexed_python_type(t) is False
 
     assert ut.check_nonindexed_python_type(z) is False
