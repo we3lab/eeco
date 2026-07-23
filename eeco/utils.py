@@ -739,7 +739,8 @@ def check_nonindexed_pyomo_type(input_var):
     """
     return isinstance(
         input_var,
-        (   ScalarParam,
+        (
+            ScalarParam,
             ExpressionData,
             LinearExpression,
             SumExpression,

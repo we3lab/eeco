@@ -362,7 +362,7 @@ def test_pyomo_type():
     assert ut.check_indexed_pyomo_type(m.e_i[1]) is False
     assert ut.check_nonindexed_pyomo_type(m.e_i[1])
 
-    assert ut.check_indexed_pyomo_type(m.p) is False    
+    assert ut.check_indexed_pyomo_type(m.p) is False
     assert ut.check_nonindexed_pyomo_type(m.p)
     assert ut.check_indexed_pyomo_type(m.p_i[1]) is False
     # this will be false as pyomo returns an int for params
