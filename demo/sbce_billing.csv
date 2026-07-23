@@ -1,0 +1,23 @@
+utility,type,period,basic_charge_limit (imperial),basic_charge_limit (metric),month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge (imperial),charge (metric),units,Notes
+electric,customer,,,,,,,,,,3649.76,3649.76,$/month,Santa Barbara Clean Energy TOU-SUB-8-E (2023 rates)
+electric,demand,peak-summer,0,0,6,9,16,21,0,4,2.55,2.55,$/kW,Assumed > 50 kV (transmission voltage)
+electric,demand,part-peak-winter1,0,0,1,5,16,21,0,4,1.24,1.24,$/kW,"Includes distribution, transmission, and generation charges"
+electric,demand,part-peak-winter2,0,0,10,12,16,21,0,4,1.24,1.24,$/kW,
+electric,demand,maximum,0,0,1,12,0,24,0,6,8.03,8.03,$/kW,
+electric,energy,,0,0,6,9,16,21,0,4,0.52939,0.52939,$/kWh,
+electric,energy,,0,0,6,9,0,16,0,6,0.12955,0.12955,$/kWh,
+electric,energy,,0,0,6,9,21,24,0,6,0.12955,0.12955,$/kWh,
+electric,energy,,0,0,6,9,16,21,5,6,0.19809,0.19809,$/kWh,
+electric,energy,,0,0,1,5,16,21,0,6,0.20081,0.20081,$/kWh,
+electric,energy,,0,0,1,5,0,8,0,6,0.1332,0.1332,$/kWh,
+electric,energy,,0,0,1,5,21,24,0,6,0.1332,0.1332,$/kWh,
+electric,energy,,0,0,1,5,8,16,0,6,0.09081,0.09081,$/kWh,
+electric,energy,,0,0,10,12,16,21,0,6,0.20081,0.20081,$/kWh,
+electric,energy,,0,0,10,12,0,8,0,6,0.1332,0.1332,$/kWh,
+electric,energy,,0,0,10,12,21,24,0,6,0.1332,0.1332,$/kWh,
+electric,energy,,0,0,10,12,8,16,0,6,0.09081,0.09081,$/kWh,
+electric,gas,,0,0,10,12,8,16,0,6,0.09081,0.09081,$/kWh,
+gas,customer,,0,0,,,,,,,14.7945,14.7945,$/month,Estimated from multiplying cost of 1 meter for 1 day by 30 days
+gas,energy,,0,0,1,12,0,24,0,6,0.570905,0.20161353,$/therm or $/m3,
+gas,energy,,250,708,1,12,0,24,0,6,0.415764,0.146825913,$/therm or $/m3,
+gas,energy,,4167,11800,1,12,0,24,0,6,0.311744,0.110091536,$/therm or $/m3,
