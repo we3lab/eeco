@@ -695,7 +695,7 @@ If False, they will not be scaled. Default is False.</p></li>
 <dd class="field-even"><p>DataFrame of charge arrays</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.1)">pandas.DataFrame</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -826,8 +826,8 @@ billing csv file, then calls it on the dates specified.</p>
 <li><p><strong>variants</strong> (<em>list[dict]</em>) – List of dictionaries containing variation parameters with keys:
 - percent_change_dict: dict for charge scaling (see parametrize_rate_data)
 - shift_peak_hours_before: float to shift peak start, in hours
-- shift_peak_hours_after: float to shift peak end, in hours
-- variant_name: str (optional) variant name</p></li>
+- <cite>shift_peak_hours_after</cite> (float) : shift peak end, in hours
+- <cite>variant_name</cite> (str, optional) : variant name</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -914,7 +914,7 @@ Must be multiple of 0.25 hours. Default 0</p></li>
 parametrized charges and windows</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.1)">pandas.DataFrame</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">

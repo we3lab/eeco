@@ -220,7 +220,7 @@
 <span class="sd">    panda.Series</span>
 <span class="sd">        timeseries of the cost of the charge with irrelevant timesteps zeroed out</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datetime</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_indexed_np_array</span><span class="p">(</span><span class="n">datetime</span><span class="p">):</span>
         <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">datetime</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datetime</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
         <span class="n">datetime</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">[</span><span class="n">DATETIME</span><span class="p">]</span>
@@ -744,12 +744,13 @@
 <span class="sd">        in USD for the given `charge_array` and `consumption_data`</span>
 <span class="sd">        and the second entry being the pyomo model object (or None)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+
+    <span class="k">if</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">):</span>
         <span class="n">consumption_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">),</span> <span class="n">prev_demand</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">consumption_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">),</span> <span class="n">prev_demand</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_indexed_np_array</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">consumption_data</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
                 <span class="s2">&quot;Demand calculation includes negative values. Pass in &quot;</span>
@@ -767,19 +768,19 @@
                 <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>  <span class="c1"># ignore if current and previous maxima outside of charge limit</span>
             <span class="n">demand_charged</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="p">(</span><span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">)):</span>
+    <span class="k">elif</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">consumption_max</span> <span class="o">&gt;=</span> <span class="n">limit</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">consumption_max</span> <span class="o">&lt;=</span> <span class="n">next_limit</span><span class="p">:</span>
                 <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span>
                     <span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_limit&quot;</span><span class="p">,</span>
-                    <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">initialize</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
+                    <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">initialize</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
                 <span class="p">)</span>
                 <span class="n">var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_limit&quot;</span><span class="p">)</span>
 
                 <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
                     <span class="k">return</span> <span class="n">var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">consumption_data</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">-</span> <span class="n">limit</span>
 
-                <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
+                <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
                 <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_limit_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
 
                 <span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
@@ -797,7 +798,7 @@
                 <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">demand_charged</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">):</span>
+    <span class="k">elif</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_cvx_type</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">consumption_max</span> <span class="o">&gt;=</span> <span class="n">limit</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">consumption_max</span> <span class="o">&lt;=</span> <span class="n">next_limit</span><span class="p">:</span>
                 <span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
@@ -906,7 +907,7 @@
     <span class="k">else</span><span class="p">:</span>  <span class="c1"># Pyomo does not support shape attribute</span>
         <span class="n">n_steps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_indexed_np_array</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">consumption_data</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
                 <span class="s2">&quot;Energy calculation includes negative values. Pass in &quot;</span>
@@ -942,12 +943,14 @@
                 <span class="n">within_limit_flag</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">cost</span> <span class="o">+=</span> <span class="nb">max</span><span class="p">(</span><span class="n">energy</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">limit</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">charge_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">)):</span>
+    <span class="k">elif</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">)</span> <span class="ow">or</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_cvx_type</span><span class="p">(</span>
+        <span class="n">consumption_data</span>
+    <span class="p">):</span>
         <span class="c1"># For tiered charges, approximate extimated consumption being split evenly</span>
         <span class="c1"># Only necessary if we have a finite next_limit OR if current limit &gt; 0</span>
         <span class="c1"># NOTE: this convex approximation breaks global optimality guarantees</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">next_limit</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span> <span class="ow">and</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">):</span>
                 <span class="n">consumption_per_timestep</span> <span class="o">=</span> <span class="n">consumption_estimate</span> <span class="o">/</span> <span class="n">n_steps</span>
                 <span class="n">consumption_estimate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_steps</span><span class="p">)</span> <span class="o">*</span> <span class="n">consumption_per_timestep</span>
 
@@ -1027,7 +1030,7 @@
 <span class="sd">        in USD for the given `charge_array` and `export_data`</span>
 <span class="sd">        and the second entry being the pyomo model object (or None)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_indexed_np_array</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">consumption_data</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
                 <span class="s2">&quot;Export revenue calculation includes negative values. Pass in &quot;</span>
@@ -1036,7 +1039,9 @@
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">consumption_data</span> <span class="o">*</span> <span class="n">charge_array</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_per_hour</span><span class="p">,</span> <span class="n">model</span>
 
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">,</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">)):</span>
+    <span class="k">elif</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">)</span> <span class="ow">or</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_cvx_type</span><span class="p">(</span>
+        <span class="n">consumption_data</span>
+    <span class="p">):</span>
         <span class="n">cost_expr</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
             <span class="n">consumption_data</span><span class="p">,</span>
             <span class="n">charge_array</span><span class="p">,</span>
@@ -1311,7 +1316,7 @@
 <span class="sd">        - &quot;binary_variable&quot;: `NotImplementedError`</span>
 <span class="sd">        - None (default): No decomposition, treats all consumption as imports</span>
 
-<span class="sd">    varstr_alias_func: function</span>
+<span class="sd">    varstr_alias_func : function</span>
 <span class="sd">        Function to generate variable name for pyomo,</span>
 <span class="sd">        should take in a 6 inputs and generate a string output.</span>
 <span class="sd">        The function will receive following six inputs:</span>
@@ -1350,6 +1355,8 @@
     <span class="k">if</span> <span class="n">consumption_estimate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">consumption_estimate</span> <span class="o">=</span> <span class="mi">0</span>
 
+    <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;_var_index&quot;</span><span class="p">):</span>
+        <span class="n">ut</span><span class="o">.</span><span class="n">createa_pyomo_model_index_from_dict</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">consumption_data_dict</span><span class="p">)</span>
     <span class="n">conversion_factors</span> <span class="o">=</span> <span class="n">get_conversion_factors</span><span class="p">(</span>
         <span class="n">electric_consumption_units</span><span class="p">,</span> <span class="n">gas_consumption_units</span>
     <span class="p">)</span>
@@ -1388,14 +1395,14 @@
                 <span class="n">prev_demand</span> <span class="o">=</span> <span class="mi">0</span>
                 <span class="n">prev_demand_cost</span> <span class="o">=</span> <span class="mi">0</span>
 
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">):</span>
                 <span class="c1"># convert single kWh to the equivalent kW per timestep</span>
                 <span class="n">demand_consumption_estimate</span> <span class="o">=</span> <span class="p">(</span>
                     <span class="n">consumption_estimate</span> <span class="o">*</span> <span class="n">n_per_hour</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">charge_array</span><span class="p">)</span>
                 <span class="p">)</span>
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">)):</span>
                 <span class="n">demand_consumption_estimate</span> <span class="o">=</span> <span class="n">consumption_estimate</span><span class="p">[</span><span class="n">utility</span><span class="p">]</span>
-                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">demand_consumption_estimate</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">demand_consumption_estimate</span><span class="p">):</span>
                     <span class="n">demand_consumption_estimate</span> <span class="o">=</span> <span class="p">(</span>
                         <span class="n">demand_consumption_estimate</span> <span class="o">*</span> <span class="n">n_per_hour</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">charge_array</span><span class="p">)</span>
                     <span class="p">)</span>
@@ -1421,7 +1428,7 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">prev_consumption</span> <span class="o">=</span> <span class="mi">0</span>
 
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">):</span>
                 <span class="c1"># assumed to be kWh or therms/m3 per month</span>
                 <span class="n">energy_consumption_estimate</span> <span class="o">=</span> <span class="n">consumption_estimate</span>
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">)):</span>
@@ -1743,7 +1750,9 @@
                     <span class="s2">&quot;Decomposition types are not supported with CVXPY objects. &quot;</span>
                     <span class="s2">&quot;Use Pyomo instead for problems requiring decomposition_type.&quot;</span>
                 <span class="p">)</span>
-
+    <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;_var_index&quot;</span><span class="p">):</span>
+        <span class="c1"># Assumes vars for diff utilities share same index set</span>
+        <span class="n">ut</span><span class="o">.</span><span class="n">createa_pyomo_model_index_from_dict</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">consumption_data_dict</span><span class="p">)</span>
     <span class="n">conversion_factors</span> <span class="o">=</span> <span class="n">get_conversion_factors</span><span class="p">(</span>
         <span class="n">electric_consumption_units</span><span class="p">,</span> <span class="n">gas_consumption_units</span>
     <span class="p">)</span>
@@ -2276,8 +2285,7 @@
 
 
 <div class="viewcode-block" id="parametrize_charge_dict"><a class="viewcode-back" href="../../eeco.html#eeco.costs.parametrize_charge_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parametrize_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">variants</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Takes in an existing charge_dict and varies it parametrically to create</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Takes in an existing charge_dict and varies it parametrically to create</span>
 <span class="sd">    alternative rate structures. Calls parametrize_rate_data to parametrize the</span>
 <span class="sd">    billing csv file, then calls it on the dates specified.</span>
 
@@ -2285,16 +2293,19 @@
 <span class="sd">    ----------</span>
 <span class="sd">    start_dt : datetime.datetime</span>
 <span class="sd">        first timestep to be included in the cost analysis</span>
+
 <span class="sd">    end_dt : datetime.datetime</span>
 <span class="sd">        last timestep to be included in the cost analysis</span>
+
 <span class="sd">    rate_data : pandas.DataFrame</span>
 <span class="sd">        tariff data with required columns</span>
+
 <span class="sd">    variants : list[dict]</span>
 <span class="sd">        List of dictionaries containing variation parameters with keys:</span>
 <span class="sd">        - percent_change_dict: dict for charge scaling (see parametrize_rate_data)</span>
 <span class="sd">        - shift_peak_hours_before: float to shift peak start, in hours</span>
-<span class="sd">        - shift_peak_hours_after: float to shift peak end, in hours</span>
-<span class="sd">        - variant_name: str (optional) variant name</span>
+<span class="sd">        - `shift_peak_hours_after` (float) : shift peak end, in hours</span>
+<span class="sd">        - `variant_name` (str, optional) : variant name</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>

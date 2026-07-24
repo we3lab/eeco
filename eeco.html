@@ -670,7 +670,7 @@ If False, they will not be scaled. Default is False.</p></li>
 <dd class="field-even"><p>DataFrame of charge arrays</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.1)">pandas.DataFrame</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -801,8 +801,8 @@ billing csv file, then calls it on the dates specified.</p>
 <li><p><strong>variants</strong> (<em>list[dict]</em>) – List of dictionaries containing variation parameters with keys:
 - percent_change_dict: dict for charge scaling (see parametrize_rate_data)
 - shift_peak_hours_before: float to shift peak start, in hours
-- shift_peak_hours_after: float to shift peak end, in hours
-- variant_name: str (optional) variant name</p></li>
+- <cite>shift_peak_hours_after</cite> (float) : shift peak end, in hours
+- <cite>variant_name</cite> (str, optional) : variant name</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -889,7 +889,7 @@ Must be multiple of 0.25 hours. Default 0</p></li>
 parametrized charges and windows</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.1)">pandas.DataFrame</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
@@ -1144,14 +1144,184 @@ Pandas and NumPy value quantities.</p>
 <section id="module-eeco.utils">
 <span id="eeco-utils-module"></span><h2>eeco.utils module<a class="headerlink" href="#module-eeco.utils" title="Permalink to this heading"></a></h2>
 <dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.check_cvx_type">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">check_cvx_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_var</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#check_cvx_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.check_cvx_type" title="Permalink to this definition"></a></dt>
+<dd><p>Checks if input is a CVXPY variable, expression, or parameter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>input_var</strong> (<em>object</em>) – Input parameter to check</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.check_indexed_np_array">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">check_indexed_np_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_var</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#check_indexed_np_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.check_indexed_np_array" title="Permalink to this definition"></a></dt>
+<dd><p>Checks if input is an array-like type (e.g., <cite>np.ndarray</cite>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>input_var</strong> (<em>object</em>) – Input parameter to check</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.check_indexed_pyomo_type">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">check_indexed_pyomo_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_var</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#check_indexed_pyomo_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.check_indexed_pyomo_type" title="Permalink to this definition"></a></dt>
+<dd><p>Checks if input is an indexed Pyomo variable, expression, or parameter.
+Returns <cite>False</cite> if a non-indexed variable, parameter,
+or expression (or non-Pyomo type).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>input_var</strong> (<em>object</em>) – Input parameter to check</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>boolean</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.check_nonindexed_pyomo_type">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">check_nonindexed_pyomo_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_var</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#check_nonindexed_pyomo_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.check_nonindexed_pyomo_type" title="Permalink to this definition"></a></dt>
+<dd><p>Checks if input is a non-idnexed Pyomo variable, expression, or parameter.
+Returns <cite>False</cite> if an indexed variable, parameter,
+or expression (or non-Pyomo type).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>input_var</strong> (<em>object</em>) – Input parameter to check</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.check_nonindexed_python_type">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">check_nonindexed_python_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_var</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#check_nonindexed_python_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.check_nonindexed_python_type" title="Permalink to this definition"></a></dt>
+<dd><p>Checks if input is a general int/float variable, expression, or parameter
+(e.g., <cite>np.int32</cite> or <cite>np.float64</cite>)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>input_var</strong> (<em>object</em>) – Input parameter to check</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="eeco.utils.convert_utc_to_timezone">
 <span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">convert_utc_to_timezone</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">utc_hour</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timezone_str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#convert_utc_to_timezone"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.convert_utc_to_timezone" title="Permalink to this definition"></a></dt>
 <dd><p>Convert UTC hour (0-23) to the corresponding hour in a specified timezone.</p>
-<p>Parameters:
-utc_hour (int): Hour in UTC (0-23).
-timezone_str (str): Timezone string, e.g., ‘America/New_York’.</p>
-<p>Returns:
-int: Corresponding hour in the specified timezone.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>utc_hour</strong> (<em>int</em>) – Hour in UTC (0-23).</p></li>
+<li><p><strong>timezone_str</strong> (<em>str</em>) – Timezone string, e.g., ‘America/New_York’.</p></li>
+<li><p><strong>Returns</strong></p></li>
+<li><p><strong>int</strong> (<em>Corresponding hour in the specified timezone.</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.create_pyomo_model_index_ref">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">create_pyomo_model_index_ref</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#create_pyomo_model_index_ref"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.create_pyomo_model_index_ref" title="Permalink to this definition"></a></dt>
+<dd><p>Attach time index to the model for Pyomo variables and expressions.</p>
+<p>Builds a mapping between the entries in <cite>var</cite>’s index set and their
+positional order, and stores both on the model as private attributes.
+This makes it easy to translate between a Pyomo indexed variable’s index
+values and plain integer positions (e.g. when aligning with a NumPy
+array or another positional data structure).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>pyomo.environ.Model</em>) – The Pyomo model (or Block) to attach the index bookkeeping to.</p></li>
+<li><p><strong>var</strong> (<em>: pyomo.environ.Param or pyomo.environ.Var</em>) – A Pyomo indexed component (e.g. an indexed Var) whose
+<cite>index_set()</cite> will be enumerated.</p></li>
+<li><p><strong>overwrite</strong> (<em>bool</em>) – Ignored if index does not exist yet.
+If index exists, must be set to True for updates to take effect.
+If False, no changes are made to the index and a warning is raised.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – When the index already exists and <cite>overwrite</cite> is False,
+    then the function with a warning to the user to set <cite>overwrite</cite> to True
+    if they’d like to enforce index updates.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><p>Sets the following attributes on <cite>model</cite>:
+- <cite>_var_index_ref</cite> (dict): maps each index value in</p>
+<blockquote>
+<div><p><cite>var.index_set()</cite> to its integer position.</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt><cite>_var_index</cite> (list): the index values of <cite>var.index_set()</cite></dt><dd><p>in enumeration order.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.createa_pyomo_model_index_from_dict">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">createa_pyomo_model_index_from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#createa_pyomo_model_index_from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.createa_pyomo_model_index_from_dict" title="Permalink to this definition"></a></dt>
+<dd><p>Attach time index to the model for Pyomo variables and expressions.</p>
+<p>Builds a mapping between the entries in <cite>var</cite>’s index set and their
+positional order, and stores both on the model as private attributes.
+This makes it easy to translate between a Pyomo indexed variable’s index
+values and plain integer positions (e.g. when aligning with a NumPy
+array or another positional data structure).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>pyomo.environ.Model</em>) – The Pyomo model (or Block) to attach the index bookkeeping to.</p></li>
+<li><p><strong>dict</strong> (<em>dict that contains {key: pyomo.environ.Param or pyomo.environ.Var} or</em>) – dict of dicts like {key: {key: pyomo.environ.Param or pyomo.environ.Var}},
+Can also be an indexed pyomo var, experssion or param</p></li>
+<li><p><strong>overwrite</strong> (<em>bool</em>) – Ignored if index does not exist yet.
+If index exists, must be set to True for updates to take effect.
+If False, no changes are made to the index and a warning is raised.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When pyomo var is not found in supplied dict, will raise an error</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><p>Sets the following attributes on <cite>model</cite>:
+- <cite>_var_index_ref</cite> (dict): maps each index value in</p>
+<blockquote>
+<div><p><cite>var.index_set()</cite> to its integer position.</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt><cite>_var_index</cite> (list): the index values of <cite>var.index_set()</cite></dt><dd><p>in enumeration order.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -1231,7 +1401,7 @@ of increments of <cite>type</cite> of one binned increment of our time variable
 <dd class="field-even"><p>Indexed variable or parameter as a numpy array</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
