@@ -114,7 +114,7 @@ def create_charge_array(
     panda.Series
         timeseries of the cost of the charge with irrelevant timesteps zeroed out
     """
-    if isinstance(datetime, np.ndarray):
+    if ut.check_indexed_np_array(datetime):
         datetime = pd.to_datetime(datetime)
     elif isinstance(datetime, pd.DataFrame):
         datetime = datetime[DATETIME]
@@ -638,12 +638,13 @@ def calculate_demand_cost(
         in USD for the given `charge_array` and `consumption_data`
         and the second entry being the pyomo model object (or None)
     """
-    if isinstance(consumption_estimate, (float, int)):
+
+    if ut.check_nonindexed_python_type(consumption_estimate):
         consumption_max = max(float(consumption_estimate), prev_demand)
     else:
         consumption_max = max(max(consumption_estimate), prev_demand)
 
-    if isinstance(consumption_data, np.ndarray):
+    if ut.check_indexed_np_array(consumption_data):
         if np.any(consumption_data < 0):
             warnings.warn(
                 "Demand calculation includes negative values. Pass in "
@@ -661,19 +662,19 @@ def calculate_demand_cost(
                 )
         else:  # ignore if current and previous maxima outside of charge limit
             demand_charged = np.array([0])
-    elif isinstance(consumption_data, (pyo.Param, pyo.Var)):
+    elif ut.check_indexed_pyomo_type(consumption_data):
         if consumption_max >= limit:
             if consumption_max <= next_limit:
                 model.add_component(
                     varstr + "_limit",
-                    pyo.Var(model.t, initialize=0, bounds=(None, None)),
+                    pyo.Var(model._var_index, initialize=0, bounds=(None, None)),
                 )
                 var = model.find_component(varstr + "_limit")
 
                 def const_rule(model, t):
                     return var[t] == consumption_data[t] - limit
 
-                constraint = pyo.Constraint(model.t, rule=const_rule)
+                constraint = pyo.Constraint(model._var_index, rule=const_rule)
                 model.add_component(varstr + "_limit_constraint", constraint)
 
                 demand_charged, model = ut.multiply(
@@ -691,7 +692,7 @@ def calculate_demand_cost(
                 )
         else:
             demand_charged = np.array([0])
-    elif isinstance(consumption_data, cp.Expression):
+    elif ut.check_cvx_type(consumption_data):
         if consumption_max >= limit:
             if consumption_max <= next_limit:
                 demand_charged, model = ut.multiply(
@@ -800,7 +801,7 @@ def calculate_energy_cost(
     else:  # Pyomo does not support shape attribute
         n_steps = len(consumption_data)
 
-    if isinstance(consumption_data, np.ndarray):
+    if ut.check_indexed_np_array(consumption_data):
         if np.any(consumption_data < 0):
             warnings.warn(
                 "Energy calculation includes negative values. Pass in "
@@ -836,12 +837,14 @@ def calculate_energy_cost(
                 within_limit_flag = True
                 cost += max(energy - float(limit), 0) * charge_array[i]
 
-    elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
+    elif ut.check_indexed_pyomo_type(consumption_data) or ut.check_cvx_type(
+        consumption_data
+    ):
         # For tiered charges, approximate extimated consumption being split evenly
         # Only necessary if we have a finite next_limit OR if current limit > 0
         # NOTE: this convex approximation breaks global optimality guarantees
         if not np.isinf(next_limit) or (not np.isinf(limit) and limit > 0):
-            if isinstance(consumption_estimate, (float, int)):
+            if ut.check_nonindexed_python_type(consumption_estimate):
                 consumption_per_timestep = consumption_estimate / n_steps
                 consumption_estimate = np.ones(n_steps) * consumption_per_timestep
 
@@ -921,7 +924,7 @@ def calculate_export_revenue(
         in USD for the given `charge_array` and `export_data`
         and the second entry being the pyomo model object (or None)
     """
-    if isinstance(consumption_data, np.ndarray):
+    if ut.check_indexed_np_array(consumption_data):
         if np.any(consumption_data < 0):
             warnings.warn(
                 "Export revenue calculation includes negative values. Pass in "
@@ -930,7 +933,9 @@ def calculate_export_revenue(
             )
         return np.sum(consumption_data * charge_array) / n_per_hour, model
 
-    elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
+    elif ut.check_indexed_pyomo_type(consumption_data) or ut.check_cvx_type(
+        consumption_data
+    ):
         cost_expr, model = ut.multiply(
             consumption_data,
             charge_array,
@@ -1205,7 +1210,7 @@ def calculate_cost(
         - "binary_variable": `NotImplementedError`
         - None (default): No decomposition, treats all consumption as imports
 
-    varstr_alias_func: function
+    varstr_alias_func : function
         Function to generate variable name for pyomo,
         should take in a 6 inputs and generate a string output.
         The function will receive following six inputs:
@@ -1244,6 +1249,8 @@ def calculate_cost(
     if consumption_estimate is None:
         consumption_estimate = 0
 
+    if model is not None and not hasattr(model, "_var_index"):
+        ut.createa_pyomo_model_index_from_dict(model, consumption_data_dict)
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )
@@ -1282,14 +1289,14 @@ def calculate_cost(
                 prev_demand = 0
                 prev_demand_cost = 0
 
-            if isinstance(consumption_estimate, (float, int)):
+            if ut.check_nonindexed_python_type(consumption_estimate):
                 # convert single kWh to the equivalent kW per timestep
                 demand_consumption_estimate = (
                     consumption_estimate * n_per_hour / len(charge_array)
                 )
             elif isinstance(consumption_estimate, (dict)):
                 demand_consumption_estimate = consumption_estimate[utility]
-                if isinstance(demand_consumption_estimate, (float, int)):
+                if ut.check_nonindexed_python_type(demand_consumption_estimate):
                     demand_consumption_estimate = (
                         demand_consumption_estimate * n_per_hour / len(charge_array)
                     )
@@ -1315,7 +1322,7 @@ def calculate_cost(
             else:
                 prev_consumption = 0
 
-            if isinstance(consumption_estimate, (float, int)):
+            if ut.check_nonindexed_python_type(consumption_estimate):
                 # assumed to be kWh or therms/m3 per month
                 energy_consumption_estimate = consumption_estimate
             elif isinstance(consumption_estimate, (dict)):
@@ -1637,7 +1644,9 @@ def calculate_itemized_cost(
                     "Decomposition types are not supported with CVXPY objects. "
                     "Use Pyomo instead for problems requiring decomposition_type."
                 )
-
+    if model is not None and not hasattr(model, "_var_index"):
+        # Assumes vars for diff utilities share same index set
+        ut.createa_pyomo_model_index_from_dict(model, consumption_data_dict)
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )
@@ -2170,8 +2179,7 @@ def parametrize_rate_data(
 
 
 def parametrize_charge_dict(start_dt, end_dt, rate_data, variants=None):
-    """
-    Takes in an existing charge_dict and varies it parametrically to create
+    """Takes in an existing charge_dict and varies it parametrically to create
     alternative rate structures. Calls parametrize_rate_data to parametrize the
     billing csv file, then calls it on the dates specified.
 
@@ -2179,16 +2187,19 @@ def parametrize_charge_dict(start_dt, end_dt, rate_data, variants=None):
     ----------
     start_dt : datetime.datetime
         first timestep to be included in the cost analysis
+
     end_dt : datetime.datetime
         last timestep to be included in the cost analysis
+
     rate_data : pandas.DataFrame
         tariff data with required columns
+
     variants : list[dict]
         List of dictionaries containing variation parameters with keys:
         - percent_change_dict: dict for charge scaling (see parametrize_rate_data)
         - shift_peak_hours_before: float to shift peak start, in hours
-        - shift_peak_hours_after: float to shift peak end, in hours
-        - variant_name: str (optional) variant name
+        - `shift_peak_hours_after` (float) : shift peak end, in hours
+        - `variant_name` (str, optional) : variant name
 
     Returns
     -------
