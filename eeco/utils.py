@@ -676,8 +676,8 @@ def createa_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
         The Pyomo model (or Block) to attach the index bookkeeping to.
 
     dict : dict that contains {key: pyomo.environ.Param or pyomo.environ.Var} or
-        dict of dicts that contains {key: {key: pyomo.environ.Param or pyomo.environ.Var}},
-        can also be an indexed pyomo var, experssion or param
+        dict of dicts like {key: {key: pyomo.environ.Param or pyomo.environ.Var}},
+        Can also be an indexed pyomo var, experssion or param
 
     overwrite : bool
         Ignored if index does not exist yet.
@@ -768,7 +768,8 @@ def create_pyomo_model_index_ref(model, var, overwrite=False):
 
 def check_indexed_pyomo_type(input_var):
     """Checks if input is an indexed Pyomo variable, expression, or parameter.
-    Returns `False` if a non-indexed variable, parameter, or expression (or non-Pyomo type).
+    Returns `False` if a non-indexed variable, parameter,
+    or expression (or non-Pyomo type).
 
     Parameters
     ----------
@@ -784,7 +785,8 @@ def check_indexed_pyomo_type(input_var):
 
 def check_nonindexed_pyomo_type(input_var):
     """Checks if input is a non-idnexed Pyomo variable, expression, or parameter.
-    Returns `False` if an indexed variable, parameter, or expression (or non-Pyomo type).
+    Returns `False` if an indexed variable, parameter,
+    or expression (or non-Pyomo type).
 
     Parameters
     ----------

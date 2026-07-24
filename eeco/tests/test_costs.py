@@ -5,7 +5,6 @@ import cvxpy as cp
 import pandas as pd
 import pyomo.environ as pyo
 import datetime
-from eeco import utils as ut
 from eeco import costs
 from eeco.units import u
 from eeco.costs import (
