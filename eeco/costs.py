@@ -693,10 +693,10 @@ def calculate_demand_cost(
         and the second entry being the pyomo model object (or None)
     """
 
-    if ut.check_nonindexed_python_type(consumption_estimate):
-        max(float(consumption_estimate), prev_demand)
-    elif isinstance(prev_demand, cp.Expression):  # for cp.Parameter
-        consumption_max = None # evaluate later for parameterized prev_demand
+    if isinstance(prev_demand, cp.Expression):  # for cp.Parameter
+        consumption_max = None  # evaluate later for parameterized prev_demand
+    elif ut.check_nonindexed_python_type(consumption_estimate):
+        consumption_max = max(float(consumption_estimate), prev_demand)
     else:
         consumption_max = max(max(consumption_estimate), prev_demand)
 
@@ -1720,18 +1720,7 @@ def calculate_itemized_cost(
         Same as the second return value of `calculate_cost`.
 
     """
-    if model is not None and hasattr(model, "_var_index") is False:
-        # Assumes vars for diff utilities share same index set
-        for key, var in consumption_data_dict.items():
-            if isinstance(var, dict):
-                for sk, svar in var.items():
-                    if isinstance(var, (cp.Expression, pyo.Var, pyo.Param)):
-                        ut.create_pyomo_model_index_ref(model, svar)
-                        break
-            else:
-                if isinstance(var, (cp.Expression, pyo.Var, pyo.Param)):
-                    ut.create_pyomo_model_index_ref(model, var)
-                    break    if model is not None and not hasattr(model, "_var_index"):
+    if model is not None and not hasattr(model, "_var_index"):
         # Assumes vars for diff utilities share same index set
         ut.createa_pyomo_model_index_from_dict(model, consumption_data_dict)
     conversion_factors = get_conversion_factors(

@@ -521,7 +521,7 @@ def _decompose_absolute_value_pyo(expression, model, varstr):
     def negative_rule(model, t):
         return -expression[t]
 
-    negative_expr = pyo.Expression(model.t, rule=negative_rule)
+    negative_expr = pyo.Expression(model._var_index, rule=negative_rule)
     model.add_component(f"{varstr}_negative_expr", negative_expr)
     negative_var, model = max_pos(negative_expr, model, neg_name)
 
@@ -532,7 +532,7 @@ def _decompose_absolute_value_pyo(expression, model, varstr):
 
     model.add_component(
         f"{varstr}_magnitude_constraint",
-        pyo.Constraint(model.t, rule=magnitude_rule),
+        pyo.Constraint(model._var_index, rule=magnitude_rule),
     )
 
     return positive_var, negative_var, model
@@ -565,21 +565,21 @@ def _decompose_binary_pyo(expression, model, varstr, big_m=1e6):
     binary_name = f"{varstr}_is_importing"
     model.add_component(
         binary_name,
-        pyo.Var(model.t, within=pyo.Binary, initialize=1),
+        pyo.Var(model._var_index, within=pyo.Binary, initialize=1),
     )
     binary_var = model.find_component(binary_name)
 
     # Import variable (positive consumption)
     model.add_component(
         pos_name,
-        pyo.Var(model.t, bounds=(0, None), initialize=0),
+        pyo.Var(model._var_index, bounds=(0, None), initialize=0),
     )
     positive_var = model.find_component(pos_name)
 
     # Export variable (magnitude of negative consumption, stored as positive)
     model.add_component(
         neg_name,
-        pyo.Var(model.t, bounds=(0, None), initialize=0),
+        pyo.Var(model._var_index, bounds=(0, None), initialize=0),
     )
     negative_var = model.find_component(neg_name)
 
@@ -593,7 +593,7 @@ def _decompose_binary_pyo(expression, model, varstr, big_m=1e6):
 
     model.add_component(
         f"{varstr}_import_bigm_constraint",
-        pyo.Constraint(model.t, rule=import_bigm_rule),
+        pyo.Constraint(model._var_index, rule=import_bigm_rule),
     )
 
     # Constraint: exports <= big_m * (1 - binary) (exports=0 when binary=1)
@@ -602,7 +602,7 @@ def _decompose_binary_pyo(expression, model, varstr, big_m=1e6):
 
     model.add_component(
         f"{varstr}_export_bigm_constraint",
-        pyo.Constraint(model.t, rule=export_bigm_rule),
+        pyo.Constraint(model._var_index, rule=export_bigm_rule),
     )
 
     return positive_var, negative_var, model
@@ -678,7 +678,7 @@ def decompose_consumption(
                 "Use Pyomo for 'absolute_value' decomposition."
             )
 
-    elif isinstance(expression, (pyo.Var, pyo.Param)):
+    elif check_indexed_pyomo_type(expression):
         # Call mode-specific function to create vars and add mode-specific constraints
         if decomposition_type == "absolute_value":
             positive_var, negative_var, model = _decompose_absolute_value_pyo(
@@ -703,7 +703,7 @@ def decompose_consumption(
 
         model.add_component(
             f"{varstr}_decomposition_constraint",
-            pyo.Constraint(model.t, rule=decomposition_rule),
+            pyo.Constraint(model._var_index, rule=decomposition_rule),
         )
 
         return positive_var, negative_var, model, []
