@@ -211,7 +211,7 @@ def solve_pyo_problem(
     """Helper function to solve Pyomo optimization problem."""
     model.obj = pyo.Objective(expr=objective)
 
-    if decomposition_type is not None:  # Nonlinear when decomposition_type used
+    if decomposition_type == "absolute_value":  # Nonlinear due to abs() constraint
         solver = pyo.SolverFactory("ipopt")
     else:  # scip otherwise
         solver = pyo.SolverFactory("scip")
@@ -1258,6 +1258,45 @@ def test_calculate_cost_np(
             None,
             None,
             pytest.approx(120.0),
+        ),
+        (
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": np.concatenate(
+                    [np.ones(48) * 0, np.ones(24) * 1, np.ones(24) * 0]
+                ),
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": (
+                    np.concatenate(
+                        [
+                            np.ones(34) * 0,
+                            np.ones(14) * 2,
+                            np.ones(24) * 0,
+                            np.ones(14) * 2,
+                            np.ones(10) * 0,
+                        ]
+                    )
+                ),
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": np.ones(96) * 10,
+            },
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
+            "15m",
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": cp.Parameter(nonneg=True, value=0),
+                    "cost": 0,
+                },
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": cp.Parameter(nonneg=True, value=0),
+                    "cost": 0,
+                },
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": {
+                    "demand": cp.Parameter(nonneg=True, value=0),
+                    "cost": 0,
+                },
+            },
+            0,  # consumption_estimate
+            None,  # desired_utility
+            None,  # desired_charge_type
+            pytest.approx(1191),  # same expected as float-zero version
         ),
     ],
 )
@@ -3377,7 +3416,7 @@ def test_calculate_itemized_cost_np(
     expected_itemized,
 ):
     """Test calculate_itemized_cost with and without decomposition_type."""
-    result, model = costs.calculate_itemized_cost(
+    result, _ = costs.calculate_itemized_cost(
         charge_dict,
         consumption_data_dict,
         resolution=resolution,
@@ -3501,7 +3540,7 @@ def test_calculate_itemized_cost_cvx(
                 by_charge_key=by_charge_key,
             )
     else:
-        result, model = costs.calculate_itemized_cost(
+        result, _ = costs.calculate_itemized_cost(
             charge_dict,
             cvx_vars,
             resolution=resolution,
@@ -3684,7 +3723,7 @@ def test_calculate_itemized_cost_cvx(
                 },
             },
         ),
-        # `binary_variable` for `decomposition_type` should raise `NotImplementedError`
+        # binary_big_M decomposition (MILP)
         (
             {
                 "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
@@ -3695,13 +3734,26 @@ def test_calculate_itemized_cost_cvx(
                 GAS: np.ones(96),
             },
             "15m",
-            "binary_variable",
+            "binary_big_M",
             240,
             None,
             None,
             False,
-            None,  # No expected cost - should raise NotImplementedError
-            None,  # No expected itemized - should raise NotImplementedError
+            pytest.approx(6.0 - 1.5),  # 48*10*0.05/4 - 48*5*0.025/4 = 6.0 - 1.5 = 4.5
+            {
+                "electric": {
+                    "energy": pytest.approx(6.0),  # 48*10*0.05/4 = 6.0
+                    "export": pytest.approx(-1.5),  # -48*5*0.025/4 = 1.5
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
         ),
         # by_charge_key=True
         (
@@ -3760,39 +3812,33 @@ def test_calculate_itemized_cost_pyo(
     if gas_consumption_units is not None:
         kwargs["gas_consumption_units"] = gas_consumption_units
 
-    if decomposition_type == "binary_variable":
-        with pytest.raises(NotImplementedError):
-            result, model = costs.calculate_itemized_cost(
-                charge_dict, pyo_vars, **kwargs
-            )
-    else:
-        result, model = costs.calculate_itemized_cost(charge_dict, pyo_vars, **kwargs)
-        total_expr = sum(result["total"].values()) if by_charge_key else result["total"]
-        solve_pyo_problem(
-            model,
-            total_expr,
-            decomposition_type,
-            charge_dict,
-            consumption_data_dict,
-            by_charge_key,
-        )
+    result, model = costs.calculate_itemized_cost(charge_dict, pyo_vars, **kwargs)
+    total_expr = sum(result["total"].values()) if by_charge_key else result["total"]
+    solve_pyo_problem(
+        model,
+        total_expr,
+        decomposition_type,
+        charge_dict,
+        consumption_data_dict,
+        by_charge_key,
+    )
 
-        total_value = (
-            sum(pyo.value(v) for v in result["total"].values())
-            if by_charge_key
-            else pyo.value(result["total"])
-        )
-        assert total_value == expected_cost
-        for utility in expected_itemized:
-            for charge_type in expected_itemized[utility]:
-                expected_value = expected_itemized[utility][charge_type]
-                actual_value = result[utility][charge_type]
-                if by_charge_key:
-                    # Compare pyo.value for each key
-                    actual_value = {k: pyo.value(v) for k, v in actual_value.items()}
-                    assert actual_value == expected_value
-                else:
-                    assert pyo.value(actual_value) == expected_value
+    total_value = (
+        sum(pyo.value(v) for v in result["total"].values())
+        if by_charge_key
+        else pyo.value(result["total"])
+    )
+    assert total_value == expected_cost
+    for utility in expected_itemized:
+        for charge_type in expected_itemized[utility]:
+            expected_value = expected_itemized[utility][charge_type]
+            actual_value = result[utility][charge_type]
+            if by_charge_key:
+                # Compare pyo.value for each key
+                actual_value = {k: pyo.value(v) for k, v in actual_value.items()}
+                assert actual_value == expected_value
+            else:
+                assert pyo.value(actual_value) == expected_value
 
 
 @pytest.mark.parametrize(
@@ -3832,3 +3878,54 @@ def test_individual_charge(charge_list, expected_result):
         model=None,
     )
     assert cost == expected_result
+
+
+@pytest.mark.parametrize(
+    "start_dt, billing_period_starts, prev_dict, expected",
+    [
+        # start_dt in billing_period_starts -> reset to 0
+        (
+            np.datetime64("2024-07-10"),
+            [np.datetime64("2024-07-10")],
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 5.0,
+                    "cost": 5.0,
+                }
+            },
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 3.0,
+                    "cost": 3.0,
+                }
+            },
+        ),
+        # start_dt not in billing_period_starts, multi-day key -> accumulate max
+        (
+            np.datetime64("2024-07-11"),
+            [np.datetime64("2024-07-10")],
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 2.0,
+                    "cost": 2.0,
+                }
+            },
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 3.0,
+                    "cost": 3.0,
+                }
+            },
+        ),
+    ],
+)
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_get_prev_demand_dict(start_dt, billing_period_starts, prev_dict, expected):
+    charge_dict = {
+        "electric_demand_peak_20240710_20240731_100": np.ones(3),
+    }
+    usage_data = np.array([1.0, 2.0, 3.0])
+    result = costs.get_prev_demand_dict(
+        charge_dict, usage_data, start_dt, billing_period_starts, prev_dict
+    )
+    assert result == expected
