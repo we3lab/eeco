@@ -54,43 +54,53 @@ def test_sum_pyo(consumption_data, varstr, expected):
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "consumption_data, varstr1, varstr2, expected",
+    "consumption_data, varstr1, varstr2, time_set, expected",
     [
+        # two Pyo variables
         (
             {"electric": np.ones(96) * 100, "gas": np.ones(96)},
             "electric",
             "gas",
+            None,
             np.ones(96) * 100,
+        ),
+        # Pyo variable * numpy charge array on non-standard index
+        (
+            {"electric": np.array([100.0, 200.0, 300.0, 400.0])},
+            "electric",
+            np.array([0.1, 0.2, 0.3, 0.4]),
+            [0.0, 900.0, 1800.0, 2700.0],
+            np.array([10.0, 40.0, 90.0, 160.0]),
+        ),
+        # Pyo variable * numpy charge array on irregular (non-uniform) index
+        (
+            {"electric": np.array([100.0, 200.0, 300.0, 400.0])},
+            "electric",
+            np.array([0.1, 0.2, 0.3, 0.4]),
+            [2.0, 4.0, 5.0, 8.0],
+            np.array([10.0, 40.0, 90.0, 160.0]),
         ),
     ],
 )
-def test_multiply_pyo(consumption_data, varstr1, varstr2, expected):
+def test_multiply_pyo(consumption_data, varstr1, varstr2, time_set, expected):
     model = pyo.ConcreteModel()
-    model.T = len(consumption_data["electric"])
-    model.t = range(model.T)
-    pyo_vars = {}
+    model.T = len(consumption_data[varstr1])
+    model.t = range(model.T) if time_set is None else time_set
+    pos = {t: i for i, t in enumerate(model.t)}
     for key, val in consumption_data.items():
-        var = pyo.Var(model.t, initialize=np.zeros(len(val)), bounds=(0, None))
+        var = pyo.Var(model.t, bounds=(None, None))
         model.add_component(key, var)
-        pyo_vars[key] = var
-
-    @model.Constraint(model.t)
-    def electric_constraint(m, t):
-        return consumption_data["electric"][t] == m.electric[t]
-
-    @model.Constraint(model.t)
-    def gas_constraint(m, t):
-        return consumption_data["gas"][t] == m.gas[t]
+        for t in model.t:
+            var[t].fix(float(val[pos[t]]))
 
     var1 = getattr(model, varstr1)
-    var2 = getattr(model, varstr2)
-
+    var2 = getattr(model, varstr2) if isinstance(varstr2, str) else varstr2
     ut.create_pyomo_model_index_ref(model, var1)
     result, model = ut.multiply(var1, var2, model=model, varstr="test")
     model.objective = pyo.Objective(expr=0)
     solver = pyo.SolverFactory("ipopt")
     solver.solve(model)
-    assert np.allclose([pyo.value(result[i]) for i in range(len(result))], expected)
+    assert np.allclose([pyo.value(result[t]) for t in model.t], expected)
     assert model is not None
 
 
@@ -131,6 +141,50 @@ def test_max_pyo(consumption_data, varstr, expected):
     solver.solve(model)
     assert pyo.value(result) == expected
     assert model is not None
+
+
+@pytest.mark.parametrize(
+    "dict_type", ["pyovar", "normal", "nested", "multi_input", "empty"]
+)
+def test_create_pyomo_model_index_ref_from_dict(dict_type):
+    model = pyo.ConcreteModel()
+    model.e = pyo.Var(range(10), initialize=1)
+    if dict_type == "normal":
+        input_dict = {"electric": model.e}
+    elif dict_type == "pyovar":
+        input_dict = model.e
+    elif dict_type == "nested":
+        input_dict = {"nest_test": {"electric": model.e}}
+    elif dict_type == "multi_input":
+        input_dict = {
+            "nest_test": {"electric": model.e, "another_entery": np.arange(10)},
+            "electric": np.arange(10),
+        }
+    elif dict_type == "empty":
+        input_dict = {"nest_test": {"electric": np.arange(10)}}
+
+    if dict_type == "empty":
+        with pytest.raises(TypeError):
+            ut.createa_pyomo_model_index_from_dict(model, input_dict)
+        assert not hasattr(model, "_var_index_ref")
+        assert not hasattr(model, "_var_index")
+    else:
+        ut.createa_pyomo_model_index_from_dict(model, input_dict)
+        assert hasattr(model, "_var_index_ref")
+        assert hasattr(model, "_var_index")
+        assert model._var_index_ref == {
+            0: 0,
+            1: 1,
+            2: 2,
+            3: 3,
+            4: 4,
+            5: 5,
+            6: 6,
+            7: 7,
+            8: 8,
+            9: 9,
+        }
+        assert model._var_index == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -357,7 +411,7 @@ def test_decompose_consumption_pyo(
         "gas": np.zeros_like(consumption_data),
     }
     model, pyo_vars = setup_pyo_vars_constraints(consumption_data_dict)
-
+    ut.createa_pyomo_model_index_from_dict(model, pyo_vars)
     if expect_warning:
         with pytest.warns(UserWarning):
             positive_var, negative_var, model, constraints = ut.decompose_consumption(
@@ -390,3 +444,91 @@ def test_decompose_consumption_pyo(
         assert len(positive_var) == len(consumption_data)
         assert len(negative_var) == len(consumption_data)
         # Testing of values handled after solving problem in test_costs.py
+
+
+def test_pyomo_type():
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var(initialize=1)
+    m.x_i = pyo.Var([1, 2], initialize=1)
+    m.e = pyo.Expression(expr=m.x_i[1] + m.x_i[2])
+    m.e_i = pyo.Expression([1, 2], rule=lambda m, i: m.x_i[i] + 1)
+    m.p_i = pyo.Param([1, 2], mutable=False, initialize={1: 1, 2: 2})
+    m.p = pyo.Param(initialize=1)
+
+    assert ut.check_indexed_pyomo_type(m.x) is False
+    assert ut.check_nonindexed_pyomo_type(m.x)
+    assert ut.check_indexed_pyomo_type(m.x_i)
+    assert ut.check_indexed_pyomo_type(m.x_i[1]) is False
+    assert ut.check_nonindexed_pyomo_type(m.x_i[1])
+
+    assert ut.check_indexed_pyomo_type(m.e) is False
+    assert ut.check_nonindexed_pyomo_type(m.e)
+    assert ut.check_indexed_pyomo_type(m.e_i)
+    assert ut.check_indexed_pyomo_type(m.e_i[1]) is False
+    assert ut.check_nonindexed_pyomo_type(m.e_i[1])
+
+    assert ut.check_indexed_pyomo_type(m.p) is False
+    assert ut.check_nonindexed_pyomo_type(m.p)
+    assert ut.check_indexed_pyomo_type(m.p_i[1]) is False
+    # this will be false as pyomo returns an int for params
+    assert ut.check_nonindexed_pyomo_type(m.p_i[1]) is False
+
+    assert ut.check_cvx_type(m.x) is False
+    assert ut.check_cvx_type(m.x_i) is False
+    assert ut.check_cvx_type(m.x_i[1]) is False
+    assert ut.check_cvx_type(m.e) is False
+    assert ut.check_cvx_type(m.e_i) is False
+    assert ut.check_cvx_type(m.e_i[1]) is False
+    assert ut.check_cvx_type(m.p) is False
+    assert ut.check_cvx_type(m.p_i[1]) is False
+
+
+def test_cvx_type():
+
+    cv = cp.Variable()
+    ce = cv + 1
+
+    assert ut.check_cvx_type(ce)
+    assert ut.check_cvx_type(cv)
+
+    assert ut.check_nonindexed_pyomo_type(ce) is False
+    assert ut.check_nonindexed_pyomo_type(cv) is False
+
+    assert ut.check_indexed_pyomo_type(ce) is False
+    assert ut.check_indexed_pyomo_type(cv) is False
+
+
+def test_python_types():
+    x = 1
+    y = 1.1
+    z = np.array([1, 2, 3])
+    ls = [1, 2, 3, 4]
+    t = (1, 2, 3, 4)
+    assert ut.check_nonindexed_python_type(x)
+    assert ut.check_nonindexed_python_type(y)
+    assert ut.check_indexed_np_array(z)
+
+    # We do not support lists or tuples
+    assert ut.check_indexed_np_array(ls) is False
+    assert ut.check_nonindexed_python_type(ls) is False
+
+    assert ut.check_indexed_np_array(t) is False
+    assert ut.check_nonindexed_python_type(t) is False
+
+    assert ut.check_nonindexed_python_type(z) is False
+    assert ut.check_nonindexed_python_type(z[0])
+
+    assert ut.check_cvx_type(x) is False
+    assert ut.check_cvx_type(y) is False
+    assert ut.check_cvx_type(z) is False
+    assert ut.check_cvx_type(z[0]) is False
+
+    assert ut.check_indexed_pyomo_type(x) is False
+    assert ut.check_indexed_pyomo_type(y) is False
+    assert ut.check_indexed_pyomo_type(z) is False
+    assert ut.check_indexed_pyomo_type(z[0]) is False
+
+    assert ut.check_nonindexed_pyomo_type(x) is False
+    assert ut.check_nonindexed_pyomo_type(y) is False
+    assert ut.check_nonindexed_pyomo_type(z) is False
+    assert ut.check_nonindexed_pyomo_type(z[0]) is False

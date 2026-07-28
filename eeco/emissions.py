@@ -3,10 +3,8 @@
 import pint
 import datetime
 import calendar
-import cvxpy as cp
 import numpy as np
 import pandas as pd
-import pyomo.environ as pyo
 
 from .units import u
 from . import utils as ut
@@ -68,7 +66,7 @@ def calculate_grid_emissions(
         emissions_units = carbon_intensity.units
         carbon_intensity = carbon_intensity.magnitude
 
-    if isinstance(consumption_data, np.ndarray):
+    if ut.check_indexed_np_array(consumption_data):
         total_emissions = (
             np.sum(consumption_data * carbon_intensity)
             * consumption_units
@@ -77,9 +75,11 @@ def calculate_grid_emissions(
             / n_per_hour
         )
         return total_emissions.to(u.kg), None
-    elif isinstance(consumption_data, (cp.Expression, pyo.Var, pyo.Param)):
-        if isinstance(consumption_data, (pyo.Var, pyo.Param)):
-            ut.create_pyomo_model_index_ref(model, consumption_data)
+    elif ut.check_cvx_type(consumption_data) or ut.check_indexed_pyomo_type(
+        consumption_data
+    ):
+        if ut.check_indexed_pyomo_type(consumption_data):
+            ut.createa_pyomo_model_index_from_dict(model, consumption_data)
         conversion_factor = (
             (1 * consumption_units * emissions_units * u.hour).to(u.kg).magnitude
         )

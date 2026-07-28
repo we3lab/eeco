@@ -10,7 +10,9 @@ from pyomo.core.expr.numeric_expr import (
     LinearExpression,
     MonomialTermExpression,
 )
-from pyomo.core.base.var import ScalarVar
+from pyomo.core.base.var import ScalarVar, IndexedVar
+from pyomo.core.base.param import ScalarParam, IndexedParam
+from pyomo.core.base.expression import ExpressionData
 from pyomo.core.base.expression import IndexedExpression
 
 # Dictionary mapping region types to timezone strings
@@ -164,9 +166,7 @@ def max(expression, model=None, varstr=None):
     ([numpy.Array, cvxpy.Expression, pyomo.environ.Var], pyomo.environ.Model)
         Expression representing max of `expression`
     """
-    if isinstance(
-        expression, (LinearExpression, SumExpression, MonomialTermExpression, ScalarVar)
-    ):
+    if check_nonindexed_pyomo_type(expression):
         model.add_component(varstr, pyo.Var())
         var = model.find_component(varstr)
 
@@ -176,7 +176,7 @@ def max(expression, model=None, varstr=None):
         constraint = pyo.Constraint(rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
+    elif check_indexed_pyomo_type(expression):
         model.add_component(varstr, pyo.Var())
         var = model.find_component(varstr)
 
@@ -184,13 +184,12 @@ def max(expression, model=None, varstr=None):
             return var >= expression[t]
 
         constraint = pyo.Constraint(model._var_index, rule=const_rule)
+        constraint = pyo.Constraint(model._var_index, rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif isinstance(
-        expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
-    ):
+    elif check_indexed_np_array(expression) or check_nonindexed_python_type(expression):
         return (np.max(expression), model)
-    elif isinstance(expression, cp.Expression):
+    elif check_cvx_type(expression):
         return (cp.max(expression), None)
     else:
         raise TypeError(
@@ -236,7 +235,7 @@ def sum(expression, axis=0, model=None, varstr=None):
     [numpy.Array, cvxpy.Expression, pyomo.environ.Expression]
         Expression representing sum of `expression` along `axis`
     """
-    if isinstance(expression, (SumExpression, IndexedExpression, pyo.Param, pyo.Var)):
+    if check_indexed_pyomo_type(expression):
         model.add_component(varstr, pyo.Var())
         var = model.find_component(varstr)
 
@@ -246,11 +245,9 @@ def sum(expression, axis=0, model=None, varstr=None):
         constraint = pyo.Constraint(rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif isinstance(
-        expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
-    ):
+    elif check_indexed_np_array(expression) or check_nonindexed_python_type(expression):
         return (np.sum(expression, axis=axis), model)
-    elif isinstance(expression, cp.Expression):
+    elif check_cvx_type(expression):
         return (cp.sum(expression, axis=axis), None)
     else:
         raise TypeError(
@@ -298,9 +295,7 @@ def max_pos(expression, model=None, varstr=None):
         Expression representing element-wise maximum positive value of `expression`.
         Scalar input returns scalar output, indexed input returns indexed output.
     """
-    if isinstance(
-        expression, (LinearExpression, SumExpression, MonomialTermExpression, ScalarVar)
-    ) or (hasattr(expression, "is_variable_type") and expression.is_variable_type()):
+    if check_nonindexed_pyomo_type(expression):
         model.add_component(varstr, pyo.Var(initialize=0, bounds=(0, None)))
         var = model.find_component(varstr)
 
@@ -310,7 +305,7 @@ def max_pos(expression, model=None, varstr=None):
         constraint = pyo.Constraint(rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif isinstance(expression, (IndexedExpression, pyo.Param, pyo.Var)):
+    elif check_indexed_pyomo_type(expression):
         # Create indexed max_pos variable
         model.add_component(varstr, pyo.Var(expression.index_set(), bounds=(0, None)))
         var = model.find_component(varstr)
@@ -321,11 +316,9 @@ def max_pos(expression, model=None, varstr=None):
         constraint = pyo.Constraint(expression.index_set(), rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
-    elif isinstance(
-        expression, (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray)
-    ):
+    elif check_indexed_np_array(expression) or check_nonindexed_python_type(expression):
         return (np.max(expression), model) if np.max(expression) > 0 else (0, model)
-    elif isinstance(expression, cp.Expression):
+    elif check_cvx_type(expression):
         return cp.maximum(expression, 0), None  # Works for scalar or vector
     else:
         raise TypeError(
@@ -388,25 +381,27 @@ def multiply(
     ]
         result from elementwise multiplication of `expression1` and `expression2`
     """
-    if isinstance(expression1, cp.Expression) or isinstance(expression2, cp.Expression):
+    if check_cvx_type(expression1) or check_cvx_type(expression2):
         return (cp.multiply(expression1, expression2), None)
-    elif isinstance(
-        expression1, (SumExpression, IndexedExpression, pyo.Param, pyo.Var)
-    ) or isinstance(
-        expression2, (SumExpression, IndexedExpression, pyo.Param, pyo.Var)
+    elif (
+        check_nonindexed_pyomo_type(expression1)
+        or check_nonindexed_pyomo_type(expression2)
+        or check_indexed_pyomo_type(expression1)
+        or check_indexed_pyomo_type(expression2)
     ):
-        if (not isinstance(expression1, (int, float))) and (len(expression1) > 1):
-            if (not isinstance(expression2, (int, float))) and (len(expression2) > 1):
-                # TODO: replace model.t with better way to get dimensions
+        if (not check_nonindexed_python_type(expression1)) and (len(expression1) > 1):
+            if (not check_nonindexed_python_type(expression2)) and (
+                len(expression2) > 1
+            ):
                 model.add_component(varstr, pyo.Var(model._var_index))
                 var = model.find_component(varstr)
 
                 def const_rule(model, t):
-                    if isinstance(expression1, (pyo.Param, pyo.Var)):
+                    if check_indexed_pyomo_type(expression1):
                         exp1 = expression1[t]
                     else:
                         exp1 = expression1[model._var_index_ref[t]]
-                    if isinstance(expression2, (pyo.Param, pyo.Var)):
+                    if check_indexed_pyomo_type(expression2):
                         exp2 = expression2[t]
                     else:
                         exp2 = expression2[model._var_index_ref[t]]
@@ -425,7 +420,7 @@ def multiply(
                 constraint = pyo.Constraint(model._var_index, rule=const_rule)
                 model.add_component(varstr + "_constraint", constraint)
                 return (var, model)
-        elif (not isinstance(expression2, (int, float))) and (len(expression2) > 1):
+        elif (not check_nonindexed_pyomo_type(expression2)) and (len(expression2) > 1):
             model.add_component(varstr, pyo.Var(model._var_index))
             var = model.find_component(varstr)
 
@@ -437,12 +432,13 @@ def multiply(
             return (var, model)
         else:
             return (expression1 * expression2, model)
-    elif isinstance(
-        expression1,
-        (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray),
-    ) and isinstance(
-        expression2,
-        (int, float, np.int32, np.int64, np.float32, np.float64, np.ndarray),
+    elif (
+        check_indexed_np_array(expression1) or check_nonindexed_python_type(expression1)
+    ) and (
+        (
+            check_indexed_np_array(expression2)
+            or check_nonindexed_python_type(expression2)
+        )
     ):
         return (np.multiply(expression1, expression2), model)
     else:
@@ -664,12 +660,12 @@ def decompose_consumption(
         - CVXPY: (positive_var, negative_var, None, constraints) - list of constraints
           that must be added to the Problem; model is always None for CVXPY
     """
-    if isinstance(expression, np.ndarray):
+    if check_indexed_np_array(expression):
         positive_values = np.maximum(expression, 0)
         negative_values = np.maximum(-expression, 0)  # magnitude as positive
         return positive_values, negative_values, model, []
 
-    elif isinstance(expression, cp.Expression):
+    elif check_cvx_type(expression):
         if decomposition_type == "binary_big_M":
             positive_var, negative_var, constraints = _decompose_binary_cvx(
                 expression, big_m
@@ -723,7 +719,7 @@ def parse_freq(freq):
 
     Parameters
     ----------
-    freq: str
+    freq : str
         a string of the form [type][freq_binsize], where type corresponds to a
         numpy.timedelta64 encoding and freq binsize is an integer giving the number
         of increments of `type` of one binned increment of our time variable
@@ -744,7 +740,7 @@ def get_freq_binsize_minutes(freq):
 
     Parameters
     ----------
-    freq: str
+    freq : str
         a string of the form [type][freq_binsize], where type corresponds to a
         numpy.timedelta64 encoding and freq binsize is an integer giving the number
         of increments of `type` of one binned increment of our time variable
@@ -778,9 +774,13 @@ def convert_utc_to_timezone(utc_hour, timezone_str):
     """
     Convert UTC hour (0-23) to the corresponding hour in a specified timezone.
 
-    Parameters:
-    utc_hour (int): Hour in UTC (0-23).
-    timezone_str (str): Timezone string, e.g., 'America/New_York'.
+    Parameters
+    ----------
+    utc_hour : int
+        Hour in UTC (0-23).
+
+    timezone_str : str
+        Timezone string, e.g., 'America/New_York'.
 
     Returns:
     int: Corresponding hour in the specified timezone.
@@ -818,6 +818,198 @@ def sanitize_varstr(varstr):
     return re.sub(r"[^a-zA-Z0-9_]", "_", varstr).replace(" ", "_")
 
 
-def create_pyomo_model_index_ref(model, var):
-    model._var_index_ref = {idx: i for i, idx in enumerate(var.index_set())}
-    model._var_index = list(var.index_set())
+def createa_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
+    """Attach time index to the model for Pyomo variables and expressions.
+
+    Builds a mapping between the entries in `var`'s index set and their
+    positional order, and stores both on the model as private attributes.
+    This makes it easy to translate between a Pyomo indexed variable's index
+    values and plain integer positions (e.g. when aligning with a NumPy
+    array or another positional data structure).
+
+    Parameters
+    ----------
+    model : pyomo.environ.Model
+        The Pyomo model (or Block) to attach the index bookkeeping to.
+
+    dict : dict that contains {key: pyomo.environ.Param or pyomo.environ.Var} or
+        dict of dicts like {key: {key: pyomo.environ.Param or pyomo.environ.Var}},
+        Can also be an indexed pyomo var, experssion or param
+
+    overwrite : bool
+        Ignored if index does not exist yet.
+        If index exists, must be set to True for updates to take effect.
+        If False, no changes are made to the index and a warning is raised.
+
+    Raises
+    ------
+    TypeError
+        When pyomo var is not found in supplied dict, will raise an error
+
+    Returns
+    -------
+    None
+        Sets the following attributes on `model`:
+        - `_var_index_ref` (dict): maps each index value in
+            `var.index_set()` to its integer position.
+        - `_var_index` (list): the index values of `var.index_set()`
+            in enumeration order.
+    """
+
+    def find_pyo_var(posible_dict):
+        if isinstance(posible_dict, dict):
+            for sub_dict in posible_dict.values():
+                if find_pyo_var(sub_dict):
+                    return True
+        elif check_indexed_pyomo_type(posible_dict):
+            create_pyomo_model_index_ref(model, posible_dict, overwrite=overwrite)
+            return True
+        return False
+
+    find_pyo_var(input_dict)
+    if not hasattr(model, "_var_index"):
+        raise (
+            TypeError(f"Could not find a pyomo variable in supplied dict: {input_dict}")
+        )
+
+
+def create_pyomo_model_index_ref(model, var, overwrite=False):
+    """Attach time index to the model for Pyomo variables and expressions.
+
+    Builds a mapping between the entries in `var`'s index set and their
+    positional order, and stores both on the model as private attributes.
+    This makes it easy to translate between a Pyomo indexed variable's index
+    values and plain integer positions (e.g. when aligning with a NumPy
+    array or another positional data structure).
+
+    Parameters
+    ----------
+    model : pyomo.environ.Model
+        The Pyomo model (or Block) to attach the index bookkeeping to.
+
+    var : : pyomo.environ.Param or pyomo.environ.Var
+        A Pyomo indexed component (e.g. an indexed Var) whose
+        `index_set()` will be enumerated.
+
+    overwrite : bool
+        Ignored if index does not exist yet.
+        If index exists, must be set to True for updates to take effect.
+        If False, no changes are made to the index and a warning is raised.
+
+    Raises
+    ------
+    UserWarning
+        When the index already exists and `overwrite` is False,
+        then the function with a warning to the user to set `overwrite` to True
+        if they'd like to enforce index updates.
+
+    Returns
+    -------
+    None
+        Sets the following attributes on `model`:
+        - `_var_index_ref` (dict): maps each index value in
+            `var.index_set()` to its integer position.
+        - `_var_index` (list): the index values of `var.index_set()`
+            in enumeration order.
+    """
+    if not hasattr(model, "_var_index") or overwrite:
+        model._var_index_ref = {idx: i for i, idx in enumerate(var.index_set())}
+        model._var_index = list(var.index_set())
+    else:
+        warnings.warn(
+            "`_var_index` already exists, so `create_pyomo_model_index_ref`"
+            "was ignored. Please set `overwrite=True` to enforce updating the index.",
+            UserWarning,
+        )
+
+
+def check_indexed_pyomo_type(input_var):
+    """Checks if input is an indexed Pyomo variable, expression, or parameter.
+    Returns `False` if a non-indexed variable, parameter,
+    or expression (or non-Pyomo type).
+
+    Parameters
+    ----------
+    input_var : object
+        Input parameter to check
+
+    Returns
+    -------
+    boolean
+    """
+    return isinstance(input_var, (IndexedVar, IndexedParam, IndexedExpression))
+
+
+def check_nonindexed_pyomo_type(input_var):
+    """Checks if input is a non-idnexed Pyomo variable, expression, or parameter.
+    Returns `False` if an indexed variable, parameter,
+    or expression (or non-Pyomo type).
+
+    Parameters
+    ----------
+    input_var : object
+        Input parameter to check
+
+    Returns
+    -------
+    bool
+    """
+    return isinstance(
+        input_var,
+        (
+            ScalarParam,
+            ExpressionData,
+            LinearExpression,
+            SumExpression,
+            MonomialTermExpression,
+            ScalarVar,
+        ),
+    ) or (hasattr(input_var, "is_variable_type") and input_var.is_variable_type())
+
+
+def check_cvx_type(input_var):
+    """Checks if input is a CVXPY variable, expression, or parameter.
+
+    Parameters
+    ----------
+    input_var : object
+        Input parameter to check
+
+    Returns
+    -------
+    bool
+    """
+    return isinstance(input_var, (cp.Expression, cp.Variable))
+
+
+def check_nonindexed_python_type(input_var):
+    """Checks if input is a general int/float variable, expression, or parameter
+    (e.g., `np.int32` or `np.float64`)
+
+    Parameters
+    ----------
+    input_var : object
+        Input parameter to check
+
+    Returns
+    -------
+    bool
+    """
+    return isinstance(
+        input_var, (int, float, np.int32, np.int64, np.float32, np.float64)
+    )
+
+
+def check_indexed_np_array(input_var):
+    """Checks if input is an array-like type (e.g., `np.ndarray`).
+
+    Parameters
+    ----------
+    input_var : object
+        Input parameter to check
+
+    Returns
+    -------
+    bool
+    """
+    return isinstance(input_var, (np.ndarray))
