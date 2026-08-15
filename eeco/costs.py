@@ -203,12 +203,13 @@ def get_timesteps(start_dt, end_dt, resolution="15m"):
     Parameters
     ----------
     start_dt : datetime-like
-        first timestep to be included in the cost analysis. Accepts
-        `datetime.datetime`, `numpy.datetime64`, and ISO-8601 strings
+        first timestep to be included in the cost analysis.
+        Accepts `datetime.datetime`, `numpy.datetime64`, and ISO-8601 strings
 
     end_dt : datetime-like
-        last timestep to be included in the cost analysis. Accepts
-        `datetime.datetime`, `numpy.datetime64`, and ISO-8601 strings
+        end timestep of the cost analysis, not inclusive.
+        The last timestep returned is one `resolution` before `end_dt`.
+        Accepts `datetime.datetime`, `numpy.datetime64`, and ISO-8601 strings
 
     resolution : str
         granularity of each timestep in string form with default value of "15m"
@@ -258,7 +259,8 @@ def get_billing_period_scale_factor(start_dt, end_dt):
         first timestep to be included in the cost analysis
 
     end_dt : datetime-like (see :func:`get_timesteps`)
-        last timestep to be included in the cost analysis
+        end of the cost analysis, exclusive: the horizon runs up to but does
+        not include `end_dt`
 
     Returns
     -------
@@ -301,7 +303,8 @@ def get_charge_dict(
         first timestep to be included in the cost analysis
 
     end_dt : datetime-like (see :func:`get_timesteps`)
-        last timestep to be included in the cost analysis
+        end of the cost analysis, exclusive: the horizon runs up to but does
+        not include `end_dt`
 
     rate_data : pandas.DataFrame
         tariff data with required columns `utility`, `type`, `basic_charge_limit`,
@@ -489,7 +492,8 @@ def get_charge_df(
         first timestep to be included in the cost analysis
 
     end_dt : datetime-like (see :func:`get_timesteps`)
-        last timestep to be included in the cost analysis
+        end of the cost analysis, exclusive: the horizon runs up to but does
+        not include `end_dt`
 
     rate_data : pandas.DataFrame
         tariff data with required columns `utility`, `type`, `basic_charge_limit`,
@@ -2311,7 +2315,8 @@ def parametrize_charge_dict(start_dt, end_dt, rate_data, variants=None):
         first timestep to be included in the cost analysis
 
     end_dt : datetime-like (see :func:`get_timesteps`)
-        last timestep to be included in the cost analysis
+        end of the cost analysis, exclusive: the horizon runs up to but does
+        not include `end_dt`
 
     rate_data : pandas.DataFrame
         tariff data with required columns

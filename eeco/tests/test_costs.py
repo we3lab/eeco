@@ -7,6 +7,7 @@ import pandas as pd
 import pyomo.environ as pyo
 import datetime
 from eeco import costs
+from eeco import utils as ut
 from eeco.units import u
 from eeco.costs import (
     CHARGE,
@@ -396,7 +397,14 @@ def test_get_timesteps(start_dt, end_dt, resolution, expected_ntsteps, expect_wa
 
     assert ntsteps == expected_ntsteps
     assert len(datetime_df) == expected_ntsteps
-    assert datetime_df[costs.DATETIME].iloc[0] == pd.Timestamp(start_dt)
+
+    # start_dt is inclusive, end_dt is exclusive
+    binsize = pd.Timedelta(minutes=ut.get_freq_binsize_minutes(resolution))
+    timesteps = datetime_df[costs.DATETIME]
+    assert timesteps.iloc[0] == pd.Timestamp(start_dt)
+    assert timesteps.iloc[-1] == pd.Timestamp(start_dt) + (ntsteps - 1) * binsize
+    assert timesteps.iloc[-1] < pd.Timestamp(end_dt)
+    assert (timesteps < pd.Timestamp(end_dt)).all()
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
