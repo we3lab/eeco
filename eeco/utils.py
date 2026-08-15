@@ -828,7 +828,7 @@ def sanitize_varstr(varstr):
     return re.sub(r"[^a-zA-Z0-9_]", "_", varstr).replace(" ", "_")
 
 
-def createa_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
+def create_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
     """Attach time index to the model for Pyomo variables and expressions.
 
     Builds a mapping between the entries in `var`'s index set and their

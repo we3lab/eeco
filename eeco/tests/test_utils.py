@@ -165,11 +165,11 @@ def test_create_pyomo_model_index_ref_from_dict(dict_type):
 
     if dict_type == "empty":
         with pytest.raises(TypeError):
-            ut.createa_pyomo_model_index_from_dict(model, input_dict)
+            ut.create_pyomo_model_index_from_dict(model, input_dict)
         assert not hasattr(model, "_var_index_ref")
         assert not hasattr(model, "_var_index")
     else:
-        ut.createa_pyomo_model_index_from_dict(model, input_dict)
+        ut.create_pyomo_model_index_from_dict(model, input_dict)
         assert hasattr(model, "_var_index_ref")
         assert hasattr(model, "_var_index")
         assert model._var_index_ref == {
@@ -409,7 +409,7 @@ def test_decompose_consumption_pyo(
         "gas": np.zeros_like(consumption_data),
     }
     model, pyo_vars = setup_pyo_vars_constraints(consumption_data_dict)
-    ut.createa_pyomo_model_index_from_dict(model, pyo_vars)
+    ut.create_pyomo_model_index_from_dict(model, pyo_vars)
     if expect_error:
         with pytest.raises(NotImplementedError):
             ut.decompose_consumption(
