@@ -1,5 +1,6 @@
 import os
 import pytest
+import warnings
 import numpy as np
 import cvxpy as cp
 import pandas as pd
@@ -322,7 +323,118 @@ def test_create_charge_array(
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "start_dt, end_dt, billing_path, resolution, expected",
+    "start_dt, end_dt, resolution, expected_ntsteps, expect_warning",
+    [
+        # the same horizon expressed as each accepted input type
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 11),
+            "15m",
+            96,
+            False,
+        ),
+        (np.datetime64("2024-07-10"), np.datetime64("2024-07-11"), "15m", 96, False),
+        (pd.Timestamp("2024-07-10"), pd.Timestamp("2024-07-11"), "15m", 96, False),
+        ("2024-07-10", "2024-07-11", "15m", 96, False),
+        # timestep count follows the resolution string
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 11),
+            "1h",
+            24,
+            False,
+        ),
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 17),
+            "1D",
+            7,
+            False,
+        ),
+        # horizons that divide evenly into the resolution are silent
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 10, 0, 45),
+            "15m",
+            3,
+            False,
+        ),
+        # a trailing partial timestep is dropped, and warned about
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 10, 0, 50),
+            "15m",
+            3,
+            True,
+        ),
+        # the same horizon divides evenly at a finer resolution
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 10, 0, 50),
+            "5m",
+            10,
+            False,
+        ),
+        # partial days at daily resolution drop the most
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 17, 23, 59),
+            "1D",
+            7,
+            True,
+        ),
+    ],
+)
+def test_get_timesteps(start_dt, end_dt, resolution, expected_ntsteps, expect_warning):
+    if expect_warning:
+        with pytest.warns(UserWarning, match="not a whole multiple"):
+            ntsteps, datetime_df = costs.get_timesteps(start_dt, end_dt, resolution)
+    else:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            ntsteps, datetime_df = costs.get_timesteps(start_dt, end_dt, resolution)
+
+    assert ntsteps == expected_ntsteps
+    assert len(datetime_df) == expected_ntsteps
+    assert datetime_df[costs.DATETIME].iloc[0] == pd.Timestamp(start_dt)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "start_dt, end_dt, expected",
+    [
+        # whole billing period
+        (datetime.datetime(2024, 7, 1), datetime.datetime(2024, 8, 1), 1.0),
+        # partial billing period
+        (datetime.datetime(2024, 7, 10), datetime.datetime(2024, 8, 1), 22 / 31),
+        # December must not overflow into a thirteenth month
+        (datetime.datetime(2023, 12, 1), datetime.datetime(2023, 12, 8), 7 / 31),
+        # horizon crossing a year boundary
+        (
+            datetime.datetime(2023, 12, 20),
+            datetime.datetime(2024, 1, 10),
+            12 / 31 + 9 / 31,
+        ),
+        # horizons longer than one billing period are not capped at 1
+        (datetime.datetime(2023, 6, 1), datetime.datetime(2023, 7, 16), 1 + 15 / 31),
+        (datetime.datetime(2024, 2, 1), datetime.datetime(2024, 3, 17), 1 + 16 / 31),
+        # each month is weighted by its own length, so February depends on the year
+        (datetime.datetime(2024, 2, 1), datetime.datetime(2024, 2, 15), 14 / 29),
+        (datetime.datetime(2023, 2, 1), datetime.datetime(2023, 2, 15), 14 / 28),
+        # accepts the same input types as get_timesteps
+        (np.datetime64("2024-07-10"), np.datetime64("2024-08-01"), 22 / 31),
+        ("2024-07-10", "2024-08-01", 22 / 31),
+    ],
+)
+def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
+    result = costs.get_billing_period_scale_factor(start_dt, end_dt)
+    assert result == pytest.approx(expected)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "start_dt, end_dt, billing_path, resolution, expected, "
+    "scale_fixed_charges, demand_scale_factor",
     [
         # only one energy charge
         # no name, assessed, effective start, or effective end
@@ -334,6 +446,8 @@ def test_create_charge_array(
             {
                 "electric_energy_0_20240710_20240710_0": np.ones(96) * 0.05,
             },
+            False,
+            1,
         ),
         # only one energy charge but at 5 min. resolution
         # no name, assessed, effective start, or effective end
@@ -345,6 +459,8 @@ def test_create_charge_array(
             {
                 "electric_energy_0_20240710_20240710_0": np.ones(288) * 0.05,
             },
+            False,
+            1,
         ),
         # only one energy charge but at 1 hour resolution
         # no name, assessed, effective start, or effective end
@@ -356,6 +472,8 @@ def test_create_charge_array(
             {
                 "electric_energy_0_20240710_20240710_0": np.ones(24) * 0.05,
             },
+            False,
+            1,
         ),
         # three energy charges
         # no name, assessed, effective start, or effective end
@@ -385,6 +503,8 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
         ),
         # two energy charges combined under same name, one still separate
         # still no name, assessed, effective start, or effective end
@@ -409,6 +529,8 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
         ),
         # all 3 energy charges combined under same name
         # still no name, assessed, effective start, or effective end
@@ -426,6 +548,8 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
         ),
         # 2 demand charges, all-day and on-peak
         (
@@ -443,6 +567,8 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
         ),
         # 2 demand charges, one assessed monthly and one blank assessed column
         (
@@ -460,6 +586,8 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
         ),
         # 2 demand charges, one assessed daily and one blank assessed column
         # but only one day of data
@@ -478,6 +606,8 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
         ),
         # 2 demand charges, one assessed daily and one blank assessed column
         # and two days of data
@@ -503,6 +633,8 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
         ),
         # export payments for two days
         (
@@ -513,6 +645,8 @@ def test_create_charge_array(
             {
                 "electric_export_0_20240710_20240711_0": np.ones(192) * 0.025,
             },
+            False,
+            1,
         ),
         # customer payments for any number of days
         (
@@ -523,6 +657,8 @@ def test_create_charge_array(
             {
                 "electric_customer_0_20240710_20240731_0": np.array([1000]),
             },
+            False,
+            1,
         ),
         # effective start/end dates
         (
@@ -544,6 +680,8 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
         ),
         # switch between months and weekend/weekday
         (
@@ -573,6 +711,8 @@ def test_create_charge_array(
                 "gas_energy_0_20240531_20240601_0": np.ones(48) * 0.10018787433608317,
                 "gas_energy_1_20240531_20240601_0": np.zeros(48),
             },
+            False,
+            1,
         ),
         # switch between years
         (
@@ -613,6 +753,8 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
         ),
         # charge limit of 100 kW, no grouping
         (
@@ -660,6 +802,8 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
         ),
         # charge limit of 100 kW, with grouping
         (
@@ -683,6 +827,8 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
         ),
         # 2 demand charges with 100 kW charge limits, all-day and on-peak
         (
@@ -708,17 +854,103 @@ def test_create_charge_array(
                     ]
                 ),
             },
+            False,
+            1,
+        ),
+        # customer charge spread across all timesteps (scale_fixed_charges=True)
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 8, 1),
+            input_dir + "billing_customer.csv",
+            "15m",
+            {
+                "electric_customer_0_20240710_20240731_0": (
+                    np.ones(2112) * 1000 * (2112 / 2976) / 2112
+                ),
+            },
+            True,
+            1,
+        ),
+        # customer charge prorated across a December horizon
+        (
+            datetime.datetime(2023, 12, 1),
+            datetime.datetime(2023, 12, 8),
+            input_dir + "billing_customer.csv",
+            "15m",
+            {
+                "electric_customer_0_20231201_20231207_0": (
+                    np.ones(672) * 1000 * (7 / 31) / 672
+                ),
+            },
+            True,
+            1,
+        ),
+        # customer charge over a horizon spanning two billing periods
+        (
+            datetime.datetime(2023, 6, 1),
+            datetime.datetime(2023, 7, 16),
+            input_dir + "billing_customer.csv",
+            "15m",
+            {
+                "electric_customer_0_20230601_20230715_0": (
+                    np.ones(4320) * 1000 * (1 + 15 / 31) / 4320
+                ),
+            },
+            True,
+            1,
+        ),
+        # full-billing-period (monthly) demand charges scaled by demand_scale_factor
+        (
+            np.datetime64("2024-07-10"),
+            np.datetime64("2024-07-11"),
+            input_dir + "billing_demand_monthly.csv",
+            "15m",
+            {
+                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
+                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                    [np.zeros(64), np.ones(20) * 20 * 0.5, np.zeros(12)]
+                ),
+            },
+            False,
+            0.5,
+        ),
+        # per-day charges not scaled by by demand_scale_factor
+        (
+            np.datetime64("2024-07-10"),
+            np.datetime64("2024-07-11"),
+            input_dir + "billing_demand_daily.csv",
+            "15m",
+            {
+                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
+                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                    [np.zeros(64), np.ones(20) * 20, np.zeros(12)]
+                ),
+            },
+            False,
+            0.5,
         ),
     ],
 )
-def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
+def test_get_charge_dict(
+    start_dt,
+    end_dt,
+    billing_path,
+    resolution,
+    expected,
+    scale_fixed_charges,
+    demand_scale_factor,
+):
     tariff_df = pd.read_csv(billing_path)
-    result = costs.get_charge_dict(start_dt, end_dt, tariff_df, resolution=resolution)
+    result = costs.get_charge_dict(
+        start_dt,
+        end_dt,
+        tariff_df,
+        resolution=resolution,
+        scale_fixed_charges=scale_fixed_charges,
+        demand_scale_factor=demand_scale_factor,
+    )
     assert result.keys() == expected.keys()
     for key, val in result.items():
-        print(key)
-        print(result[key][0])
-        print(expected[key][0])
         assert (result[key] == expected[key]).all()
 
 
@@ -1258,6 +1490,45 @@ def test_calculate_cost_np(
             None,
             None,
             pytest.approx(120.0),
+        ),
+        (
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": np.concatenate(
+                    [np.ones(48) * 0, np.ones(24) * 1, np.ones(24) * 0]
+                ),
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": (
+                    np.concatenate(
+                        [
+                            np.ones(34) * 0,
+                            np.ones(14) * 2,
+                            np.ones(24) * 0,
+                            np.ones(14) * 2,
+                            np.ones(10) * 0,
+                        ]
+                    )
+                ),
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": np.ones(96) * 10,
+            },
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
+            "15m",
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": cp.Parameter(nonneg=True, value=0),
+                    "cost": 0,
+                },
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": cp.Parameter(nonneg=True, value=0),
+                    "cost": 0,
+                },
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": {
+                    "demand": cp.Parameter(nonneg=True, value=0),
+                    "cost": 0,
+                },
+            },
+            0,  # consumption_estimate
+            None,  # desired_utility
+            None,  # desired_charge_type
+            pytest.approx(1191),  # same expected as float-zero version
         ),
     ],
 )
@@ -3391,7 +3662,6 @@ def test_calculate_itemized_cost_np(
     assert total == expected_cost
     for utility in expected_itemized:
         for charge_type in expected_itemized[utility]:
-            print(f"utility: {utility} & charge_type: {charge_type}")
             expected_value = expected_itemized[utility][charge_type]
             actual_value = result[utility][charge_type]
             assert actual_value == expected_value
@@ -3832,3 +4102,54 @@ def test_individual_charge(charge_list, expected_result):
         model=None,
     )
     assert cost == expected_result
+
+
+@pytest.mark.parametrize(
+    "start_dt, billing_period_starts, prev_dict, expected",
+    [
+        # start_dt in billing_period_starts -> reset to 0
+        (
+            np.datetime64("2024-07-10"),
+            [np.datetime64("2024-07-10")],
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 5.0,
+                    "cost": 5.0,
+                }
+            },
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 3.0,
+                    "cost": 3.0,
+                }
+            },
+        ),
+        # start_dt not in billing_period_starts, multi-day key -> accumulate max
+        (
+            np.datetime64("2024-07-11"),
+            [np.datetime64("2024-07-10")],
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 2.0,
+                    "cost": 2.0,
+                }
+            },
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 3.0,
+                    "cost": 3.0,
+                }
+            },
+        ),
+    ],
+)
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_get_prev_demand_dict(start_dt, billing_period_starts, prev_dict, expected):
+    charge_dict = {
+        "electric_demand_peak_20240710_20240731_100": np.ones(3),
+    }
+    usage_data = np.array([1.0, 2.0, 3.0])
+    result = costs.get_prev_demand_dict(
+        charge_dict, usage_data, start_dt, billing_period_starts, prev_dict
+    )
+    assert result == expected
