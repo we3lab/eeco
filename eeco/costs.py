@@ -1048,14 +1048,18 @@ def get_converted_consumption_data(
 
                 # Decompose if not already done
                 if model is None or not hasattr(model, pos_name):
-                    imports, exports, model, new_constraints = ut.decompose_consumption(
+                    imports, exports, decomp_objects = ut.decompose_consumption(
                         converted_consumption,
                         model=model,
                         varstr=utility,
                         decomposition_type=decomposition_type,
                         big_m=big_m,
                     )
-                    cvxpy_constraints.extend(new_constraints)
+                    # cvxpy returns constraints to collect. Pyomo returns the model
+                    if isinstance(decomp_objects, list):
+                        cvxpy_constraints.extend(decomp_objects)
+                    else:
+                        model = decomp_objects
 
                 consumption_data_dict[utility] = {
                     "imports": imports,
@@ -1072,6 +1076,24 @@ def get_converted_consumption_data(
     if model is not None:
         return consumption_data_dict, model
     return consumption_data_dict, cvxpy_constraints or None
+
+
+def get_charge_array_length(charge_array):
+    """Number of timesteps in a charge array for np and cvxpy objects.
+
+    Parameters
+    ----------
+    charge_array : numpy.ndarray or cvxpy.Expression
+        array of charges per timestep
+
+    Returns
+    -------
+    int
+        number of timesteps in `charge_array`
+    """
+    if isinstance(charge_array, cp.Expression):
+        return charge_array.size
+    return len(charge_array)
 
 
 def get_charge_array_duration(key):
@@ -1305,24 +1327,17 @@ def calculate_cost(
                 prev_demand = 0
                 prev_demand_cost = 0
 
+            num_tsteps = get_charge_array_length(charge_array)
             if ut.check_nonindexed_python_type(consumption_estimate):
                 # convert single kWh to the equivalent kW per timestep
-                _n = (
-                    charge_array.size
-                    if isinstance(charge_array, cp.Expression)
-                    else len(charge_array)
+                demand_consumption_estimate = (
+                    consumption_estimate * n_per_hour / num_tsteps
                 )
-                demand_consumption_estimate = consumption_estimate * n_per_hour / _n
             elif isinstance(consumption_estimate, (dict)):
                 demand_consumption_estimate = consumption_estimate[utility]
                 if ut.check_nonindexed_python_type(demand_consumption_estimate):
-                    _n = (
-                        charge_array.size
-                        if isinstance(charge_array, cp.Expression)
-                        else len(charge_array)
-                    )
                     demand_consumption_estimate = (
-                        demand_consumption_estimate * n_per_hour / _n
+                        demand_consumption_estimate * n_per_hour / num_tsteps
                     )
             else:
                 demand_consumption_estimate = consumption_estimate

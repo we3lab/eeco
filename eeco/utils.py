@@ -184,7 +184,6 @@ def max(expression, model=None, varstr=None):
             return var >= expression[t]
 
         constraint = pyo.Constraint(model._var_index, rule=const_rule)
-        constraint = pyo.Constraint(model._var_index, rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
     elif check_indexed_np_array(expression) or check_nonindexed_python_type(expression):
@@ -644,33 +643,47 @@ def decompose_consumption(
           Creates a MILP (mixed-integer linear program).
           Supported for both Pyomo and CVXPY (requires MIP solver).
 
-        Note: For numpy.ndarray inputs, decomposition_type is ignored since
-        the decomposition is a direct calculation, not an optimization variable.
+        Note: For numpy.ndarray inputs, decomposition_type is ignored
 
     big_m : float, optional
         Big-M value for binary decomposition. Should be larger than maximum
         possible consumption magnitude. Default is 1e6. Only used when
         decomposition_type="binary_big_M".
 
+    Raises
+    ------
+    NotImplementedError
+        When `decomposition_type` is anything other than "absolute_value"
+        or "binary_big_M" for Pyomo, or anything other than "binary_big_M" for
+        CVXPY. Never raised for `numpy.Array`.
+
+    TypeError
+        When `expression` is not of type `numpy.Array`, `cvxpy.Expression`,
+        `pyomo.core.expr.numeric_expr.NumericExpression`,
+        `pyomo.core.expr.numeric_expr.NumericNDArray`,
+        `pyomo.environ.Param`, or `pyomo.environ.Var`
+
     Returns
     -------
     tuple
-        - numpy: (positive_values, negative_values, model, [])
-        - Pyomo: (positive_var, negative_var, model, []) - constraints added to model
-        - CVXPY: (positive_var, negative_var, None, constraints) - list of constraints
-          that must be added to the Problem; model is always None for CVXPY
+        (positive, negative, model_objects), where `model_objects` matches the
+        second return value of `calculate_cost`:
+
+        - numpy: (positive_values, negative_values, model) - `model` is untouched
+        - Pyomo: (positive_var, negative_var, model) - constraints added to `model`
+        - CVXPY: (positive_var, negative_var, constraints) - list of constraints
     """
     if check_indexed_np_array(expression):
         positive_values = np.maximum(expression, 0)
         negative_values = np.maximum(-expression, 0)  # magnitude as positive
-        return positive_values, negative_values, model, []
+        return positive_values, negative_values, model
 
     elif check_cvx_type(expression):
         if decomposition_type == "binary_big_M":
             positive_var, negative_var, constraints = _decompose_binary_cvx(
                 expression, big_m
             )
-            return positive_var, negative_var, None, constraints
+            return positive_var, negative_var, constraints
         else:
             raise NotImplementedError(
                 f"Decomposition type '{decomposition_type}' not supported for CVXPY. "
@@ -689,13 +702,10 @@ def decompose_consumption(
                 expression, model, varstr, big_m
             )
         else:
-            warnings.warn(
-                f"Decomposition type '{decomposition_type}' is not implemented. "
-                "Available types: 'absolute_value', 'binary_big_M'. "
-                "Skipping decomposition.",
-                UserWarning,
+            raise NotImplementedError(
+                f"Decomposition type '{decomposition_type}' not supported for Pyomo. "
+                "Available types: 'absolute_value' and 'binary_big_M'."
             )
-            return None, None, model, []
 
         # Add common decomposition constraint: expression = imports - exports
         def decomposition_rule(model, t):
@@ -706,7 +716,7 @@ def decompose_consumption(
             pyo.Constraint(model._var_index, rule=decomposition_rule),
         )
 
-        return positive_var, negative_var, model, []
+        return positive_var, negative_var, model
 
     else:
         raise TypeError(

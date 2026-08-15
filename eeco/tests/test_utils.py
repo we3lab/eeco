@@ -306,14 +306,13 @@ def test_decompose_consumption_np(
         with pytest.raises(TypeError):
             ut.decompose_consumption(consumption_data)
     else:
-        positive_values, negative_values, model, constraints = ut.decompose_consumption(
+        positive_values, negative_values, model_objects = ut.decompose_consumption(
             consumption_data
         )
 
         assert np.array_equal(positive_values, expected_positive)
         assert np.array_equal(negative_values, expected_negative)
-        assert model is None
-        assert constraints == []
+        assert model_objects is None
         assert np.array_equal(consumption_data, positive_values - negative_values)
 
 
@@ -366,12 +365,11 @@ def test_decompose_consumption_cvx(
             else:
                 ut.decompose_consumption(x, decomposition_type=decomposition_type)
     else:
-        positive_var, negative_var, model, constraints = ut.decompose_consumption(
+        positive_var, negative_var, constraints = ut.decompose_consumption(
             x, decomposition_type=decomposition_type
         )
         assert isinstance(positive_var, cp.Variable)
         assert isinstance(negative_var, cp.Variable)
-        assert model is None
         assert isinstance(constraints, list)
         assert len(constraints) == 3  # decomposition + 2 Big-M constraints
 
@@ -387,7 +385,7 @@ def test_decompose_consumption_cvx(
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "consumption_data, expected_positive_sum, expected_negative_sum, "
-    "decomposition_type, expect_warning",
+    "decomposition_type, expect_error",
     [
         (np.array([1, -2, 3, -4, 0]), 4, 6, "absolute_value", False),
         (np.array([0, 0, 0]), 0, 0, "absolute_value", False),
@@ -404,7 +402,7 @@ def test_decompose_consumption_pyo(
     expected_positive_sum,
     expected_negative_sum,
     decomposition_type,
-    expect_warning,
+    expect_error,
 ):
     consumption_data_dict = {
         "electric": consumption_data,
@@ -412,25 +410,21 @@ def test_decompose_consumption_pyo(
     }
     model, pyo_vars = setup_pyo_vars_constraints(consumption_data_dict)
     ut.createa_pyomo_model_index_from_dict(model, pyo_vars)
-    if expect_warning:
-        with pytest.warns(UserWarning):
-            positive_var, negative_var, model, constraints = ut.decompose_consumption(
+    if expect_error:
+        with pytest.raises(NotImplementedError):
+            ut.decompose_consumption(
                 pyo_vars["electric"],
                 model=model,
                 varstr="electric",
                 decomposition_type=decomposition_type,
             )
-        assert positive_var is None
-        assert negative_var is None
-        assert constraints == []
     else:
-        positive_var, negative_var, model, constraints = ut.decompose_consumption(
+        positive_var, negative_var, model = ut.decompose_consumption(
             pyo_vars["electric"],
             model=model,
             varstr="electric",
             decomposition_type=decomposition_type,
         )
-        assert constraints == []
         # Check that variables exist and have the correct length
         assert hasattr(model, "electric_positive")
         assert hasattr(model, "electric_negative")
