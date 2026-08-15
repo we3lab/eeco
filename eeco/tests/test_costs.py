@@ -716,9 +716,6 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
     result = costs.get_charge_dict(start_dt, end_dt, tariff_df, resolution=resolution)
     assert result.keys() == expected.keys()
     for key, val in result.items():
-        print(key)
-        print(result[key][0])
-        print(expected[key][0])
         assert (result[key] == expected[key]).all()
 
 
@@ -3430,7 +3427,6 @@ def test_calculate_itemized_cost_np(
     assert total == expected_cost
     for utility in expected_itemized:
         for charge_type in expected_itemized[utility]:
-            print(f"utility: {utility} & charge_type: {charge_type}")
             expected_value = expected_itemized[utility][charge_type]
             actual_value = result[utility][charge_type]
             assert actual_value == expected_value

@@ -191,7 +191,7 @@ The `decomposition_type` parameter allows you to decompose consumption data into
 Options include:
 
 - Default `None`: No decomposition, consumption treated as imports only.
-- `"binary_big_M"`: Uses binary variable with Big-M constraints. Creates a MILP requiring a MIP solver (e.g., Gurobi). Supported for both CVXPY and Pyomo.
+- `"binary_big_M"`: Uses binary variable with Big-M constraints. Creates a MILP requiring a MIP solver (e.g., SCIP, Gurobi). Supported for both CVXPY and Pyomo.
 - `"absolute_value"`: Uses absolute value constraints. Creates a nonlinear problem for Pyomo. **Not supported for CVXPY** (not DCP-compliant).
 
 For numpy arrays, `decomposition_type` is ignored since decomposition is a direct calculation.
@@ -247,7 +247,7 @@ For numpy arrays, `decomposition_type` is ignored since decomposition is a direc
     constraints = decomp_constraints + [...]  # add other constraints
     
     prob = cp.Problem(objective, constraints)
-    prob.solve(solver=cp.GUROBI)  # requires MIP solver
+    prob.solve(solver=cp.SCIP)  # requires MIP solver
 
 When `decomposition_type` is not `None`, the function creates separate variables for positive consumption (imports) and negative consumption (exports), applying export charges only to the export component.
 A constraint `total_consumption = imports - exports` is added to balance the decomposition.

@@ -456,7 +456,7 @@ def _decompose_binary_cvx(expression, big_m=1e6):
 
     Creates a mixed-integer program (MIP) where a binary variable indicates
     whether we are importing (1) or exporting (0) at each timestep.
-    Requires a MIP solver (e.g., Gurobi, MOSEK).
+    Requires a MIP solver (e.g., Gurobi, MOSEK, SCIP).
 
     Parameters
     ----------
@@ -687,7 +687,7 @@ def decompose_consumption(
         else:
             raise NotImplementedError(
                 f"Decomposition type '{decomposition_type}' not supported for CVXPY. "
-                "Only 'binary_big_M' is available (requires MIP solver like Gurobi). "
+                "Only 'binary_big_M' is available (requires a MIP solver). "
                 "Use Pyomo for 'absolute_value' decomposition."
             )
 

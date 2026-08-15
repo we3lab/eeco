@@ -373,10 +373,10 @@ def test_decompose_consumption_cvx(
         assert isinstance(constraints, list)
         assert len(constraints) == 3  # decomposition + 2 Big-M constraints
 
-        # Solve with Gurobi and verify values
+        # Solve with SCIP and verify values
         constraints.append(x == consumption_data)
         prob = cp.Problem(cp.Minimize(0), constraints)
-        prob.solve(solver=cp.GUROBI)
+        prob.solve(solver=cp.SCIP)
 
         np.testing.assert_array_almost_equal(positive_var.value, expected_positive)
         np.testing.assert_array_almost_equal(negative_var.value, expected_negative)
