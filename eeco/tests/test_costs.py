@@ -395,16 +395,14 @@ def test_get_timesteps(start_dt, end_dt, resolution, expected_ntsteps, expect_wa
             warnings.simplefilter("error", UserWarning)
             ntsteps, datetime_df = costs.get_timesteps(start_dt, end_dt, resolution)
 
-    assert ntsteps == expected_ntsteps
-    assert len(datetime_df) == expected_ntsteps
-
-    # start_dt is inclusive, end_dt is exclusive
     binsize = pd.Timedelta(minutes=ut.get_freq_binsize_minutes(resolution))
     timesteps = datetime_df[costs.DATETIME]
-    assert timesteps.iloc[0] == pd.Timestamp(start_dt)
-    assert timesteps.iloc[-1] == pd.Timestamp(start_dt) + (ntsteps - 1) * binsize
-    assert timesteps.iloc[-1] < pd.Timestamp(end_dt)
-    assert (timesteps < pd.Timestamp(end_dt)).all()
+
+    assert ntsteps == expected_ntsteps == len(timesteps)
+    assert timesteps.iloc[0] == pd.Timestamp(start_dt)  # start_dt is inclusive
+    # end_dt is exclusive and one more timestep would have reached it
+    last = timesteps.iloc[-1]
+    assert last + binsize <= pd.Timestamp(end_dt) < last + 2 * binsize
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
