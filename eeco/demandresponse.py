@@ -33,7 +33,7 @@ REDUCTION_KW = "reduction_kW"
 DELIVERED_RATIO = "delivered_ratio"
 REVENUE = "revenue"
 
-# Payment function region dict keys. 
+# Payment function region dict keys.
 REGION_X1 = "x1"
 REGION_X2 = "x2"
 REGION_Y1 = "y1"
@@ -44,7 +44,7 @@ def _event_window_mask(index, event_date, start_hour, duration_hours):
     """Boolean mask selecting timestamps in `index` within the half-open window
     [event_date + start_hour, event_date + start_hour + duration_hours).
 
-    Use this as opposed to the pandas.Series.between_time method to identify 
+    Use this as opposed to the pandas.Series.between_time method to identify
     the window on a specific event day, as opposed to every day present.
 
     Parameters
@@ -106,7 +106,9 @@ def _find_payment_region(payment_function, delivered_ratio=None, region_x1=None)
         error_msg = f"No region with x1 close to {region_x1}"
     else:
         predicate = lambda r: r[REGION_X1] <= delivered_ratio < r[REGION_X2]
-        error_msg = f"delivered_ratio {delivered_ratio} is not covered by payment_function"
+        error_msg = (
+            f"delivered_ratio {delivered_ratio} is not covered by payment_function"
+        )
 
     region = next((r for r in payment_function if predicate(r)), None)
     if region is None:
@@ -582,7 +584,9 @@ def _baseline_day_terms(
         terms = [(1.0 / len(matched), model_power_kW[idx]) for idx in matched]
         return terms, True
 
-    mask = _event_window_mask(historical_power_kW.index, day, start_hour, duration_hours)
+    mask = _event_window_mask(
+        historical_power_kW.index, day, start_hour, duration_hours
+    )
     day_slice = historical_power_kW.loc[mask]
     if day_slice.empty:
         raise ValueError(f"No data available for baseline day {day}")
@@ -897,7 +901,9 @@ def build_event_revenue(
         )
 
 
-def calculate_event_revenue(historical_power_kW, event, baseline_params, payment_function):
+def calculate_event_revenue(
+    historical_power_kW, event, baseline_params, payment_function
+):
     """Calculate ex-post demand response revenue for a single event.
 
     Parameters
@@ -955,7 +961,9 @@ def calculate_event_revenue(historical_power_kW, event, baseline_params, payment
     }
 
 
-def calculate_dr_revenue(historical_power_kW, events, baseline_params, payment_function):
+def calculate_dr_revenue(
+    historical_power_kW, events, baseline_params, payment_function
+):
     """Calculate ex-post demand response revenue across all events.
 
     Each event is processed independently: its own window is re-sliced from
@@ -1100,11 +1108,16 @@ def build_dr_revenue(
         )
 
         mask = _event_window_mask(
-            datetime_index, event[EVENT_DATE], event[EVENT_START_HOUR], event[EVENT_DURATION]
+            datetime_index,
+            event[EVENT_DATE],
+            event[EVENT_START_HOUR],
+            event[EVENT_DURATION],
         )
         matched_indices = [idx for idx, keep in zip(var_index, mask) if keep]
         if not matched_indices:
-            raise ValueError(f"No data available for event window on {event[EVENT_DATE]}")
+            raise ValueError(
+                f"No data available for event window on {event[EVENT_DATE]}"
+            )
         mean_power = pyo.quicksum(power_kW[idx] for idx in matched_indices) / len(
             matched_indices
         )
