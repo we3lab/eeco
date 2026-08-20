@@ -173,7 +173,9 @@ def test_calculate_event_baseline_insufficient_days():
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 def test_calculate_event_baseline_dynamic_day_fully_in_horizon():
-    historical_power_kW = _flat_power_series(value_by_hour=100)  # unused: day is in-horizon
+    historical_power_kW = _flat_power_series(
+        value_by_hour=100
+    )  # unused: day is in-horizon
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     params = dr.make_baseline_parameters(n_baseline_days=1, adjustment_hours=None)
 
@@ -549,7 +551,9 @@ def _build_dr_revenue_fixture():
         ]
     )
     historical_power_kW = _flat_power_series(value_by_hour=90)
-    baseline_params = dr.make_baseline_parameters(n_baseline_days=1, adjustment_hours=None)
+    baseline_params = dr.make_baseline_parameters(
+        n_baseline_days=1, adjustment_hours=None
+    )
 
     events = dr.add_event(None, "2024-01-15", 13, 2, 17, ["2024-01-01"], 100, 10)
     events = dr.add_event(events, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)
@@ -563,7 +567,14 @@ def _build_dr_revenue_fixture():
     model.power[2].fix(0)
     model.power[3].fix(0)
 
-    return model, datetime_index, events, historical_power_kW, baseline_params, region_x1s
+    return (
+        model,
+        datetime_index,
+        events,
+        historical_power_kW,
+        baseline_params,
+        region_x1s,
+    )
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -694,8 +705,12 @@ def test_build_dr_revenue_dynamic_baseline():
             "2024-01-08 14:00",
         ]
     )
-    historical_power_kW = _flat_power_series(value_by_hour=100)  # unused: baseline day is in-horizon
-    baseline_params = dr.make_baseline_parameters(n_baseline_days=1, adjustment_hours=None)
+    historical_power_kW = _flat_power_series(
+        value_by_hour=100
+    )  # unused: baseline day is in-horizon
+    baseline_params = dr.make_baseline_parameters(
+        n_baseline_days=1, adjustment_hours=None
+    )
 
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-03"], 100, 10)
     region_x1s = {"2024-01-08": 0.75}
