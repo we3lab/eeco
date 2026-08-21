@@ -269,7 +269,8 @@ def test_calculate_event_baseline_dynamic_day_partial_overlap():
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 def test_calculate_event_baseline_dynamic_mixed_days():
     historical_power_kW = _flat_power_series(value_by_hour=100)
-    # day A (2024-01-01) in horizon -> dynamic; day B (2024-01-02) out -> historical (mean 100)
+    # day A (2024-01-01) in horizon -> dynamic;
+    # day B (2024-01-02) out -> historical (mean 100)
     event = dr.add_event(
         None, "2024-01-08", 13, 2, 17, ["2024-01-01", "2024-01-02"], 100, 10
     )[0]
@@ -1015,7 +1016,8 @@ def test_build_dr_revenue_with_capacity_energy_payment():
         region_x1s,
     )
 
-    # dr_event_0 is "2024-01-08": capacity 300 (see fixture docstring) + energy 0.09*60*2
+    # dr_event_0 is "2024-01-08": capacity 300 (see fixture docstring)
+    # + energy 0.09*60*2
     capacity_0 = model.find_component("dr_event_0_revenue")
     energy_0 = model.find_component("dr_event_0_energy_revenue")
     total_0 = model.find_component("dr_event_0_total_revenue")
@@ -1090,7 +1092,8 @@ def test_build_dr_revenue_dynamic_baseline():
     baseline_constraint = model.find_component("dyn_event_0_baseline_kW_constraint")
     assert pyo.value(baseline_constraint.body) == pytest.approx(0, abs=1e-6)
 
-    # reduction = 120 - 30 = 90 -> delivered ratio 0.9 -> region [0.75, 1.05) -> revenue 900
+    # reduction = 120 - 30 = 90 -> delivered ratio 0.9
+    # -> region [0.75, 1.05) -> revenue 900
     revenue_var = model.find_component("dyn_event_0_revenue")
     revenue_var.fix(900)
     revenue_constraint = model.find_component("dyn_event_0_revenue_constraint")
