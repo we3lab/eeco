@@ -875,10 +875,16 @@ class PaymentStructure:
             The matching region.
         """
         if region_x1 is not None:
-            predicate = lambda r: np.isclose(r[REGION_X1], region_x1)
+
+            def predicate(r):
+                return np.isclose(r[REGION_X1], region_x1)
+
             error_msg = f"No region with x1 close to {region_x1}"
         else:
-            predicate = lambda r: r[REGION_X1] <= delivered_ratio < r[REGION_X2]
+
+            def predicate(r):
+                return r[REGION_X1] <= delivered_ratio < r[REGION_X2]
+
             error_msg = (
                 f"delivered_ratio {delivered_ratio} is not covered by payment_function"
             )
