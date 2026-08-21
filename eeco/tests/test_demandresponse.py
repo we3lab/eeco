@@ -338,6 +338,109 @@ def test_calculate_event_baseline_adjustment_stays_historical_even_in_horizon():
     assert baseline_kW == pytest.approx(expected)
 
 
+def _adjustment_factor_fixture():
+    """Baseline days whose adjustment window (10:00-13:00) sits at 100 kW and
+    an event day whose own adjustment window sits at 110 kW, so the day-of
+    adjustment factor works out to 1.1 against a raw baseline of 100 kW."""
+    historical_power_kW = _flat_power_series(value_by_hour=100, adj_value_by_hour=100)
+    event_adj_start = pd.Timestamp("2024-01-08 10:00")
+    event_adj_end = event_adj_start + pd.Timedelta(hours=2)
+    historical_power_kW.loc[event_adj_start:event_adj_end] = 110
+
+    baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
+    return historical_power_kW, event
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_adjustment_factor_exposed_as_fixed_model_var():
+    """With `adjustment_in_model=True` the day-of adjustment factor becomes a
+    fixed pyomo Var, so the user can retune it and re-solve without
+    rebuilding the model."""
+    historical_power_kW, event = _adjustment_factor_fixture()
+    baseline_method = dr.BaselineMethod(
+        n_baseline_days=5, adjustment_hours=3, adjustment_in_model=True
+    )
+
+    model = pyo.ConcreteModel()
+    # horizon well away from every baseline day -> all days stay historical,
+    # proving the Param is created even when the baseline itself is a constant
+    model_datetime_index = pd.date_range(
+        "2024-02-01", "2024-02-02", freq="1h", inclusive="left"
+    )
+    model.t = pyo.RangeSet(0, len(model_datetime_index) - 1)
+    model.power = pyo.Var(model.t)
+
+    baseline_var, model = baseline_method.compute(
+        historical_power_kW,
+        event,
+        model=model,
+        model_power_kW=model.power,
+        model_datetime_index=model_datetime_index,
+        varstr="adj_baseline",
+    )
+
+    factor_var = model.find_component("adj_baseline_adjustment_factor")
+    assert factor_var is not None
+    assert pyo.value(factor_var) == pytest.approx(1.1, rel=1e-3)
+    # Fixed, so the solver treats it as an input rather than choosing it --
+    # which also keeps `baseline * factor` linear (degree 1, not bilinear).
+    assert factor_var.fixed
+    constraint = model.find_component("adj_baseline_constraint")
+    assert constraint.body.polynomial_degree() == 1
+
+    baseline_var.fix(110)  # raw baseline 100 * factor 1.1
+    assert pyo.value(constraint.body) == pytest.approx(
+        pyo.value(constraint.upper), abs=1e-6
+    )
+
+    # retune the factor in place -- no rebuild, the baseline follows it
+    factor_var.fix(1.2)
+    baseline_var.fix(120)
+    assert pyo.value(constraint.body) == pytest.approx(
+        pyo.value(constraint.upper), abs=1e-6
+    )
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_adjustment_in_model_is_inert_without_a_model():
+    """Ex-post there is no model to hold a Param, so the flag changes nothing
+    and the factor is folded into a plain float as usual."""
+    historical_power_kW, event = _adjustment_factor_fixture()
+    baseline_method = dr.BaselineMethod(
+        n_baseline_days=5, adjustment_hours=3, adjustment_in_model=True
+    )
+    baseline_kW = baseline_method.compute(historical_power_kW, event)
+    assert baseline_kW == pytest.approx(110, rel=1e-3)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_adjustment_in_model_defaults_off():
+    """Left at its default the flag adds nothing to the model, preserving the
+    plain-float return for an all-historical baseline."""
+    historical_power_kW, event = _adjustment_factor_fixture()
+    baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_hours=3)
+
+    model = pyo.ConcreteModel()
+    model_datetime_index = pd.date_range(
+        "2024-02-01", "2024-02-02", freq="1h", inclusive="left"
+    )
+    model.t = pyo.RangeSet(0, len(model_datetime_index) - 1)
+    model.power = pyo.Var(model.t)
+
+    baseline_kW, model = baseline_method.compute(
+        historical_power_kW,
+        event,
+        model=model,
+        model_power_kW=model.power,
+        model_datetime_index=model_datetime_index,
+        varstr="no_adj_param",
+    )
+    assert baseline_kW == pytest.approx(110, rel=1e-3)
+    assert model.find_component("no_adj_param_adjustment_factor") is None
+    assert model.find_component("no_adj_param") is None
+
+
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 def test_calculate_event_baseline_model_args_incomplete_raises():
     historical_power_kW = _flat_power_series(value_by_hour=100)
@@ -689,6 +792,252 @@ def test_build_dr_revenue_errors():
             CBP_PAYMENT_FUNCTION,
             {"2024-02-01": 0.60},
         )
+
+
+def _per_day_event_series(day_values, event_start_hour=13, event_duration_hours=2):
+    """Builds an hourly power series over Jan 2024 where the event window on
+    each date in `day_values` is set to that date's value, and every other
+    hour is a constant filler (50)."""
+    index = pd.date_range("2024-01-01", "2024-02-01", freq="1h", inclusive="left")
+    series = pd.Series(np.full(len(index), 50.0), index=index)
+    for day_str, value in day_values.items():
+        mask = dr._event_window_mask(
+            index, day_str, event_start_hour, event_duration_hours
+        )
+        series.loc[mask] = value
+    return series
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_top_usage_days_baseline_selects_highest_usage_days():
+    day_values = {
+        "2024-01-01": 50,  # Mon
+        "2024-01-02": 200,  # Tue -- highest usage
+        "2024-01-03": 60,  # Wed
+        "2024-01-04": 150,  # Thu -- second highest usage
+        "2024-01-05": 70,  # Fri -- most recent, but low usage
+    }
+    power_kW = _per_day_event_series(day_values)
+    event = dr.add_event(
+        None, "2024-01-08", 13, 2, 17, list(day_values.keys()), 100, 10
+    )[0]
+
+    top_usage_method = dr.TopUsageDaysBaseline(n_baseline_days=2, adjustment_hours=None)
+    assert top_usage_method.compute(power_kW, event) == pytest.approx(
+        np.mean([200, 150])
+    )
+
+    # The foundation class instead picks the two *most recent* days -- proving
+    # the subclass changed only the ranking rule, not the rest of the behavior.
+    default_method = dr.BaselineMethod(n_baseline_days=2, adjustment_hours=None)
+    assert default_method.compute(power_kW, event) == pytest.approx(np.mean([70, 150]))
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_fixed_level_baseline_ignores_history():
+    power_kW = _flat_power_series(value_by_hour=9999)  # deliberately irrelevant
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    baseline_method = dr.FixedLevelBaseline(firm_level_kW=500)
+
+    assert baseline_method.compute(power_kW, event) == 500
+
+    model = pyo.ConcreteModel()
+    baseline_kW, returned_model = baseline_method.compute(power_kW, event, model=model)
+    assert baseline_kW == 500
+    assert returned_model is model
+
+    with pytest.raises(ValueError):
+        dr.FixedLevelBaseline(firm_level_kW=-1)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_unilateral_interruption_baseline_requires_model():
+    power_kW = _flat_power_series(value_by_hour=100)
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    baseline_method = dr.UnilateralInterruptionBaseline(interruption_level_kW=0.0)
+
+    with pytest.raises(NotImplementedError):
+        baseline_method.compute(power_kW, event)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_unilateral_interruption_baseline_constrains_model():
+    power_kW = _flat_power_series(value_by_hour=100)
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    baseline_method = dr.UnilateralInterruptionBaseline(interruption_level_kW=0.0)
+
+    model = pyo.ConcreteModel()
+    model_datetime_index = pd.date_range(
+        "2024-01-08 12:00", "2024-01-08 17:00", freq="1h", inclusive="left"
+    )
+    model.t = pyo.RangeSet(0, len(model_datetime_index) - 1)
+    model.power = pyo.Var(model.t)
+
+    baseline_kW, model = baseline_method.compute(
+        power_kW,
+        event,
+        model=model,
+        model_power_kW=model.power,
+        model_datetime_index=model_datetime_index,
+        varstr="interrupt_1",
+    )
+    assert baseline_kW == 0.0
+
+    constraint = model.find_component("interrupt_1_interruption_constraint")
+    assert constraint is not None
+    # event window [13, 15) -> positions 1, 2 in the 12:00-17:00 index
+    assert set(constraint.keys()) == {1, 2}
+    for idx in constraint:
+        # An upper bound only -- the interruption caps what the facility can
+        # draw, it does not force it to draw exactly that much.
+        assert constraint[idx].lower is None
+        assert pyo.value(constraint[idx].upper) == pytest.approx(0.0)
+
+    with pytest.raises(ValueError):
+        baseline_method.compute(
+            power_kW, event, model=model
+        )  # missing other model args
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_capacity_energy_payment_evaluate_adds_energy_term():
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    reduction_kW = 60  # delivered ratio 0.6 -> region [0.60, 0.75)
+    payment_structure = dr.CapacityEnergyPayment(
+        CBP_PAYMENT_FUNCTION, energy_price=0.09
+    )
+
+    revenue = payment_structure.evaluate(event, reduction_kW)
+
+    expected_capacity = dr.PaymentStructure(CBP_PAYMENT_FUNCTION).evaluate(
+        event, reduction_kW
+    )
+    expected_energy = 0.09 * reduction_kW * event[dr.EVENT_DURATION]
+    assert revenue == pytest.approx(expected_capacity + expected_energy)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_capacity_energy_payment_build_expression_cvxpy():
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    reduction_kW = cp.Variable()
+    reduction_kW.value = 60.0
+    payment_structure = dr.CapacityEnergyPayment(
+        CBP_PAYMENT_FUNCTION, energy_price=0.09
+    )
+
+    revenue_expr, constraints = payment_structure.build_expression(
+        event, reduction_kW, region_x1=0.60
+    )
+
+    expected_capacity_expr, _ = dr.PaymentStructure(
+        CBP_PAYMENT_FUNCTION
+    ).build_expression(event, reduction_kW, region_x1=0.60)
+    expected_energy = 0.09 * 60.0 * event[dr.EVENT_DURATION]
+    assert revenue_expr.value == pytest.approx(
+        expected_capacity_expr.value + expected_energy
+    )
+    assert len(constraints) == 2
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_capacity_energy_payment_build_expression_pyomo():
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    model = pyo.ConcreteModel()
+    model.reduction = pyo.Var()
+    model.reduction.fix(60.0)
+
+    payment_structure = dr.CapacityEnergyPayment(
+        CBP_PAYMENT_FUNCTION, energy_price=0.09
+    )
+    total_var, model = payment_structure.build_expression(
+        event, model.reduction, region_x1=0.60, model=model, varstr="ce_event"
+    )
+
+    capacity_var = model.find_component("ce_event_revenue")
+    capacity_var.fix(10 * 0.5 * 60)  # region [0.60, 0.75) formula, capacity_price=10
+    capacity_constraint = model.find_component("ce_event_revenue_constraint")
+    assert pyo.value(capacity_constraint.body) == pytest.approx(0, abs=1e-6)
+
+    energy_var = model.find_component("ce_event_energy_revenue")
+    energy_var.fix(0.09 * 60 * event[dr.EVENT_DURATION])
+    energy_constraint = model.find_component("ce_event_energy_revenue_constraint")
+    assert pyo.value(energy_constraint.body) == pytest.approx(0, abs=1e-6)
+
+    total_var.fix(pyo.value(capacity_var) + pyo.value(energy_var))
+    total_constraint = model.find_component("ce_event_total_revenue_constraint")
+    assert pyo.value(total_constraint.body) == pytest.approx(0, abs=1e-6)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_market_indexed_payment_resolves_price():
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    reduction_kW = 60
+
+    payment_structure = dr.MarketIndexedPayment(
+        CBP_PAYMENT_FUNCTION, price_lookup=lambda e: 42.0
+    )
+    revenue = payment_structure.evaluate(event, reduction_kW)
+
+    resolved_event = {**event, dr.CAPACITY_PRICE: 42.0}
+    expected = dr.PaymentStructure(CBP_PAYMENT_FUNCTION).evaluate(
+        resolved_event, reduction_kW
+    )
+    assert revenue == pytest.approx(expected)
+    # sanity: the original event's capacity_price (10) would give a different answer
+    assert revenue != pytest.approx(
+        dr.PaymentStructure(CBP_PAYMENT_FUNCTION).evaluate(event, reduction_kW)
+    )
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_build_dr_revenue_with_capacity_energy_payment():
+    (
+        model,
+        datetime_index,
+        events,
+        historical_power_kW,
+        baseline_params,
+        region_x1s,
+    ) = _build_dr_revenue_fixture()
+
+    payment_structure = dr.CapacityEnergyPayment(
+        CBP_PAYMENT_FUNCTION, energy_price=0.09
+    )
+
+    total_revenue, model = dr.build_dr_revenue(
+        model.power,
+        datetime_index,
+        events,
+        historical_power_kW,
+        baseline_params,
+        model,
+        payment_structure,
+        region_x1s,
+    )
+
+    # dr_event_0 is "2024-01-08": capacity 300 (see fixture docstring) + energy 0.09*60*2
+    capacity_0 = model.find_component("dr_event_0_revenue")
+    energy_0 = model.find_component("dr_event_0_energy_revenue")
+    total_0 = model.find_component("dr_event_0_total_revenue")
+    capacity_0.fix(300)
+    energy_0.fix(0.09 * 60 * 2)
+    total_0.fix(pyo.value(capacity_0) + pyo.value(energy_0))
+    constraint_0 = model.find_component("dr_event_0_total_revenue_constraint")
+    assert pyo.value(constraint_0.body) == pytest.approx(0, abs=1e-6)
+
+    # dr_event_1 is "2024-01-15": capacity 900 + energy 0.09*90*2
+    capacity_1 = model.find_component("dr_event_1_revenue")
+    energy_1 = model.find_component("dr_event_1_energy_revenue")
+    total_1 = model.find_component("dr_event_1_total_revenue")
+    capacity_1.fix(900)
+    energy_1.fix(0.09 * 90 * 2)
+    total_1.fix(pyo.value(capacity_1) + pyo.value(energy_1))
+    constraint_1 = model.find_component("dr_event_1_total_revenue_constraint")
+    assert pyo.value(constraint_1.body) == pytest.approx(0, abs=1e-6)
+
+    assert pyo.value(model.objective.expr) == pytest.approx(
+        -(pyo.value(total_0) + pyo.value(total_1))
+    )
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
