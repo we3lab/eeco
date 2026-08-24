@@ -43,6 +43,7 @@ CUSTOMER = "customer"
 ENERGY = "energy"
 DEMAND = "demand"
 EXPORT = "export"
+COST = "cost"
 
 # Charge tier strings
 PEAK = "peak"
@@ -610,18 +611,18 @@ def get_prev_demand_dict(
     prev_dict = dict(prev_dict or {})
     usage_data = np.asarray(usage_data, dtype=float)
     for charge_name, charge_array in charge_dict.items():
-        entry = prev_dict.get(charge_name) or {DEMAND: 0.0, "cost": 0.0}
+        entry = prev_dict.get(charge_name) or {DEMAND: 0.0, COST: 0.0}
         if start_dt in billing_period_starts or (
             get_charge_array_duration(charge_name) == 1
             and pd.Timestamp(start_dt).hour == 0
         ):
-            entry = {DEMAND: 0.0, "cost": 0.0}
+            entry = {DEMAND: 0.0, COST: 0.0}
         charge_array = np.asarray(charge_array, dtype=float)
         active = charge_array > 0
         window_demand = float(np.max(usage_data[active])) if active.any() else 0.0
         prev_dict[charge_name] = {
             DEMAND: max(entry[DEMAND], window_demand),
-            "cost": max(entry["cost"], float(np.max(usage_data * charge_array))),
+            COST: max(entry[COST], float(np.max(usage_data * charge_array))),
         }
     return prev_dict
 
@@ -1410,7 +1411,7 @@ def calculate_cost(
         if charge_type == DEMAND:
             if prev_demand_dict is not None:
                 prev_demand = prev_demand_dict[key][DEMAND]
-                prev_demand_cost = prev_demand_dict[key]["cost"]
+                prev_demand_cost = prev_demand_dict[key][COST]
             else:
                 prev_demand = 0
                 prev_demand_cost = 0
