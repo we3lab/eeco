@@ -208,7 +208,7 @@ def get_timesteps(start_dt, end_dt, resolution="15m"):
         Accepts `datetime.datetime`, `numpy.datetime64`, and ISO-8601 strings
 
     end_dt : datetime-like
-        end timestep of the cost analysis, not inclusive.
+        end timestep of the cost analysis, exclusive.
         The last timestep returned is one `resolution` before `end_dt`.
         Accepts `datetime.datetime`, `numpy.datetime64`, and ISO-8601 strings
 
@@ -523,8 +523,22 @@ def get_charge_df(
     pandas.DataFrame
         DataFrame of charge arrays
     """
+    # TODO: this function mandates a specific method for the scale factor, 
+    # but the user should be able to pass in any scaling function
+    if scale_fixed_charges or scale_demand_charges:
+        scale_factor = get_billing_period_scale_factor(start_dt, end_dt)
+    else:
+        scale_factor = 1.0
+
     # get the charge dictionary
-    charge_dict = get_charge_dict(start_dt, end_dt, rate_data, resolution=resolution)
+    charge_dict = get_charge_dict(
+        start_dt, 
+        end_dt, 
+        rate_data, 
+        resolution=resolution,
+        scale_fixed_charges=scale_fixed_charges,
+        demand_scale_factor=scale_factor
+    )
 
     ntsteps, datetime = get_timesteps(start_dt, end_dt, resolution)
 
@@ -537,37 +551,13 @@ def get_charge_df(
         )
     }
 
-    if scale_fixed_charges or scale_demand_charges:
-        scale_factor = get_billing_period_scale_factor(start_dt, end_dt)
-    else:
-        scale_factor = 1.0
-
-    if keep_fixed_charges:
-        # replace the fixed charge in charge_dict with its time-averaged value
-        for key, value in fixed_charge_dict.items():
-            if scale_fixed_charges:
-                arr = np.ones(ntsteps) * value[0] * scale_factor / ntsteps
-            else:
-                arr = np.zeros(ntsteps)
-                arr[0] = value[0]
-
-            charge_dict[key] = arr
-    else:
+    if not keep_fixed_charges:
         # remove fixed charges from the charge_dict
         for key in fixed_charge_dict.keys():
             del charge_dict[key]
 
-    if scale_demand_charges:
-        demand_charge_dict = {
-            key: value for key, value in charge_dict.items() if "demand" in key
-        }
-        for key, value in demand_charge_dict.items():
-            charge_dict[key] = value * scale_factor
-
     charge_df = pd.DataFrame(charge_dict)
-
     charge_df = pd.concat([datetime, charge_df], axis=1)
-
     # remove all zero columns
     charge_df = charge_df.loc[:, (charge_df != 0).any(axis=0)]
     return charge_df
