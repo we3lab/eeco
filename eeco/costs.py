@@ -1420,7 +1420,6 @@ def calculate_cost(
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
 
         # Only apply demand_scale_factor if charge is assessed monthly
-        charge_duration_days = get_charge_array_duration(key)
         effective_scale_factor = demand_scale_factor if assessed is MONTHLY else 1
 
         if charge_type == DEMAND:

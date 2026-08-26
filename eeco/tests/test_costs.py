@@ -7,7 +7,6 @@ import pandas as pd
 import pyomo.environ as pyo
 import datetime
 from eeco import costs
-from eeco import utils as ut
 from eeco.units import u
 from eeco.costs import (
     CHARGE,
@@ -861,7 +860,6 @@ def test_get_timesteps(start_dt, end_dt, resolution, expected_steps, expect_warn
             warnings.simplefilter("error", UserWarning)
             ntsteps, datetime_df = costs.get_timesteps(start_dt, end_dt, resolution)
 
-    binsize = pd.Timedelta(minutes=ut.get_freq_binsize_minutes(resolution))
     timesteps = datetime_df[costs.DATETIME]
 
     assert ntsteps == len(expected_steps) == len(timesteps)
@@ -1383,7 +1381,9 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
         #     False,
         #     0.5,
         #     {
-        #         "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
+        #         "electric_demand-monthly_all-day_20240710_20240710_0": (
+        #             np.ones(96) * 5 * 0.5,
+        #         )
         #         "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
         #             [np.zeros(64), np.ones(20) * 20 * 0.5, np.zeros(12)]
         #         ),
@@ -1398,7 +1398,9 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
         #     False,
         #     0.5,
         #     {
-        #         "electric_demand-daily_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
+        #         "electric_demand-daily_all-day_20240710_20240710_0": (
+        #             np.ones(96) * 5 * 0.5,
+        #         )
         #         "electric_demand-daily_on-peak_20240710_20240710_0": np.concatenate(
         #             [np.zeros(64), np.ones(20) * 20, np.zeros(12)]
         #         ),
@@ -3007,9 +3009,7 @@ def test_calculate_export_revenue(
     ],
 )
 def test_get_charge_array_duration(key, expected):
-    from eeco.costs import get_charge_array_duration
-
-    assert get_charge_array_duration(key) == expected
+    assert costs.get_charge_array_duration(key) == expected
 
 
 @pytest.mark.parametrize(
