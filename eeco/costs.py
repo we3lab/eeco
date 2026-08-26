@@ -440,7 +440,9 @@ def get_charge_dict(
                                         new_start.strftime("%Y%m%d"),
                                         str(int(limit)),
                                     )
-                                    add_to_charge_array(charge_dict, key_str, charge_array)
+                                    add_to_charge_array(
+                                        charge_dict, key_str, charge_array
+                                    )
                             else:
                                 charge_array = create_charge_array(
                                     charge, datetime, start, new_end, utility=utility
@@ -502,7 +504,7 @@ def get_charge_df(
         granularity of each timestep in string form with default value of "15m"
 
     keep_fixed_charges : bool
-        Whether to discard fixed (i.e., customer) charges or keep them. 
+        Whether to discard fixed (i.e., customer) charges or keep them.
         Default is True, which returns fixed (and all other) charges.
 
     scale_fixed_charges : bool
@@ -520,9 +522,9 @@ def get_charge_df(
     # get the datetime array and charge dictionary
     ntsteps, datetime = get_timesteps(start_dt, end_dt, resolution)
     charge_dict = get_charge_dict(
-        start_dt, 
-        end_dt, 
-        rate_data, 
+        start_dt,
+        end_dt,
+        rate_data,
         resolution=resolution,
     )
     if scale_fixed_charges or scale_demand_charges:
@@ -544,7 +546,7 @@ def get_charge_df(
         for key, value in fixed_charge_dict.items():
             if scale_fixed_charges:
                 arr = np.ones(ntsteps) * value[0] * scale_factor / ntsteps
-            else: # or put the whole charge in first entry with trailing zeros
+            else:  # or put the whole charge in first entry with trailing zeros
                 arr = np.zeros(ntsteps)
                 arr[0] = value[0]
 
@@ -558,7 +560,8 @@ def get_charge_df(
         # TODO: implicit dependency on `default_varstr_alias_func`
         # which we should brainstorm how to remove
         demand_charge_dict = {
-            key: value for key, value in charge_dict.items() 
+            key: value
+            for key, value in charge_dict.items()
             if (DEMAND in key) and (DAILY not in key)
         }
         for key, value in demand_charge_dict.items():
@@ -1846,9 +1849,7 @@ def calculate_itemized_cost(
                     results_dict[TOTAL].get(charge_key, 0) + cost
                 )
     else:
-        results_dict[TOTAL] = sum(
-            results_dict[utility][TOTAL] for utility in utilities
-        )
+        results_dict[TOTAL] = sum(results_dict[utility][TOTAL] for utility in utilities)
 
     return results_dict, model
 

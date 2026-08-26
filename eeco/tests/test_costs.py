@@ -432,9 +432,9 @@ def test_create_charge_array(
             False,
         ),
         (
-            np.datetime64("2024-07-10"), 
-            np.datetime64("2024-07-11"), 
-            "15m", 
+            np.datetime64("2024-07-10"),
+            np.datetime64("2024-07-11"),
+            "15m",
             [
                 datetime.datetime(2024, 7, 10, 0, 0),
                 datetime.datetime(2024, 7, 10, 0, 15),
@@ -533,12 +533,12 @@ def test_create_charge_array(
                 datetime.datetime(2024, 7, 10, 23, 30),
                 datetime.datetime(2024, 7, 10, 23, 45),
             ],
-            False
+            False,
         ),
         (
             pd.Timestamp("2024-07-10"),
-            pd.Timestamp("2024-07-11"), 
-            "15m", 
+            pd.Timestamp("2024-07-11"),
+            "15m",
             [
                 datetime.datetime(2024, 7, 10, 0, 0),
                 datetime.datetime(2024, 7, 10, 0, 15),
@@ -637,12 +637,12 @@ def test_create_charge_array(
                 datetime.datetime(2024, 7, 10, 23, 30),
                 datetime.datetime(2024, 7, 10, 23, 45),
             ],
-            False
+            False,
         ),
         (
-            "2024-07-10", 
-            "2024-07-11", 
-            "15m", 
+            "2024-07-10",
+            "2024-07-11",
+            "15m",
             [
                 datetime.datetime(2024, 7, 10, 0, 0),
                 datetime.datetime(2024, 7, 10, 0, 15),
@@ -741,7 +741,7 @@ def test_create_charge_array(
                 datetime.datetime(2024, 7, 10, 23, 30),
                 datetime.datetime(2024, 7, 10, 23, 45),
             ],
-            False
+            False,
         ),
         # timestep count follows the resolution string
         (
@@ -799,7 +799,7 @@ def test_create_charge_array(
             [
                 datetime.datetime(2024, 7, 10, 0, 0),
                 datetime.datetime(2024, 7, 10, 0, 15),
-                datetime.datetime(2024, 7, 10, 0, 30)
+                datetime.datetime(2024, 7, 10, 0, 30),
             ],
             False,
         ),
@@ -811,7 +811,7 @@ def test_create_charge_array(
             [
                 datetime.datetime(2024, 7, 10, 0, 0),
                 datetime.datetime(2024, 7, 10, 0, 15),
-                datetime.datetime(2024, 7, 10, 0, 30)
+                datetime.datetime(2024, 7, 10, 0, 30),
             ],
             True,
         ),
@@ -898,6 +898,7 @@ def test_get_timesteps(start_dt, end_dt, resolution, expected_steps, expect_warn
 def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
     result = costs.get_billing_period_scale_factor(start_dt, end_dt)
     assert result == pytest.approx(expected)
+
 
 # TODO: remove demand_scale_factor and scale_fixed_charges from these tests
 # @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1176,7 +1177,8 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
                 ),
                 "electric_energy_5_20240531_20240601_0": np.zeros(48),
                 "electric_energy_6_20240531_20240601_0": np.zeros(48),
-                "electric_demand-monthly_maximum_20240531_20240601_0": np.ones(48) * 7.128,
+                "electric_demand-monthly_maximum_20240531_20240601_0": np.ones(48)
+                * 7.128,
                 "gas_customer_0_20240531_20240601_0": np.array([93.14]),
                 # converted from 0.2837 therms
                 "gas_energy_0_20240531_20240601_0": np.ones(48) * 0.10018787433608317,
@@ -1207,7 +1209,8 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
                 "electric_energy_6_20231231_20240101_0": np.concatenate(
                     [np.ones(24) * 0.022552, np.zeros(24)]
                 ),
-                "electric_demand-monthly_maximum_20231231_20240101_0": np.ones(48) * 7.128,
+                "electric_demand-monthly_maximum_20231231_20240101_0": np.ones(48)
+                * 7.128,
                 "gas_customer_0_20231231_20240101_0": np.array([93.14]),
                 "gas_energy_0_20231231_20240101_0": np.concatenate(
                     [
@@ -1309,7 +1312,8 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
             1,
             {
                 "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5,
-                "electric_demand-monthly_all-day_20240710_20240710_100": np.ones(96) * 10,
+                "electric_demand-monthly_all-day_20240710_20240710_100": np.ones(96)
+                * 10,
                 "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
