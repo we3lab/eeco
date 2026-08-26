@@ -471,6 +471,3 @@ def test_python_types():
     assert ut.check_nonindexed_pyomo_type(y) is False
     assert ut.check_nonindexed_pyomo_type(z) is False
     assert ut.check_nonindexed_pyomo_type(z[0]) is False
-
-
-# TODO: add test_get_freq_binsize_minutes
