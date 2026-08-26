@@ -899,7 +899,7 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
     result = costs.get_billing_period_scale_factor(start_dt, end_dt)
     assert result == pytest.approx(expected)
 
-
+# TODO: remove demand_scale_factor and scale_fixed_charges from these tests
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "start_dt, end_dt, billing_path, resolution, scale_fixed_charges, "
@@ -1029,8 +1029,8 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
             False,
             1,
             {
-                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
@@ -1048,8 +1048,8 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
             False,
             1,
             {
-                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
@@ -1068,8 +1068,8 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
             False,
             1,
             {
-                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand-daily_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
@@ -1088,15 +1088,15 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
             False,
             1,
             {
-                "electric_demand_all-day_20240710_20240711_0": np.ones(192) * 5,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-monthly_all-day_20240710_20240711_0": np.ones(192) * 5,
+                "electric_demand-daily_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
                         np.zeros(108),
                     ]
                 ),
-                "electric_demand_on-peak_20240711_20240711_0": np.concatenate(
+                "electric_demand-daily_on-peak_20240711_20240711_0": np.concatenate(
                     [
                         np.zeros(160),
                         np.ones(20) * 20,
@@ -1176,7 +1176,7 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
                 ),
                 "electric_energy_5_20240531_20240601_0": np.zeros(48),
                 "electric_energy_6_20240531_20240601_0": np.zeros(48),
-                "electric_demand_maximum_20240531_20240601_0": np.ones(48) * 7.128,
+                "electric_demand-monthly_maximum_20240531_20240601_0": np.ones(48) * 7.128,
                 "gas_customer_0_20240531_20240601_0": np.array([93.14]),
                 # converted from 0.2837 therms
                 "gas_energy_0_20240531_20240601_0": np.ones(48) * 0.10018787433608317,
@@ -1192,7 +1192,7 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
             False,
             1,
             {
-                "electric_customer_0_20231231_20240101_0": np.array([300]),
+                "electric_customer-monthly_0_20231231_20240101_0": np.array([300]),
                 "electric_energy_0_20231231_20240101_0": np.concatenate(
                     [
                         np.zeros(24),
@@ -1207,8 +1207,8 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
                 "electric_energy_6_20231231_20240101_0": np.concatenate(
                     [np.ones(24) * 0.022552, np.zeros(24)]
                 ),
-                "electric_demand_maximum_20231231_20240101_0": np.ones(48) * 7.128,
-                "gas_customer_0_20231231_20240101_0": np.array([93.14]),
+                "electric_demand-monthly_maximum_20231231_20240101_0": np.ones(48) * 7.128,
+                "gas_customer-monthly_0_20231231_20240101_0": np.array([93.14]),
                 "gas_energy_0_20231231_20240101_0": np.concatenate(
                     [
                         np.zeros(24),
@@ -1308,16 +1308,16 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
             False,
             1,
             {
-                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
-                "electric_demand_all-day_20240710_20240710_100": np.ones(96) * 10,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand-monthly_all-day_20240710_20240710_100": np.ones(96) * 10,
+                "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
                         np.zeros(12),
                     ]
                 ),
-                "electric_demand_on-peak_20240710_20240710_100": np.concatenate(
+                "electric_demand-monthly_on-peak_20240710_20240710_100": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 30,
@@ -1377,8 +1377,8 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
             False,
             0.5,
             {
-                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
+                "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
                     [np.zeros(64), np.ones(20) * 20 * 0.5, np.zeros(12)]
                 ),
             },
@@ -1392,8 +1392,8 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
             False,
             0.5,
             {
-                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-daily_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
+                "electric_demand-daily_on-peak_20240710_20240710_0": np.concatenate(
                     [np.zeros(64), np.ones(20) * 20, np.zeros(12)]
                 ),
             },
@@ -1415,8 +1415,9 @@ def test_get_charge_dict(
         end_dt,
         tariff_df,
         resolution=resolution,
-        scale_fixed_charges=scale_fixed_charges,
-        demand_scale_factor=demand_scale_factor,
+        # TODO: move these tests to `get_charge_df`
+        # scale_fixed_charges=scale_fixed_charges,
+        # demand_scale_factor=demand_scale_factor,
     )
     assert result.keys() == expected.keys()
     for key, val in result.items():
@@ -2590,23 +2591,23 @@ def test_build_pyomo_costing(
             ELECTRIC,
             {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             {
-                "electric_demand_peak-summer_20240309_20240309_0": {
+                "electric_demand-monthly_peak-summer_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-summer_20240309_20240309_0": {
+                "electric_demand-monthly_half-peak-summer_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_off-peak_20240309_20240309_0": {
+                "electric_demand-monthly_off-peak_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-winter1_20240309_20240309_0": {
+                "electric_demand-monthly_half-peak-winter1_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-winter2_20240309_20240309_0": {
+                "electric_demand-monthly_half-peak-winter2_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
@@ -2623,23 +2624,23 @@ def test_build_pyomo_costing(
             ELECTRIC,
             {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             {
-                "electric_demand_peak-summer_20240710_20240710_0": {
+                "electric_demand-monthly_peak-summer_20240710_20240710_0": {
                     "demand": 7.078810759792355,
                     "cost": 150,
                 },
-                "electric_demand_half-peak-summer_20240710_20240710_0": {
+                "electric_demand-monthly_half-peak-summer_20240710_20240710_0": {
                     "demand": 13.605442176870748,
                     "cost": 80,
                 },
-                "electric_demand_off-peak_20240710_20240710_0": {
+                "electric_demand-monthly_off-peak_20240710_20240710_0": {
                     "demand": 42.253521126760563,
                     "cost": 900,
                 },
-                "electric_demand_half-peak-winter1_20240710_20240710_0": {
+                "electric_demand-monthly_half-peak-winter1_20240710_20240710_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-winter2_20240710_20240710_0": {
+                "electric_demand-monthly_half-peak-winter2_20240710_20240710_0": {
                     "demand": 0,
                     "cost": 0,
                 },
@@ -4545,7 +4546,6 @@ def test_calculate_itemized_cost_pyo(
 )
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 def test_individual_charge(charge_list, expected_result):
-
     billing_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "data", "input", "billing.csv"
     )
@@ -4559,7 +4559,6 @@ def test_individual_charge(charge_list, expected_result):
         np.datetime64("2024-07-11"),
         tariff_df,
     )
-
     cost, _ = costs.calculate_cost(
         charge_dict,
         {"electric": baseload, "gas": np.zeros_like(baseload)},

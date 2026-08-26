@@ -19,6 +19,7 @@ MONTH_START = "month_start"
 MONTH_END = "month_end"
 WEEKDAY_START = "weekday_start"
 WEEKDAY_END = "weekday_end"
+COST = "cost"
 CHARGE = "charge"
 CHARGE_METRIC = "charge (metric)"
 CHARGE_IMPERIAL = "charge (imperial)"
@@ -30,6 +31,8 @@ TYPE = "type"
 NAME = "name"
 PERIOD = "period"
 ASSESSED = "assessed"
+MONTHLY = "monthly"
+DAILY = "daily"
 EFFECTIVE_START_DATE = "effective_start_date"
 EFFECTIVE_END_DATE = "effective_end_date"
 DATETIME = "DateTime"
@@ -43,7 +46,7 @@ CUSTOMER = "customer"
 ENERGY = "energy"
 DEMAND = "demand"
 EXPORT = "export"
-COST = "cost"
+TOTAL = "total"
 
 # Charge tier strings
 PEAK = "peak"
@@ -292,8 +295,6 @@ def get_charge_dict(
     end_dt,
     rate_data,
     resolution="15m",
-    scale_fixed_charges=False,
-    demand_scale_factor=1,
 ):
     """Creates a dictionary where the values are charge arrays and keys are of the form
     `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
@@ -315,18 +316,6 @@ def get_charge_dict(
 
     resolution : str
         granularity of each timestep in string form with default value of "15m"
-
-    scale_fixed_charges : bool
-        If True, fixed charges will be divided amongst all time steps and scaled
-        by the horizon's fraction of a billing period. If False, they will not be
-        scaled but included in the first timestep only. Default is True.
-
-    demand_scale_factor : float
-        Optional factor for scaling demand charges relative to energy charges
-        when the optimization/simulation period is not a full billing cycle.
-        Applied to each demand charge billed over a full billing period (the
-        non-daily charges); per-day (daily-assessed) demand is left unscaled.
-        Default is 1
 
     Returns
     -------
@@ -403,8 +392,10 @@ def get_charge_dict(
 
                         try:
                             assessed = charge[ASSESSED]
+                            if pd.isna(assessed):
+                                assessed = MONTHLY
                         except KeyError:
-                            assessed = "monthly"
+                            assessed = MONTHLY
 
                         if charge_type == CUSTOMER:
                             try:
@@ -427,33 +418,46 @@ def get_charge_dict(
                                 str(int(limit)),
                             )
                             add_to_charge_array(charge_dict, key_str, charge_array)
-                        elif charge_type == DEMAND and assessed == "daily":
-                            for day in range((end - start).days + 1):
-                                new_start = start + dt.timedelta(days=day)
-                                new_end = new_start + dt.timedelta(days=1)
+                        # TODO: implicit dependency on `default_varstr_alias_func`
+                        # which we should brainstorm how to remove
+                        elif charge_type == DEMAND:
+                            if assessed == DAILY:
+                                for day in range((end - start).days + 1):
+                                    new_start = start + dt.timedelta(days=day)
+                                    new_end = new_start + dt.timedelta(days=1)
+                                    charge_array = create_charge_array(
+                                        charge,
+                                        datetime,
+                                        new_start,
+                                        new_end,
+                                        utility=utility,
+                                    )
+                                    key_str = default_varstr_alias_func(
+                                        utility,
+                                        charge_type + "-" + assessed,
+                                        name,
+                                        new_start.strftime("%Y%m%d"),
+                                        new_start.strftime("%Y%m%d"),
+                                        str(int(limit)),
+                                    )
+                                    add_to_charge_array(charge_dict, key_str, charge_array)
+                            else:
                                 charge_array = create_charge_array(
-                                    charge,
-                                    datetime,
-                                    new_start,
-                                    new_end,
-                                    utility=utility,
+                                    charge, datetime, start, new_end, utility=utility
                                 )
                                 key_str = default_varstr_alias_func(
                                     utility,
-                                    charge_type,
+                                    charge_type + "-" + assessed,
                                     name,
-                                    new_start.strftime("%Y%m%d"),
-                                    new_start.strftime("%Y%m%d"),
-                                    str(limit),
+                                    start.strftime("%Y%m%d"),
+                                    end.strftime("%Y%m%d"),
+                                    str(int(limit)),
                                 )
                                 add_to_charge_array(charge_dict, key_str, charge_array)
                         else:
                             charge_array = create_charge_array(
                                 charge, datetime, start, new_end, utility=utility
                             )
-                            # demand_scale_factor prorates full-billing-period charges
-                            if charge_type == DEMAND:
-                                charge_array = charge_array * demand_scale_factor
                             key_str = default_varstr_alias_func(
                                 utility,
                                 charge_type,
@@ -464,14 +468,6 @@ def get_charge_dict(
                             )
                             add_to_charge_array(charge_dict, key_str, charge_array)
 
-    # Optionally spread each fixed charge across each horizon timestep
-    if scale_fixed_charges:
-        scale_factor = get_billing_period_scale_factor(start_dt, end_dt)
-        for key in list(charge_dict):
-            if key.split("_")[1] == CUSTOMER:
-                charge_dict[key] = (
-                    np.ones(ntsteps) * charge_dict[key][0] * scale_factor / ntsteps
-                )
     return charge_dict
 
 
@@ -506,8 +502,8 @@ def get_charge_df(
         granularity of each timestep in string form with default value of "15m"
 
     keep_fixed_charges : bool
-        If True, fixed charges will included.
-        If False, fixed charges will be dropped from the output. Default is False.
+        Whether to discard fixed (i.e., customer) charges or keep them. 
+        Default is True, which returns fixed (and all other) charges.
 
     scale_fixed_charges : bool
         If True, fixed charges will be divided amongst all time steps and scaled
@@ -515,34 +511,26 @@ def get_charge_df(
         scaled but included in the first timestep only. Default is True.
 
     scale_demand_charges : bool
-        If True, demand charges will be scaled by the horizon's fraction of a
-        billing period. If False, they will not be scaled. Default is False.
 
     Returns
     -------
     pandas.DataFrame
         DataFrame of charge arrays
     """
-    # TODO: this function mandates a specific method for the scale factor, 
-    # but the user should be able to pass in any scaling function
-    if scale_fixed_charges or scale_demand_charges:
-        scale_factor = get_billing_period_scale_factor(start_dt, end_dt)
-    else:
-        scale_factor = 1.0
-
-    # get the charge dictionary
+    # get the datetime array and charge dictionary
+    ntsteps, datetime = get_timesteps(start_dt, end_dt, resolution)
     charge_dict = get_charge_dict(
         start_dt, 
         end_dt, 
         rate_data, 
         resolution=resolution,
-        scale_fixed_charges=scale_fixed_charges,
-        demand_scale_factor=scale_factor
     )
+    if scale_fixed_charges or scale_demand_charges:
+        scale_factor = get_billing_period_scale_factor(start_dt, end_dt)
+    else:
+        scale_factor = 1.0
 
-    ntsteps, datetime = get_timesteps(start_dt, end_dt, resolution)
-
-    # first find the value of the fixed charge
+    # find the value of the fixed charge
     fixed_charge_dict = {
         key: value
         for key, value in charge_dict.items()
@@ -551,10 +539,30 @@ def get_charge_df(
         )
     }
 
-    if not keep_fixed_charges:
+    if keep_fixed_charges:
+        # replace the fixed charge in charge_dict with its time-averaged value
+        for key, value in fixed_charge_dict.items():
+            if scale_fixed_charges:
+                arr = np.ones(ntsteps) * value[0] * scale_factor / ntsteps
+            else: # or put the whole charge in first entry with trailing zeros
+                arr = np.zeros(ntsteps)
+                arr[0] = value[0]
+
+            charge_dict[key] = arr
+    else:
         # remove fixed charges from the charge_dict
         for key in fixed_charge_dict.keys():
             del charge_dict[key]
+
+    if scale_demand_charges:
+        # TODO: implicit dependency on `default_varstr_alias_func`
+        # which we should brainstorm how to remove
+        demand_charge_dict = {
+            key: value for key, value in charge_dict.items() 
+            if (DEMAND in key) and (DAILY not in key)
+        }
+        for key, value in demand_charge_dict.items():
+            charge_dict[key] = value * scale_factor
 
     charge_df = pd.DataFrame(charge_dict)
     charge_df = pd.concat([datetime, charge_df], axis=1)
@@ -643,6 +651,9 @@ def default_varstr_alias_func(
 
     charge_limit : str
         The consumption limit for this tier of charges converted to a string
+
+    assessed : str
+        The period over which a charge is assessed. Default is "monthly".
 
     Returns
     -------
@@ -1376,13 +1387,25 @@ def calculate_cost(
         consumption_data_dict, conversion_factors, decomposition_type, model
     )
 
+    print(charge_dict.keys())
     for key, charge_array in charge_dict.items():
-        utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
+        utility, full_charge_type, name, eff_start, eff_end, limit_str = key.split("_")
         varstr = ut.sanitize_varstr(
             varstr_alias_func(
-                utility, charge_type, name, eff_start, eff_end, limit_str
+                utility, full_charge_type, name, eff_start, eff_end, limit_str
             )  # noqa: E501
         )
+
+        # TODO: create a list of valid `assessed` periods to loop through
+        if DAILY in full_charge_type:
+            charge_type = full_charge_type.replace(DAILY, "").replace("-", "")
+            assessed = DAILY
+        elif MONTHLY in full_charge_type:
+            charge_type = full_charge_type.replace(MONTHLY, "").replace("-", "")
+            assessed = MONTHLY
+        else:
+            charge_type = full_charge_type
+            assessed = MONTHLY
 
         # if we want itemized costs skip irrelvant portions of the bill
         if (desired_utility and utility not in desired_utility) or (
@@ -1391,12 +1414,12 @@ def calculate_cost(
             continue
 
         charge_limit = int(limit_str)
-        key_substr = "_".join([utility, charge_type, name, eff_start, eff_end])
+        key_substr = "_".join([utility, full_charge_type, name, eff_start, eff_end])
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
 
-        # Only apply demand_scale_factor if charge spans more than one day
+        # Only apply demand_scale_factor if charge is assessed monthly
         charge_duration_days = get_charge_array_duration(key)
-        effective_scale_factor = demand_scale_factor if charge_duration_days > 1 else 1
+        effective_scale_factor = demand_scale_factor if assessed is MONTHLY else 1
 
         if charge_type == DEMAND:
             if prev_demand_dict is not None:
@@ -1805,27 +1828,27 @@ def calculate_itemized_cost(
                     results_dict[utility][charge_type] = cost
 
         if by_charge_key:
-            results_dict[utility]["total"] = {}
+            results_dict[utility][TOTAL] = {}
             for charge_type in charge_types:
                 for charge_key, cost in results_dict[utility][charge_type].items():
-                    results_dict[utility]["total"][charge_key] = (
-                        results_dict[utility]["total"].get(charge_key, 0) + cost
+                    results_dict[utility][TOTAL][charge_key] = (
+                        results_dict[utility][TOTAL].get(charge_key, 0) + cost
                     )
         else:
-            results_dict[utility]["total"] = sum(
+            results_dict[utility][TOTAL] = sum(
                 results_dict[utility][charge_type] for charge_type in charge_types
             )
 
     if by_charge_key:
-        results_dict["total"] = {}
+        results_dict[TOTAL] = {}
         for utility in utilities:
-            for charge_key, cost in results_dict[utility]["total"].items():
-                results_dict["total"][charge_key] = (
-                    results_dict["total"].get(charge_key, 0) + cost
+            for charge_key, cost in results_dict[utility][TOTAL].items():
+                results_dict[TOTAL][charge_key] = (
+                    results_dict[TOTAL].get(charge_key, 0) + cost
                 )
     else:
-        results_dict["total"] = sum(
-            results_dict[utility]["total"] for utility in utilities
+        results_dict[TOTAL] = sum(
+            results_dict[utility][TOTAL] for utility in utilities
         )
 
     return results_dict, model
