@@ -1326,78 +1326,80 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
                 ),
             },
         ),
-        # customer charge spread across all timesteps (scale_fixed_charges=True)
-        (
-            datetime.datetime(2024, 7, 10),
-            datetime.datetime(2024, 8, 1),
-            input_dir + "billing_customer.csv",
-            "15m",
-            True,
-            1,
-            {
-                "electric_customer_0_20240710_20240731_0": (
-                    np.ones(2112) * 1000 * (2112 / 2976) / 2112
-                ),
-            },
-        ),
-        # customer charge prorated across a December horizon
-        (
-            datetime.datetime(2023, 12, 1),
-            datetime.datetime(2023, 12, 8),
-            input_dir + "billing_customer.csv",
-            "15m",
-            True,
-            1,
-            {
-                "electric_customer_0_20231201_20231207_0": (
-                    np.ones(672) * 1000 * (7 / 31) / 672
-                ),
-            },
-        ),
-        # customer charge over a horizon spanning two billing periods
-        (
-            datetime.datetime(2023, 6, 1),
-            datetime.datetime(2023, 7, 16),
-            input_dir + "billing_customer.csv",
-            "15m",
-            True,
-            1,
-            {
-                "electric_customer_0_20230601_20230715_0": (
-                    np.ones(4320) * 1000 * (1 + 15 / 31) / 4320
-                ),
-            },
-        ),
-        # full-billing-period (monthly) demand charges scaled by demand_scale_factor
-        (
-            np.datetime64("2024-07-10"),
-            np.datetime64("2024-07-11"),
-            input_dir + "billing_demand_monthly.csv",
-            "15m",
-            False,
-            0.5,
-            {
-                "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
-                "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
-                    [np.zeros(64), np.ones(20) * 20 * 0.5, np.zeros(12)]
-                ),
-            },
-        ),
-        # per-day charges not scaled by by demand_scale_factor
-        (
-            np.datetime64("2024-07-10"),
-            np.datetime64("2024-07-11"),
-            input_dir + "billing_demand_daily.csv",
-            "15m",
-            False,
-            0.5,
-            {
-                "electric_demand-daily_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
-                "electric_demand-daily_on-peak_20240710_20240710_0": np.concatenate(
-                    [np.zeros(64), np.ones(20) * 20, np.zeros(12)]
-                ),
-            },
-        ),
+        # TODO: all below tests belong in get_charge_df or calculate_costs
+        # no scaling should occur within inner `get_charge_dict` loop, only wrappers
+        # # customer charge spread across all timesteps (scale_fixed_charges=True)
+        # (
+        #     datetime.datetime(2024, 7, 10),
+        #     datetime.datetime(2024, 8, 1),
+        #     input_dir + "billing_customer.csv",
+        #     "15m",
+        #     True,
+        #     1,
+        #     {
+        #         "electric_customer_0_20240710_20240731_0": (
+        #             np.ones(2112) * 1000 * (2112 / 2976) / 2112
+        #         ),
+        #     },
+        # ),
+        # # customer charge prorated across a December horizon
+        # (
+        #     datetime.datetime(2023, 12, 1),
+        #     datetime.datetime(2023, 12, 8),
+        #     input_dir + "billing_customer.csv",
+        #     "15m",
+        #     True,
+        #     1,
+        #     {
+        #         "electric_customer_0_20231201_20231207_0": (
+        #             np.ones(672) * 1000 * (7 / 31) / 672
+        #         ),
+        #     },
+        # ),
+        # # customer charge over a horizon spanning two billing periods
+        # (
+        #     datetime.datetime(2023, 6, 1),
+        #     datetime.datetime(2023, 7, 16),
+        #     input_dir + "billing_customer.csv",
+        #     "15m",
+        #     True,
+        #     1,
+        #     {
+        #         "electric_customer_0_20230601_20230715_0": (
+        #             np.ones(4320) * 1000 * (1 + 15 / 31) / 4320
+        #         ),
+        #     },
+        # ),
+        # # full-billing-period (monthly) demand charges scaled by demand_scale_factor
+        # (
+        #     np.datetime64("2024-07-10"),
+        #     np.datetime64("2024-07-11"),
+        #     input_dir + "billing_demand_monthly.csv",
+        #     "15m",
+        #     False,
+        #     0.5,
+        #     {
+        #         "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
+        #         "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
+        #             [np.zeros(64), np.ones(20) * 20 * 0.5, np.zeros(12)]
+        #         ),
+        #     },
+        # ),
+        # # per-day charges not scaled by by demand_scale_factor
+        # (
+        #     np.datetime64("2024-07-10"),
+        #     np.datetime64("2024-07-11"),
+        #     input_dir + "billing_demand_daily.csv",
+        #     "15m",
+        #     False,
+        #     0.5,
+        #     {
+        #         "electric_demand-daily_all-day_20240710_20240710_0": np.ones(96) * 5 * 0.5,
+        #         "electric_demand-daily_on-peak_20240710_20240710_0": np.concatenate(
+        #             [np.zeros(64), np.ones(20) * 20, np.zeros(12)]
+        #         ),
+        #     },
+        # ),
     ],
 )
 def test_get_charge_dict(
