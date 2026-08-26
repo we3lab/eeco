@@ -900,7 +900,7 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
     assert result == pytest.approx(expected)
 
 # TODO: remove demand_scale_factor and scale_fixed_charges from these tests
-@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+# @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "start_dt, end_dt, billing_path, resolution, scale_fixed_charges, "
     "demand_scale_factor, expected",
@@ -1192,7 +1192,7 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
             False,
             1,
             {
-                "electric_customer-monthly_0_20231231_20240101_0": np.array([300]),
+                "electric_customer_0_20231231_20240101_0": np.array([300]),
                 "electric_energy_0_20231231_20240101_0": np.concatenate(
                     [
                         np.zeros(24),
@@ -1208,7 +1208,7 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
                     [np.ones(24) * 0.022552, np.zeros(24)]
                 ),
                 "electric_demand-monthly_maximum_20231231_20240101_0": np.ones(48) * 7.128,
-                "gas_customer-monthly_0_20231231_20240101_0": np.array([93.14]),
+                "gas_customer_0_20231231_20240101_0": np.array([93.14]),
                 "gas_energy_0_20231231_20240101_0": np.concatenate(
                     [
                         np.zeros(24),
@@ -2548,6 +2548,8 @@ def test_build_pyomo_costing(
             np.float64(4027.79),
             False,
         ),
+        # daily demand should be scaled because this is the inner function
+        # scaling logic should all be handled in the outer `calculate_cost` loop
         (
             np.datetime64("2024-07-10"),  # Summer weekday
             np.datetime64("2024-07-11"),  # Summer weekday
@@ -2557,7 +2559,7 @@ def test_build_pyomo_costing(
             None,
             0,  # consumption_estimate=None (same as default)
             1.1,  # non-default scale factor
-            np.float64(4027.79),  # daily demand charge unscaled
+            np.float64(4430.569),
             False,
         ),
         (
@@ -3687,7 +3689,7 @@ def test_parametrize_rate_data(
                     "variant_name": "exact_keys",
                 }
             ],
-            "electric_demand_peak-summer",
+            "electric_demand-monthly_peak-summer",
             {
                 "variant_name": "exact_keys",
                 "expected_keys": ["original", "exact_keys"],
@@ -3807,7 +3809,6 @@ def test_parametrize_rate_data(
 )
 def test_parametrize_charge_dict(variant_params, key_subset, expected):
     """Test the parametrize_charge_dict function with different variant types."""
-
     rate_data = pd.read_csv(input_dir + "billing_pge.csv")
     start_dt = np.datetime64("2024-07-10")
     end_dt = np.datetime64("2024-07-11")

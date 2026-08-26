@@ -1387,7 +1387,6 @@ def calculate_cost(
         consumption_data_dict, conversion_factors, decomposition_type, model
     )
 
-    print(charge_dict.keys())
     for key, charge_array in charge_dict.items():
         utility, full_charge_type, name, eff_start, eff_end, limit_str = key.split("_")
         varstr = ut.sanitize_varstr(
