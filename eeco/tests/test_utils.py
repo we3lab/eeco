@@ -19,6 +19,29 @@ def test_parse_freq(freq, expected):
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
+    "freq, expected",
+    [
+        ("15m", 15),
+        ("1m", 1),
+        ("1h", 60),
+        ("6h", 360),
+        ("1D", 1440),
+        ("1d", 1440),
+        ("2d", 2880),
+    ],
+)
+def test_get_freq_binsize_minutes(freq, expected):
+    assert ut.get_freq_binsize_minutes(freq) == expected
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_get_freq_binsize_minutes_invalid_type_raises():
+    with pytest.raises(ValueError):
+        ut.get_freq_binsize_minutes("1y")
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
     "consumption_data, varstr, expected",
     [
         ({"electric": np.ones(96) * 100, "gas": np.ones(96)}, "electric", 9600),
