@@ -1248,6 +1248,7 @@ def calculate_cost(
     desired_utility=None,
     desired_charge_type=None,
     demand_scale_factor=1,
+    fixed_scale_factor=1,
     model=None,
     decomposition_type=None,
     varstr_alias_func=default_varstr_alias_func,
@@ -1327,6 +1328,12 @@ def calculate_cost(
         when the optimization/simulation period is not a full billing cycle.
         Applied to monthly charges where end_date - start_date > 1 day.
         Default is 1
+
+    fixed_scale_factor : float
+        Optional factor for scaling fixed (customer) charges relative to energy
+        charges when the optimization/simulation period is not a full billing
+        cycle. Applied to the whole customer charge, which is otherwise billed
+        in full regardless of horizon length. Default is 1
 
     model : pyomo.Model
         The model object associated with the problem.
@@ -1496,7 +1503,7 @@ def calculate_cost(
             )
             cost -= new_cost
         elif charge_type == CUSTOMER:
-            cost += charge_array.sum()
+            cost += charge_array.sum() * fixed_scale_factor
         else:
             raise ValueError("Invalid charge_type: " + charge_type)
 
@@ -1663,6 +1670,7 @@ def calculate_itemized_cost(
     consumption_estimate=0,
     desired_utility=None,
     demand_scale_factor=1,
+    fixed_scale_factor=1,
     model=None,
     decomposition_type=None,
     by_charge_key=False,
@@ -1721,6 +1729,12 @@ def calculate_itemized_cost(
         when the optimization/simulation period is not a full billing cycle.
         Applied to monthly charges where end_date - start_date > 1 day.
         Default is 1
+
+    fixed_scale_factor : float
+        Optional factor for scaling fixed (customer) charges relative to energy
+        charges when the optimization/simulation period is not a full billing
+        cycle. Applied to the whole customer charge, which is otherwise billed
+        in full regardless of horizon length. Default is 1
 
     model : pyomo.Model
         The model object associated with the problem.
@@ -1816,6 +1830,7 @@ def calculate_itemized_cost(
                     desired_utility=utility,
                     desired_charge_type=charge_type,
                     demand_scale_factor=demand_scale_factor,
+                    fixed_scale_factor=fixed_scale_factor,
                     model=model,
                     decomposition_type=decomposition_type,
                     varstr_alias_func=varstr_alias_func,

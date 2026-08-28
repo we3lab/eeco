@@ -1435,7 +1435,8 @@ def test_get_charge_dict(
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
-    "consumption_estimate, desired_utility, desired_charge_type, expected_cost, "
+    "consumption_estimate, desired_utility, desired_charge_type, "
+    "fixed_scale_factor, expected_cost, "
     "expect_warning, expect_error",
     [
         # single energy charge with flat consumption
@@ -1447,6 +1448,7 @@ def test_get_charge_dict(
             0,
             None,
             None,
+            1,
             pytest.approx(1.2),
             False,
             False,
@@ -1460,6 +1462,7 @@ def test_get_charge_dict(
             0,
             None,
             None,
+            1,
             np.sum(np.arange(96)) * 0.05 / 4,
             False,
             False,
@@ -1488,6 +1491,7 @@ def test_get_charge_dict(
             2400,
             None,
             None,
+            1,
             260,
             False,
             False,
@@ -1504,6 +1508,7 @@ def test_get_charge_dict(
             0,
             None,
             None,
+            1,
             pytest.approx(
                 3.0
             ),  # (48*10 + 48*5) * 0.05 / 4 = 3.0 (negative values treated as magnitude)
@@ -1522,6 +1527,7 @@ def test_get_charge_dict(
             0,
             None,
             None,
+            1,
             None,  # No expected cost
             False,
             True,
@@ -1547,6 +1553,7 @@ def test_get_charge_dict(
             0,
             None,
             None,
+            1,
             pytest.approx(9.0),
             False,
             False,
@@ -1581,7 +1588,22 @@ def test_get_charge_dict(
             0,
             None,
             None,
+            1,
             pytest.approx(2720.68223669),
+            False,
+            False,
+        ),
+        # customer charge prorated by fixed_scale_factor
+        (
+            {"electric_customer_0_20240710_20240731_0": np.array([1000.0])},
+            {ELECTRIC: np.ones(96), GAS: np.ones(96)},
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            2 / 31,
+            pytest.approx(1000.0 * 2 / 31),
             False,
             False,
         ),
@@ -1595,6 +1617,7 @@ def test_calculate_cost_np(
     consumption_estimate,
     desired_utility,
     desired_charge_type,
+    fixed_scale_factor,
     expected_cost,
     expect_warning,
     expect_error,
@@ -1609,6 +1632,7 @@ def test_calculate_cost_np(
                 consumption_estimate=consumption_estimate,
                 desired_utility=desired_utility,
                 desired_charge_type=desired_charge_type,
+                fixed_scale_factor=fixed_scale_factor,
             )
     elif expect_warning:
         with pytest.warns(UserWarning):
@@ -1620,6 +1644,7 @@ def test_calculate_cost_np(
                 consumption_estimate=consumption_estimate,
                 desired_utility=desired_utility,
                 desired_charge_type=desired_charge_type,
+                fixed_scale_factor=fixed_scale_factor,
             )
         assert result == expected_cost
         assert model is None
@@ -1632,6 +1657,7 @@ def test_calculate_cost_np(
             consumption_estimate=consumption_estimate,
             desired_utility=desired_utility,
             desired_charge_type=desired_charge_type,
+            fixed_scale_factor=fixed_scale_factor,
         )
         assert result == expected_cost
         assert model is None
@@ -3990,6 +4016,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
     "resolution, "
     "decomposition_type, "
     "by_charge_key, "
+    "fixed_scale_factor, "
     "expected_cost, "
     "expected_itemized",
     [
@@ -4000,6 +4027,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             "15m",
             None,
             False,
+            1,
             pytest.approx(1.2),
             {
                 "electric": {
@@ -4028,6 +4056,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             "15m",
             "absolute_value",
             False,
+            1,
             pytest.approx(-1.5),
             {
                 "electric": {
@@ -4072,6 +4101,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             "15m",
             None,
             False,
+            1,
             pytest.approx(2720.68223669),
             {
                 "electric": {
@@ -4095,6 +4125,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             "15m",
             None,
             True,
+            1,
             pytest.approx(1.2),
             {
                 "electric": {
@@ -4113,6 +4144,25 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
                 },
             },
         ),
+        # customer charge prorated by fixed_scale_factor
+        (
+            {"electric_customer_0_20240710_20240731_0": np.array([1000.0])},
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            False,
+            2 / 31,
+            pytest.approx(1000.0 * 2 / 31),
+            {
+                ELECTRIC: {
+                    "customer": pytest.approx(1000.0 * 2 / 31),
+                    "energy": 0,
+                    "demand": 0,
+                    "export": 0,
+                },
+                GAS: {"customer": 0, "energy": 0, "demand": 0, "export": 0},
+            },
+        ),
     ],
 )
 def test_calculate_itemized_cost_np(
@@ -4121,6 +4171,7 @@ def test_calculate_itemized_cost_np(
     resolution,
     decomposition_type,
     by_charge_key,
+    fixed_scale_factor,
     expected_cost,
     expected_itemized,
 ):
@@ -4133,6 +4184,7 @@ def test_calculate_itemized_cost_np(
         electric_consumption_units=u.kW,
         gas_consumption_units=u.meter**3 / u.day,
         by_charge_key=by_charge_key,
+        fixed_scale_factor=fixed_scale_factor,
     )
 
     total = sum(result["total"].values()) if by_charge_key else result["total"]
