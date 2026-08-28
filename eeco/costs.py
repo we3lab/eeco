@@ -311,8 +311,8 @@ def get_charge_dict(
     rate_data : pandas.DataFrame
         tariff data with required columns `utility`, `type`, `basic_charge_limit`,
         `name`, `month_start`, `month_end`, `weekday_start`, `weekday_end`,
-        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`,
-        `effective_start_date`, and `effective_end_date`
+        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`
+        (default "monthly"), `effective_start_date`, and `effective_end_date`
 
     resolution : str
         granularity of each timestep in string form with default value of "15m"
@@ -497,8 +497,8 @@ def get_charge_df(
     rate_data : pandas.DataFrame
         tariff data with required columns `utility`, `type`, `basic_charge_limit`,
         `name`, `month_start`, `month_end`, `weekday_start`, `weekday_end`,
-        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`,
-        `effective_start_date`, and `effective_end_date`
+        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`
+        (default "monthly"), `effective_start_date`, and `effective_end_date`
 
     resolution : str
         granularity of each timestep in string form with default value of "15m"
@@ -646,7 +646,7 @@ def default_varstr_alias_func(
     name : str
         The name of the period for this charge (e.g., 'all-day' or 'on-peak')
 
-    start_date
+    start_date : str
         The inclusive start date for this charge
 
     end_date : str
@@ -654,9 +654,6 @@ def default_varstr_alias_func(
 
     charge_limit : str
         The consumption limit for this tier of charges converted to a string
-
-    assessed : str
-        The period over which a charge is assessed. Default is "monthly".
 
     Returns
     -------
