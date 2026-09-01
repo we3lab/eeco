@@ -1,3 +1,5 @@
+name: Checks
+
 on:
   pull_request:
     branches: [main]
@@ -52,19 +54,17 @@ jobs:
           - os: win64
             os-version: windows-2022
     steps:                        
-      - name: Install Conda
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          auto-update-conda: true
-          python-version: 3.13
-          channels: conda-forge
-      - name: Install Dependencies
-        shell: bash -el {0}
-        run: |
-          conda install scip ipopt
-          python -m pip install --upgrade pip
-          pip list
-          pip install -e .[test]
+        - uses: conda-incubator/setup-miniconda@v3
+          with:
+            python-version: ${{ matrix.python-version }}
+            miniforge-version: latest
+            channels: conda-forge
+            activate-environment: eeco
+        - name: Install via conda.yaml
+          run: |
+            conda install scip pip
+            pip list
+            pip install -e .[dev]
       - name: Test with pytest
         shell: bash -el {0}
         run: |
