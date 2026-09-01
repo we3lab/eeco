@@ -49,8 +49,9 @@ jobs:
             os-version: ubuntu-latest
           - os: win64
             os-version: windows-2022
-    steps:                        
-      - name: Setup Conda
+    steps:                
+      - uses: actions/checkout@v4
+      - name: Set up Conda
         uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: ${{ matrix.python-version }}
@@ -60,8 +61,6 @@ jobs:
         run: |
           conda install scip ipopt
           python -m pip install --upgrade pip
-          pwd
-          ls
           pip install .[dev]
       - name: Test with pytest
         shell: bash -el {0}
