@@ -140,9 +140,9 @@ In this case, it is important to take into account previously consumed electrici
 For example, using <cite>billing_pge.csv</cite>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">eeco</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
 
-<span class="n">tariff_path</span> <span class="o">=</span> <span class="s2">&quot;tests/data/input/billing_pge.csv&quot;</span>
-<span class="n">start_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2024-07-10&quot;</span><span class="p">)</span>
-<span class="n">end_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2024-07-11&quot;</span><span class="p">)</span>
+<span class="n">tariff_path</span> <span class="o">=</span> <span class="s2">"tests/data/input/billing_pge.csv"</span>
+<span class="n">start_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">"2024-07-10"</span><span class="p">)</span>
+<span class="n">end_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">"2024-07-11"</span><span class="p">)</span>
 <span class="n">billing_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">tariff_path</span><span class="p">)</span>
 <span class="n">charge_dict</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">billing_data</span><span class="p">)</span>
 
@@ -150,30 +150,30 @@ For example, using <cite>billing_pge.csv</cite>:</p>
 <span class="n">num_timesteps</span> <span class="o">=</span> <span class="mi">96</span>
 
 <span class="c1"># this is just a CVXPY variable, but a user would provide constraints to the optimization problem</span>
-<span class="n">consumption_data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">),</span> <span class="s2">&quot;gas&quot;</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)}</span>
+<span class="n">consumption_data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"electric"</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">),</span> <span class="s2">"gas"</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)}</span>
 
 <span class="n">prev_consumption_dict</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;gas_energy_0_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">960</span><span class="p">,</span>
-    <span class="s2">&quot;gas_energy_0_20240710_20240710_5000&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_0_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">34000</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_1_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">14000</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_2_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">24000</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_3_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">14000</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_4_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">14000</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_5_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">19200</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_6_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_7_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_8_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_9_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_10_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_11_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_12_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="s2">&quot;electric_energy_13_20240710_20240710_0&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">"gas_energy_0_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">960</span><span class="p">,</span>
+    <span class="s2">"gas_energy_0_20240710_20240710_5000"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">"electric_energy_0_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">34000</span><span class="p">,</span>
+    <span class="s2">"electric_energy_1_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">14000</span><span class="p">,</span>
+    <span class="s2">"electric_energy_2_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">24000</span><span class="p">,</span>
+    <span class="s2">"electric_energy_3_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">14000</span><span class="p">,</span>
+    <span class="s2">"electric_energy_4_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">14000</span><span class="p">,</span>
+    <span class="s2">"electric_energy_5_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">19200</span><span class="p">,</span>
+    <span class="s2">"electric_energy_6_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">"electric_energy_7_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">"electric_energy_8_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">"electric_energy_9_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">"electric_energy_10_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">"electric_energy_11_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">"electric_energy_12_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">"electric_energy_13_20240710_20240710_0"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
 <span class="p">}</span>
 
 <span class="c1"># see below sections with more detail on how to define the `consumption_estimate``</span>
 <span class="c1"># this is just synthetic data, but a real estimate from the facility historical data should be used</span>
-<span class="n">consumption_estimate</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;gas&quot;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)),</span> <span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)}</span>
+<span class="n">consumption_estimate</span><span class="o">=</span><span class="p">{</span><span class="s2">"gas"</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)),</span> <span class="s2">"electric"</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)}</span>
 
 <span class="n">total_monthly_bill</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_costs</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
@@ -208,19 +208,19 @@ that is passed into <cite>calculate_demand_cost</cite>.</p></li>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">eeco</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
 
 <span class="c1"># load necessary data</span>
-<span class="n">start_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2024-07-10&quot;</span><span class="p">)</span>
-<span class="n">end_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2024-07-11&quot;</span><span class="p">)</span>
+<span class="n">start_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">"2024-07-10"</span><span class="p">)</span>
+<span class="n">end_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">"2024-07-11"</span><span class="p">)</span>
 <span class="n">charge_dict</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">tariff_df</span><span class="p">)</span>
 <span class="n">num_timesteps</span> <span class="o">=</span> <span class="mi">96</span>
 
 <span class="c1"># this is just a CVXPY variable, but a user would provide constraints to the optimization problem</span>
-<span class="n">consumption_data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">),</span> <span class="s2">&quot;gas&quot;</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)}</span>
+<span class="n">consumption_data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"electric"</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">),</span> <span class="s2">"gas"</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)}</span>
 
 <span class="c1"># `consumptione_estimate` as a dict of floats and/or arrays</span>
 <span class="n">total_monthly_bill</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_costs</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
     <span class="n">consumption_data_dict</span><span class="p">,</span>
-    <span class="n">consumption_estimate</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;gas&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">),</span> <span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)}</span>
+    <span class="n">consumption_estimate</span><span class="o">=</span><span class="p">{</span><span class="s2">"gas"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">),</span> <span class="s2">"electric"</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)}</span>
 <span class="p">)</span>
 
 <span class="c1"># `consumptione_estimate` as an array</span>
@@ -228,7 +228,7 @@ that is passed into <cite>calculate_demand_cost</cite>.</p></li>
     <span class="n">charge_dict</span><span class="p">,</span>
     <span class="n">consumption_data_dict</span><span class="p">,</span>
     <span class="n">consumption_estimate</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">),</span>
-    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;gas&quot;</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">"gas"</span>
 <span class="p">)</span>
 
 <span class="c1"># `consumptione_estimate` as a float or int</span>
@@ -236,7 +236,7 @@ that is passed into <cite>calculate_demand_cost</cite>.</p></li>
     <span class="n">charge_dict</span><span class="p">,</span>
     <span class="n">consumption_data_dict</span><span class="p">,</span>
     <span class="n">consumption_estimate</span><span class="o">=</span><span class="nb">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">),</span>
-    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">&quot;electric&quot;</span>
+    <span class="n">desired_utility</span><span class="o">=</span><span class="s2">"electric"</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -299,19 +299,19 @@ Options include:</p>
 
 <span class="c1"># Example with export charges</span>
 <span class="n">charge_dict</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;electric_export_0_2024-07-10_2024-07-10_0&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">96</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.025</span><span class="p">,</span>
+    <span class="s2">"electric_export_0_2024-07-10_2024-07-10_0"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">96</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.025</span><span class="p">,</span>
 <span class="p">}</span>
 
 <span class="n">consumption_data</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">48</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">48</span><span class="p">)</span> <span class="o">*</span> <span class="mi">5</span><span class="p">]),</span>
-    <span class="s2">&quot;gas&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">96</span><span class="p">),</span>
+    <span class="s2">"electric"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">48</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">48</span><span class="p">)</span> <span class="o">*</span> <span class="mi">5</span><span class="p">]),</span>
+    <span class="s2">"gas"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">96</span><span class="p">),</span>
 <span class="p">}</span>
 
 <span class="c1"># Decompose consumption into imports and exports</span>
 <span class="n">result</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
     <span class="n">consumption_data</span><span class="p">,</span>
-    <span class="n">decomposition_type</span><span class="o">=</span><span class="s2">&quot;absolute_value&quot;</span>
+    <span class="n">decomposition_type</span><span class="o">=</span><span class="s2">"absolute_value"</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -327,7 +327,7 @@ By default, <cite>default_varstr_alias_func</cite> creates variable names of the
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">default_varstr_alias_func</span><span class="p">(</span>
     <span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">charge_limit</span>
 <span class="p">):</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_limit</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_limit</span><span class="si">}</span><span class="s2">"</span>
 </pre></div>
 </div>
 <p>However, users can pass in their own custom variable name function into <cite>calculate_costs</cite>.
@@ -337,18 +337,18 @@ For example, to change “gas” to “ng” in all the variable names:</p>
 <span class="k">def</span><span class="w"> </span><span class="nf">custom_varstr_alias_func</span><span class="p">(</span>
     <span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">charge_limit</span>
 <span class="p">):</span>
-    <span class="k">if</span> <span class="n">utility</span> <span class="o">==</span> <span class="s2">&quot;gas&quot;</span><span class="p">:</span>
-        <span class="n">utility</span> <span class="o">=</span> <span class="s2">&quot;ng&quot;</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_limit</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="n">utility</span> <span class="o">==</span> <span class="s2">"gas"</span><span class="p">:</span>
+        <span class="n">utility</span> <span class="o">=</span> <span class="s2">"ng"</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_limit</span><span class="si">}</span><span class="s2">"</span>
 
 <span class="c1"># load necessary data</span>
-<span class="n">start_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2024-07-10&quot;</span><span class="p">)</span>
-<span class="n">end_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2024-07-11&quot;</span><span class="p">)</span>
+<span class="n">start_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">"2024-07-10"</span><span class="p">)</span>
+<span class="n">end_dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">"2024-07-11"</span><span class="p">)</span>
 <span class="n">charge_dict</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">tariff_df</span><span class="p">)</span>
 <span class="n">num_timesteps_horizon</span> <span class="o">=</span> <span class="mi">96</span>
 
 <span class="c1"># this is just a CVXPY variable, but a user would provide constraints to the optimization problem</span>
-<span class="n">consumption_data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;electric&quot;</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">),</span> <span class="s2">&quot;gas&quot;</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)}</span>
+<span class="n">consumption_data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"electric"</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">),</span> <span class="s2">"gas"</span><span class="p">:</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">)}</span>
 
 <span class="n">total_monthly_bill</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_costs</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>

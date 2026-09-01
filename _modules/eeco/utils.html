@@ -123,106 +123,106 @@
 
 <span class="c1"># Dictionary mapping region types to timezone strings</span>
 <span class="n">TIMEZONE_DICT</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;iso_rto_code&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;CAISO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
-        <span class="s2">&quot;ERCOT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;ISONE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;MISO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;NYISO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;OTHER&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Default to Eastern Time (ET)</span>
-        <span class="s2">&quot;PJM&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;SPP&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+    <span class="s2">"iso_rto_code"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"CAISO"</span><span class="p">:</span> <span class="s2">"America/Los_Angeles"</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">"ERCOT"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"ISONE"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"MISO"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"NYISO"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"OTHER"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Default to Eastern Time (ET)</span>
+        <span class="s2">"PJM"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"SPP"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
     <span class="p">},</span>
-    <span class="s2">&quot;nerc_region&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;MRO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;NPCC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;RFC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;SERC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;SPP&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;TRE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;WECC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT) / Pacific Time (PT)</span>
+    <span class="s2">"nerc_region"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"MRO"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"NPCC"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"RFC"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"SERC"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"SPP"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"TRE"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"WECC"</span><span class="p">:</span> <span class="s2">"America/Denver"</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT) / Pacific Time (PT)</span>
     <span class="p">},</span>
-    <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;AK&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Anchorage&quot;</span><span class="p">,</span>  <span class="c1"># Alaska Time (AKT)</span>
-        <span class="s2">&quot;AL&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;AR&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;AZ&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Phoenix&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Standard Time (MST, no DST)</span>
-        <span class="s2">&quot;CA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
-        <span class="s2">&quot;CO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
-        <span class="s2">&quot;CT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;DE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;FL&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;GA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;IA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;ID&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Boise&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
-        <span class="s2">&quot;IL&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;IN&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Indiana/Indianapolis&quot;</span><span class="p">,</span>  <span class="c1"># Mostly Eastern Time (ET)</span>
-        <span class="s2">&quot;KS&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;KY&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;LA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;MA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;MD&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;ME&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;MI&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Detroit&quot;</span><span class="p">,</span>  <span class="c1"># Mostly Eastern Time (ET)</span>
-        <span class="s2">&quot;MN&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;MO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;MS&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;MT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
-        <span class="s2">&quot;NC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;ND&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;NE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
-        <span class="s2">&quot;NH&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;NJ&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;NM&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
-        <span class="s2">&quot;NV&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
-        <span class="s2">&quot;NY&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;OH&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;OK&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;OR&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
-        <span class="s2">&quot;PA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;RI&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;SC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;SD&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
-        <span class="s2">&quot;TN&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;TX&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;UT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
-        <span class="s2">&quot;VA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;VT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;WA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
-        <span class="s2">&quot;WI&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;WV&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;WY&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+    <span class="s2">"state"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"AK"</span><span class="p">:</span> <span class="s2">"America/Anchorage"</span><span class="p">,</span>  <span class="c1"># Alaska Time (AKT)</span>
+        <span class="s2">"AL"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"AR"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"AZ"</span><span class="p">:</span> <span class="s2">"America/Phoenix"</span><span class="p">,</span>  <span class="c1"># Mountain Standard Time (MST, no DST)</span>
+        <span class="s2">"CA"</span><span class="p">:</span> <span class="s2">"America/Los_Angeles"</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">"CO"</span><span class="p">:</span> <span class="s2">"America/Denver"</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">"CT"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"DE"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"FL"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"GA"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"IA"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"ID"</span><span class="p">:</span> <span class="s2">"America/Boise"</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">"IL"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"IN"</span><span class="p">:</span> <span class="s2">"America/Indiana/Indianapolis"</span><span class="p">,</span>  <span class="c1"># Mostly Eastern Time (ET)</span>
+        <span class="s2">"KS"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"KY"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"LA"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"MA"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"MD"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"ME"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"MI"</span><span class="p">:</span> <span class="s2">"America/Detroit"</span><span class="p">,</span>  <span class="c1"># Mostly Eastern Time (ET)</span>
+        <span class="s2">"MN"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"MO"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"MS"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"MT"</span><span class="p">:</span> <span class="s2">"America/Denver"</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">"NC"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"ND"</span><span class="p">:</span> <span class="s2">"America/Denver"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"NE"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">"NH"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"NJ"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"NM"</span><span class="p">:</span> <span class="s2">"America/Denver"</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">"NV"</span><span class="p">:</span> <span class="s2">"America/Denver"</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">"NY"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"OH"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"OK"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"OR"</span><span class="p">:</span> <span class="s2">"America/Los_Angeles"</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">"PA"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"RI"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"SC"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"SD"</span><span class="p">:</span> <span class="s2">"America/Denver"</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">"TN"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"TX"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"UT"</span><span class="p">:</span> <span class="s2">"America/Denver"</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">"VA"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"VT"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"WA"</span><span class="p">:</span> <span class="s2">"America/Los_Angeles"</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">"WI"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"WV"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"WY"</span><span class="p">:</span> <span class="s2">"America/Denver"</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
     <span class="p">},</span>
-    <span class="s2">&quot;egrid_subregions&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;AKGD&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Anchorage&quot;</span><span class="p">,</span>  <span class="c1"># Alaska Time (AKT)</span>
-        <span class="s2">&quot;AZNM&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Phoenix&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Standard Time (MST, no DST)</span>
-        <span class="s2">&quot;CAMX&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
-        <span class="s2">&quot;ERCT&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;FRCC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;MROE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;MROW&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;NEWE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;NWPP&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Los_Angeles&quot;</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
-        <span class="s2">&quot;NYCW&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;NYLI&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;NYUP&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;RFCE&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;RFCM&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;RFCW&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;RMPA&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Denver&quot;</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
-        <span class="s2">&quot;SPNO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;SPSO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;SRMV&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;SRMW&quot;</span><span class="p">:</span> <span class="s2">&quot;America/Chicago&quot;</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
-        <span class="s2">&quot;SRSO&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;SRTV&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
-        <span class="s2">&quot;SRVC&quot;</span><span class="p">:</span> <span class="s2">&quot;America/New_York&quot;</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+    <span class="s2">"egrid_subregions"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"AKGD"</span><span class="p">:</span> <span class="s2">"America/Anchorage"</span><span class="p">,</span>  <span class="c1"># Alaska Time (AKT)</span>
+        <span class="s2">"AZNM"</span><span class="p">:</span> <span class="s2">"America/Phoenix"</span><span class="p">,</span>  <span class="c1"># Mountain Standard Time (MST, no DST)</span>
+        <span class="s2">"CAMX"</span><span class="p">:</span> <span class="s2">"America/Los_Angeles"</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">"ERCT"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"FRCC"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"MROE"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"MROW"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"NEWE"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"NWPP"</span><span class="p">:</span> <span class="s2">"America/Los_Angeles"</span><span class="p">,</span>  <span class="c1"># Pacific Time (PT)</span>
+        <span class="s2">"NYCW"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"NYLI"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"NYUP"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"RFCE"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"RFCM"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"RFCW"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"RMPA"</span><span class="p">:</span> <span class="s2">"America/Denver"</span><span class="p">,</span>  <span class="c1"># Mountain Time (MT)</span>
+        <span class="s2">"SPNO"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"SPSO"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"SRMV"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"SRMW"</span><span class="p">:</span> <span class="s2">"America/Chicago"</span><span class="p">,</span>  <span class="c1"># Central Time (CT)</span>
+        <span class="s2">"SRSO"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"SRTV"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
+        <span class="s2">"SRVC"</span><span class="p">:</span> <span class="s2">"America/New_York"</span><span class="p">,</span>  <span class="c1"># Eastern Time (ET)</span>
     <span class="p">},</span>
 <span class="p">}</span>
 
 
 <div class="viewcode-block" id="idxparam_value"><a class="viewcode-back" href="../../utils.html#eeco.utils.idxparam_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">idxparam_value</span><span class="p">(</span><span class="n">idx_param</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the parameter value at the given index.</span>
+<span class="w">    </span><span class="sd">"""Returns the parameter value at the given index.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -233,12 +233,12 @@
 <span class="sd">    -------</span>
 <span class="sd">    numpy.ndarray</span>
 <span class="sd">        Indexed variable or parameter as a numpy array</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">idx_param</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_param</span><span class="p">))])</span></div>
 
 
 <div class="viewcode-block" id="max"><a class="viewcode-back" href="../../utils.html#eeco.utils.max">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">max</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Elementwise maximum of an expression or array</span>
+<span class="w">    </span><span class="sd">"""Elementwise maximum of an expression or array</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -271,7 +271,7 @@
 <span class="sd">    -------</span>
 <span class="sd">    ([numpy.Array, cvxpy.Expression, pyomo.environ.Var], pyomo.environ.Model)</span>
 <span class="sd">        Expression representing max of `expression`</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">check_nonindexed_pyomo_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
         <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">())</span>
         <span class="n">var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">)</span>
@@ -280,7 +280,7 @@
             <span class="k">return</span> <span class="n">var</span> <span class="o">&gt;=</span> <span class="n">expression</span>
 
         <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
-        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_constraint"</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
         <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">())</span>
@@ -290,7 +290,7 @@
             <span class="k">return</span> <span class="n">var</span> <span class="o">&gt;=</span> <span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
 
         <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
-        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_constraint"</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">check_indexed_np_array</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span> <span class="ow">or</span> <span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">expression</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
@@ -298,12 +298,12 @@
         <span class="k">return</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">expression</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>
+            <span class="s2">"Only CVXPY or Pyomo variables and NumPy arrays are currently supported."</span>
         <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="sum"><a class="viewcode-back" href="../../utils.html#eeco.utils.sum">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Elementwise sum of values in an expression or array</span>
+<span class="w">    </span><span class="sd">"""Elementwise sum of values in an expression or array</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -339,7 +339,7 @@
 <span class="sd">    -------</span>
 <span class="sd">    [numpy.Array, cvxpy.Expression, pyomo.environ.Expression]</span>
 <span class="sd">        Expression representing sum of `expression` along `axis`</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
         <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">())</span>
         <span class="n">var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">)</span>
@@ -348,7 +348,7 @@
             <span class="k">return</span> <span class="n">var</span> <span class="o">==</span> <span class="n">pyo</span><span class="o">.</span><span class="n">summation</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
 
         <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
-        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_constraint"</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">check_indexed_np_array</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span> <span class="ow">or</span> <span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
@@ -356,12 +356,12 @@
         <span class="k">return</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>
+            <span class="s2">"Only CVXPY or Pyomo variables and NumPy arrays are currently supported."</span>
         <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="max_pos"><a class="viewcode-back" href="../../utils.html#eeco.utils.max_pos">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">max_pos</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the element-wise maximum positive value of an expression.</span>
+<span class="w">    </span><span class="sd">"""Returns the element-wise maximum positive value of an expression.</span>
 <span class="sd">    Returns scalar for scalar input, indexed for indexed input.</span>
 
 <span class="sd">    Parameters</span>
@@ -399,7 +399,7 @@
 <span class="sd">    )</span>
 <span class="sd">        Expression representing element-wise maximum positive value of `expression`.</span>
 <span class="sd">        Scalar input returns scalar output, indexed input returns indexed output.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">check_nonindexed_pyomo_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
         <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">initialize</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)))</span>
         <span class="n">var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">)</span>
@@ -408,7 +408,7 @@
             <span class="k">return</span> <span class="n">var</span> <span class="o">&gt;=</span> <span class="n">expression</span>
 
         <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
-        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_constraint"</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
         <span class="c1"># Create indexed max_pos variable</span>
@@ -419,7 +419,7 @@
             <span class="k">return</span> <span class="n">var</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">expression</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span>
 
         <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">expression</span><span class="o">.</span><span class="n">index_set</span><span class="p">(),</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
-        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_constraint"</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">check_indexed_np_array</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span> <span class="ow">or</span> <span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">expression</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
@@ -427,7 +427,7 @@
         <span class="k">return</span> <span class="n">cp</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="kc">None</span>  <span class="c1"># Works for scalar or vector</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>
+            <span class="s2">"Only CVXPY or Pyomo variables and NumPy arrays are currently supported."</span>
         <span class="p">)</span></div>
 
 
@@ -437,7 +437,7 @@
     <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Implements elementwise multiplication operation on two optimization expressions</span>
+<span class="w">    </span><span class="sd">"""Implements elementwise multiplication operation on two optimization expressions</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -485,7 +485,7 @@
 <span class="sd">        pyomo.environ.Expression</span>
 <span class="sd">    ]</span>
 <span class="sd">        result from elementwise multiplication of `expression1` and `expression2`</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">check_cvx_type</span><span class="p">(</span><span class="n">expression1</span><span class="p">)</span> <span class="ow">or</span> <span class="n">check_cvx_type</span><span class="p">(</span><span class="n">expression2</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">expression1</span><span class="p">,</span> <span class="n">expression2</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
     <span class="k">elif</span> <span class="p">(</span>
@@ -513,7 +513,7 @@
                     <span class="k">return</span> <span class="n">var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">exp1</span> <span class="o">*</span> <span class="n">exp2</span>
 
                 <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
-                <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+                <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_constraint"</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
                 <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">))</span>
@@ -523,7 +523,7 @@
                     <span class="k">return</span> <span class="n">var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">expression1</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">*</span> <span class="n">expression2</span>
 
                 <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
-                <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+                <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_constraint"</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
                 <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
         <span class="k">elif</span> <span class="p">(</span><span class="ow">not</span> <span class="n">check_nonindexed_pyomo_type</span><span class="p">(</span><span class="n">expression2</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">expression2</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span><span class="p">,</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">))</span>
@@ -533,7 +533,7 @@
                 <span class="k">return</span> <span class="n">var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">expression1</span> <span class="o">*</span> <span class="n">expression2</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
 
             <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
-            <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">&quot;_constraint&quot;</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_constraint"</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
             <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">(</span><span class="n">expression1</span> <span class="o">*</span> <span class="n">expression2</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
@@ -548,19 +548,19 @@
         <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">expression1</span><span class="p">,</span> <span class="n">expression2</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>
+            <span class="s2">"Only CVXPY or Pyomo variables and NumPy arrays are currently supported."</span>
         <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="get_decomposed_var_names"><a class="viewcode-back" href="../../utils.html#eeco.utils.get_decomposed_var_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_decomposed_var_names</span><span class="p">(</span><span class="n">utility</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get consistent variable names for decomposed consumption variables.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_positive&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_negative&quot;</span></div>
+<span class="w">    </span><span class="sd">"""Get consistent variable names for decomposed consumption variables."""</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_positive"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_negative"</span></div>
 
 
 <div class="viewcode-block" id="decompose_consumption"><a class="viewcode-back" href="../../utils.html#eeco.utils.decompose_consumption">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">decompose_consumption</span><span class="p">(</span>
-    <span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">decomposition_type</span><span class="o">=</span><span class="s2">&quot;absolute_value&quot;</span>
+    <span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">decomposition_type</span><span class="o">=</span><span class="s2">"absolute_value"</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Decomposes consumption data into positive and negative components</span>
+<span class="w">    </span><span class="sd">"""Decomposes consumption data into positive and negative components</span>
 <span class="sd">    And adds constraint such that total consumption equals</span>
 <span class="sd">    positive values minus negative values</span>
 <span class="sd">    (where negative values are stored as positive magnitudes).</span>
@@ -586,8 +586,8 @@
 
 <span class="sd">    decomposition_type : str</span>
 <span class="sd">        Type of decomposition to use.</span>
-<span class="sd">        - &quot;binary_variable&quot;: To be implemented</span>
-<span class="sd">        - &quot;absolute_value&quot;: Creates nonlinear problem</span>
+<span class="sd">        - "binary_variable": To be implemented</span>
+<span class="sd">        - "absolute_value": Creates nonlinear problem</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -595,37 +595,37 @@
 <span class="sd">        (positive_values, negative_values, model) where</span>
 <span class="sd">        positive_values and negative_values are both positive</span>
 <span class="sd">        with the constraint that total = positive - negative</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">check_indexed_np_array</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
         <span class="n">positive_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">negative_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="o">-</span><span class="n">expression</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># magnitude as positive</span>
         <span class="k">return</span> <span class="n">positive_values</span><span class="p">,</span> <span class="n">negative_values</span><span class="p">,</span> <span class="n">model</span>
     <span class="k">elif</span> <span class="n">check_cvx_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">decomposition_type</span> <span class="o">==</span> <span class="s2">&quot;absolute_value&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">decomposition_type</span> <span class="o">==</span> <span class="s2">"absolute_value"</span><span class="p">:</span>
             <span class="n">positive_values</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">max_pos</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
             <span class="n">negative_values</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">max_pos</span><span class="p">(</span><span class="o">-</span><span class="n">expression</span><span class="p">)</span>  <span class="c1"># magnitude as positive</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Decomposition type &#39;</span><span class="si">{</span><span class="n">decomposition_type</span><span class="si">}</span><span class="s2">&#39; is not implemented yet. &quot;</span>
-                <span class="s2">&quot;Please use available type. Skipping decomposition.&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"Decomposition type '</span><span class="si">{</span><span class="n">decomposition_type</span><span class="si">}</span><span class="s2">' is not implemented yet. "</span>
+                <span class="s2">"Please use available type. Skipping decomposition."</span><span class="p">,</span>
                 <span class="ne">UserWarning</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">positive_values</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">negative_values</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="n">positive_values</span><span class="p">,</span> <span class="n">negative_values</span><span class="p">,</span> <span class="n">model</span>
     <span class="k">elif</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">decomposition_type</span> <span class="o">==</span> <span class="s2">&quot;absolute_value&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">decomposition_type</span> <span class="o">==</span> <span class="s2">"absolute_value"</span><span class="p">:</span>
 
             <span class="c1"># Use max_pos to create positive_var and negative_var</span>
             <span class="n">pos_name</span><span class="p">,</span> <span class="n">neg_name</span> <span class="o">=</span> <span class="n">get_decomposed_var_names</span><span class="p">(</span><span class="n">varstr</span><span class="p">)</span>
             <span class="n">positive_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">max_pos</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">pos_name</span><span class="p">)</span>
 
-            <span class="c1"># Create negative expression since pyomo won&#39;t take -expression directly</span>
+            <span class="c1"># Create negative expression since pyomo won't take -expression directly</span>
             <span class="k">def</span><span class="w"> </span><span class="nf">negative_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
                 <span class="k">return</span> <span class="o">-</span><span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
 
             <span class="n">negative_expr</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Expression</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">negative_rule</span><span class="p">)</span>
-            <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_negative_expr&quot;</span><span class="p">,</span> <span class="n">negative_expr</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_negative_expr"</span><span class="p">,</span> <span class="n">negative_expr</span><span class="p">)</span>
             <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">max_pos</span><span class="p">(</span><span class="n">negative_expr</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">neg_name</span><span class="p">)</span>
 
             <span class="c1"># Add constraint to balance import and export decomposed values</span>
@@ -633,7 +633,7 @@
                 <span class="k">return</span> <span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">positive_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">-</span> <span class="n">negative_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
 
             <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_decomposition_constraint&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_decomposition_constraint"</span><span class="p">,</span>
                 <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">decomposition_rule</span><span class="p">),</span>
             <span class="p">)</span>
 
@@ -643,15 +643,15 @@
                 <span class="k">return</span> <span class="n">positive_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="n">negative_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="nb">abs</span><span class="p">(</span><span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">])</span>
 
             <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_magnitude_constraint&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_magnitude_constraint"</span><span class="p">,</span>
                 <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">magnitude_rule</span><span class="p">),</span>
             <span class="p">)</span>
 
             <span class="k">return</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Decomposition type &#39;</span><span class="si">{</span><span class="n">decomposition_type</span><span class="si">}</span><span class="s2">&#39; is not implemented yet. &quot;</span>
-                <span class="s2">&quot;Please use available type. Skipping decomposition.&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"Decomposition type '</span><span class="si">{</span><span class="n">decomposition_type</span><span class="si">}</span><span class="s2">' is not implemented yet. "</span>
+                <span class="s2">"Please use available type. Skipping decomposition."</span><span class="p">,</span>
                 <span class="ne">UserWarning</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">positive_var</span> <span class="o">=</span> <span class="kc">None</span>
@@ -659,12 +659,12 @@
         <span class="k">return</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="s2">&quot;Only CVXPY or Pyomo variables and NumPy arrays are currently supported.&quot;</span>
+            <span class="s2">"Only CVXPY or Pyomo variables and NumPy arrays are currently supported."</span>
         <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="parse_freq"><a class="viewcode-back" href="../../utils.html#eeco.utils.parse_freq">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parse_freq</span><span class="p">(</span><span class="n">freq</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parses a time frequency code string, returning its type and its freq_binsize</span>
+<span class="w">    </span><span class="sd">"""Parses a time frequency code string, returning its type and its freq_binsize</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -672,20 +672,20 @@
 <span class="sd">        a string of the form [type][freq_binsize], where type corresponds to a</span>
 <span class="sd">        numpy.timedelta64 encoding and freq binsize is an integer giving the number</span>
 <span class="sd">        of increments of `type` of one binned increment of our time variable</span>
-<span class="sd">        (for example &#39;6h&#39; means the data are grouped into increments of 6 hours)</span>
+<span class="sd">        (for example '6h' means the data are grouped into increments of 6 hours)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple</span>
 <span class="sd">        tuple of the form (`int`,`str`) giving the binsize and units (freq_type)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">freq_type</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;[0-9]&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">freq</span><span class="p">)</span>
-    <span class="n">freq_binsize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;[^0-9]&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">freq</span><span class="p">))</span>
+<span class="sd">    """</span>
+    <span class="n">freq_type</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">"[0-9]"</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">freq</span><span class="p">)</span>
+    <span class="n">freq_binsize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">"[^0-9]"</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">freq</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">freq_binsize</span><span class="p">,</span> <span class="n">freq_type</span></div>
 
 
 <div class="viewcode-block" id="get_freq_binsize_minutes"><a class="viewcode-back" href="../../utils.html#eeco.utils.get_freq_binsize_minutes">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">freq</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Gets size of a given time frequency expressed in units of minutes</span>
+<span class="w">    </span><span class="sd">"""Gets size of a given time frequency expressed in units of minutes</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -693,7 +693,7 @@
 <span class="sd">        a string of the form [type][freq_binsize], where type corresponds to a</span>
 <span class="sd">        numpy.timedelta64 encoding and freq binsize is an integer giving the number</span>
 <span class="sd">        of increments of `type` of one binned increment of our time variable</span>
-<span class="sd">        (for example &#39;6h&#39; means the data are grouped into increments of 6 hours)</span>
+<span class="sd">        (for example '6h' means the data are grouped into increments of 6 hours)</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -704,23 +704,23 @@
 <span class="sd">    -------</span>
 <span class="sd">    int</span>
 <span class="sd">        integer giving the number of minutes in the given time frequency unit</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">freq_binsize</span><span class="p">,</span> <span class="n">freq_type</span> <span class="o">=</span> <span class="n">parse_freq</span><span class="p">(</span><span class="n">freq</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">freq_type</span> <span class="o">==</span> <span class="s2">&quot;m&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">freq_type</span> <span class="o">==</span> <span class="s2">"m"</span><span class="p">:</span>
         <span class="n">multiplier</span> <span class="o">=</span> <span class="mi">1</span>
-    <span class="k">elif</span> <span class="n">freq_type</span> <span class="o">==</span> <span class="s2">&quot;h&quot;</span><span class="p">:</span>
+    <span class="k">elif</span> <span class="n">freq_type</span> <span class="o">==</span> <span class="s2">"h"</span><span class="p">:</span>
         <span class="n">multiplier</span> <span class="o">=</span> <span class="mi">60</span>
-    <span class="k">elif</span> <span class="n">freq_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;D&quot;</span><span class="p">,</span> <span class="s2">&quot;d&quot;</span><span class="p">]:</span>
+    <span class="k">elif</span> <span class="n">freq_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"D"</span><span class="p">,</span> <span class="s2">"d"</span><span class="p">]:</span>
         <span class="n">multiplier</span> <span class="o">=</span> <span class="mi">60</span> <span class="o">*</span> <span class="mi">24</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;Cannot deal with data that are not in minute, hourly, or daily resolution&quot;</span>
+            <span class="s2">"Cannot deal with data that are not in minute, hourly, or daily resolution"</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">multiplier</span> <span class="o">*</span> <span class="n">freq_binsize</span></div>
 
 
 <div class="viewcode-block" id="convert_utc_to_timezone"><a class="viewcode-back" href="../../utils.html#eeco.utils.convert_utc_to_timezone">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">convert_utc_to_timezone</span><span class="p">(</span><span class="n">utc_hour</span><span class="p">,</span> <span class="n">timezone_str</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Convert UTC hour (0-23) to the corresponding hour in a specified timezone.</span>
 
 <span class="sd">    Parameters</span>
@@ -729,14 +729,14 @@
 <span class="sd">        Hour in UTC (0-23).</span>
 
 <span class="sd">    timezone_str : str</span>
-<span class="sd">        Timezone string, e.g., &#39;America/New_York&#39;.</span>
+<span class="sd">        Timezone string, e.g., 'America/New_York'.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">    int: Corresponding hour in the specified timezone.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># Ensure the UTC hour is within the valid range</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">utc_hour</span> <span class="o">&lt;=</span> <span class="mi">23</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;UTC hour must be between 0 and 23.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"UTC hour must be between 0 and 23."</span><span class="p">)</span>
 
     <span class="c1"># Create a UTC datetime object with the specified hour</span>
     <span class="n">utc_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
@@ -751,7 +751,7 @@
 
 
 <div class="viewcode-block" id="sanitize_varstr"><a class="viewcode-back" href="../../utils.html#eeco.utils.sanitize_varstr">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sanitize_varstr</span><span class="p">(</span><span class="n">varstr</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sanitizes a variable string by removing non-alphanumeric</span>
+<span class="w">    </span><span class="sd">"""Sanitizes a variable string by removing non-alphanumeric</span>
 <span class="sd">    characters and replacing spaces with underscores.</span>
 
 <span class="sd">    Parameters</span>
@@ -763,16 +763,16 @@
 <span class="sd">    -------</span>
 <span class="sd">    str</span>
 <span class="sd">        The sanitized variable string.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[^a-zA-Z0-9_]&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="n">varstr</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span></div>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^a-zA-Z0-9_]"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="n">varstr</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">" "</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="createa_pyomo_model_index_from_dict"><a class="viewcode-back" href="../../utils.html#eeco.utils.createa_pyomo_model_index_from_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">createa_pyomo_model_index_from_dict</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">input_dict</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Attach time index to the model for Pyomo variables and expressions.</span>
+<span class="w">    </span><span class="sd">"""Attach time index to the model for Pyomo variables and expressions.</span>
 
-<span class="sd">    Builds a mapping between the entries in `var`&#39;s index set and their</span>
+<span class="sd">    Builds a mapping between the entries in `var`'s index set and their</span>
 <span class="sd">    positional order, and stores both on the model as private attributes.</span>
-<span class="sd">    This makes it easy to translate between a Pyomo indexed variable&#39;s index</span>
+<span class="sd">    This makes it easy to translate between a Pyomo indexed variable's index</span>
 <span class="sd">    values and plain integer positions (e.g. when aligning with a NumPy</span>
 <span class="sd">    array or another positional data structure).</span>
 
@@ -803,7 +803,7 @@
 <span class="sd">            `var.index_set()` to its integer position.</span>
 <span class="sd">        - `_var_index` (list): the index values of `var.index_set()`</span>
 <span class="sd">            in enumeration order.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">find_pyo_var</span><span class="p">(</span><span class="n">posible_dict</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">posible_dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
@@ -816,18 +816,18 @@
         <span class="k">return</span> <span class="kc">False</span>
 
     <span class="n">find_pyo_var</span><span class="p">(</span><span class="n">input_dict</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;_var_index&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"_var_index"</span><span class="p">):</span>
         <span class="k">raise</span> <span class="p">(</span>
-            <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not find a pyomo variable in supplied dict: </span><span class="si">{</span><span class="n">input_dict</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not find a pyomo variable in supplied dict: </span><span class="si">{</span><span class="n">input_dict</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="create_pyomo_model_index_ref"><a class="viewcode-back" href="../../utils.html#eeco.utils.create_pyomo_model_index_ref">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">create_pyomo_model_index_ref</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Attach time index to the model for Pyomo variables and expressions.</span>
+<span class="w">    </span><span class="sd">"""Attach time index to the model for Pyomo variables and expressions.</span>
 
-<span class="sd">    Builds a mapping between the entries in `var`&#39;s index set and their</span>
+<span class="sd">    Builds a mapping between the entries in `var`'s index set and their</span>
 <span class="sd">    positional order, and stores both on the model as private attributes.</span>
-<span class="sd">    This makes it easy to translate between a Pyomo indexed variable&#39;s index</span>
+<span class="sd">    This makes it easy to translate between a Pyomo indexed variable's index</span>
 <span class="sd">    values and plain integer positions (e.g. when aligning with a NumPy</span>
 <span class="sd">    array or another positional data structure).</span>
 
@@ -850,7 +850,7 @@
 <span class="sd">    UserWarning</span>
 <span class="sd">        When the index already exists and `overwrite` is False,</span>
 <span class="sd">        then the function with a warning to the user to set `overwrite` to True</span>
-<span class="sd">        if they&#39;d like to enforce index updates.</span>
+<span class="sd">        if they'd like to enforce index updates.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -860,20 +860,20 @@
 <span class="sd">            `var.index_set()` to its integer position.</span>
 <span class="sd">        - `_var_index` (list): the index values of `var.index_set()`</span>
 <span class="sd">            in enumeration order.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;_var_index&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">overwrite</span><span class="p">:</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"_var_index"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">overwrite</span><span class="p">:</span>
         <span class="n">model</span><span class="o">.</span><span class="n">_var_index_ref</span> <span class="o">=</span> <span class="p">{</span><span class="n">idx</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">index_set</span><span class="p">())}</span>
         <span class="n">model</span><span class="o">.</span><span class="n">_var_index</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">index_set</span><span class="p">())</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">&quot;`_var_index` already exists, so `create_pyomo_model_index_ref`&quot;</span>
-            <span class="s2">&quot;was ignored. Please set `overwrite=True` to enforce updating the index.&quot;</span><span class="p">,</span>
+            <span class="s2">"`_var_index` already exists, so `create_pyomo_model_index_ref`"</span>
+            <span class="s2">"was ignored. Please set `overwrite=True` to enforce updating the index."</span><span class="p">,</span>
             <span class="ne">UserWarning</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="check_indexed_pyomo_type"><a class="viewcode-back" href="../../utils.html#eeco.utils.check_indexed_pyomo_type">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">input_var</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Checks if input is an indexed Pyomo variable, expression, or parameter.</span>
+<span class="w">    </span><span class="sd">"""Checks if input is an indexed Pyomo variable, expression, or parameter.</span>
 <span class="sd">    Returns `False` if a non-indexed variable, parameter,</span>
 <span class="sd">    or expression (or non-Pyomo type).</span>
 
@@ -885,12 +885,12 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    boolean</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_var</span><span class="p">,</span> <span class="p">(</span><span class="n">IndexedVar</span><span class="p">,</span> <span class="n">IndexedParam</span><span class="p">,</span> <span class="n">IndexedExpression</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="check_nonindexed_pyomo_type"><a class="viewcode-back" href="../../utils.html#eeco.utils.check_nonindexed_pyomo_type">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_nonindexed_pyomo_type</span><span class="p">(</span><span class="n">input_var</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Checks if input is a non-idnexed Pyomo variable, expression, or parameter.</span>
+<span class="w">    </span><span class="sd">"""Checks if input is a non-idnexed Pyomo variable, expression, or parameter.</span>
 <span class="sd">    Returns `False` if an indexed variable, parameter,</span>
 <span class="sd">    or expression (or non-Pyomo type).</span>
 
@@ -902,7 +902,7 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    bool</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span>
         <span class="n">input_var</span><span class="p">,</span>
         <span class="p">(</span>
@@ -913,11 +913,11 @@
             <span class="n">MonomialTermExpression</span><span class="p">,</span>
             <span class="n">ScalarVar</span><span class="p">,</span>
         <span class="p">),</span>
-    <span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">input_var</span><span class="p">,</span> <span class="s2">&quot;is_variable_type&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">input_var</span><span class="o">.</span><span class="n">is_variable_type</span><span class="p">())</span></div>
+    <span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">input_var</span><span class="p">,</span> <span class="s2">"is_variable_type"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">input_var</span><span class="o">.</span><span class="n">is_variable_type</span><span class="p">())</span></div>
 
 
 <div class="viewcode-block" id="check_cvx_type"><a class="viewcode-back" href="../../utils.html#eeco.utils.check_cvx_type">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_cvx_type</span><span class="p">(</span><span class="n">input_var</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Checks if input is a CVXPY variable, expression, or parameter.</span>
+<span class="w">    </span><span class="sd">"""Checks if input is a CVXPY variable, expression, or parameter.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -927,12 +927,12 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    bool</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_var</span><span class="p">,</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="check_nonindexed_python_type"><a class="viewcode-back" href="../../utils.html#eeco.utils.check_nonindexed_python_type">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_nonindexed_python_type</span><span class="p">(</span><span class="n">input_var</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Checks if input is a general int/float variable, expression, or parameter</span>
+<span class="w">    </span><span class="sd">"""Checks if input is a general int/float variable, expression, or parameter</span>
 <span class="sd">    (e.g., `np.int32` or `np.float64`)</span>
 
 <span class="sd">    Parameters</span>
@@ -943,14 +943,14 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    bool</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span>
         <span class="n">input_var</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
     <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="check_indexed_np_array"><a class="viewcode-back" href="../../utils.html#eeco.utils.check_indexed_np_array">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_indexed_np_array</span><span class="p">(</span><span class="n">input_var</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Checks if input is an array-like type (e.g., `np.ndarray`).</span>
+<span class="w">    </span><span class="sd">"""Checks if input is an array-like type (e.g., `np.ndarray`).</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -960,7 +960,7 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    bool</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_var</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span></div>
 </pre></div>
 
