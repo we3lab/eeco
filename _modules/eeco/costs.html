@@ -106,6 +106,7 @@
   <h1>Source code for eeco.costs</h1><div class="highlight"><pre>
 <span></span><span class="sd">"""Functions to calculate costs from electricity consumption data."""</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">calendar</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -124,6 +125,7 @@
 <span class="n">MONTH_END</span> <span class="o">=</span> <span class="s2">"month_end"</span>
 <span class="n">WEEKDAY_START</span> <span class="o">=</span> <span class="s2">"weekday_start"</span>
 <span class="n">WEEKDAY_END</span> <span class="o">=</span> <span class="s2">"weekday_end"</span>
+<span class="n">COST</span> <span class="o">=</span> <span class="s2">"cost"</span>
 <span class="n">CHARGE</span> <span class="o">=</span> <span class="s2">"charge"</span>
 <span class="n">CHARGE_METRIC</span> <span class="o">=</span> <span class="s2">"charge (metric)"</span>
 <span class="n">CHARGE_IMPERIAL</span> <span class="o">=</span> <span class="s2">"charge (imperial)"</span>
@@ -135,6 +137,8 @@
 <span class="n">NAME</span> <span class="o">=</span> <span class="s2">"name"</span>
 <span class="n">PERIOD</span> <span class="o">=</span> <span class="s2">"period"</span>
 <span class="n">ASSESSED</span> <span class="o">=</span> <span class="s2">"assessed"</span>
+<span class="n">MONTHLY</span> <span class="o">=</span> <span class="s2">"monthly"</span>
+<span class="n">DAILY</span> <span class="o">=</span> <span class="s2">"daily"</span>
 <span class="n">EFFECTIVE_START_DATE</span> <span class="o">=</span> <span class="s2">"effective_start_date"</span>
 <span class="n">EFFECTIVE_END_DATE</span> <span class="o">=</span> <span class="s2">"effective_end_date"</span>
 <span class="n">DATETIME</span> <span class="o">=</span> <span class="s2">"DateTime"</span>
@@ -148,6 +152,7 @@
 <span class="n">ENERGY</span> <span class="o">=</span> <span class="s2">"energy"</span>
 <span class="n">DEMAND</span> <span class="o">=</span> <span class="s2">"demand"</span>
 <span class="n">EXPORT</span> <span class="o">=</span> <span class="s2">"export"</span>
+<span class="n">TOTAL</span> <span class="o">=</span> <span class="s2">"total"</span>
 
 <span class="c1"># Charge tier strings</span>
 <span class="n">PEAK</span> <span class="o">=</span> <span class="s2">"peak"</span>
@@ -302,23 +307,118 @@
     <span class="n">charge_dict</span><span class="p">[</span><span class="n">key_str</span><span class="p">]</span> <span class="o">=</span> <span class="n">old_charge_array</span> <span class="o">+</span> <span class="n">charge_array</span></div>
 
 
-<div class="viewcode-block" id="get_charge_dict"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_charge_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">"15m"</span><span class="p">):</span>
+<div class="viewcode-block" id="get_timesteps"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_timesteps">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_timesteps</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">"15m"</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Number of timesteps in the horizon and the corresponding datetime column.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    start_dt : datetime-like</span>
+<span class="sd">        first timestep to be included in the cost analysis.</span>
+<span class="sd">        Accepts `datetime.datetime`, `numpy.datetime64`, and ISO-8601 strings</span>
+
+<span class="sd">    end_dt : datetime-like</span>
+<span class="sd">        end timestep of the cost analysis, exclusive.</span>
+<span class="sd">        The last timestep returned is one `resolution` before `end_dt`.</span>
+<span class="sd">        Accepts `datetime.datetime`, `numpy.datetime64`, and ISO-8601 strings</span>
+
+<span class="sd">    resolution : str</span>
+<span class="sd">        granularity of each timestep in string form with default value of "15m"</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple of (int, pandas.DataFrame)</span>
+<span class="sd">        the number of timesteps and a single-column DataFrame of their datetimes</span>
+
+<span class="sd">    Warns</span>
+<span class="sd">    -----</span>
+<span class="sd">    UserWarning</span>
+<span class="sd">        when the horizon is not a whole multiple of `resolution`, since the</span>
+<span class="sd">        trailing partial timestep is dropped from the returned timeseries but</span>
+<span class="sd">        still counted when prorating fixed charges</span>
+<span class="sd">    """</span>
+    <span class="n">start_dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">start_dt</span><span class="p">)</span>
+    <span class="n">end_dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">end_dt</span><span class="p">)</span>
+    <span class="n">res_binsize_minutes</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
+
+    <span class="n">binsize</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">res_binsize_minutes</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">%</span> <span class="n">binsize</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Horizon </span><span class="si">{</span><span class="n">start_dt</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">end_dt</span><span class="si">}</span><span class="s2"> is not a whole multiple of the "</span>
+            <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">resolution</span><span class="si">}</span><span class="s2">' resolution. The partial timestep is dropped, "</span>
+            <span class="s2">"but the full horizon is still used to prorate fixed charges."</span>
+        <span class="p">)</span>
+
+    <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">binsize</span><span class="p">)</span>
+    <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">periods</span><span class="o">=</span><span class="n">ntsteps</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="n">binsize</span><span class="p">),</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">DATETIME</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ntsteps</span><span class="p">,</span> <span class="n">datetime</span></div>
+
+
+<div class="viewcode-block" id="get_billing_period_scale_factor"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_billing_period_scale_factor">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_billing_period_scale_factor</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Fraction of a monthly billing period covered by the analysis horizon.</span>
+
+<span class="sd">    The horizon's overlap with each calendar month it touches is summed, so</span>
+<span class="sd">    horizons spanning several months are handled correctly.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    start_dt : datetime-like (see :func:`get_timesteps`)</span>
+<span class="sd">        first timestep to be included in the cost analysis</span>
+
+<span class="sd">    end_dt : datetime-like (see :func:`get_timesteps`)</span>
+<span class="sd">        end of the cost analysis, exclusive: the horizon runs up to but does</span>
+<span class="sd">        not include `end_dt`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        the horizon's length as a fraction of a monthly billing period</span>
+<span class="sd">    """</span>
+    <span class="n">horizon_start</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">start_dt</span><span class="p">)</span>
+    <span class="n">horizon_end</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">end_dt</span><span class="p">)</span>
+
+    <span class="n">scale_factor</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">month_start</span> <span class="o">=</span> <span class="n">horizon_start</span><span class="o">.</span><span class="n">normalize</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">day</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">while</span> <span class="n">month_start</span> <span class="o">&lt;</span> <span class="n">horizon_end</span><span class="p">:</span>
+        <span class="n">days_in_month</span> <span class="o">=</span> <span class="n">calendar</span><span class="o">.</span><span class="n">monthrange</span><span class="p">(</span><span class="n">month_start</span><span class="o">.</span><span class="n">year</span><span class="p">,</span> <span class="n">month_start</span><span class="o">.</span><span class="n">month</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">month_start</span><span class="o">.</span><span class="n">month</span> <span class="o">==</span> <span class="mi">12</span><span class="p">:</span>
+            <span class="n">next_month_start</span> <span class="o">=</span> <span class="n">month_start</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">year</span><span class="o">=</span><span class="n">month_start</span><span class="o">.</span><span class="n">year</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">month</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">next_month_start</span> <span class="o">=</span> <span class="n">month_start</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">month</span><span class="o">=</span><span class="n">month_start</span><span class="o">.</span><span class="n">month</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">overlap</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">horizon_end</span><span class="p">,</span> <span class="n">next_month_start</span><span class="p">)</span> <span class="o">-</span> <span class="nb">max</span><span class="p">(</span><span class="n">horizon_start</span><span class="p">,</span> <span class="n">month_start</span><span class="p">)</span>
+        <span class="n">scale_factor</span> <span class="o">+=</span> <span class="n">overlap</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="n">days_in_month</span> <span class="o">*</span> <span class="mi">24</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+        <span class="n">month_start</span> <span class="o">=</span> <span class="n">next_month_start</span>
+
+    <span class="k">return</span> <span class="n">scale_factor</span></div>
+
+
+<div class="viewcode-block" id="get_charge_dict"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_charge_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_dict</span><span class="p">(</span>
+    <span class="n">start_dt</span><span class="p">,</span>
+    <span class="n">end_dt</span><span class="p">,</span>
+    <span class="n">rate_data</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">"15m"</span><span class="p">,</span>
+<span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Creates a dictionary where the values are charge arrays and keys are of the form</span>
 <span class="sd">    `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    start_dt : datetime.datetime</span>
+<span class="sd">    start_dt : datetime-like (see :func:`get_timesteps`)</span>
 <span class="sd">        first timestep to be included in the cost analysis</span>
 
-<span class="sd">    end_dt : datetime.datetime</span>
-<span class="sd">        last timestep to be included in the cost analysis</span>
+<span class="sd">    end_dt : datetime-like (see :func:`get_timesteps`)</span>
+<span class="sd">        end of the cost analysis, exclusive: the horizon runs up to but does</span>
+<span class="sd">        not include `end_dt`</span>
 
 <span class="sd">    rate_data : pandas.DataFrame</span>
 <span class="sd">        tariff data with required columns `utility`, `type`, `basic_charge_limit`,</span>
 <span class="sd">        `name`, `month_start`, `month_end`, `weekday_start`, `weekday_end`,</span>
-<span class="sd">        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`,</span>
-<span class="sd">        `effective_start_date`, and `effective_end_date`</span>
+<span class="sd">        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`</span>
+<span class="sd">        (default "monthly"), `effective_start_date`, and `effective_end_date`</span>
 
 <span class="sd">    resolution : str</span>
 <span class="sd">        granularity of each timestep in string form with default value of "15m"</span>
@@ -330,30 +430,12 @@
 <span class="sd">    """</span>
     <span class="n">charge_dict</span> <span class="o">=</span> <span class="p">{}</span>
 
+    <span class="c1"># datetime.datetime and numpy.datetime64 inputs follow pandas code path</span>
+    <span class="n">start_dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">start_dt</span><span class="p">)</span>
+    <span class="n">end_dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">end_dt</span><span class="p">)</span>
+
     <span class="c1"># Get the number of timesteps in a day (according to charge resolution)</span>
-    <span class="n">res_binsize_minutes</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">end_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">):</span>
-        <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">res_binsize_minutes</span><span class="p">))</span>
-        <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-                <span class="p">[</span>
-                    <span class="n">start_dt</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">i</span> <span class="o">*</span> <span class="n">res_binsize_minutes</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span>
-                <span class="p">]</span>
-            <span class="p">),</span>
-            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">DATETIME</span><span class="p">],</span>
-        <span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="n">res_binsize_minutes</span><span class="p">,</span> <span class="s2">"m"</span><span class="p">))</span>
-        <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-                <span class="p">[</span>
-                    <span class="n">start_dt</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">res_binsize_minutes</span><span class="p">,</span> <span class="s2">"m"</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span>
-                <span class="p">]</span>
-            <span class="p">),</span>
-            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">DATETIME</span><span class="p">],</span>
-        <span class="p">)</span>
+    <span class="n">ntsteps</span><span class="p">,</span> <span class="n">datetime</span> <span class="o">=</span> <span class="n">get_timesteps</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">resolution</span><span class="p">)</span>
 
     <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="p">[</span><span class="n">GAS</span><span class="p">,</span> <span class="n">ELECTRIC</span><span class="p">]:</span>
         <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="p">[</span><span class="n">CUSTOMER</span><span class="p">,</span> <span class="n">ENERGY</span><span class="p">,</span> <span class="n">DEMAND</span><span class="p">,</span> <span class="n">EXPORT</span><span class="p">]:</span>
@@ -371,14 +453,9 @@
             <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
                 <span class="c1"># repeat start datetime for every charge</span>
                 <span class="n">effective_starts</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="n">start_dt</span><span class="p">])</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">charges</span><span class="p">))</span>
-                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">end_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">):</span>
-                    <span class="n">effective_ends</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)])</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span>
-                        <span class="nb">len</span><span class="p">(</span><span class="n">charges</span><span class="p">)</span>
-                    <span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">effective_ends</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>
-                        <span class="p">[</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s2">"D"</span><span class="p">)]</span>
-                    <span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">charges</span><span class="p">))</span>
+                <span class="n">effective_ends</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)])</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">charges</span><span class="p">)</span>
+                <span class="p">)</span>
 
             <span class="c1"># numpy.unique does not work on datetimes so this is a workaround</span>
             <span class="n">starts_ends</span> <span class="o">=</span> <span class="p">[]</span>
@@ -421,8 +498,10 @@
 
                         <span class="k">try</span><span class="p">:</span>
                             <span class="n">assessed</span> <span class="o">=</span> <span class="n">charge</span><span class="p">[</span><span class="n">ASSESSED</span><span class="p">]</span>
+                            <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">assessed</span><span class="p">):</span>
+                                <span class="n">assessed</span> <span class="o">=</span> <span class="n">MONTHLY</span>
                         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-                            <span class="n">assessed</span> <span class="o">=</span> <span class="s2">"monthly"</span>
+                            <span class="n">assessed</span> <span class="o">=</span> <span class="n">MONTHLY</span>
 
                         <span class="k">if</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="n">CUSTOMER</span><span class="p">:</span>
                             <span class="k">try</span><span class="p">:</span>
@@ -445,24 +524,42 @@
                                 <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">limit</span><span class="p">)),</span>
                             <span class="p">)</span>
                             <span class="n">add_to_charge_array</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">)</span>
-                        <span class="k">elif</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="n">DEMAND</span> <span class="ow">and</span> <span class="n">assessed</span> <span class="o">==</span> <span class="s2">"daily"</span><span class="p">:</span>
-                            <span class="k">for</span> <span class="n">day</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">((</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
-                                <span class="n">new_start</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">day</span><span class="p">)</span>
-                                <span class="n">new_end</span> <span class="o">=</span> <span class="n">new_start</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                        <span class="c1"># TODO: implicit dependency on `default_varstr_alias_func`</span>
+                        <span class="c1"># which we should brainstorm how to remove</span>
+                        <span class="k">elif</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="n">DEMAND</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">assessed</span> <span class="o">==</span> <span class="n">DAILY</span><span class="p">:</span>
+                                <span class="k">for</span> <span class="n">day</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">((</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                                    <span class="n">new_start</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">day</span><span class="p">)</span>
+                                    <span class="n">new_end</span> <span class="o">=</span> <span class="n">new_start</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                                    <span class="n">charge_array</span> <span class="o">=</span> <span class="n">create_charge_array</span><span class="p">(</span>
+                                        <span class="n">charge</span><span class="p">,</span>
+                                        <span class="n">datetime</span><span class="p">,</span>
+                                        <span class="n">new_start</span><span class="p">,</span>
+                                        <span class="n">new_end</span><span class="p">,</span>
+                                        <span class="n">utility</span><span class="o">=</span><span class="n">utility</span><span class="p">,</span>
+                                    <span class="p">)</span>
+                                    <span class="n">key_str</span> <span class="o">=</span> <span class="n">default_varstr_alias_func</span><span class="p">(</span>
+                                        <span class="n">utility</span><span class="p">,</span>
+                                        <span class="n">charge_type</span> <span class="o">+</span> <span class="s2">"-"</span> <span class="o">+</span> <span class="n">assessed</span><span class="p">,</span>
+                                        <span class="n">name</span><span class="p">,</span>
+                                        <span class="n">new_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">"</span><span class="p">),</span>
+                                        <span class="n">new_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">"</span><span class="p">),</span>
+                                        <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">limit</span><span class="p">)),</span>
+                                    <span class="p">)</span>
+                                    <span class="n">add_to_charge_array</span><span class="p">(</span>
+                                        <span class="n">charge_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">charge_array</span>
+                                    <span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
                                 <span class="n">charge_array</span> <span class="o">=</span> <span class="n">create_charge_array</span><span class="p">(</span>
-                                    <span class="n">charge</span><span class="p">,</span>
-                                    <span class="n">datetime</span><span class="p">,</span>
-                                    <span class="n">new_start</span><span class="p">,</span>
-                                    <span class="n">new_end</span><span class="p">,</span>
-                                    <span class="n">utility</span><span class="o">=</span><span class="n">utility</span><span class="p">,</span>
+                                    <span class="n">charge</span><span class="p">,</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">new_end</span><span class="p">,</span> <span class="n">utility</span><span class="o">=</span><span class="n">utility</span>
                                 <span class="p">)</span>
                                 <span class="n">key_str</span> <span class="o">=</span> <span class="n">default_varstr_alias_func</span><span class="p">(</span>
                                     <span class="n">utility</span><span class="p">,</span>
-                                    <span class="n">charge_type</span><span class="p">,</span>
+                                    <span class="n">charge_type</span> <span class="o">+</span> <span class="s2">"-"</span> <span class="o">+</span> <span class="n">assessed</span><span class="p">,</span>
                                     <span class="n">name</span><span class="p">,</span>
-                                    <span class="n">new_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">"</span><span class="p">),</span>
-                                    <span class="n">new_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">"</span><span class="p">),</span>
-                                    <span class="nb">str</span><span class="p">(</span><span class="n">limit</span><span class="p">),</span>
+                                    <span class="n">start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">"</span><span class="p">),</span>
+                                    <span class="n">end</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">"</span><span class="p">),</span>
+                                    <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">limit</span><span class="p">)),</span>
                                 <span class="p">)</span>
                                 <span class="n">add_to_charge_array</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">)</span>
                         <span class="k">else</span><span class="p">:</span>
@@ -478,6 +575,7 @@
                                 <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">limit</span><span class="p">)),</span>
                             <span class="p">)</span>
                             <span class="n">add_to_charge_array</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">charge_array</span><span class="p">)</span>
+
     <span class="k">return</span> <span class="n">charge_dict</span></div>
 
 
@@ -495,69 +593,52 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    start_dt : datetime.datetime</span>
+<span class="sd">    start_dt : datetime-like (see :func:`get_timesteps`)</span>
 <span class="sd">        first timestep to be included in the cost analysis</span>
 
-<span class="sd">    end_dt : datetime.datetime</span>
-<span class="sd">        last timestep to be included in the cost analysis</span>
+<span class="sd">    end_dt : datetime-like (see :func:`get_timesteps`)</span>
+<span class="sd">        end of the cost analysis, exclusive: the horizon runs up to but does</span>
+<span class="sd">        not include `end_dt`</span>
 
 <span class="sd">    rate_data : pandas.DataFrame</span>
 <span class="sd">        tariff data with required columns `utility`, `type`, `basic_charge_limit`,</span>
 <span class="sd">        `name`, `month_start`, `month_end`, `weekday_start`, `weekday_end`,</span>
-<span class="sd">        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`,</span>
-<span class="sd">        `effective_start_date`, and `effective_end_date`</span>
+<span class="sd">        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`</span>
+<span class="sd">        (default "monthly"), `effective_start_date`, and `effective_end_date`</span>
 
 <span class="sd">    resolution : str</span>
 <span class="sd">        granularity of each timestep in string form with default value of "15m"</span>
 
 <span class="sd">    keep_fixed_charges : bool</span>
-<span class="sd">        If True, fixed charges will included.</span>
-<span class="sd">        If False, fixed charges will be dropped from the output. Default is False.</span>
+<span class="sd">        Whether to discard fixed (i.e., customer) charges or keep them.</span>
+<span class="sd">        Default is True, which returns fixed (and all other) charges.</span>
 
 <span class="sd">    scale_fixed_charges : bool</span>
 <span class="sd">        If True, fixed charges will be divided amongst all time steps and scaled</span>
-<span class="sd">        by timesteps in the month. If False, they will not be scaled</span>
-<span class="sd">        but included in the first timestep only. Default is True.</span>
+<span class="sd">        by the horizon's fraction of a billing period. If False, they will not be</span>
+<span class="sd">        scaled but included in the first timestep only. Default is True.</span>
 
 <span class="sd">    scale_demand_charges : bool</span>
-<span class="sd">        If True, demand charges will be scaled by the number of timesteps in the month.</span>
-<span class="sd">        If False, they will not be scaled. Default is False.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    pandas.DataFrame</span>
 <span class="sd">        DataFrame of charge arrays</span>
 <span class="sd">    """</span>
-    <span class="c1"># get the number of timesteps in a day (according to charge resolution)</span>
-    <span class="n">res_binsize_minutes</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">get_freq_binsize_minutes</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
-
-    <span class="c1"># get the charge dictionary</span>
-    <span class="n">charge_dict</span> <span class="o">=</span> <span class="n">get_charge_dict</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">rate_data</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">end_dt</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">):</span>
-        <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">res_binsize_minutes</span><span class="p">))</span>
-        <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-                <span class="p">[</span>
-                    <span class="n">start_dt</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">i</span> <span class="o">*</span> <span class="n">res_binsize_minutes</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span>
-                <span class="p">]</span>
-            <span class="p">),</span>
-            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">DATETIME</span><span class="p">],</span>
-        <span class="p">)</span>
+    <span class="c1"># get the datetime array and charge dictionary</span>
+    <span class="n">ntsteps</span><span class="p">,</span> <span class="n">datetime</span> <span class="o">=</span> <span class="n">get_timesteps</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">resolution</span><span class="p">)</span>
+    <span class="n">charge_dict</span> <span class="o">=</span> <span class="n">get_charge_dict</span><span class="p">(</span>
+        <span class="n">start_dt</span><span class="p">,</span>
+        <span class="n">end_dt</span><span class="p">,</span>
+        <span class="n">rate_data</span><span class="p">,</span>
+        <span class="n">resolution</span><span class="o">=</span><span class="n">resolution</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">scale_fixed_charges</span> <span class="ow">or</span> <span class="n">scale_demand_charges</span><span class="p">:</span>
+        <span class="n">scale_factor</span> <span class="o">=</span> <span class="n">get_billing_period_scale_factor</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">ntsteps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">end_dt</span> <span class="o">-</span> <span class="n">start_dt</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="n">res_binsize_minutes</span><span class="p">,</span> <span class="s2">"m"</span><span class="p">))</span>
-        <span class="n">datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-                <span class="p">[</span>
-                    <span class="n">start_dt</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">res_binsize_minutes</span><span class="p">,</span> <span class="s2">"m"</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span>
-                <span class="p">]</span>
-            <span class="p">),</span>
-            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">DATETIME</span><span class="p">],</span>
-        <span class="p">)</span>
+        <span class="n">scale_factor</span> <span class="o">=</span> <span class="mf">1.0</span>
 
-    <span class="c1"># first find the value of the fixed charge</span>
+    <span class="c1"># find the value of the fixed charge</span>
     <span class="n">fixed_charge_dict</span> <span class="o">=</span> <span class="p">{</span>
         <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
@@ -566,24 +647,12 @@
         <span class="p">)</span>
     <span class="p">}</span>
 
-    <span class="k">if</span> <span class="n">scale_fixed_charges</span> <span class="ow">or</span> <span class="n">scale_demand_charges</span><span class="p">:</span>
-        <span class="c1"># calculate the scale factor</span>
-        <span class="n">month</span> <span class="o">=</span> <span class="n">start_dt</span><span class="o">.</span><span class="n">month</span>
-        <span class="n">year</span> <span class="o">=</span> <span class="n">end_dt</span><span class="o">.</span><span class="n">year</span>
-        <span class="n">mins_in_month</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="n">month</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">days</span> <span class="o">*</span> <span class="mi">24</span> <span class="o">*</span> <span class="mi">60</span>
-        <span class="p">)</span>
-        <span class="n">bins_in_month</span> <span class="o">=</span> <span class="n">mins_in_month</span> <span class="o">/</span> <span class="n">res_binsize_minutes</span>
-        <span class="n">scale_factor</span> <span class="o">=</span> <span class="n">ntsteps</span> <span class="o">/</span> <span class="n">bins_in_month</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">scale_factor</span> <span class="o">=</span> <span class="mf">1.0</span>
-
     <span class="k">if</span> <span class="n">keep_fixed_charges</span><span class="p">:</span>
         <span class="c1"># replace the fixed charge in charge_dict with its time-averaged value</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">fixed_charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">scale_fixed_charges</span><span class="p">:</span>
                 <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span> <span class="o">*</span> <span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">scale_factor</span> <span class="o">/</span> <span class="n">ntsteps</span>
-            <span class="k">else</span><span class="p">:</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># or put the whole charge in first entry with trailing zeros</span>
                 <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ntsteps</span><span class="p">)</span>
                 <span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
@@ -594,19 +663,75 @@
             <span class="k">del</span> <span class="n">charge_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
 
     <span class="k">if</span> <span class="n">scale_demand_charges</span><span class="p">:</span>
+        <span class="c1"># TODO: implicit dependency on `default_varstr_alias_func`</span>
+        <span class="c1"># which we should brainstorm how to remove</span>
         <span class="n">demand_charge_dict</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="s2">"demand"</span> <span class="ow">in</span> <span class="n">key</span>
+            <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">DEMAND</span> <span class="ow">in</span> <span class="n">key</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">DAILY</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">key</span><span class="p">)</span>
         <span class="p">}</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">demand_charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">charge_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span> <span class="o">*</span> <span class="n">scale_factor</span>
 
     <span class="n">charge_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">charge_dict</span><span class="p">)</span>
-
     <span class="n">charge_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">datetime</span><span class="p">,</span> <span class="n">charge_df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-
     <span class="c1"># remove all zero columns</span>
     <span class="n">charge_df</span> <span class="o">=</span> <span class="n">charge_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">(</span><span class="n">charge_df</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)]</span>
     <span class="k">return</span> <span class="n">charge_df</span></div>
+
+
+<div class="viewcode-block" id="get_prev_demand_dict"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_prev_demand_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_prev_demand_dict</span><span class="p">(</span>
+    <span class="n">charge_dict</span><span class="p">,</span>
+    <span class="n">usage_data</span><span class="p">,</span>
+    <span class="n">start_dt</span><span class="p">,</span>
+    <span class="n">billing_period_starts</span><span class="p">,</span>
+    <span class="n">prev_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Compute a new or updated previous max demand charge dict for use in costing.</span>
+
+<span class="sd">    For each charge in charge_dict, resets the tracked maximum to zero at the</span>
+<span class="sd">    start of the relevant timeframe. Then accumulates the running maximum.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    charge_dict : dict</span>
+<span class="sd">        Maps charge key strings to charge arrays (numpy arrays or cp.Expression).</span>
+
+<span class="sd">    usage_data : numpy.ndarray</span>
+<span class="sd">        Array of consumption values for the current timestep window.</span>
+
+<span class="sd">    start_dt : datetime-like (see :func:`get_timesteps`)</span>
+<span class="sd">        Start datetime of the current optimization window.</span>
+
+<span class="sd">    billing_period_starts : list</span>
+<span class="sd">        List of datetimes marking the start of each billing period.</span>
+
+<span class="sd">    prev_dict : dict, optional</span>
+<span class="sd">        Existing previous-max dict to update. Defaults to empty dict.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        Mapping of charge key to {"demand": running peak demand,</span>
+<span class="sd">        "cost": running max of usage * charge}</span>
+<span class="sd">    """</span>
+    <span class="n">prev_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">prev_dict</span> <span class="ow">or</span> <span class="p">{})</span>
+    <span class="n">usage_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">usage_data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">charge_name</span><span class="p">,</span> <span class="n">charge_array</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">entry</span> <span class="o">=</span> <span class="n">prev_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">charge_name</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{</span><span class="n">DEMAND</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">COST</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">in</span> <span class="n">billing_period_starts</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="n">get_charge_array_duration</span><span class="p">(</span><span class="n">charge_name</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+            <span class="ow">and</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">start_dt</span><span class="p">)</span><span class="o">.</span><span class="n">hour</span> <span class="o">==</span> <span class="mi">0</span>
+        <span class="p">):</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="p">{</span><span class="n">DEMAND</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">COST</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">}</span>
+        <span class="n">charge_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">charge_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">active</span> <span class="o">=</span> <span class="n">charge_array</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="n">window_demand</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">usage_data</span><span class="p">[</span><span class="n">active</span><span class="p">]))</span> <span class="k">if</span> <span class="n">active</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="n">prev_dict</span><span class="p">[</span><span class="n">charge_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">DEMAND</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="n">DEMAND</span><span class="p">],</span> <span class="n">window_demand</span><span class="p">),</span>
+            <span class="n">COST</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="n">COST</span><span class="p">],</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">usage_data</span> <span class="o">*</span> <span class="n">charge_array</span><span class="p">))),</span>
+        <span class="p">}</span>
+    <span class="k">return</span> <span class="n">prev_dict</span></div>
 
 
 <div class="viewcode-block" id="default_varstr_alias_func"><a class="viewcode-back" href="../../eeco.html#eeco.costs.default_varstr_alias_func">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">default_varstr_alias_func</span><span class="p">(</span>
@@ -627,7 +752,7 @@
 <span class="sd">    name : str</span>
 <span class="sd">        The name of the period for this charge (e.g., 'all-day' or 'on-peak')</span>
 
-<span class="sd">    start_date</span>
+<span class="sd">    start_date : str</span>
 <span class="sd">        The inclusive start date for this charge</span>
 
 <span class="sd">    end_date : str</span>
@@ -745,7 +870,9 @@
 <span class="sd">        and the second entry being the pyomo model object (or None)</span>
 <span class="sd">    """</span>
 
-    <span class="k">if</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">prev_demand</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">):</span>  <span class="c1"># for cp.Parameter</span>
+        <span class="n">consumption_max</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># evaluate later for parameterized prev_demand</span>
+    <span class="k">elif</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">):</span>
         <span class="n">consumption_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">),</span> <span class="n">prev_demand</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">consumption_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">),</span> <span class="n">prev_demand</span><span class="p">)</span>
@@ -799,17 +926,18 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">demand_charged</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">elif</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_cvx_type</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">consumption_max</span> <span class="o">&gt;=</span> <span class="n">limit</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">consumption_max</span> <span class="o">&lt;=</span> <span class="n">next_limit</span><span class="p">:</span>
+        <span class="n">_use_param</span> <span class="o">=</span> <span class="n">consumption_max</span> <span class="ow">is</span> <span class="kc">None</span>  <span class="c1"># True when prev_demand is a cp.Parameter</span>
+        <span class="k">if</span> <span class="n">_use_param</span> <span class="ow">or</span> <span class="n">consumption_max</span> <span class="o">&gt;=</span> <span class="n">limit</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_use_param</span> <span class="ow">and</span> <span class="n">consumption_max</span> <span class="o">&gt;</span> <span class="n">next_limit</span><span class="p">:</span>
                 <span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
-                    <span class="n">consumption_data</span> <span class="o">-</span> <span class="n">limit</span><span class="p">,</span>
+                    <span class="n">next_limit</span> <span class="o">-</span> <span class="n">limit</span><span class="p">,</span>
                     <span class="n">charge_array</span><span class="p">,</span>
                     <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
                     <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_multiply"</span><span class="p">,</span>
                 <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span>
-                    <span class="n">next_limit</span> <span class="o">-</span> <span class="n">limit</span><span class="p">,</span>
+                    <span class="n">consumption_data</span> <span class="o">-</span> <span class="n">limit</span><span class="p">,</span>
                     <span class="n">charge_array</span><span class="p">,</span>
                     <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
                     <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_multiply"</span><span class="p">,</span>
@@ -1226,6 +1354,7 @@
     <span class="n">desired_utility</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">desired_charge_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">demand_scale_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">fixed_scale_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">decomposition_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">default_varstr_alias_func</span><span class="p">,</span>
@@ -1306,6 +1435,12 @@
 <span class="sd">        Applied to monthly charges where end_date - start_date &gt; 1 day.</span>
 <span class="sd">        Default is 1</span>
 
+<span class="sd">    fixed_scale_factor : float</span>
+<span class="sd">        Optional factor for scaling fixed (customer) charges relative to energy</span>
+<span class="sd">        charges when the optimization/simulation period is not a full billing</span>
+<span class="sd">        cycle. Applied to the whole customer charge, which is otherwise billed</span>
+<span class="sd">        in full regardless of horizon length. Default is 1</span>
+
 <span class="sd">    model : pyomo.Model</span>
 <span class="sd">        The model object associated with the problem.</span>
 <span class="sd">        Only used in the case of Pyomo, so `None` by default.</span>
@@ -1366,12 +1501,23 @@
     <span class="p">)</span>
 
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">charge_array</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">,</span> <span class="n">limit_str</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
+        <span class="n">utility</span><span class="p">,</span> <span class="n">full_charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">,</span> <span class="n">limit_str</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
         <span class="n">varstr</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sanitize_varstr</span><span class="p">(</span>
             <span class="n">varstr_alias_func</span><span class="p">(</span>
-                <span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">,</span> <span class="n">limit_str</span>
+                <span class="n">utility</span><span class="p">,</span> <span class="n">full_charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">,</span> <span class="n">limit_str</span>
             <span class="p">)</span>  <span class="c1"># noqa: E501</span>
         <span class="p">)</span>
+
+        <span class="c1"># TODO: create a list of valid `assessed` periods to loop through</span>
+        <span class="k">if</span> <span class="n">DAILY</span> <span class="ow">in</span> <span class="n">full_charge_type</span><span class="p">:</span>
+            <span class="n">charge_type</span> <span class="o">=</span> <span class="n">full_charge_type</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">DAILY</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+            <span class="n">assessed</span> <span class="o">=</span> <span class="n">DAILY</span>
+        <span class="k">elif</span> <span class="n">MONTHLY</span> <span class="ow">in</span> <span class="n">full_charge_type</span><span class="p">:</span>
+            <span class="n">charge_type</span> <span class="o">=</span> <span class="n">full_charge_type</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">MONTHLY</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+            <span class="n">assessed</span> <span class="o">=</span> <span class="n">MONTHLY</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">charge_type</span> <span class="o">=</span> <span class="n">full_charge_type</span>
+            <span class="n">assessed</span> <span class="o">=</span> <span class="n">MONTHLY</span>
 
         <span class="c1"># if we want itemized costs skip irrelvant portions of the bill</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">desired_utility</span> <span class="ow">and</span> <span class="n">utility</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">desired_utility</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
@@ -1380,17 +1526,16 @@
             <span class="k">continue</span>
 
         <span class="n">charge_limit</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">limit_str</span><span class="p">)</span>
-        <span class="n">key_substr</span> <span class="o">=</span> <span class="s2">"_"</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">utility</span><span class="p">,</span> <span class="n">charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">])</span>
+        <span class="n">key_substr</span> <span class="o">=</span> <span class="s2">"_"</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">utility</span><span class="p">,</span> <span class="n">full_charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">])</span>
         <span class="n">next_limit</span> <span class="o">=</span> <span class="n">get_next_limit</span><span class="p">(</span><span class="n">key_substr</span><span class="p">,</span> <span class="n">charge_limit</span><span class="p">,</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
 
-        <span class="c1"># Only apply demand_scale_factor if charge spans more than one day</span>
-        <span class="n">charge_duration_days</span> <span class="o">=</span> <span class="n">get_charge_array_duration</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-        <span class="n">effective_scale_factor</span> <span class="o">=</span> <span class="n">demand_scale_factor</span> <span class="k">if</span> <span class="n">charge_duration_days</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mi">1</span>
+        <span class="c1"># Only apply demand_scale_factor if charge is assessed monthly</span>
+        <span class="n">effective_scale_factor</span> <span class="o">=</span> <span class="n">demand_scale_factor</span> <span class="k">if</span> <span class="n">assessed</span> <span class="ow">is</span> <span class="n">MONTHLY</span> <span class="k">else</span> <span class="mi">1</span>
 
         <span class="k">if</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="n">DEMAND</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">prev_demand_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">prev_demand</span> <span class="o">=</span> <span class="n">prev_demand_dict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">DEMAND</span><span class="p">]</span>
-                <span class="n">prev_demand_cost</span> <span class="o">=</span> <span class="n">prev_demand_dict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">"cost"</span><span class="p">]</span>
+                <span class="n">prev_demand_cost</span> <span class="o">=</span> <span class="n">prev_demand_dict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">COST</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">prev_demand</span> <span class="o">=</span> <span class="mi">0</span>
                 <span class="n">prev_demand_cost</span> <span class="o">=</span> <span class="mi">0</span>
@@ -1464,7 +1609,7 @@
             <span class="p">)</span>
             <span class="n">cost</span> <span class="o">-=</span> <span class="n">new_cost</span>
         <span class="k">elif</span> <span class="n">charge_type</span> <span class="o">==</span> <span class="n">CUSTOMER</span><span class="p">:</span>
-            <span class="n">cost</span> <span class="o">+=</span> <span class="n">charge_array</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">cost</span> <span class="o">+=</span> <span class="n">charge_array</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">*</span> <span class="n">fixed_scale_factor</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Invalid charge_type: "</span> <span class="o">+</span> <span class="n">charge_type</span><span class="p">)</span>
 
@@ -1631,6 +1776,7 @@
     <span class="n">consumption_estimate</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">desired_utility</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">demand_scale_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">fixed_scale_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">decomposition_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">by_charge_key</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
@@ -1689,6 +1835,12 @@
 <span class="sd">        when the optimization/simulation period is not a full billing cycle.</span>
 <span class="sd">        Applied to monthly charges where end_date - start_date &gt; 1 day.</span>
 <span class="sd">        Default is 1</span>
+
+<span class="sd">    fixed_scale_factor : float</span>
+<span class="sd">        Optional factor for scaling fixed (customer) charges relative to energy</span>
+<span class="sd">        charges when the optimization/simulation period is not a full billing</span>
+<span class="sd">        cycle. Applied to the whole customer charge, which is otherwise billed</span>
+<span class="sd">        in full regardless of horizon length. Default is 1</span>
 
 <span class="sd">    model : pyomo.Model</span>
 <span class="sd">        The model object associated with the problem.</span>
@@ -1784,6 +1936,7 @@
                     <span class="n">desired_utility</span><span class="o">=</span><span class="n">utility</span><span class="p">,</span>
                     <span class="n">desired_charge_type</span><span class="o">=</span><span class="n">charge_type</span><span class="p">,</span>
                     <span class="n">demand_scale_factor</span><span class="o">=</span><span class="n">demand_scale_factor</span><span class="p">,</span>
+                    <span class="n">fixed_scale_factor</span><span class="o">=</span><span class="n">fixed_scale_factor</span><span class="p">,</span>
                     <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
                     <span class="n">decomposition_type</span><span class="o">=</span><span class="n">decomposition_type</span><span class="p">,</span>
                     <span class="n">varstr_alias_func</span><span class="o">=</span><span class="n">varstr_alias_func</span><span class="p">,</span>
@@ -1794,28 +1947,26 @@
                     <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">cost</span>
 
         <span class="k">if</span> <span class="n">by_charge_key</span><span class="p">:</span>
-            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">"total"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">TOTAL</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="n">charge_types</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">charge_key</span><span class="p">,</span> <span class="n">cost</span> <span class="ow">in</span> <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                    <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">"total"</span><span class="p">][</span><span class="n">charge_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-                        <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">"total"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">charge_key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">cost</span>
+                    <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">TOTAL</span><span class="p">][</span><span class="n">charge_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">TOTAL</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">charge_key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">cost</span>
                     <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">"total"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">TOTAL</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
                 <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">charge_type</span><span class="p">]</span> <span class="k">for</span> <span class="n">charge_type</span> <span class="ow">in</span> <span class="n">charge_types</span>
             <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">by_charge_key</span><span class="p">:</span>
-        <span class="n">results_dict</span><span class="p">[</span><span class="s2">"total"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">results_dict</span><span class="p">[</span><span class="n">TOTAL</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="n">utilities</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">charge_key</span><span class="p">,</span> <span class="n">cost</span> <span class="ow">in</span> <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">"total"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="n">results_dict</span><span class="p">[</span><span class="s2">"total"</span><span class="p">][</span><span class="n">charge_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="n">results_dict</span><span class="p">[</span><span class="s2">"total"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">charge_key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">cost</span>
+            <span class="k">for</span> <span class="n">charge_key</span><span class="p">,</span> <span class="n">cost</span> <span class="ow">in</span> <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">TOTAL</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">results_dict</span><span class="p">[</span><span class="n">TOTAL</span><span class="p">][</span><span class="n">charge_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">results_dict</span><span class="p">[</span><span class="n">TOTAL</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">charge_key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">cost</span>
                 <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">results_dict</span><span class="p">[</span><span class="s2">"total"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
-            <span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="s2">"total"</span><span class="p">]</span> <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="n">utilities</span>
-        <span class="p">)</span>
+        <span class="n">results_dict</span><span class="p">[</span><span class="n">TOTAL</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">results_dict</span><span class="p">[</span><span class="n">utility</span><span class="p">][</span><span class="n">TOTAL</span><span class="p">]</span> <span class="k">for</span> <span class="n">utility</span> <span class="ow">in</span> <span class="n">utilities</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">results_dict</span><span class="p">,</span> <span class="n">model</span></div>
 
@@ -2291,11 +2442,12 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    start_dt : datetime.datetime</span>
+<span class="sd">    start_dt : datetime-like (see :func:`get_timesteps`)</span>
 <span class="sd">        first timestep to be included in the cost analysis</span>
 
-<span class="sd">    end_dt : datetime.datetime</span>
-<span class="sd">        last timestep to be included in the cost analysis</span>
+<span class="sd">    end_dt : datetime-like (see :func:`get_timesteps`)</span>
+<span class="sd">        end of the cost analysis, exclusive: the horizon runs up to but does</span>
+<span class="sd">        not include `end_dt`</span>
 
 <span class="sd">    rate_data : pandas.DataFrame</span>
 <span class="sd">        tariff data with required columns</span>
