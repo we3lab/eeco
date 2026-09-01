@@ -1,0 +1,78 @@
+name: Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency: 
+  group: ${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTEST_ADDOPTS: --color=yes
+  PIP_PROGRESS_BAR: "off"
+  KERNEL_NAME: eeco
+
+defaults:
+  run:
+    # -l: login shell, needed when using Conda:
+    shell: bash -l {0}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[test]
+      - name: Lint with flake8
+        run: |
+          flake8 eeco --count --verbose --show-source --statistics
+      - name: Check with black
+        run: |
+          black --check eeco
+  test:
+    name: test
+    runs-on: ${{ matrix.os-version }}
+    needs: [lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.11"
+          - "3.12"
+          - "3.13"
+        os:
+          - linux
+          - win64
+        include:
+          - os: linux
+            os-version: ubuntu-latest
+          - os: win64
+            os-version: windows-2022
+    steps:                
+      - uses: actions/checkout@v4
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: latest
+          channels: conda-forge
+          activate-environment: eeco
+      - name: Install via conda.yaml
+        run: |
+          conda install scip ipopt
+          python -m pip install --upgrade pip
+          pip install .[dev]
+      - name: Test with pytest
+        shell: bash -el {0}
+        run: |
+          pytest --cov-report xml --cov=eeco eeco/tests/ -vv
+          codecov -t ${{ secrets.CODECOV_TOKEN }}
+

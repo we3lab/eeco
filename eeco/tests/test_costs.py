@@ -1,5 +1,6 @@
 import os
 import pytest
+import warnings
 import numpy as np
 import cvxpy as cp
 import pandas as pd
@@ -322,7 +323,586 @@ def test_create_charge_array(
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "start_dt, end_dt, billing_path, resolution, expected",
+    "start_dt, end_dt, resolution, expected_steps, expect_warning",
+    [
+        # the same horizon expressed as each accepted input type
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 11),
+            "15m",
+            [
+                datetime.datetime(2024, 7, 10, 0, 0),
+                datetime.datetime(2024, 7, 10, 0, 15),
+                datetime.datetime(2024, 7, 10, 0, 30),
+                datetime.datetime(2024, 7, 10, 0, 45),
+                datetime.datetime(2024, 7, 10, 1, 0),
+                datetime.datetime(2024, 7, 10, 1, 15),
+                datetime.datetime(2024, 7, 10, 1, 30),
+                datetime.datetime(2024, 7, 10, 1, 45),
+                datetime.datetime(2024, 7, 10, 2, 0),
+                datetime.datetime(2024, 7, 10, 2, 15),
+                datetime.datetime(2024, 7, 10, 2, 30),
+                datetime.datetime(2024, 7, 10, 2, 45),
+                datetime.datetime(2024, 7, 10, 3, 0),
+                datetime.datetime(2024, 7, 10, 3, 15),
+                datetime.datetime(2024, 7, 10, 3, 30),
+                datetime.datetime(2024, 7, 10, 3, 45),
+                datetime.datetime(2024, 7, 10, 4, 0),
+                datetime.datetime(2024, 7, 10, 4, 15),
+                datetime.datetime(2024, 7, 10, 4, 30),
+                datetime.datetime(2024, 7, 10, 4, 45),
+                datetime.datetime(2024, 7, 10, 5, 0),
+                datetime.datetime(2024, 7, 10, 5, 15),
+                datetime.datetime(2024, 7, 10, 5, 30),
+                datetime.datetime(2024, 7, 10, 5, 45),
+                datetime.datetime(2024, 7, 10, 6, 0),
+                datetime.datetime(2024, 7, 10, 6, 15),
+                datetime.datetime(2024, 7, 10, 6, 30),
+                datetime.datetime(2024, 7, 10, 6, 45),
+                datetime.datetime(2024, 7, 10, 7, 0),
+                datetime.datetime(2024, 7, 10, 7, 15),
+                datetime.datetime(2024, 7, 10, 7, 30),
+                datetime.datetime(2024, 7, 10, 7, 45),
+                datetime.datetime(2024, 7, 10, 8, 0),
+                datetime.datetime(2024, 7, 10, 8, 15),
+                datetime.datetime(2024, 7, 10, 8, 30),
+                datetime.datetime(2024, 7, 10, 8, 45),
+                datetime.datetime(2024, 7, 10, 9, 0),
+                datetime.datetime(2024, 7, 10, 9, 15),
+                datetime.datetime(2024, 7, 10, 9, 30),
+                datetime.datetime(2024, 7, 10, 9, 45),
+                datetime.datetime(2024, 7, 10, 10, 0),
+                datetime.datetime(2024, 7, 10, 10, 15),
+                datetime.datetime(2024, 7, 10, 10, 30),
+                datetime.datetime(2024, 7, 10, 10, 45),
+                datetime.datetime(2024, 7, 10, 11, 0),
+                datetime.datetime(2024, 7, 10, 11, 15),
+                datetime.datetime(2024, 7, 10, 11, 30),
+                datetime.datetime(2024, 7, 10, 11, 45),
+                datetime.datetime(2024, 7, 10, 12, 0),
+                datetime.datetime(2024, 7, 10, 12, 15),
+                datetime.datetime(2024, 7, 10, 12, 30),
+                datetime.datetime(2024, 7, 10, 12, 45),
+                datetime.datetime(2024, 7, 10, 13, 0),
+                datetime.datetime(2024, 7, 10, 13, 15),
+                datetime.datetime(2024, 7, 10, 13, 30),
+                datetime.datetime(2024, 7, 10, 13, 45),
+                datetime.datetime(2024, 7, 10, 14, 0),
+                datetime.datetime(2024, 7, 10, 14, 15),
+                datetime.datetime(2024, 7, 10, 14, 30),
+                datetime.datetime(2024, 7, 10, 14, 45),
+                datetime.datetime(2024, 7, 10, 15, 0),
+                datetime.datetime(2024, 7, 10, 15, 15),
+                datetime.datetime(2024, 7, 10, 15, 30),
+                datetime.datetime(2024, 7, 10, 15, 45),
+                datetime.datetime(2024, 7, 10, 16, 0),
+                datetime.datetime(2024, 7, 10, 16, 15),
+                datetime.datetime(2024, 7, 10, 16, 30),
+                datetime.datetime(2024, 7, 10, 16, 45),
+                datetime.datetime(2024, 7, 10, 17, 0),
+                datetime.datetime(2024, 7, 10, 17, 15),
+                datetime.datetime(2024, 7, 10, 17, 30),
+                datetime.datetime(2024, 7, 10, 17, 45),
+                datetime.datetime(2024, 7, 10, 18, 0),
+                datetime.datetime(2024, 7, 10, 18, 15),
+                datetime.datetime(2024, 7, 10, 18, 30),
+                datetime.datetime(2024, 7, 10, 18, 45),
+                datetime.datetime(2024, 7, 10, 19, 0),
+                datetime.datetime(2024, 7, 10, 19, 15),
+                datetime.datetime(2024, 7, 10, 19, 30),
+                datetime.datetime(2024, 7, 10, 19, 45),
+                datetime.datetime(2024, 7, 10, 20, 0),
+                datetime.datetime(2024, 7, 10, 20, 15),
+                datetime.datetime(2024, 7, 10, 20, 30),
+                datetime.datetime(2024, 7, 10, 20, 45),
+                datetime.datetime(2024, 7, 10, 21, 0),
+                datetime.datetime(2024, 7, 10, 21, 15),
+                datetime.datetime(2024, 7, 10, 21, 30),
+                datetime.datetime(2024, 7, 10, 21, 45),
+                datetime.datetime(2024, 7, 10, 22, 0),
+                datetime.datetime(2024, 7, 10, 22, 15),
+                datetime.datetime(2024, 7, 10, 22, 30),
+                datetime.datetime(2024, 7, 10, 22, 45),
+                datetime.datetime(2024, 7, 10, 23, 0),
+                datetime.datetime(2024, 7, 10, 23, 15),
+                datetime.datetime(2024, 7, 10, 23, 30),
+                datetime.datetime(2024, 7, 10, 23, 45),
+            ],
+            False,
+        ),
+        (
+            np.datetime64("2024-07-10"),
+            np.datetime64("2024-07-11"),
+            "15m",
+            [
+                datetime.datetime(2024, 7, 10, 0, 0),
+                datetime.datetime(2024, 7, 10, 0, 15),
+                datetime.datetime(2024, 7, 10, 0, 30),
+                datetime.datetime(2024, 7, 10, 0, 45),
+                datetime.datetime(2024, 7, 10, 1, 0),
+                datetime.datetime(2024, 7, 10, 1, 15),
+                datetime.datetime(2024, 7, 10, 1, 30),
+                datetime.datetime(2024, 7, 10, 1, 45),
+                datetime.datetime(2024, 7, 10, 2, 0),
+                datetime.datetime(2024, 7, 10, 2, 15),
+                datetime.datetime(2024, 7, 10, 2, 30),
+                datetime.datetime(2024, 7, 10, 2, 45),
+                datetime.datetime(2024, 7, 10, 3, 0),
+                datetime.datetime(2024, 7, 10, 3, 15),
+                datetime.datetime(2024, 7, 10, 3, 30),
+                datetime.datetime(2024, 7, 10, 3, 45),
+                datetime.datetime(2024, 7, 10, 4, 0),
+                datetime.datetime(2024, 7, 10, 4, 15),
+                datetime.datetime(2024, 7, 10, 4, 30),
+                datetime.datetime(2024, 7, 10, 4, 45),
+                datetime.datetime(2024, 7, 10, 5, 0),
+                datetime.datetime(2024, 7, 10, 5, 15),
+                datetime.datetime(2024, 7, 10, 5, 30),
+                datetime.datetime(2024, 7, 10, 5, 45),
+                datetime.datetime(2024, 7, 10, 6, 0),
+                datetime.datetime(2024, 7, 10, 6, 15),
+                datetime.datetime(2024, 7, 10, 6, 30),
+                datetime.datetime(2024, 7, 10, 6, 45),
+                datetime.datetime(2024, 7, 10, 7, 0),
+                datetime.datetime(2024, 7, 10, 7, 15),
+                datetime.datetime(2024, 7, 10, 7, 30),
+                datetime.datetime(2024, 7, 10, 7, 45),
+                datetime.datetime(2024, 7, 10, 8, 0),
+                datetime.datetime(2024, 7, 10, 8, 15),
+                datetime.datetime(2024, 7, 10, 8, 30),
+                datetime.datetime(2024, 7, 10, 8, 45),
+                datetime.datetime(2024, 7, 10, 9, 0),
+                datetime.datetime(2024, 7, 10, 9, 15),
+                datetime.datetime(2024, 7, 10, 9, 30),
+                datetime.datetime(2024, 7, 10, 9, 45),
+                datetime.datetime(2024, 7, 10, 10, 0),
+                datetime.datetime(2024, 7, 10, 10, 15),
+                datetime.datetime(2024, 7, 10, 10, 30),
+                datetime.datetime(2024, 7, 10, 10, 45),
+                datetime.datetime(2024, 7, 10, 11, 0),
+                datetime.datetime(2024, 7, 10, 11, 15),
+                datetime.datetime(2024, 7, 10, 11, 30),
+                datetime.datetime(2024, 7, 10, 11, 45),
+                datetime.datetime(2024, 7, 10, 12, 0),
+                datetime.datetime(2024, 7, 10, 12, 15),
+                datetime.datetime(2024, 7, 10, 12, 30),
+                datetime.datetime(2024, 7, 10, 12, 45),
+                datetime.datetime(2024, 7, 10, 13, 0),
+                datetime.datetime(2024, 7, 10, 13, 15),
+                datetime.datetime(2024, 7, 10, 13, 30),
+                datetime.datetime(2024, 7, 10, 13, 45),
+                datetime.datetime(2024, 7, 10, 14, 0),
+                datetime.datetime(2024, 7, 10, 14, 15),
+                datetime.datetime(2024, 7, 10, 14, 30),
+                datetime.datetime(2024, 7, 10, 14, 45),
+                datetime.datetime(2024, 7, 10, 15, 0),
+                datetime.datetime(2024, 7, 10, 15, 15),
+                datetime.datetime(2024, 7, 10, 15, 30),
+                datetime.datetime(2024, 7, 10, 15, 45),
+                datetime.datetime(2024, 7, 10, 16, 0),
+                datetime.datetime(2024, 7, 10, 16, 15),
+                datetime.datetime(2024, 7, 10, 16, 30),
+                datetime.datetime(2024, 7, 10, 16, 45),
+                datetime.datetime(2024, 7, 10, 17, 0),
+                datetime.datetime(2024, 7, 10, 17, 15),
+                datetime.datetime(2024, 7, 10, 17, 30),
+                datetime.datetime(2024, 7, 10, 17, 45),
+                datetime.datetime(2024, 7, 10, 18, 0),
+                datetime.datetime(2024, 7, 10, 18, 15),
+                datetime.datetime(2024, 7, 10, 18, 30),
+                datetime.datetime(2024, 7, 10, 18, 45),
+                datetime.datetime(2024, 7, 10, 19, 0),
+                datetime.datetime(2024, 7, 10, 19, 15),
+                datetime.datetime(2024, 7, 10, 19, 30),
+                datetime.datetime(2024, 7, 10, 19, 45),
+                datetime.datetime(2024, 7, 10, 20, 0),
+                datetime.datetime(2024, 7, 10, 20, 15),
+                datetime.datetime(2024, 7, 10, 20, 30),
+                datetime.datetime(2024, 7, 10, 20, 45),
+                datetime.datetime(2024, 7, 10, 21, 0),
+                datetime.datetime(2024, 7, 10, 21, 15),
+                datetime.datetime(2024, 7, 10, 21, 30),
+                datetime.datetime(2024, 7, 10, 21, 45),
+                datetime.datetime(2024, 7, 10, 22, 0),
+                datetime.datetime(2024, 7, 10, 22, 15),
+                datetime.datetime(2024, 7, 10, 22, 30),
+                datetime.datetime(2024, 7, 10, 22, 45),
+                datetime.datetime(2024, 7, 10, 23, 0),
+                datetime.datetime(2024, 7, 10, 23, 15),
+                datetime.datetime(2024, 7, 10, 23, 30),
+                datetime.datetime(2024, 7, 10, 23, 45),
+            ],
+            False,
+        ),
+        (
+            pd.Timestamp("2024-07-10"),
+            pd.Timestamp("2024-07-11"),
+            "15m",
+            [
+                datetime.datetime(2024, 7, 10, 0, 0),
+                datetime.datetime(2024, 7, 10, 0, 15),
+                datetime.datetime(2024, 7, 10, 0, 30),
+                datetime.datetime(2024, 7, 10, 0, 45),
+                datetime.datetime(2024, 7, 10, 1, 0),
+                datetime.datetime(2024, 7, 10, 1, 15),
+                datetime.datetime(2024, 7, 10, 1, 30),
+                datetime.datetime(2024, 7, 10, 1, 45),
+                datetime.datetime(2024, 7, 10, 2, 0),
+                datetime.datetime(2024, 7, 10, 2, 15),
+                datetime.datetime(2024, 7, 10, 2, 30),
+                datetime.datetime(2024, 7, 10, 2, 45),
+                datetime.datetime(2024, 7, 10, 3, 0),
+                datetime.datetime(2024, 7, 10, 3, 15),
+                datetime.datetime(2024, 7, 10, 3, 30),
+                datetime.datetime(2024, 7, 10, 3, 45),
+                datetime.datetime(2024, 7, 10, 4, 0),
+                datetime.datetime(2024, 7, 10, 4, 15),
+                datetime.datetime(2024, 7, 10, 4, 30),
+                datetime.datetime(2024, 7, 10, 4, 45),
+                datetime.datetime(2024, 7, 10, 5, 0),
+                datetime.datetime(2024, 7, 10, 5, 15),
+                datetime.datetime(2024, 7, 10, 5, 30),
+                datetime.datetime(2024, 7, 10, 5, 45),
+                datetime.datetime(2024, 7, 10, 6, 0),
+                datetime.datetime(2024, 7, 10, 6, 15),
+                datetime.datetime(2024, 7, 10, 6, 30),
+                datetime.datetime(2024, 7, 10, 6, 45),
+                datetime.datetime(2024, 7, 10, 7, 0),
+                datetime.datetime(2024, 7, 10, 7, 15),
+                datetime.datetime(2024, 7, 10, 7, 30),
+                datetime.datetime(2024, 7, 10, 7, 45),
+                datetime.datetime(2024, 7, 10, 8, 0),
+                datetime.datetime(2024, 7, 10, 8, 15),
+                datetime.datetime(2024, 7, 10, 8, 30),
+                datetime.datetime(2024, 7, 10, 8, 45),
+                datetime.datetime(2024, 7, 10, 9, 0),
+                datetime.datetime(2024, 7, 10, 9, 15),
+                datetime.datetime(2024, 7, 10, 9, 30),
+                datetime.datetime(2024, 7, 10, 9, 45),
+                datetime.datetime(2024, 7, 10, 10, 0),
+                datetime.datetime(2024, 7, 10, 10, 15),
+                datetime.datetime(2024, 7, 10, 10, 30),
+                datetime.datetime(2024, 7, 10, 10, 45),
+                datetime.datetime(2024, 7, 10, 11, 0),
+                datetime.datetime(2024, 7, 10, 11, 15),
+                datetime.datetime(2024, 7, 10, 11, 30),
+                datetime.datetime(2024, 7, 10, 11, 45),
+                datetime.datetime(2024, 7, 10, 12, 0),
+                datetime.datetime(2024, 7, 10, 12, 15),
+                datetime.datetime(2024, 7, 10, 12, 30),
+                datetime.datetime(2024, 7, 10, 12, 45),
+                datetime.datetime(2024, 7, 10, 13, 0),
+                datetime.datetime(2024, 7, 10, 13, 15),
+                datetime.datetime(2024, 7, 10, 13, 30),
+                datetime.datetime(2024, 7, 10, 13, 45),
+                datetime.datetime(2024, 7, 10, 14, 0),
+                datetime.datetime(2024, 7, 10, 14, 15),
+                datetime.datetime(2024, 7, 10, 14, 30),
+                datetime.datetime(2024, 7, 10, 14, 45),
+                datetime.datetime(2024, 7, 10, 15, 0),
+                datetime.datetime(2024, 7, 10, 15, 15),
+                datetime.datetime(2024, 7, 10, 15, 30),
+                datetime.datetime(2024, 7, 10, 15, 45),
+                datetime.datetime(2024, 7, 10, 16, 0),
+                datetime.datetime(2024, 7, 10, 16, 15),
+                datetime.datetime(2024, 7, 10, 16, 30),
+                datetime.datetime(2024, 7, 10, 16, 45),
+                datetime.datetime(2024, 7, 10, 17, 0),
+                datetime.datetime(2024, 7, 10, 17, 15),
+                datetime.datetime(2024, 7, 10, 17, 30),
+                datetime.datetime(2024, 7, 10, 17, 45),
+                datetime.datetime(2024, 7, 10, 18, 0),
+                datetime.datetime(2024, 7, 10, 18, 15),
+                datetime.datetime(2024, 7, 10, 18, 30),
+                datetime.datetime(2024, 7, 10, 18, 45),
+                datetime.datetime(2024, 7, 10, 19, 0),
+                datetime.datetime(2024, 7, 10, 19, 15),
+                datetime.datetime(2024, 7, 10, 19, 30),
+                datetime.datetime(2024, 7, 10, 19, 45),
+                datetime.datetime(2024, 7, 10, 20, 0),
+                datetime.datetime(2024, 7, 10, 20, 15),
+                datetime.datetime(2024, 7, 10, 20, 30),
+                datetime.datetime(2024, 7, 10, 20, 45),
+                datetime.datetime(2024, 7, 10, 21, 0),
+                datetime.datetime(2024, 7, 10, 21, 15),
+                datetime.datetime(2024, 7, 10, 21, 30),
+                datetime.datetime(2024, 7, 10, 21, 45),
+                datetime.datetime(2024, 7, 10, 22, 0),
+                datetime.datetime(2024, 7, 10, 22, 15),
+                datetime.datetime(2024, 7, 10, 22, 30),
+                datetime.datetime(2024, 7, 10, 22, 45),
+                datetime.datetime(2024, 7, 10, 23, 0),
+                datetime.datetime(2024, 7, 10, 23, 15),
+                datetime.datetime(2024, 7, 10, 23, 30),
+                datetime.datetime(2024, 7, 10, 23, 45),
+            ],
+            False,
+        ),
+        (
+            "2024-07-10",
+            "2024-07-11",
+            "15m",
+            [
+                datetime.datetime(2024, 7, 10, 0, 0),
+                datetime.datetime(2024, 7, 10, 0, 15),
+                datetime.datetime(2024, 7, 10, 0, 30),
+                datetime.datetime(2024, 7, 10, 0, 45),
+                datetime.datetime(2024, 7, 10, 1, 0),
+                datetime.datetime(2024, 7, 10, 1, 15),
+                datetime.datetime(2024, 7, 10, 1, 30),
+                datetime.datetime(2024, 7, 10, 1, 45),
+                datetime.datetime(2024, 7, 10, 2, 0),
+                datetime.datetime(2024, 7, 10, 2, 15),
+                datetime.datetime(2024, 7, 10, 2, 30),
+                datetime.datetime(2024, 7, 10, 2, 45),
+                datetime.datetime(2024, 7, 10, 3, 0),
+                datetime.datetime(2024, 7, 10, 3, 15),
+                datetime.datetime(2024, 7, 10, 3, 30),
+                datetime.datetime(2024, 7, 10, 3, 45),
+                datetime.datetime(2024, 7, 10, 4, 0),
+                datetime.datetime(2024, 7, 10, 4, 15),
+                datetime.datetime(2024, 7, 10, 4, 30),
+                datetime.datetime(2024, 7, 10, 4, 45),
+                datetime.datetime(2024, 7, 10, 5, 0),
+                datetime.datetime(2024, 7, 10, 5, 15),
+                datetime.datetime(2024, 7, 10, 5, 30),
+                datetime.datetime(2024, 7, 10, 5, 45),
+                datetime.datetime(2024, 7, 10, 6, 0),
+                datetime.datetime(2024, 7, 10, 6, 15),
+                datetime.datetime(2024, 7, 10, 6, 30),
+                datetime.datetime(2024, 7, 10, 6, 45),
+                datetime.datetime(2024, 7, 10, 7, 0),
+                datetime.datetime(2024, 7, 10, 7, 15),
+                datetime.datetime(2024, 7, 10, 7, 30),
+                datetime.datetime(2024, 7, 10, 7, 45),
+                datetime.datetime(2024, 7, 10, 8, 0),
+                datetime.datetime(2024, 7, 10, 8, 15),
+                datetime.datetime(2024, 7, 10, 8, 30),
+                datetime.datetime(2024, 7, 10, 8, 45),
+                datetime.datetime(2024, 7, 10, 9, 0),
+                datetime.datetime(2024, 7, 10, 9, 15),
+                datetime.datetime(2024, 7, 10, 9, 30),
+                datetime.datetime(2024, 7, 10, 9, 45),
+                datetime.datetime(2024, 7, 10, 10, 0),
+                datetime.datetime(2024, 7, 10, 10, 15),
+                datetime.datetime(2024, 7, 10, 10, 30),
+                datetime.datetime(2024, 7, 10, 10, 45),
+                datetime.datetime(2024, 7, 10, 11, 0),
+                datetime.datetime(2024, 7, 10, 11, 15),
+                datetime.datetime(2024, 7, 10, 11, 30),
+                datetime.datetime(2024, 7, 10, 11, 45),
+                datetime.datetime(2024, 7, 10, 12, 0),
+                datetime.datetime(2024, 7, 10, 12, 15),
+                datetime.datetime(2024, 7, 10, 12, 30),
+                datetime.datetime(2024, 7, 10, 12, 45),
+                datetime.datetime(2024, 7, 10, 13, 0),
+                datetime.datetime(2024, 7, 10, 13, 15),
+                datetime.datetime(2024, 7, 10, 13, 30),
+                datetime.datetime(2024, 7, 10, 13, 45),
+                datetime.datetime(2024, 7, 10, 14, 0),
+                datetime.datetime(2024, 7, 10, 14, 15),
+                datetime.datetime(2024, 7, 10, 14, 30),
+                datetime.datetime(2024, 7, 10, 14, 45),
+                datetime.datetime(2024, 7, 10, 15, 0),
+                datetime.datetime(2024, 7, 10, 15, 15),
+                datetime.datetime(2024, 7, 10, 15, 30),
+                datetime.datetime(2024, 7, 10, 15, 45),
+                datetime.datetime(2024, 7, 10, 16, 0),
+                datetime.datetime(2024, 7, 10, 16, 15),
+                datetime.datetime(2024, 7, 10, 16, 30),
+                datetime.datetime(2024, 7, 10, 16, 45),
+                datetime.datetime(2024, 7, 10, 17, 0),
+                datetime.datetime(2024, 7, 10, 17, 15),
+                datetime.datetime(2024, 7, 10, 17, 30),
+                datetime.datetime(2024, 7, 10, 17, 45),
+                datetime.datetime(2024, 7, 10, 18, 0),
+                datetime.datetime(2024, 7, 10, 18, 15),
+                datetime.datetime(2024, 7, 10, 18, 30),
+                datetime.datetime(2024, 7, 10, 18, 45),
+                datetime.datetime(2024, 7, 10, 19, 0),
+                datetime.datetime(2024, 7, 10, 19, 15),
+                datetime.datetime(2024, 7, 10, 19, 30),
+                datetime.datetime(2024, 7, 10, 19, 45),
+                datetime.datetime(2024, 7, 10, 20, 0),
+                datetime.datetime(2024, 7, 10, 20, 15),
+                datetime.datetime(2024, 7, 10, 20, 30),
+                datetime.datetime(2024, 7, 10, 20, 45),
+                datetime.datetime(2024, 7, 10, 21, 0),
+                datetime.datetime(2024, 7, 10, 21, 15),
+                datetime.datetime(2024, 7, 10, 21, 30),
+                datetime.datetime(2024, 7, 10, 21, 45),
+                datetime.datetime(2024, 7, 10, 22, 0),
+                datetime.datetime(2024, 7, 10, 22, 15),
+                datetime.datetime(2024, 7, 10, 22, 30),
+                datetime.datetime(2024, 7, 10, 22, 45),
+                datetime.datetime(2024, 7, 10, 23, 0),
+                datetime.datetime(2024, 7, 10, 23, 15),
+                datetime.datetime(2024, 7, 10, 23, 30),
+                datetime.datetime(2024, 7, 10, 23, 45),
+            ],
+            False,
+        ),
+        # timestep count follows the resolution string
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 11),
+            "1h",
+            [
+                datetime.datetime(2024, 7, 10, 0, 0),
+                datetime.datetime(2024, 7, 10, 1, 0),
+                datetime.datetime(2024, 7, 10, 2, 0),
+                datetime.datetime(2024, 7, 10, 3, 0),
+                datetime.datetime(2024, 7, 10, 4, 0),
+                datetime.datetime(2024, 7, 10, 5, 0),
+                datetime.datetime(2024, 7, 10, 6, 0),
+                datetime.datetime(2024, 7, 10, 7, 0),
+                datetime.datetime(2024, 7, 10, 8, 0),
+                datetime.datetime(2024, 7, 10, 9, 0),
+                datetime.datetime(2024, 7, 10, 10, 0),
+                datetime.datetime(2024, 7, 10, 11, 0),
+                datetime.datetime(2024, 7, 10, 12, 0),
+                datetime.datetime(2024, 7, 10, 13, 0),
+                datetime.datetime(2024, 7, 10, 14, 0),
+                datetime.datetime(2024, 7, 10, 15, 0),
+                datetime.datetime(2024, 7, 10, 16, 0),
+                datetime.datetime(2024, 7, 10, 17, 0),
+                datetime.datetime(2024, 7, 10, 18, 0),
+                datetime.datetime(2024, 7, 10, 19, 0),
+                datetime.datetime(2024, 7, 10, 20, 0),
+                datetime.datetime(2024, 7, 10, 21, 0),
+                datetime.datetime(2024, 7, 10, 22, 0),
+                datetime.datetime(2024, 7, 10, 23, 0),
+            ],
+            False,
+        ),
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 17),
+            "1D",
+            [
+                datetime.datetime(2024, 7, 10),
+                datetime.datetime(2024, 7, 11),
+                datetime.datetime(2024, 7, 12),
+                datetime.datetime(2024, 7, 13),
+                datetime.datetime(2024, 7, 14),
+                datetime.datetime(2024, 7, 15),
+                datetime.datetime(2024, 7, 16),
+            ],
+            False,
+        ),
+        # horizons that divide evenly into the resolution are silent
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 10, 0, 45),
+            "15m",
+            [
+                datetime.datetime(2024, 7, 10, 0, 0),
+                datetime.datetime(2024, 7, 10, 0, 15),
+                datetime.datetime(2024, 7, 10, 0, 30),
+            ],
+            False,
+        ),
+        # a trailing partial timestep is dropped, and warned about
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 10, 0, 50),
+            "15m",
+            [
+                datetime.datetime(2024, 7, 10, 0, 0),
+                datetime.datetime(2024, 7, 10, 0, 15),
+                datetime.datetime(2024, 7, 10, 0, 30),
+            ],
+            True,
+        ),
+        # the same horizon divides evenly at a finer resolution
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 10, 0, 50),
+            "5m",
+            [
+                datetime.datetime(2024, 7, 10, 0, 0),
+                datetime.datetime(2024, 7, 10, 0, 5),
+                datetime.datetime(2024, 7, 10, 0, 10),
+                datetime.datetime(2024, 7, 10, 0, 15),
+                datetime.datetime(2024, 7, 10, 0, 20),
+                datetime.datetime(2024, 7, 10, 0, 25),
+                datetime.datetime(2024, 7, 10, 0, 30),
+                datetime.datetime(2024, 7, 10, 0, 35),
+                datetime.datetime(2024, 7, 10, 0, 40),
+                datetime.datetime(2024, 7, 10, 0, 45),
+            ],
+            False,
+        ),
+        # partial days at daily resolution drop the last (and warns)
+        (
+            datetime.datetime(2024, 7, 10),
+            datetime.datetime(2024, 7, 17, 23, 59),
+            "1D",
+            [
+                datetime.datetime(2024, 7, 10),
+                datetime.datetime(2024, 7, 11),
+                datetime.datetime(2024, 7, 12),
+                datetime.datetime(2024, 7, 13),
+                datetime.datetime(2024, 7, 14),
+                datetime.datetime(2024, 7, 15),
+                datetime.datetime(2024, 7, 16),
+            ],
+            True,
+        ),
+    ],
+)
+def test_get_timesteps(start_dt, end_dt, resolution, expected_steps, expect_warning):
+    if expect_warning:
+        with pytest.warns(UserWarning, match="not a whole multiple"):
+            ntsteps, datetime_df = costs.get_timesteps(start_dt, end_dt, resolution)
+    else:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            ntsteps, datetime_df = costs.get_timesteps(start_dt, end_dt, resolution)
+
+    timesteps = datetime_df[costs.DATETIME]
+
+    assert ntsteps == len(expected_steps) == len(timesteps)
+    assert (expected_steps == timesteps).all()
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "start_dt, end_dt, expected",
+    [
+        # whole billing period
+        (datetime.datetime(2024, 7, 1), datetime.datetime(2024, 8, 1), 1.0),
+        # partial billing period
+        (datetime.datetime(2024, 7, 10), datetime.datetime(2024, 8, 1), 22 / 31),
+        # December must not overflow into a thirteenth month
+        (datetime.datetime(2023, 12, 1), datetime.datetime(2023, 12, 8), 7 / 31),
+        # horizon crossing a year boundary
+        (
+            datetime.datetime(2023, 12, 20),
+            datetime.datetime(2024, 1, 10),
+            12 / 31 + 9 / 31,
+        ),
+        # horizons longer than one billing period are not capped at 1
+        (datetime.datetime(2023, 6, 1), datetime.datetime(2023, 7, 16), 1 + 15 / 31),
+        (datetime.datetime(2024, 2, 1), datetime.datetime(2024, 3, 17), 1 + 16 / 31),
+        # each month is weighted by its own length, so February depends on the year
+        (datetime.datetime(2024, 2, 1), datetime.datetime(2024, 2, 15), 14 / 29),
+        (datetime.datetime(2023, 2, 1), datetime.datetime(2023, 2, 15), 14 / 28),
+        # accepts the same input types as get_timesteps
+        (np.datetime64("2024-07-10"), np.datetime64("2024-08-01"), 22 / 31),
+        ("2024-07-10", "2024-08-01", 22 / 31),
+    ],
+)
+def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
+    result = costs.get_billing_period_scale_factor(start_dt, end_dt)
+    assert result == pytest.approx(expected)
+
+
+# TODO: remove demand_scale_factor and scale_fixed_charges from these tests
+# @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "start_dt, end_dt, billing_path, resolution, scale_fixed_charges, "
+    "demand_scale_factor, expected",
     [
         # only one energy charge
         # no name, assessed, effective start, or effective end
@@ -331,6 +911,8 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_energy_1.csv",
             "15m",
+            False,
+            1,
             {
                 "electric_energy_0_20240710_20240710_0": np.ones(96) * 0.05,
             },
@@ -342,6 +924,8 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_energy_1.csv",
             "5m",
+            False,
+            1,
             {
                 "electric_energy_0_20240710_20240710_0": np.ones(288) * 0.05,
             },
@@ -353,6 +937,8 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_energy_1.csv",
             "1h",
+            False,
+            1,
             {
                 "electric_energy_0_20240710_20240710_0": np.ones(24) * 0.05,
             },
@@ -364,6 +950,8 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_energy_3.csv",
             "15m",
+            False,
+            1,
             {
                 "electric_energy_0_20240710_20240710_0": np.concatenate(
                     [
@@ -393,6 +981,8 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_energy_peak.csv",
             "15m",
+            False,
+            1,
             {
                 "electric_energy_off-peak_20240710_20240710_0": np.concatenate(
                     [
@@ -417,6 +1007,8 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_energy_combine.csv",
             "15m",
+            False,
+            1,
             {
                 "electric_energy_all-day_20240710_20240710_0": np.concatenate(
                     [
@@ -433,9 +1025,11 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_demand_2.csv",
             "15m",
+            False,
+            1,
             {
-                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
@@ -450,9 +1044,11 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_demand_monthly.csv",
             "15m",
+            False,
+            1,
             {
-                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
@@ -468,9 +1064,11 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_demand_daily.csv",
             "15m",
+            False,
+            1,
             {
-                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand-daily_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
@@ -486,16 +1084,18 @@ def test_create_charge_array(
             np.datetime64("2024-07-12"),  # Summer weekdays
             input_dir + "billing_demand_daily.csv",
             "15m",
+            False,
+            1,
             {
-                "electric_demand_all-day_20240710_20240711_0": np.ones(192) * 5,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-monthly_all-day_20240710_20240711_0": np.ones(192) * 5,
+                "electric_demand-daily_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
                         np.zeros(108),
                     ]
                 ),
-                "electric_demand_on-peak_20240711_20240711_0": np.concatenate(
+                "electric_demand-daily_on-peak_20240711_20240711_0": np.concatenate(
                     [
                         np.zeros(160),
                         np.ones(20) * 20,
@@ -510,6 +1110,8 @@ def test_create_charge_array(
             np.datetime64("2024-07-12"),  # Summer weekdays
             input_dir + "billing_export.csv",
             "15m",
+            False,
+            1,
             {
                 "electric_export_0_20240710_20240711_0": np.ones(192) * 0.025,
             },
@@ -520,6 +1122,8 @@ def test_create_charge_array(
             np.datetime64("2024-08-01"),  # Summer weekdays
             input_dir + "billing_customer.csv",
             "15m",
+            False,
+            1,
             {
                 "electric_customer_0_20240710_20240731_0": np.array([1000]),
             },
@@ -530,6 +1134,8 @@ def test_create_charge_array(
             np.datetime64("2024-08-01"),  # Summer weekdays
             input_dir + "billing_effective.csv",
             "1h",
+            False,
+            1,
             {
                 "electric_energy_0_20240101_20240720_0": np.concatenate(
                     [
@@ -551,6 +1157,8 @@ def test_create_charge_array(
             np.datetime64("2024-06-02"),  # Summer weekdays
             input_dir + "billing.csv",
             "1h",
+            False,
+            1,
             {
                 "electric_customer_0_20240531_20240601_0": np.array([300]),
                 "electric_energy_0_20240531_20240601_0": np.concatenate(
@@ -567,7 +1175,8 @@ def test_create_charge_array(
                 ),
                 "electric_energy_5_20240531_20240601_0": np.zeros(48),
                 "electric_energy_6_20240531_20240601_0": np.zeros(48),
-                "electric_demand_maximum_20240531_20240601_0": np.ones(48) * 7.128,
+                "electric_demand-monthly_maximum_20240531_20240601_0": np.ones(48)
+                * 7.128,
                 "gas_customer_0_20240531_20240601_0": np.array([93.14]),
                 # converted from 0.2837 therms
                 "gas_energy_0_20240531_20240601_0": np.ones(48) * 0.10018787433608317,
@@ -580,6 +1189,8 @@ def test_create_charge_array(
             np.datetime64("2024-01-02"),  # Summer weekdays
             input_dir + "billing.csv",
             "1h",
+            False,
+            1,
             {
                 "electric_customer_0_20231231_20240101_0": np.array([300]),
                 "electric_energy_0_20231231_20240101_0": np.concatenate(
@@ -596,7 +1207,8 @@ def test_create_charge_array(
                 "electric_energy_6_20231231_20240101_0": np.concatenate(
                     [np.ones(24) * 0.022552, np.zeros(24)]
                 ),
-                "electric_demand_maximum_20231231_20240101_0": np.ones(48) * 7.128,
+                "electric_demand-monthly_maximum_20231231_20240101_0": np.ones(48)
+                * 7.128,
                 "gas_customer_0_20231231_20240101_0": np.array([93.14]),
                 "gas_energy_0_20231231_20240101_0": np.concatenate(
                     [
@@ -620,6 +1232,8 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_energy_3_charge_limit.csv",
             "15m",
+            False,
+            1,
             {
                 "electric_energy_0_20240710_20240710_0": np.concatenate(
                     [
@@ -667,6 +1281,8 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_energy_combine_charge_limit.csv",
             "15m",
+            False,
+            1,
             {
                 "electric_energy_all-day_20240710_20240710_0": np.concatenate(
                     [
@@ -690,17 +1306,20 @@ def test_create_charge_array(
             np.datetime64("2024-07-11"),  # Summer weekdays
             input_dir + "billing_demand_2_charge_limit.csv",
             "15m",
+            False,
+            1,
             {
-                "electric_demand_all-day_20240710_20240710_0": np.ones(96) * 5,
-                "electric_demand_all-day_20240710_20240710_100": np.ones(96) * 10,
-                "electric_demand_on-peak_20240710_20240710_0": np.concatenate(
+                "electric_demand-monthly_all-day_20240710_20240710_0": np.ones(96) * 5,
+                "electric_demand-monthly_all-day_20240710_20240710_100": np.ones(96)
+                * 10,
+                "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 20,
                         np.zeros(12),
                     ]
                 ),
-                "electric_demand_on-peak_20240710_20240710_100": np.concatenate(
+                "electric_demand-monthly_on-peak_20240710_20240710_100": np.concatenate(
                     [
                         np.zeros(64),
                         np.ones(20) * 30,
@@ -709,23 +1328,115 @@ def test_create_charge_array(
                 ),
             },
         ),
+        # TODO: all below tests belong in get_charge_df or calculate_costs
+        # no scaling should occur within inner `get_charge_dict` loop, only wrappers
+        # # customer charge spread across all timesteps (scale_fixed_charges=True)
+        # (
+        #     datetime.datetime(2024, 7, 10),
+        #     datetime.datetime(2024, 8, 1),
+        #     input_dir + "billing_customer.csv",
+        #     "15m",
+        #     True,
+        #     1,
+        #     {
+        #         "electric_customer_0_20240710_20240731_0": (
+        #             np.ones(2112) * 1000 * (2112 / 2976) / 2112
+        #         ),
+        #     },
+        # ),
+        # # customer charge prorated across a December horizon
+        # (
+        #     datetime.datetime(2023, 12, 1),
+        #     datetime.datetime(2023, 12, 8),
+        #     input_dir + "billing_customer.csv",
+        #     "15m",
+        #     True,
+        #     1,
+        #     {
+        #         "electric_customer_0_20231201_20231207_0": (
+        #             np.ones(672) * 1000 * (7 / 31) / 672
+        #         ),
+        #     },
+        # ),
+        # # customer charge over a horizon spanning two billing periods
+        # (
+        #     datetime.datetime(2023, 6, 1),
+        #     datetime.datetime(2023, 7, 16),
+        #     input_dir + "billing_customer.csv",
+        #     "15m",
+        #     True,
+        #     1,
+        #     {
+        #         "electric_customer_0_20230601_20230715_0": (
+        #             np.ones(4320) * 1000 * (1 + 15 / 31) / 4320
+        #         ),
+        #     },
+        # ),
+        # # full-billing-period (monthly) demand charges scaled by demand_scale_factor
+        # (
+        #     np.datetime64("2024-07-10"),
+        #     np.datetime64("2024-07-11"),
+        #     input_dir + "billing_demand_monthly.csv",
+        #     "15m",
+        #     False,
+        #     0.5,
+        #     {
+        #         "electric_demand-monthly_all-day_20240710_20240710_0": (
+        #             np.ones(96) * 5 * 0.5,
+        #         )
+        #         "electric_demand-monthly_on-peak_20240710_20240710_0": np.concatenate(
+        #             [np.zeros(64), np.ones(20) * 20 * 0.5, np.zeros(12)]
+        #         ),
+        #     },
+        # ),
+        # # per-day charges not scaled by by demand_scale_factor
+        # (
+        #     np.datetime64("2024-07-10"),
+        #     np.datetime64("2024-07-11"),
+        #     input_dir + "billing_demand_daily.csv",
+        #     "15m",
+        #     False,
+        #     0.5,
+        #     {
+        #         "electric_demand-daily_all-day_20240710_20240710_0": (
+        #             np.ones(96) * 5 * 0.5,
+        #         )
+        #         "electric_demand-daily_on-peak_20240710_20240710_0": np.concatenate(
+        #             [np.zeros(64), np.ones(20) * 20, np.zeros(12)]
+        #         ),
+        #     },
+        # ),
     ],
 )
-def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
+def test_get_charge_dict(
+    start_dt,
+    end_dt,
+    billing_path,
+    resolution,
+    expected,
+    scale_fixed_charges,
+    demand_scale_factor,
+):
     tariff_df = pd.read_csv(billing_path)
-    result = costs.get_charge_dict(start_dt, end_dt, tariff_df, resolution=resolution)
+    result = costs.get_charge_dict(
+        start_dt,
+        end_dt,
+        tariff_df,
+        resolution=resolution,
+        # TODO: move these tests to `get_charge_df`
+        # scale_fixed_charges=scale_fixed_charges,
+        # demand_scale_factor=demand_scale_factor,
+    )
     assert result.keys() == expected.keys()
     for key, val in result.items():
-        print(key)
-        print(result[key][0])
-        print(expected[key][0])
         assert (result[key] == expected[key]).all()
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
-    "consumption_estimate, desired_utility, desired_charge_type, expected_cost, "
+    "consumption_estimate, desired_utility, desired_charge_type, "
+    "fixed_scale_factor, expected_cost, "
     "expect_warning, expect_error",
     [
         # single energy charge with flat consumption
@@ -737,6 +1448,7 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             0,
             None,
             None,
+            1,
             pytest.approx(1.2),
             False,
             False,
@@ -750,6 +1462,7 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             0,
             None,
             None,
+            1,
             np.sum(np.arange(96)) * 0.05 / 4,
             False,
             False,
@@ -778,6 +1491,7 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             2400,
             None,
             None,
+            1,
             260,
             False,
             False,
@@ -794,6 +1508,7 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             0,
             None,
             None,
+            1,
             pytest.approx(
                 3.0
             ),  # (48*10 + 48*5) * 0.05 / 4 = 3.0 (negative values treated as magnitude)
@@ -812,6 +1527,7 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             0,
             None,
             None,
+            1,
             None,  # No expected cost
             False,
             True,
@@ -837,6 +1553,7 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             0,
             None,
             None,
+            1,
             pytest.approx(9.0),
             False,
             False,
@@ -871,7 +1588,22 @@ def test_get_charge_dict(start_dt, end_dt, billing_path, resolution, expected):
             0,
             None,
             None,
+            1,
             pytest.approx(2720.68223669),
+            False,
+            False,
+        ),
+        # customer charge prorated by fixed_scale_factor
+        (
+            {"electric_customer_0_20240710_20240731_0": np.array([1000.0])},
+            {ELECTRIC: np.ones(96), GAS: np.ones(96)},
+            "15m",
+            None,
+            0,
+            None,
+            None,
+            2 / 31,
+            pytest.approx(1000.0 * 2 / 31),
             False,
             False,
         ),
@@ -885,6 +1617,7 @@ def test_calculate_cost_np(
     consumption_estimate,
     desired_utility,
     desired_charge_type,
+    fixed_scale_factor,
     expected_cost,
     expect_warning,
     expect_error,
@@ -899,6 +1632,7 @@ def test_calculate_cost_np(
                 consumption_estimate=consumption_estimate,
                 desired_utility=desired_utility,
                 desired_charge_type=desired_charge_type,
+                fixed_scale_factor=fixed_scale_factor,
             )
     elif expect_warning:
         with pytest.warns(UserWarning):
@@ -910,6 +1644,7 @@ def test_calculate_cost_np(
                 consumption_estimate=consumption_estimate,
                 desired_utility=desired_utility,
                 desired_charge_type=desired_charge_type,
+                fixed_scale_factor=fixed_scale_factor,
             )
         assert result == expected_cost
         assert model is None
@@ -922,6 +1657,7 @@ def test_calculate_cost_np(
             consumption_estimate=consumption_estimate,
             desired_utility=desired_utility,
             desired_charge_type=desired_charge_type,
+            fixed_scale_factor=fixed_scale_factor,
         )
         assert result == expected_cost
         assert model is None
@@ -1258,6 +1994,45 @@ def test_calculate_cost_np(
             None,
             None,
             pytest.approx(120.0),
+        ),
+        (
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": np.concatenate(
+                    [np.ones(48) * 0, np.ones(24) * 1, np.ones(24) * 0]
+                ),
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": (
+                    np.concatenate(
+                        [
+                            np.ones(34) * 0,
+                            np.ones(14) * 2,
+                            np.ones(24) * 0,
+                            np.ones(14) * 2,
+                            np.ones(10) * 0,
+                        ]
+                    )
+                ),
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": np.ones(96) * 10,
+            },
+            {ELECTRIC: np.arange(96), GAS: np.arange(96)},
+            "15m",
+            {
+                "electric_demand_peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": cp.Parameter(nonneg=True, value=0),
+                    "cost": 0,
+                },
+                "electric_demand_half-peak-summer_2024-07-10_2024-07-10_0": {
+                    "demand": cp.Parameter(nonneg=True, value=0),
+                    "cost": 0,
+                },
+                "electric_demand_off-peak_2024-07-10_2024-07-10_0": {
+                    "demand": cp.Parameter(nonneg=True, value=0),
+                    "cost": 0,
+                },
+            },
+            0,  # consumption_estimate
+            None,  # desired_utility
+            None,  # desired_charge_type
+            pytest.approx(1191),  # same expected as float-zero version
         ),
     ],
 )
@@ -1807,6 +2582,8 @@ def test_build_pyomo_costing(
             np.float64(4027.79),
             False,
         ),
+        # daily demand should be scaled because this is the inner function
+        # scaling logic should all be handled in the outer `calculate_cost` loop
         (
             np.datetime64("2024-07-10"),  # Summer weekday
             np.datetime64("2024-07-11"),  # Summer weekday
@@ -1816,7 +2593,7 @@ def test_build_pyomo_costing(
             None,
             0,  # consumption_estimate=None (same as default)
             1.1,  # non-default scale factor
-            np.float64(4027.79),  # daily demand charge unscaled
+            np.float64(4430.569),
             False,
         ),
         (
@@ -1850,23 +2627,23 @@ def test_build_pyomo_costing(
             ELECTRIC,
             {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             {
-                "electric_demand_peak-summer_20240309_20240309_0": {
+                "electric_demand-monthly_peak-summer_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-summer_20240309_20240309_0": {
+                "electric_demand-monthly_half-peak-summer_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_off-peak_20240309_20240309_0": {
+                "electric_demand-monthly_off-peak_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-winter1_20240309_20240309_0": {
+                "electric_demand-monthly_half-peak-winter1_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-winter2_20240309_20240309_0": {
+                "electric_demand-monthly_half-peak-winter2_20240309_20240309_0": {
                     "demand": 0,
                     "cost": 0,
                 },
@@ -1883,23 +2660,23 @@ def test_build_pyomo_costing(
             ELECTRIC,
             {ELECTRIC: np.arange(96), GAS: np.arange(96)},
             {
-                "electric_demand_peak-summer_20240710_20240710_0": {
+                "electric_demand-monthly_peak-summer_20240710_20240710_0": {
                     "demand": 7.078810759792355,
                     "cost": 150,
                 },
-                "electric_demand_half-peak-summer_20240710_20240710_0": {
+                "electric_demand-monthly_half-peak-summer_20240710_20240710_0": {
                     "demand": 13.605442176870748,
                     "cost": 80,
                 },
-                "electric_demand_off-peak_20240710_20240710_0": {
+                "electric_demand-monthly_off-peak_20240710_20240710_0": {
                     "demand": 42.253521126760563,
                     "cost": 900,
                 },
-                "electric_demand_half-peak-winter1_20240710_20240710_0": {
+                "electric_demand-monthly_half-peak-winter1_20240710_20240710_0": {
                     "demand": 0,
                     "cost": 0,
                 },
-                "electric_demand_half-peak-winter2_20240710_20240710_0": {
+                "electric_demand-monthly_half-peak-winter2_20240710_20240710_0": {
                     "demand": 0,
                     "cost": 0,
                 },
@@ -2258,9 +3035,7 @@ def test_calculate_export_revenue(
     ],
 )
 def test_get_charge_array_duration(key, expected):
-    from eeco.costs import get_charge_array_duration
-
-    assert get_charge_array_duration(key) == expected
+    assert costs.get_charge_array_duration(key) == expected
 
 
 @pytest.mark.parametrize(
@@ -2946,7 +3721,7 @@ def test_parametrize_rate_data(
                     "variant_name": "exact_keys",
                 }
             ],
-            "electric_demand_peak-summer",
+            "electric_demand-monthly_peak-summer",
             {
                 "variant_name": "exact_keys",
                 "expected_keys": ["original", "exact_keys"],
@@ -3066,7 +3841,6 @@ def test_parametrize_rate_data(
 )
 def test_parametrize_charge_dict(variant_params, key_subset, expected):
     """Test the parametrize_charge_dict function with different variant types."""
-
     rate_data = pd.read_csv(input_dir + "billing_pge.csv")
     start_dt = np.datetime64("2024-07-10")
     end_dt = np.datetime64("2024-07-11")
@@ -3242,6 +4016,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
     "resolution, "
     "decomposition_type, "
     "by_charge_key, "
+    "fixed_scale_factor, "
     "expected_cost, "
     "expected_itemized",
     [
@@ -3252,6 +4027,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             "15m",
             None,
             False,
+            1,
             pytest.approx(1.2),
             {
                 "electric": {
@@ -3280,6 +4056,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             "15m",
             "absolute_value",
             False,
+            1,
             pytest.approx(-1.5),
             {
                 "electric": {
@@ -3324,6 +4101,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             "15m",
             None,
             False,
+            1,
             pytest.approx(2720.68223669),
             {
                 "electric": {
@@ -3347,6 +4125,7 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
             "15m",
             None,
             True,
+            1,
             pytest.approx(1.2),
             {
                 "electric": {
@@ -3365,6 +4144,25 @@ def test_parametrize_rate_data_different_files(billing_file, variant_params):
                 },
             },
         ),
+        # customer charge prorated by fixed_scale_factor
+        (
+            {"electric_customer_0_20240710_20240731_0": np.array([1000.0])},
+            {ELECTRIC: np.ones(96) * 100, GAS: np.ones(96)},
+            "15m",
+            None,
+            False,
+            2 / 31,
+            pytest.approx(1000.0 * 2 / 31),
+            {
+                ELECTRIC: {
+                    "customer": pytest.approx(1000.0 * 2 / 31),
+                    "energy": 0,
+                    "demand": 0,
+                    "export": 0,
+                },
+                GAS: {"customer": 0, "energy": 0, "demand": 0, "export": 0},
+            },
+        ),
     ],
 )
 def test_calculate_itemized_cost_np(
@@ -3373,6 +4171,7 @@ def test_calculate_itemized_cost_np(
     resolution,
     decomposition_type,
     by_charge_key,
+    fixed_scale_factor,
     expected_cost,
     expected_itemized,
 ):
@@ -3385,13 +4184,13 @@ def test_calculate_itemized_cost_np(
         electric_consumption_units=u.kW,
         gas_consumption_units=u.meter**3 / u.day,
         by_charge_key=by_charge_key,
+        fixed_scale_factor=fixed_scale_factor,
     )
 
     total = sum(result["total"].values()) if by_charge_key else result["total"]
     assert total == expected_cost
     for utility in expected_itemized:
         for charge_type in expected_itemized[utility]:
-            print(f"utility: {utility} & charge_type: {charge_type}")
             expected_value = expected_itemized[utility][charge_type]
             actual_value = result[utility][charge_type]
             assert actual_value == expected_value
@@ -3806,7 +4605,6 @@ def test_calculate_itemized_cost_pyo(
 )
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 def test_individual_charge(charge_list, expected_result):
-
     billing_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "data", "input", "billing.csv"
     )
@@ -3820,7 +4618,6 @@ def test_individual_charge(charge_list, expected_result):
         np.datetime64("2024-07-11"),
         tariff_df,
     )
-
     cost, _ = costs.calculate_cost(
         charge_dict,
         {"electric": baseload, "gas": np.zeros_like(baseload)},
@@ -3832,3 +4629,54 @@ def test_individual_charge(charge_list, expected_result):
         model=None,
     )
     assert cost == expected_result
+
+
+@pytest.mark.parametrize(
+    "start_dt, billing_period_starts, prev_dict, expected",
+    [
+        # start_dt in billing_period_starts -> reset to 0
+        (
+            np.datetime64("2024-07-10"),
+            [np.datetime64("2024-07-10")],
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 5.0,
+                    "cost": 5.0,
+                }
+            },
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 3.0,
+                    "cost": 3.0,
+                }
+            },
+        ),
+        # start_dt not in billing_period_starts, multi-day key -> accumulate max
+        (
+            np.datetime64("2024-07-11"),
+            [np.datetime64("2024-07-10")],
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 2.0,
+                    "cost": 2.0,
+                }
+            },
+            {
+                "electric_demand_peak_20240710_20240731_100": {
+                    "demand": 3.0,
+                    "cost": 3.0,
+                }
+            },
+        ),
+    ],
+)
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_get_prev_demand_dict(start_dt, billing_period_starts, prev_dict, expected):
+    charge_dict = {
+        "electric_demand_peak_20240710_20240731_100": np.ones(3),
+    }
+    usage_data = np.array([1.0, 2.0, 3.0])
+    result = costs.get_prev_demand_dict(
+        charge_dict, usage_data, start_dt, billing_period_starts, prev_dict
+    )
+    assert result == expected
