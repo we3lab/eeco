@@ -65,6 +65,8 @@ jobs:
         run: |
           conda install scip ipopt
           python -m pip install --upgrade pip
+          pwd
+          ls
           pip install .[dev]
       - name: Test with pytest
         shell: bash -el {0}
