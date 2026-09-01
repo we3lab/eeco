@@ -1,4 +1,3 @@
-name: Test and Lint
 on:
   pull_request:
     branches: [main]
@@ -34,8 +33,6 @@ jobs:
       - name: Check with black
         run: |
           black --check eeco
-          with:
-            python-version: '3.13'
   test:
     runs-on: ${{ matrix.os-version }}
     needs: [lint]
