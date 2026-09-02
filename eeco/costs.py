@@ -819,6 +819,11 @@ def calculate_demand_cost(
                 )
         else:
             demand_charged = np.array([0])
+            warnings.warn(
+                f"Charge {varstr!r} (limit={limit}) was zeroed out of the expression "
+                "as consumption_estimate and prev_demand do not reach its tier limit",
+                UserWarning,
+            )
     elif ut.check_cvx_type(consumption_data):
         _use_param = consumption_max is None  # True when prev_demand is a cp.Parameter
         if _use_param or consumption_max >= limit:
@@ -838,6 +843,11 @@ def calculate_demand_cost(
                 )
         else:
             demand_charged = np.array([0])
+            warnings.warn(
+                f"Charge {varstr!r} (limit={limit}) was zeroed out of the expression "
+                "as consumption_estimate and prev_demand do not reach its tier limit",
+                UserWarning,
+            )
     else:
         raise ValueError(
             "consumption_data must be of type numpy.ndarray, "
@@ -968,13 +978,49 @@ def calculate_energy_cost(
     elif ut.check_indexed_pyomo_type(consumption_data) or ut.check_cvx_type(
         consumption_data
     ):
-        # For tiered charges, approximate extimated consumption being split evenly
-        # Only necessary if we have a finite next_limit OR if current limit > 0
-        # NOTE: this convex approximation breaks global optimality guarantees
-        if not np.isinf(next_limit) or (not np.isinf(limit) and limit > 0):
+        # private copy of charge array to avoid carrying over zeroed tiered charges
+        charge_array = np.array(charge_array, copy=True)
+        tier_active = not np.isinf(next_limit) or (not np.isinf(limit) and limit > 0)
+
+        if (
+            tier_active
+            and np.isinf(next_limit)
+            and charge_array.size > 0
+            and np.all(charge_array == charge_array[0])
+        ):
+            # A flat top tier is exact in an LP, no relaxation or estimate needed
+            rate = float(charge_array[0])
+            total_expr, model = ut.sum(
+                consumption_data, model=model, varstr=varstr + "_sum"
+            )
+            over_limit, model = ut.max_pos(
+                total_expr / n_per_hour + prev_consumption - limit,
+                model=model,
+                varstr=varstr + "_over_limit",
+            )
+            return rate * over_limit, model
+
+        if tier_active:
+            # Which tier a timestep falls in depends on cumulative consumption.
+            # We approximate this with `consumption_estimate` to fix the tier's
+            # timestep window up front, then zero `charge_array` outside it.
+            # Assume scaler estimates are split evenly.
+            # NOTE: this convex approximation breaks global optimality
+            # guarantees, since the window is only as good as the estimate.
+            # It is needed only for a finite next_limit or an hour-specific top
+            # tier
             if ut.check_nonindexed_python_type(consumption_estimate):
                 consumption_per_timestep = consumption_estimate / n_steps
                 consumption_estimate = np.ones(n_steps) * consumption_per_timestep
+            else:
+                # Attempt to convert the estimate to an array before erroring
+                consumption_estimate = np.asarray(consumption_estimate, dtype=float)
+                if consumption_estimate.shape != (n_steps,):
+                    raise ValueError(
+                        "consumption_estimate must be a scalar or a 1-D array of "
+                        f"length {n_steps} (one value per timestep); got shape "
+                        f"{consumption_estimate.shape}."
+                    )
 
             cumulative_consumption = np.cumsum(consumption_estimate) + prev_consumption
             total_consumption = cumulative_consumption[-1]
@@ -983,6 +1029,12 @@ def calculate_energy_cost(
             # if not found argmax returns 0, but whole charge array should be zeroed
             if (start_idx == 0) and (total_consumption <= float(limit)):
                 charge_array[:] = 0
+                warnings.warn(
+                    f"Charge {varstr!r} (limit={limit}) was zeroed out of "
+                    "the expression as consumption_estimate and "
+                    "prev_consumption do not reach its tier limit",
+                    UserWarning,
+                )
             else:
                 charge_array[:start_idx] = 0  # 0 for charge array before start index
             end_idx = np.argmax(cumulative_consumption > float(next_limit))
