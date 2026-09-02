@@ -7,6 +7,7 @@ import pandas as pd
 import pyomo.environ as pyo
 import datetime
 from eeco import costs
+from eeco import utils as ut
 from eeco.units import u
 from eeco.costs import (
     CHARGE,
@@ -2089,6 +2090,7 @@ test_list = [
         None,
         None,
         pytest.approx(260),
+        None,
     ),
     # demand charge with previous consumption
     (
@@ -2136,6 +2138,7 @@ test_list = [
         None,
         None,
         pytest.approx(138),
+        [24, 28, 96],  # off-peak over full horizon and TOU over smaller scope
     ),
     # demand charge with no previous consumption
     (
@@ -2181,6 +2184,7 @@ test_list = [
         None,
         None,
         pytest.approx(1188),
+        [24, 28, 96],  # off-peak over full horizon and TOU over smaller scope
     ),
     # export charges
     (
@@ -2198,6 +2202,7 @@ test_list = [
         None,
         "absolute_value",
         pytest.approx(-0.3),
+        None,
     ),
     # energy and export charges
     (
@@ -2216,6 +2221,7 @@ test_list = [
         None,
         "absolute_value",
         pytest.approx(0.6 - 0.3),  # 48*1*0.05/4 - 48*1*0.025/4 = 0.6 - 0.3 = 0.3
+        None,
     ),
     # energy charge with charge limit and time-varying consumption estimate
     (
@@ -2243,6 +2249,7 @@ test_list = [
         None,
         None,
         260,
+        None,
     ),
     # energy charge with charge limit and dictionary consumption estimate
     (
@@ -2270,6 +2277,7 @@ test_list = [
         None,
         None,
         260,
+        None,
     ),
     # energy charge with charge limit and dictionary consumption estimate
     (
@@ -2297,6 +2305,7 @@ test_list = [
         None,
         None,
         260,
+        None,
     ),
     # energy charge that won't hit charge limit + time-varying consumption estimate
     (
@@ -2327,6 +2336,7 @@ test_list = [
         None,
         None,
         260,
+        None,
     ),
     # extended format with pre-decomposed variables (imports/exports)
     (
@@ -2351,6 +2361,7 @@ test_list = [
         None,
         None,
         pytest.approx(9.0),
+        None,
     ),
 ]
 
@@ -2359,7 +2370,7 @@ test_list = [
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
     "consumption_estimate, desired_utility, desired_charge_type, "
-    "decomposition_type, expected_cost",
+    "decomposition_type, expected_cost, expected_epigraph_rows",
     test_list,
 )
 def test_calculate_cost_pyo(
@@ -2372,6 +2383,7 @@ def test_calculate_cost_pyo(
     desired_charge_type,
     decomposition_type,
     expected_cost,
+    expected_epigraph_rows,
 ):
     model, consumption_input = setup_pyo_vars_constraints(consumption_data_dict)
 
@@ -2403,7 +2415,7 @@ def test_calculate_cost_pyo(
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
     "consumption_estimate, desired_utility, desired_charge_type, "
-    "decomposition_type, expected_cost",
+    "decomposition_type, expected_cost, expected_epigraph_rows",
     test_list,
 )
 def test_calculate_cost_pyo_non_standard_index(
@@ -2416,6 +2428,7 @@ def test_calculate_cost_pyo_non_standard_index(
     desired_charge_type,
     decomposition_type,
     expected_cost,
+    expected_epigraph_rows,
 ):
     model, consumption_input = setup_pyo_vars_with_non_standard_indexing_constraints(
         consumption_data_dict
@@ -2443,6 +2456,16 @@ def test_calculate_cost_pyo_non_standard_index(
     )
     assert pyo.value(result) == expected_cost
     assert model is not None
+    if expected_epigraph_rows is not None:
+        epigraphs = [
+            component
+            for component in model.component_objects(pyo.Constraint)
+            if component.name.endswith("_max_constraint")
+        ]
+        assert sorted(len(e) for e in epigraphs) == expected_epigraph_rows
+        for epigraph in epigraphs:  # each charge has its own constraint
+            max_var = model.find_component(epigraph.name[: -len("_constraint")])
+            assert max_var.lb == 0  # bound is alternative to max >= 0
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -2783,6 +2806,35 @@ def test_calculate_demand_costs(
         )
     assert result == expected
     assert model is None
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "charge_array, index_values, expected",
+    [
+        # assessed every timestep
+        (np.ones(4), None, [0, 1, 2, 3]),
+        # not every timestep, includes zeros
+        (np.array([0.0, 20.0, 20.0, 0.0]), None, [1, 2]),
+        (np.zeros(4), None, []),
+        # assessed with negative rates
+        (np.array([0.0, -20.0, 0.0, 0.0]), None, [1]),
+        # with a model with index_values
+        (np.array([0.0, 20.0, 20.0, 0.0]), [0, 60, 120, 180], [60, 120]),
+        (np.array([0.0, 20.0, 0.0, 0.0]), [2.0, 4.0, 5.0, 8.0], [4.0]),
+    ],
+)
+def test_get_charge_window(charge_array, index_values, expected):
+    if index_values is None:
+        assert costs.get_charge_window(charge_array) == expected
+        return
+
+    model = pyo.ConcreteModel()
+    model.dummy_t = pyo.Set(initialize=index_values)
+    model.consumption = pyo.Var(model.dummy_t, bounds=(None, None))
+    ut.create_pyomo_model_index_ref(model, model.consumption)
+
+    assert costs.get_charge_window(charge_array, model) == expected
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
