@@ -1,5 +1,6 @@
 """Functions to calculate costs from electricity consumption data."""
 
+import calendar
 import warnings
 import cvxpy as cp
 import numpy as np
@@ -18,6 +19,7 @@ MONTH_START = "month_start"
 MONTH_END = "month_end"
 WEEKDAY_START = "weekday_start"
 WEEKDAY_END = "weekday_end"
+COST = "cost"
 CHARGE = "charge"
 CHARGE_METRIC = "charge (metric)"
 CHARGE_IMPERIAL = "charge (imperial)"
@@ -29,6 +31,8 @@ TYPE = "type"
 NAME = "name"
 PERIOD = "period"
 ASSESSED = "assessed"
+MONTHLY = "monthly"
+DAILY = "daily"
 EFFECTIVE_START_DATE = "effective_start_date"
 EFFECTIVE_END_DATE = "effective_end_date"
 DATETIME = "DateTime"
@@ -42,6 +46,7 @@ CUSTOMER = "customer"
 ENERGY = "energy"
 DEMAND = "demand"
 EXPORT = "export"
+TOTAL = "total"
 
 # Charge tier strings
 PEAK = "peak"
@@ -196,23 +201,118 @@ def add_to_charge_array(charge_dict, key_str, charge_array):
     charge_dict[key_str] = old_charge_array + charge_array
 
 
-def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
+def get_timesteps(start_dt, end_dt, resolution="15m"):
+    """Number of timesteps in the horizon and the corresponding datetime column.
+
+    Parameters
+    ----------
+    start_dt : datetime-like
+        first timestep to be included in the cost analysis.
+        Accepts `datetime.datetime`, `numpy.datetime64`, and ISO-8601 strings
+
+    end_dt : datetime-like
+        end timestep of the cost analysis, exclusive.
+        The last timestep returned is one `resolution` before `end_dt`.
+        Accepts `datetime.datetime`, `numpy.datetime64`, and ISO-8601 strings
+
+    resolution : str
+        granularity of each timestep in string form with default value of "15m"
+
+    Returns
+    -------
+    tuple of (int, pandas.DataFrame)
+        the number of timesteps and a single-column DataFrame of their datetimes
+
+    Warns
+    -----
+    UserWarning
+        when the horizon is not a whole multiple of `resolution`, since the
+        trailing partial timestep is dropped from the returned timeseries but
+        still counted when prorating fixed charges
+    """
+    start_dt = pd.Timestamp(start_dt)
+    end_dt = pd.Timestamp(end_dt)
+    res_binsize_minutes = ut.get_freq_binsize_minutes(resolution)
+
+    binsize = pd.Timedelta(minutes=res_binsize_minutes)
+    if (end_dt - start_dt) % binsize:
+        warnings.warn(
+            f"Horizon {start_dt} to {end_dt} is not a whole multiple of the "
+            f"'{resolution}' resolution. The partial timestep is dropped, "
+            "but the full horizon is still used to prorate fixed charges."
+        )
+
+    ntsteps = int((end_dt - start_dt) / binsize)
+    datetime = pd.DataFrame(
+        pd.date_range(start_dt, periods=ntsteps, freq=binsize),
+        columns=[DATETIME],
+    )
+
+    return ntsteps, datetime
+
+
+def get_billing_period_scale_factor(start_dt, end_dt):
+    """Fraction of a monthly billing period covered by the analysis horizon.
+
+    The horizon's overlap with each calendar month it touches is summed, so
+    horizons spanning several months are handled correctly.
+
+    Parameters
+    ----------
+    start_dt : datetime-like (see :func:`get_timesteps`)
+        first timestep to be included in the cost analysis
+
+    end_dt : datetime-like (see :func:`get_timesteps`)
+        end of the cost analysis, exclusive: the horizon runs up to but does
+        not include `end_dt`
+
+    Returns
+    -------
+    float
+        the horizon's length as a fraction of a monthly billing period
+    """
+    horizon_start = pd.Timestamp(start_dt)
+    horizon_end = pd.Timestamp(end_dt)
+
+    scale_factor = 0.0
+    month_start = horizon_start.normalize().replace(day=1)
+    while month_start < horizon_end:
+        days_in_month = calendar.monthrange(month_start.year, month_start.month)[1]
+        if month_start.month == 12:
+            next_month_start = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            next_month_start = month_start.replace(month=month_start.month + 1)
+
+        overlap = min(horizon_end, next_month_start) - max(horizon_start, month_start)
+        scale_factor += overlap.total_seconds() / (days_in_month * 24 * 60 * 60)
+        month_start = next_month_start
+
+    return scale_factor
+
+
+def get_charge_dict(
+    start_dt,
+    end_dt,
+    rate_data,
+    resolution="15m",
+):
     """Creates a dictionary where the values are charge arrays and keys are of the form
     `{utility}_{type}_{name}_{start_date}_{end_date}_{limit}`
 
     Parameters
     ----------
-    start_dt : datetime.datetime
+    start_dt : datetime-like (see :func:`get_timesteps`)
         first timestep to be included in the cost analysis
 
-    end_dt : datetime.datetime
-        last timestep to be included in the cost analysis
+    end_dt : datetime-like (see :func:`get_timesteps`)
+        end of the cost analysis, exclusive: the horizon runs up to but does
+        not include `end_dt`
 
     rate_data : pandas.DataFrame
         tariff data with required columns `utility`, `type`, `basic_charge_limit`,
         `name`, `month_start`, `month_end`, `weekday_start`, `weekday_end`,
-        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`,
-        `effective_start_date`, and `effective_end_date`
+        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`
+        (default "monthly"), `effective_start_date`, and `effective_end_date`
 
     resolution : str
         granularity of each timestep in string form with default value of "15m"
@@ -224,30 +324,12 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
     """
     charge_dict = {}
 
+    # datetime.datetime and numpy.datetime64 inputs follow pandas code path
+    start_dt = pd.Timestamp(start_dt)
+    end_dt = pd.Timestamp(end_dt)
+
     # Get the number of timesteps in a day (according to charge resolution)
-    res_binsize_minutes = ut.get_freq_binsize_minutes(resolution)
-    if isinstance(start_dt, dt.datetime) or isinstance(end_dt, dt.datetime):
-        ntsteps = int((end_dt - start_dt) / dt.timedelta(minutes=res_binsize_minutes))
-        datetime = pd.DataFrame(
-            np.array(
-                [
-                    start_dt + dt.timedelta(minutes=i * res_binsize_minutes)
-                    for i in range(ntsteps)
-                ]
-            ),
-            columns=[DATETIME],
-        )
-    else:
-        ntsteps = int((end_dt - start_dt) / np.timedelta64(res_binsize_minutes, "m"))
-        datetime = pd.DataFrame(
-            np.array(
-                [
-                    start_dt + np.timedelta64(i * res_binsize_minutes, "m")
-                    for i in range(ntsteps)
-                ]
-            ),
-            columns=[DATETIME],
-        )
+    ntsteps, datetime = get_timesteps(start_dt, end_dt, resolution)
 
     for utility in [GAS, ELECTRIC]:
         for charge_type in [CUSTOMER, ENERGY, DEMAND, EXPORT]:
@@ -265,14 +347,9 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
             except KeyError:
                 # repeat start datetime for every charge
                 effective_starts = pd.Series([start_dt]).repeat(len(charges))
-                if isinstance(end_dt, dt.datetime):
-                    effective_ends = pd.Series([end_dt - dt.timedelta(days=1)]).repeat(
-                        len(charges)
-                    )
-                else:
-                    effective_ends = pd.Series(
-                        [end_dt - np.timedelta64(1, "D")]
-                    ).repeat(len(charges))
+                effective_ends = pd.Series([end_dt - dt.timedelta(days=1)]).repeat(
+                    len(charges)
+                )
 
             # numpy.unique does not work on datetimes so this is a workaround
             starts_ends = []
@@ -315,8 +392,10 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
 
                         try:
                             assessed = charge[ASSESSED]
+                            if pd.isna(assessed):
+                                assessed = MONTHLY
                         except KeyError:
-                            assessed = "monthly"
+                            assessed = MONTHLY
 
                         if charge_type == CUSTOMER:
                             try:
@@ -339,24 +418,42 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                 str(int(limit)),
                             )
                             add_to_charge_array(charge_dict, key_str, charge_array)
-                        elif charge_type == DEMAND and assessed == "daily":
-                            for day in range((end - start).days + 1):
-                                new_start = start + dt.timedelta(days=day)
-                                new_end = new_start + dt.timedelta(days=1)
+                        # TODO: implicit dependency on `default_varstr_alias_func`
+                        # which we should brainstorm how to remove
+                        elif charge_type == DEMAND:
+                            if assessed == DAILY:
+                                for day in range((end - start).days + 1):
+                                    new_start = start + dt.timedelta(days=day)
+                                    new_end = new_start + dt.timedelta(days=1)
+                                    charge_array = create_charge_array(
+                                        charge,
+                                        datetime,
+                                        new_start,
+                                        new_end,
+                                        utility=utility,
+                                    )
+                                    key_str = default_varstr_alias_func(
+                                        utility,
+                                        charge_type + "-" + assessed,
+                                        name,
+                                        new_start.strftime("%Y%m%d"),
+                                        new_start.strftime("%Y%m%d"),
+                                        str(int(limit)),
+                                    )
+                                    add_to_charge_array(
+                                        charge_dict, key_str, charge_array
+                                    )
+                            else:
                                 charge_array = create_charge_array(
-                                    charge,
-                                    datetime,
-                                    new_start,
-                                    new_end,
-                                    utility=utility,
+                                    charge, datetime, start, new_end, utility=utility
                                 )
                                 key_str = default_varstr_alias_func(
                                     utility,
-                                    charge_type,
+                                    charge_type + "-" + assessed,
                                     name,
-                                    new_start.strftime("%Y%m%d"),
-                                    new_start.strftime("%Y%m%d"),
-                                    str(limit),
+                                    start.strftime("%Y%m%d"),
+                                    end.strftime("%Y%m%d"),
+                                    str(int(limit)),
                                 )
                                 add_to_charge_array(charge_dict, key_str, charge_array)
                         else:
@@ -372,6 +469,7 @@ def get_charge_dict(start_dt, end_dt, rate_data, resolution="15m"):
                                 str(int(limit)),
                             )
                             add_to_charge_array(charge_dict, key_str, charge_array)
+
     return charge_dict
 
 
@@ -389,69 +487,52 @@ def get_charge_df(
 
     Parameters
     ----------
-    start_dt : datetime.datetime
+    start_dt : datetime-like (see :func:`get_timesteps`)
         first timestep to be included in the cost analysis
 
-    end_dt : datetime.datetime
-        last timestep to be included in the cost analysis
+    end_dt : datetime-like (see :func:`get_timesteps`)
+        end of the cost analysis, exclusive: the horizon runs up to but does
+        not include `end_dt`
 
     rate_data : pandas.DataFrame
         tariff data with required columns `utility`, `type`, `basic_charge_limit`,
         `name`, `month_start`, `month_end`, `weekday_start`, `weekday_end`,
-        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`,
-        `effective_start_date`, and `effective_end_date`
+        `hour_start`, `hour_end`, and `charge` and optional columns `assessed`
+        (default "monthly"), `effective_start_date`, and `effective_end_date`
 
     resolution : str
         granularity of each timestep in string form with default value of "15m"
 
     keep_fixed_charges : bool
-        If True, fixed charges will included.
-        If False, fixed charges will be dropped from the output. Default is False.
+        Whether to discard fixed (i.e., customer) charges or keep them.
+        Default is True, which returns fixed (and all other) charges.
 
     scale_fixed_charges : bool
         If True, fixed charges will be divided amongst all time steps and scaled
-        by timesteps in the month. If False, they will not be scaled
-        but included in the first timestep only. Default is True.
+        by the horizon's fraction of a billing period. If False, they will not be
+        scaled but included in the first timestep only. Default is True.
 
     scale_demand_charges : bool
-        If True, demand charges will be scaled by the number of timesteps in the month.
-        If False, they will not be scaled. Default is False.
 
     Returns
     -------
     pandas.DataFrame
         DataFrame of charge arrays
     """
-    # get the number of timesteps in a day (according to charge resolution)
-    res_binsize_minutes = ut.get_freq_binsize_minutes(resolution)
-
-    # get the charge dictionary
-    charge_dict = get_charge_dict(start_dt, end_dt, rate_data, resolution=resolution)
-
-    if isinstance(start_dt, dt.datetime) or isinstance(end_dt, dt.datetime):
-        ntsteps = int((end_dt - start_dt) / dt.timedelta(minutes=res_binsize_minutes))
-        datetime = pd.DataFrame(
-            np.array(
-                [
-                    start_dt + dt.timedelta(minutes=i * res_binsize_minutes)
-                    for i in range(ntsteps)
-                ]
-            ),
-            columns=[DATETIME],
-        )
+    # get the datetime array and charge dictionary
+    ntsteps, datetime = get_timesteps(start_dt, end_dt, resolution)
+    charge_dict = get_charge_dict(
+        start_dt,
+        end_dt,
+        rate_data,
+        resolution=resolution,
+    )
+    if scale_fixed_charges or scale_demand_charges:
+        scale_factor = get_billing_period_scale_factor(start_dt, end_dt)
     else:
-        ntsteps = int((end_dt - start_dt) / np.timedelta64(res_binsize_minutes, "m"))
-        datetime = pd.DataFrame(
-            np.array(
-                [
-                    start_dt + np.timedelta64(i * res_binsize_minutes, "m")
-                    for i in range(ntsteps)
-                ]
-            ),
-            columns=[DATETIME],
-        )
+        scale_factor = 1.0
 
-    # first find the value of the fixed charge
+    # find the value of the fixed charge
     fixed_charge_dict = {
         key: value
         for key, value in charge_dict.items()
@@ -460,24 +541,12 @@ def get_charge_df(
         )
     }
 
-    if scale_fixed_charges or scale_demand_charges:
-        # calculate the scale factor
-        month = start_dt.month
-        year = end_dt.year
-        mins_in_month = (
-            (dt.date(year, month + 1, 1) - dt.date(year, month, 1)).days * 24 * 60
-        )
-        bins_in_month = mins_in_month / res_binsize_minutes
-        scale_factor = ntsteps / bins_in_month
-    else:
-        scale_factor = 1.0
-
     if keep_fixed_charges:
         # replace the fixed charge in charge_dict with its time-averaged value
         for key, value in fixed_charge_dict.items():
             if scale_fixed_charges:
                 arr = np.ones(ntsteps) * value[0] * scale_factor / ntsteps
-            else:
+            else:  # or put the whole charge in first entry with trailing zeros
                 arr = np.zeros(ntsteps)
                 arr[0] = value[0]
 
@@ -488,19 +557,75 @@ def get_charge_df(
             del charge_dict[key]
 
     if scale_demand_charges:
+        # TODO: implicit dependency on `default_varstr_alias_func`
+        # which we should brainstorm how to remove
         demand_charge_dict = {
-            key: value for key, value in charge_dict.items() if "demand" in key
+            key: value
+            for key, value in charge_dict.items()
+            if (DEMAND in key) and (DAILY not in key)
         }
         for key, value in demand_charge_dict.items():
             charge_dict[key] = value * scale_factor
 
     charge_df = pd.DataFrame(charge_dict)
-
     charge_df = pd.concat([datetime, charge_df], axis=1)
-
     # remove all zero columns
     charge_df = charge_df.loc[:, (charge_df != 0).any(axis=0)]
     return charge_df
+
+
+def get_prev_demand_dict(
+    charge_dict,
+    usage_data,
+    start_dt,
+    billing_period_starts,
+    prev_dict=None,
+):
+    """Compute a new or updated previous max demand charge dict for use in costing.
+
+    For each charge in charge_dict, resets the tracked maximum to zero at the
+    start of the relevant timeframe. Then accumulates the running maximum.
+
+    Parameters
+    ----------
+    charge_dict : dict
+        Maps charge key strings to charge arrays (numpy arrays or cp.Expression).
+
+    usage_data : numpy.ndarray
+        Array of consumption values for the current timestep window.
+
+    start_dt : datetime-like (see :func:`get_timesteps`)
+        Start datetime of the current optimization window.
+
+    billing_period_starts : list
+        List of datetimes marking the start of each billing period.
+
+    prev_dict : dict, optional
+        Existing previous-max dict to update. Defaults to empty dict.
+
+    Returns
+    -------
+    dict
+        Mapping of charge key to {"demand": running peak demand,
+        "cost": running max of usage * charge}
+    """
+    prev_dict = dict(prev_dict or {})
+    usage_data = np.asarray(usage_data, dtype=float)
+    for charge_name, charge_array in charge_dict.items():
+        entry = prev_dict.get(charge_name) or {DEMAND: 0.0, COST: 0.0}
+        if start_dt in billing_period_starts or (
+            get_charge_array_duration(charge_name) == 1
+            and pd.Timestamp(start_dt).hour == 0
+        ):
+            entry = {DEMAND: 0.0, COST: 0.0}
+        charge_array = np.asarray(charge_array, dtype=float)
+        active = charge_array > 0
+        window_demand = float(np.max(usage_data[active])) if active.any() else 0.0
+        prev_dict[charge_name] = {
+            DEMAND: max(entry[DEMAND], window_demand),
+            COST: max(entry[COST], float(np.max(usage_data * charge_array))),
+        }
+    return prev_dict
 
 
 def default_varstr_alias_func(
@@ -521,7 +646,7 @@ def default_varstr_alias_func(
     name : str
         The name of the period for this charge (e.g., 'all-day' or 'on-peak')
 
-    start_date
+    start_date : str
         The inclusive start date for this charge
 
     end_date : str
@@ -1151,6 +1276,7 @@ def calculate_cost(
     desired_utility=None,
     desired_charge_type=None,
     demand_scale_factor=1,
+    fixed_scale_factor=1,
     model=None,
     decomposition_type=None,
     big_m=1e6,
@@ -1232,6 +1358,12 @@ def calculate_cost(
         Applied to monthly charges where end_date - start_date > 1 day.
         Default is 1
 
+    fixed_scale_factor : float
+        Optional factor for scaling fixed (customer) charges relative to energy
+        charges when the optimization/simulation period is not a full billing
+        cycle. Applied to the whole customer charge, which is otherwise billed
+        in full regardless of horizon length. Default is 1
+
     model : pyomo.Model
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
@@ -1298,12 +1430,23 @@ def calculate_cost(
     )
 
     for key, charge_array in charge_dict.items():
-        utility, charge_type, name, eff_start, eff_end, limit_str = key.split("_")
+        utility, full_charge_type, name, eff_start, eff_end, limit_str = key.split("_")
         varstr = ut.sanitize_varstr(
             varstr_alias_func(
-                utility, charge_type, name, eff_start, eff_end, limit_str
+                utility, full_charge_type, name, eff_start, eff_end, limit_str
             )  # noqa: E501
         )
+
+        # TODO: create a list of valid `assessed` periods to loop through
+        if DAILY in full_charge_type:
+            charge_type = full_charge_type.replace(DAILY, "").replace("-", "")
+            assessed = DAILY
+        elif MONTHLY in full_charge_type:
+            charge_type = full_charge_type.replace(MONTHLY, "").replace("-", "")
+            assessed = MONTHLY
+        else:
+            charge_type = full_charge_type
+            assessed = MONTHLY
 
         # if we want itemized costs skip irrelvant portions of the bill
         if (desired_utility and utility not in desired_utility) or (
@@ -1312,17 +1455,16 @@ def calculate_cost(
             continue
 
         charge_limit = int(limit_str)
-        key_substr = "_".join([utility, charge_type, name, eff_start, eff_end])
+        key_substr = "_".join([utility, full_charge_type, name, eff_start, eff_end])
         next_limit = get_next_limit(key_substr, charge_limit, charge_dict.keys())
 
-        # Only apply demand_scale_factor if charge spans more than one day
-        charge_duration_days = get_charge_array_duration(key)
-        effective_scale_factor = demand_scale_factor if charge_duration_days > 1 else 1
+        # Only apply demand_scale_factor if charge is assessed monthly
+        effective_scale_factor = demand_scale_factor if assessed is MONTHLY else 1
 
         if charge_type == DEMAND:
             if prev_demand_dict is not None:
                 prev_demand = prev_demand_dict[key][DEMAND]
-                prev_demand_cost = prev_demand_dict[key]["cost"]
+                prev_demand_cost = prev_demand_dict[key][COST]
             else:
                 prev_demand = 0
                 prev_demand_cost = 0
@@ -1397,7 +1539,7 @@ def calculate_cost(
             )
             cost -= new_cost
         elif charge_type == CUSTOMER:
-            cost += charge_array.sum()
+            cost += charge_array.sum() * fixed_scale_factor
         else:
             raise ValueError("Invalid charge_type: " + charge_type)
 
@@ -1566,6 +1708,7 @@ def calculate_itemized_cost(
     consumption_estimate=0,
     desired_utility=None,
     demand_scale_factor=1,
+    fixed_scale_factor=1,
     model=None,
     decomposition_type=None,
     big_m=1e6,
@@ -1625,6 +1768,12 @@ def calculate_itemized_cost(
         when the optimization/simulation period is not a full billing cycle.
         Applied to monthly charges where end_date - start_date > 1 day.
         Default is 1
+
+    fixed_scale_factor : float
+        Optional factor for scaling fixed (customer) charges relative to energy
+        charges when the optimization/simulation period is not a full billing
+        cycle. Applied to the whole customer charge, which is otherwise billed
+        in full regardless of horizon length. Default is 1
 
     model : pyomo.Model
         The model object associated with the problem.
@@ -1719,6 +1868,7 @@ def calculate_itemized_cost(
                     desired_utility=utility,
                     desired_charge_type=charge_type,
                     demand_scale_factor=demand_scale_factor,
+                    fixed_scale_factor=fixed_scale_factor,
                     model=model,
                     varstr_alias_func=varstr_alias_func,
                 )
@@ -1728,28 +1878,26 @@ def calculate_itemized_cost(
                     results_dict[utility][charge_type] = cost
 
         if by_charge_key:
-            results_dict[utility]["total"] = {}
+            results_dict[utility][TOTAL] = {}
             for charge_type in charge_types:
                 for charge_key, cost in results_dict[utility][charge_type].items():
-                    results_dict[utility]["total"][charge_key] = (
-                        results_dict[utility]["total"].get(charge_key, 0) + cost
+                    results_dict[utility][TOTAL][charge_key] = (
+                        results_dict[utility][TOTAL].get(charge_key, 0) + cost
                     )
         else:
-            results_dict[utility]["total"] = sum(
+            results_dict[utility][TOTAL] = sum(
                 results_dict[utility][charge_type] for charge_type in charge_types
             )
 
     if by_charge_key:
-        results_dict["total"] = {}
+        results_dict[TOTAL] = {}
         for utility in utilities:
-            for charge_key, cost in results_dict[utility]["total"].items():
-                results_dict["total"][charge_key] = (
-                    results_dict["total"].get(charge_key, 0) + cost
+            for charge_key, cost in results_dict[utility][TOTAL].items():
+                results_dict[TOTAL][charge_key] = (
+                    results_dict[TOTAL].get(charge_key, 0) + cost
                 )
     else:
-        results_dict["total"] = sum(
-            results_dict[utility]["total"] for utility in utilities
-        )
+        results_dict[TOTAL] = sum(results_dict[utility][TOTAL] for utility in utilities)
 
     return results_dict, model_objects
 
@@ -2225,11 +2373,12 @@ def parametrize_charge_dict(start_dt, end_dt, rate_data, variants=None):
 
     Parameters
     ----------
-    start_dt : datetime.datetime
+    start_dt : datetime-like (see :func:`get_timesteps`)
         first timestep to be included in the cost analysis
 
-    end_dt : datetime.datetime
-        last timestep to be included in the cost analysis
+    end_dt : datetime-like (see :func:`get_timesteps`)
+        end of the cost analysis, exclusive: the horizon runs up to but does
+        not include `end_dt`
 
     rate_data : pandas.DataFrame
         tariff data with required columns
