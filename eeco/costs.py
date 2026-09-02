@@ -574,6 +574,30 @@ def get_charge_df(
     return charge_df
 
 
+def get_charge_window(charge_array, model=None):
+    """Timesteps at which a charge is actually assessed and nonzero.
+
+    Parameters
+    ----------
+    charge_array : numpy.ndarray
+        Array of charges in $/kWh, $/kW, $/therm, or $/m3
+
+    model : pyomo.environ.Model
+        The model object associated with the problem. Default is None, in which
+        case positions into `charge_array` are returned rather than index values.
+
+    Returns
+    -------
+    list
+        Positions into `charge_array` where the charge is nonzero, or the
+        corresponding `model._var_index` values when a Pyomo `model` is given
+    """
+    positions = np.nonzero(np.asarray(charge_array, dtype=float).ravel())[0]
+    if model is None or not hasattr(model, "_var_index"):
+        return [int(position) for position in positions]
+    return [model._var_index[position] for position in positions]
+
+
 def get_prev_demand_dict(
     charge_dict,
     usage_data,
@@ -619,8 +643,8 @@ def get_prev_demand_dict(
         ):
             entry = {DEMAND: 0.0, COST: 0.0}
         charge_array = np.asarray(charge_array, dtype=float)
-        active = charge_array > 0
-        window_demand = float(np.max(usage_data[active])) if active.any() else 0.0
+        active = get_charge_window(charge_array)
+        window_demand = float(np.max(usage_data[active])) if active else 0.0
         prev_dict[charge_name] = {
             DEMAND: max(entry[DEMAND], window_demand),
             COST: max(entry[COST], float(np.max(usage_data * charge_array))),
@@ -859,7 +883,16 @@ def calculate_demand_cost(
         max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
         return max_pos_val * scale_factor, max_pos_model
     else:
-        max_var, model = ut.max(demand_charged, model=model, varstr=varstr + "_max")
+        # Skipping unassessed timesteps drops rows that enforced `_max >= 0`
+        # A `lower_bound` prevents negative values while keeping `_max`
+        max_var, model = ut.max(
+            demand_charged,
+            model=model,
+            varstr=varstr + "_max",
+            index_set=get_charge_window(charge_array, model),
+            lower_bound=0,
+            initialize=0,
+        )
         max_pos_val, max_pos_model = ut.max_pos(
             max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
         )

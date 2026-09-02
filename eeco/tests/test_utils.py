@@ -129,14 +129,30 @@ def test_multiply_pyo(consumption_data, varstr1, varstr2, time_set, expected):
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "consumption_data, varstr, expected",
+    "consumption_data, varstr, index_set, lower_bound, expected",
     [
-        ({"electric": np.ones(96) * 100, "gas": np.ones(96)}, "electric", 100),
-        ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", 95),
-        ({"electric": np.arange(96), "gas": np.ones(96)}, "gas", 1),
+        (
+            {"electric": np.ones(96) * 100, "gas": np.ones(96)},
+            "electric",
+            None,
+            None,
+            100,
+        ),
+        ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", None, None, 95),
+        ({"electric": np.arange(96), "gas": np.ones(96)}, "gas", None, None, 1),
+        # a subset index_set only sees the timesteps it is given
+        (
+            {"electric": np.arange(96), "gas": np.ones(96)},
+            "electric",
+            range(10),
+            None,
+            9,
+        ),
+        # a lower_bound below the true maximum leaves the result unchanged
+        ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", None, 0, 95),
     ],
 )
-def test_max_pyo(consumption_data, varstr, expected):
+def test_max_pyo(consumption_data, varstr, index_set, lower_bound, expected):
     model = pyo.ConcreteModel()
     model.T = len(consumption_data["electric"])
     model.t = range(model.T)
@@ -157,7 +173,13 @@ def test_max_pyo(consumption_data, varstr, expected):
     var = getattr(model, varstr)
 
     ut.create_pyomo_model_index_ref(model, var)
-    result, model = ut.max(var, model=model, varstr="test")
+    result, model = ut.max(
+        var,
+        model=model,
+        varstr="test",
+        index_set=index_set,
+        lower_bound=lower_bound,
+    )
 
     model.objective = pyo.Objective(expr=0)
     solver = pyo.SolverFactory("scip")
