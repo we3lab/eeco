@@ -150,10 +150,44 @@ def test_multiply_pyo(consumption_data, varstr1, varstr2, time_set, expected):
         ),
         # a lower_bound below the true maximum leaves the result unchanged
         ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", None, 0, 95),
+        # scalar consumption estimates
+        ({"electric": 45.0, "gas": -10.0}, "electric", None, None, 45.0),
+        # scalar consumption estimates with a lower_bound
+        ({"electric": 45.0, "gas": -10.0}, "electric", None, 100, 100.0),
     ],
 )
 def test_max_pyo(consumption_data, varstr, index_set, lower_bound, expected):
     model = pyo.ConcreteModel()
+
+    if isinstance(consumption_data["electric"], (int, float)):
+        # LinearExpression case
+        for key, val in consumption_data.items():
+            model.add_component(key, pyo.Var(initialize=0))
+
+        @model.Constraint()
+        def electric_scalar_constraint(m):
+            return consumption_data["electric"] == m.electric
+
+        @model.Constraint()
+        def gas_scalar_constraint(m):
+            return consumption_data["gas"] == m.gas
+
+        var = getattr(model, varstr)
+        ut.create_pyomo_model_index_ref(model, var)
+
+        result, model = ut.max(
+            var - 0,  # like max_var - prev_demand_cost
+            model=model,
+            varstr="test",
+            index_set=index_set,
+            lower_bound=lower_bound,
+        )
+        model.objective = pyo.Objective(expr=0)
+        pyo.SolverFactory("scip").solve(model)
+        assert pyo.value(result) == expected
+        assert model is not None
+        return
+
     model.T = len(consumption_data["electric"])
     model.t = range(model.T)
     pyo_vars = {}
