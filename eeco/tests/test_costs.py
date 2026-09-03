@@ -212,7 +212,7 @@ def solve_pyo_problem(
     """Helper function to solve Pyomo optimization problem."""
     model.obj = pyo.Objective(expr=objective)
 
-    if decomposition_type is not None:  # Nonlinear when decomposition_type used
+    if decomposition_type == "absolute_value":  # Nonlinear due to abs() constraint
         solver = pyo.SolverFactory("ipopt")
     else:  # scip otherwise
         solver = pyo.SolverFactory("scip")
@@ -4176,7 +4176,7 @@ def test_calculate_itemized_cost_np(
     expected_itemized,
 ):
     """Test calculate_itemized_cost with and without decomposition_type."""
-    result, model = costs.calculate_itemized_cost(
+    result, _ = costs.calculate_itemized_cost(
         charge_dict,
         consumption_data_dict,
         resolution=resolution,
@@ -4300,7 +4300,7 @@ def test_calculate_itemized_cost_cvx(
                 by_charge_key=by_charge_key,
             )
     else:
-        result, model = costs.calculate_itemized_cost(
+        result, _ = costs.calculate_itemized_cost(
             charge_dict,
             cvx_vars,
             resolution=resolution,
@@ -4483,7 +4483,7 @@ def test_calculate_itemized_cost_cvx(
                 },
             },
         ),
-        # `binary_variable` for `decomposition_type` should raise `NotImplementedError`
+        # binary_big_M decomposition (MILP)
         (
             {
                 "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
@@ -4494,13 +4494,26 @@ def test_calculate_itemized_cost_cvx(
                 GAS: np.ones(96),
             },
             "15m",
-            "binary_variable",
+            "binary_big_M",
             240,
             None,
             None,
             False,
-            None,  # No expected cost - should raise NotImplementedError
-            None,  # No expected itemized - should raise NotImplementedError
+            pytest.approx(6.0 - 1.5),  # 48*10*0.05/4 - 48*5*0.025/4 = 6.0 - 1.5 = 4.5
+            {
+                "electric": {
+                    "energy": pytest.approx(6.0),  # 48*10*0.05/4 = 6.0
+                    "export": pytest.approx(-1.5),  # -48*5*0.025/4 = 1.5
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
         ),
         # by_charge_key=True
         (
@@ -4559,39 +4572,33 @@ def test_calculate_itemized_cost_pyo(
     if gas_consumption_units is not None:
         kwargs["gas_consumption_units"] = gas_consumption_units
 
-    if decomposition_type == "binary_variable":
-        with pytest.raises(NotImplementedError):
-            result, model = costs.calculate_itemized_cost(
-                charge_dict, pyo_vars, **kwargs
-            )
-    else:
-        result, model = costs.calculate_itemized_cost(charge_dict, pyo_vars, **kwargs)
-        total_expr = sum(result["total"].values()) if by_charge_key else result["total"]
-        solve_pyo_problem(
-            model,
-            total_expr,
-            decomposition_type,
-            charge_dict,
-            consumption_data_dict,
-            by_charge_key,
-        )
+    result, model = costs.calculate_itemized_cost(charge_dict, pyo_vars, **kwargs)
+    total_expr = sum(result["total"].values()) if by_charge_key else result["total"]
+    solve_pyo_problem(
+        model,
+        total_expr,
+        decomposition_type,
+        charge_dict,
+        consumption_data_dict,
+        by_charge_key,
+    )
 
-        total_value = (
-            sum(pyo.value(v) for v in result["total"].values())
-            if by_charge_key
-            else pyo.value(result["total"])
-        )
-        assert total_value == expected_cost
-        for utility in expected_itemized:
-            for charge_type in expected_itemized[utility]:
-                expected_value = expected_itemized[utility][charge_type]
-                actual_value = result[utility][charge_type]
-                if by_charge_key:
-                    # Compare pyo.value for each key
-                    actual_value = {k: pyo.value(v) for k, v in actual_value.items()}
-                    assert actual_value == expected_value
-                else:
-                    assert pyo.value(actual_value) == expected_value
+    total_value = (
+        sum(pyo.value(v) for v in result["total"].values())
+        if by_charge_key
+        else pyo.value(result["total"])
+    )
+    assert total_value == expected_cost
+    for utility in expected_itemized:
+        for charge_type in expected_itemized[utility]:
+            expected_value = expected_itemized[utility][charge_type]
+            actual_value = result[utility][charge_type]
+            if by_charge_key:
+                # Compare pyo.value for each key
+                actual_value = {k: pyo.value(v) for k, v in actual_value.items()}
+                assert actual_value == expected_value
+            else:
+                assert pyo.value(actual_value) == expected_value
 
 
 @pytest.mark.parametrize(

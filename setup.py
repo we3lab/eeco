@@ -6,6 +6,7 @@ with open("README.rst") as readme_file:
 setup_requirements = []
 
 test_requirements = [
+    "pyscipopt>=5.0.0", # for SCIP with cvxpy
     "black>=22.3.0",
     "flake8>=4.0.0",
     "codecov>=2.1.4",

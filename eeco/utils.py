@@ -451,11 +451,168 @@ def get_decomposed_var_names(utility):
     return f"{utility}_positive", f"{utility}_negative"
 
 
+def _decompose_binary_cvx(expression, big_m=1e6):
+    """Decompose CVXPY expression using binary variable method with Big-M.
+
+    Creates a mixed-integer program (MIP) where a binary variable indicates
+    whether we are importing (1) or exporting (0) at each timestep.
+    Requires a MIP solver (e.g., Gurobi, MOSEK, SCIP).
+
+    Parameters
+    ----------
+    expression : cvxpy.Expression
+        CVXPY expression representing net consumption
+    big_m : float, optional
+        Big-M value for constraints. Default is 1e6.
+
+    Returns
+    -------
+    tuple
+        (positive_var, negative_var, constraints) where constraints is a list
+        of CVXPY constraints that must be added to the problem
+    """
+    n = expression.shape[0] if hasattr(expression, "shape") else 1
+
+    # Binary variable: 1 = importing, 0 = exporting
+    is_importing = cp.Variable(n, boolean=True)
+
+    # Import/export variables (non-negative)
+    positive_var = cp.Variable(n, nonneg=True)
+    negative_var = cp.Variable(n, nonneg=True)
+
+    # Constraints for binary decomposition
+    constraints = [
+        # Decomposition balance: expression = imports - exports
+        expression == positive_var - negative_var,
+        # Big-M: imports <= big_m * is_importing
+        positive_var <= big_m * is_importing,
+        # Big-M: exports <= big_m * (1 - is_importing)
+        negative_var <= big_m * (1 - is_importing),
+    ]
+
+    return positive_var, negative_var, constraints
+
+
+def _decompose_absolute_value_pyo(expression, model, varstr):
+    """Create Pyomo vars and add absolute value specific constraints.
+
+    Uses max_pos constraints and magnitude constraint with abs().
+    Creates a nonlinear problem.
+
+    Parameters
+    ----------
+    expression : pyomo.environ.Var or pyomo.environ.Param
+        Pyomo variable representing net consumption
+    model : pyomo.environ.Model
+        The Pyomo model object
+    varstr : str
+        Name prefix for created variables
+
+    Returns
+    -------
+    tuple
+        (positive_var, negative_var, model)
+    """
+    pos_name, neg_name = get_decomposed_var_names(varstr)
+    positive_var, model = max_pos(expression, model, pos_name)
+
+    # Create negative expression since pyomo won't take -expression directly
+    def negative_rule(model, t):
+        return -expression[t]
+
+    negative_expr = pyo.Expression(model._var_index, rule=negative_rule)
+    model.add_component(f"{varstr}_negative_expr", negative_expr)
+    negative_var, model = max_pos(negative_expr, model, neg_name)
+
+    # Add constraint to ensure positive_var + negative_var = |expression|
+    # This prevents both variables becoming larger due to artificial arbitrage
+    def magnitude_rule(model, t):
+        return positive_var[t] + negative_var[t] == abs(expression[t])
+
+    model.add_component(
+        f"{varstr}_magnitude_constraint",
+        pyo.Constraint(model._var_index, rule=magnitude_rule),
+    )
+
+    return positive_var, negative_var, model
+
+
+def _decompose_binary_pyo(expression, model, varstr, big_m=1e6):
+    """Create Pyomo vars and add binary/Big-M specific constraints.
+
+    Creates a MILP where a binary variable indicates import (1) or export (0).
+
+    Parameters
+    ----------
+    expression : pyomo.environ.Var or pyomo.environ.Param
+        Pyomo variable representing net consumption
+    model : pyomo.environ.Model
+        The Pyomo model object
+    varstr : str
+        Name prefix for created variables
+    big_m : float, optional
+        Big-M value for constraints. Default is 1e6.
+
+    Returns
+    -------
+    tuple
+        (positive_var, negative_var, model)
+    """
+    pos_name, neg_name = get_decomposed_var_names(varstr)
+
+    # Binary variable: 1 = importing, 0 = exporting
+    binary_name = f"{varstr}_is_importing"
+    model.add_component(
+        binary_name,
+        pyo.Var(model._var_index, within=pyo.Binary, initialize=1),
+    )
+    binary_var = model.find_component(binary_name)
+
+    # Import variable (positive consumption)
+    model.add_component(
+        pos_name,
+        pyo.Var(model._var_index, bounds=(0, None), initialize=0),
+    )
+    positive_var = model.find_component(pos_name)
+
+    # Export variable (magnitude of negative consumption, stored as positive)
+    model.add_component(
+        neg_name,
+        pyo.Var(model._var_index, bounds=(0, None), initialize=0),
+    )
+    negative_var = model.find_component(neg_name)
+
+    # Big-M constraints to enforce mutual exclusivity:
+    # If binary=1: imports can be positive, exports must be 0
+    # If binary=0: imports must be 0, exports can be positive
+
+    # Constraint: imports <= big_m * binary (imports=0 when binary=0)
+    def import_bigm_rule(model, t):
+        return positive_var[t] <= big_m * binary_var[t]
+
+    model.add_component(
+        f"{varstr}_import_bigm_constraint",
+        pyo.Constraint(model._var_index, rule=import_bigm_rule),
+    )
+
+    # Constraint: exports <= big_m * (1 - binary) (exports=0 when binary=1)
+    def export_bigm_rule(model, t):
+        return negative_var[t] <= big_m * (1 - binary_var[t])
+
+    model.add_component(
+        f"{varstr}_export_bigm_constraint",
+        pyo.Constraint(model._var_index, rule=export_bigm_rule),
+    )
+
+    return positive_var, negative_var, model
+
+
 def decompose_consumption(
-    expression, model=None, varstr=None, decomposition_type="absolute_value"
+    expression, model=None, varstr=None, decomposition_type="absolute_value", big_m=1e6
 ):
-    """Decomposes consumption data into positive and negative components
-    And adds constraint such that total consumption equals
+    """Decomposes consumption data into positive and negative components.
+
+    Adds constraint such that total consumption equals
     positive values minus negative values
     (where negative values are stored as positive magnitudes).
 
@@ -480,77 +637,87 @@ def decompose_consumption(
 
     decomposition_type : str
         Type of decomposition to use.
-        - "binary_variable": To be implemented
-        - "absolute_value": Creates nonlinear problem
+        - "absolute_value": Uses max(x, 0) constraints. Creates nonlinear problem
+          for Pyomo due to abs() constraint. Not supported for CVXPY.
+        - "binary_big_M": Uses binary indicator with Big-M constraints.
+          Creates a MILP (mixed-integer linear program).
+          Supported for both Pyomo and CVXPY (requires MIP solver).
+
+        Note: For numpy.ndarray inputs, decomposition_type is ignored
+
+    big_m : float, optional
+        Big-M value for binary decomposition. Should be larger than maximum
+        possible consumption magnitude. Default is 1e6. Only used when
+        decomposition_type="binary_big_M".
+
+    Raises
+    ------
+    NotImplementedError
+        When `decomposition_type` is anything other than "absolute_value"
+        or "binary_big_M" for Pyomo, or anything other than "binary_big_M" for
+        CVXPY. Never raised for `numpy.Array`.
+
+    TypeError
+        When `expression` is not of type `numpy.Array`, `cvxpy.Expression`,
+        `pyomo.core.expr.numeric_expr.NumericExpression`,
+        `pyomo.core.expr.numeric_expr.NumericNDArray`,
+        `pyomo.environ.Param`, or `pyomo.environ.Var`
 
     Returns
     -------
     tuple
-        (positive_values, negative_values, model) where
-        positive_values and negative_values are both positive
-        with the constraint that total = positive - negative
+        (positive, negative, model_objects), where `model_objects` matches the
+        second return value of `calculate_cost`:
+
+        - numpy: (positive_values, negative_values, model) - `model` is untouched
+        - Pyomo: (positive_var, negative_var, model) - constraints added to `model`
+        - CVXPY: (positive_var, negative_var, constraints) - list of constraints
     """
     if check_indexed_np_array(expression):
         positive_values = np.maximum(expression, 0)
         negative_values = np.maximum(-expression, 0)  # magnitude as positive
         return positive_values, negative_values, model
+
     elif check_cvx_type(expression):
-        if decomposition_type == "absolute_value":
-            positive_values, _ = max_pos(expression)
-            negative_values, _ = max_pos(-expression)  # magnitude as positive
-        else:
-            warnings.warn(
-                f"Decomposition type '{decomposition_type}' is not implemented yet. "
-                "Please use available type. Skipping decomposition.",
-                UserWarning,
+        if decomposition_type == "binary_big_M":
+            positive_var, negative_var, constraints = _decompose_binary_cvx(
+                expression, big_m
             )
-            positive_values = None
-            negative_values = None
-        return positive_values, negative_values, model
+            return positive_var, negative_var, constraints
+        else:
+            raise NotImplementedError(
+                f"Decomposition type '{decomposition_type}' not supported for CVXPY. "
+                "Only 'binary_big_M' is available (requires a MIP solver). "
+                "Use Pyomo for 'absolute_value' decomposition."
+            )
+
     elif check_indexed_pyomo_type(expression):
+        # Call mode-specific function to create vars and add mode-specific constraints
         if decomposition_type == "absolute_value":
-
-            # Use max_pos to create positive_var and negative_var
-            pos_name, neg_name = get_decomposed_var_names(varstr)
-            positive_var, model = max_pos(expression, model, pos_name)
-
-            # Create negative expression since pyomo won't take -expression directly
-            def negative_rule(model, t):
-                return -expression[t]
-
-            negative_expr = pyo.Expression(model._var_index, rule=negative_rule)
-            model.add_component(f"{varstr}_negative_expr", negative_expr)
-            negative_var, model = max_pos(negative_expr, model, neg_name)
-
-            # Add constraint to balance import and export decomposed values
-            def decomposition_rule(model, t):
-                return expression[t] == positive_var[t] - negative_var[t]
-
-            model.add_component(
-                f"{varstr}_decomposition_constraint",
-                pyo.Constraint(model._var_index, rule=decomposition_rule),
+            positive_var, negative_var, model = _decompose_absolute_value_pyo(
+                expression, model, varstr
             )
-
-            # Add constraint to ensure positive_var + negative_var = |expression|
-            # This both variables becoming larger due to artificial arbitrage
-            def magnitude_rule(model, t):
-                return positive_var[t] + negative_var[t] == abs(expression[t])
-
-            model.add_component(
-                f"{varstr}_magnitude_constraint",
-                pyo.Constraint(model._var_index, rule=magnitude_rule),
+        elif decomposition_type == "binary_big_M":
+            positive_var, negative_var, model = _decompose_binary_pyo(
+                expression, model, varstr, big_m
             )
-
-            return positive_var, negative_var, model
         else:
-            warnings.warn(
-                f"Decomposition type '{decomposition_type}' is not implemented yet. "
-                "Please use available type. Skipping decomposition.",
-                UserWarning,
+            raise NotImplementedError(
+                f"Decomposition type '{decomposition_type}' not supported for Pyomo. "
+                "Available types: 'absolute_value' and 'binary_big_M'."
             )
-            positive_var = None
-            negative_var = None
+
+        # Add common decomposition constraint: expression = imports - exports
+        def decomposition_rule(model, t):
+            return expression[t] == positive_var[t] - negative_var[t]
+
+        model.add_component(
+            f"{varstr}_decomposition_constraint",
+            pyo.Constraint(model._var_index, rule=decomposition_rule),
+        )
+
         return positive_var, negative_var, model
+
     else:
         raise TypeError(
             "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
@@ -661,7 +828,7 @@ def sanitize_varstr(varstr):
     return re.sub(r"[^a-zA-Z0-9_]", "_", varstr).replace(" ", "_")
 
 
-def createa_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
+def create_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
     """Attach time index to the model for Pyomo variables and expressions.
 
     Builds a mapping between the entries in `var`'s index set and their
