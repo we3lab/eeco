@@ -54,6 +54,9 @@ HALF_PEAK = "half_peak"
 SUPER_OFF_PEAK = "super_off_peak"
 OFF_PEAK = "off_peak"
 
+# Components `calculate_demand_cost` builds, as suffixes on a charge's `varstr`
+CHARGE_COMPONENT_SUFFIXES = ("limit", "max", "max_pos")
+
 
 def get_charge_name(charge, index=None):
     """
@@ -650,6 +653,73 @@ def get_prev_demand_dict(
             COST: max(entry[COST], float(np.max(usage_data * charge_array))),
         }
     return prev_dict
+
+
+def get_charge_records(model):
+    """Handles on the Pyomo components built for each charge.
+
+    The symbolic counterpart of `get_prev_demand_dict`, which answers the same
+    question with numbers from history. Both are keyed by the original
+    `charge_dict` key, so a caller never has to rebuild a variable name that
+    `varstr_alias_func` may have changed.
+
+    Parameters
+    ----------
+    model : pyomo.environ.Model
+        A model that `calculate_cost` has already built costs on
+
+    Raises
+    ------
+    ValueError
+        When no charges have been recorded on `model`
+
+    Returns
+    -------
+    dict
+        Keyed by `charge_dict` key. Each entry holds the `varstr` and
+        `charge_type` strings alongside the `limit`, `max`, and `max_pos`
+        components named in `CHARGE_COMPONENT_SUFFIXES`, which are None for
+        charges that built none
+    """
+    if not hasattr(model, "_eeco_charges"):
+        raise ValueError(
+            "No charges recorded on this model. Call calculate_cost or "
+            "calculate_itemized_cost with a Pyomo model first."
+        )
+    return dict(model._eeco_charges)
+
+
+def _record_charge(model, key, varstr, charge_type):
+    """Record the components `calculate_cost` just built for one charge.
+
+    Resolving the names here keeps the `_max` / `_max_pos` / `_limit` suffix
+    convention private to this module. A charge whose tier was saturated or
+    zeroed builds nothing, so its components are recorded as None rather than
+    dropping the key, which would be indistinguishable from a filtered charge.
+
+    Parameters
+    ----------
+    model : pyomo.environ.Model or None
+        The model costs are being built on. Nothing is recorded when None,
+        since the numpy and cvxpy paths have no model to record onto
+
+    key : str
+        The `charge_dict` key for this charge
+
+    varstr : str
+        The sanitized variable name prefix used for this charge
+
+    charge_type : str
+        One of 'demand', 'energy', 'export', or 'customer'
+    """
+    if model is None:
+        return
+    if not hasattr(model, "_eeco_charges"):
+        model._eeco_charges = {}
+    record = {"varstr": varstr, "charge_type": charge_type}
+    for suffix in CHARGE_COMPONENT_SUFFIXES:
+        record[suffix] = model.find_component(varstr + "_" + suffix)
+    model._eeco_charges[key] = record
 
 
 def default_varstr_alias_func(
@@ -1627,6 +1697,8 @@ def calculate_cost(
             cost += charge_array.sum() * fixed_scale_factor
         else:
             raise ValueError("Invalid charge_type: " + charge_type)
+
+        _record_charge(model, key, varstr, charge_type)
 
     return cost, model_objects
 

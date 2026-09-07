@@ -2565,6 +2565,23 @@ def test_calculate_cost_pyo(
     assert pyo.value(result) == expected_cost
     assert model is not None
 
+    # every charge built is reachable by its charge_dict key, and the recorded
+    # handle is the same object a caller would get by rebuilding the name
+    records = costs.get_charge_records(model)
+    assert set(records) <= set(charge_dict)
+    for key, record in records.items():
+        assert record["charge_type"] in key
+        for suffix in costs.CHARGE_COMPONENT_SUFFIXES:
+            expected_component = model.find_component(record["varstr"] + "_" + suffix)
+            assert record[suffix] is expected_component
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_get_charge_records_before_costing():
+    model = pyo.ConcreteModel()
+    with pytest.raises(ValueError, match="No charges recorded"):
+        costs.get_charge_records(model)
+
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
