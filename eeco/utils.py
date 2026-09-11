@@ -3,6 +3,7 @@ import pytz
 import datetime
 import warnings
 import numpy as np
+import pandas as pd
 import cvxpy as cp
 import pyomo.environ as pyo
 from pyomo.core.expr.numeric_expr import (
@@ -856,3 +857,18 @@ def check_indexed_np_array(input_var):
     bool
     """
     return isinstance(input_var, (np.ndarray))
+
+
+def check_pandas_type(input_var):
+    """Checks if input is a pandas Series or DataFrame.
+
+    Parameters
+    ----------
+    input_var : object
+        Input parameter to check
+
+    Returns
+    -------
+    bool
+    """
+    return isinstance(input_var, (pd.Series, pd.DataFrame))
