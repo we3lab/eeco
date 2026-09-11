@@ -1,27 +1,12 @@
 """Calculate demand response revenue from electricity consumption data.
 
-A demand response program is modeled along two independent axes, each with
-a base class that captures the common case and subclasses for the edge
-cases found in real US tariffs:
-
-- **How the counterfactual is measured** -- `BaselineMethod`, defaulting to
-  an average of recent similar days with a day-of adjustment. See
-  `TopUsageDaysBaseline`, `FixedLevelBaseline`, and
-  `UnilateralInterruptionBaseline`.
-- **How that measurement is paid for** -- `PaymentStructure`, defaulting to
-  a piecewise-linear capacity payment keyed on the delivered fraction of
-  the bid. See `CapacityEnergyPayment` and `MarketIndexedPayment`.
-
-The two compose freely: any baseline method pairs with any payment
-structure. Every public function accepts either a plain configuration (a
-dict from `make_baseline_parameters`, a list of payment region dicts) or an
-instance of these classes, so the defaults need no ceremony and the edge
-cases need no new arguments.
-
-Typical use:
-
-- Ex-post settlement of realized data -- `calculate_dr_revenue`.
-- Building DR revenue into a pyomo optimization -- `build_dr_revenue`.
+This uses two classes to define the baselining procedure and the payment
+structure. The `BaselineMethod` class defines how to calculate the
+counterfactual baseline consumption. `PaymentStructure` class defines how to
+calculate the revenue based on the actual consumption and the baseline.
+These are used by `calculate_dr_revenue`, `build_dr_revenue` (pyomo only),
+and `calculate_itemized_dr_revenue` to calculate costs or add accounting
+equations to models.
 """
 
 import warnings
@@ -44,7 +29,8 @@ CAPACITY_PRICE = "capacity_price"
 # Baseline parameter dict keys
 BASELINE_METHOD = "baseline_method"
 N_BASELINE_DAYS = "n_baseline_days"
-ADJUSTMENT_HOURS = "adjustment_hours"
+ADJUSTMENT_OFFSET_HOURS = "adjustment_offset_hours"
+ADJUSTMENT_DURATION_HOURS = "adjustment_duration_hours"
 ADJUSTMENT_CLIP = "adjustment_clip"
 EXCLUDE_WEEKENDS = "exclude_weekends"
 EXCLUDE_HOLIDAYS = "exclude_holidays"
@@ -65,52 +51,30 @@ REGION_Y2 = "y2"
 
 
 class BaselineMethod:
-    """Foundation baselining strategy: the average of the N most recent
-    valid similar days, optionally scaled by a day-of adjustment factor.
+    """
+    The baseline method uses the power from the average of the N most recent valid
+    similar days, optionally scaled by a day-of adjustment factor.
 
-    A "baseline" is the counterfactual power the site *would* have drawn
-    during an event window had the event not been called. Revenue is paid
-    on the gap between that baseline and metered power, so the baselining
-    rule is as economically significant as the payment rate itself.
-
-    This class implements the most common rule in US demand response
-    programs, and matches the defaults of PG&E's Capacity Bidding Program
-    (10 similar weekdays, 3-hour day-of adjustment). `compute` runs four
-    steps in order, each of which is an overridable hook:
-
-    1. `_filter_days`  -- drop ineligible candidate days (weekends/holidays)
-    2. `_order_days`   -- rank the survivors by preference (default: recency)
-    3. `_baseline_day_terms` (module-level) -- average each kept day's
-       event window, transparently sourcing from either historical data or
-       an optimization decision variable
-    4. `_adjustment_factor` -- derive a same-day correction to scale by
-
-    Extending this class
-    --------------------
-    Override the smallest hook that captures the difference, not `compute`:
-
-    - Different *ranking* of candidate days (e.g. by usage rather than
-      recency)? Override `_order_days` -- see `TopUsageDaysBaseline`.
-    - Different *eligibility* rules (e.g. also exclude prior event days)?
-      Override `_filter_days`.
-    - Different *same-day correction*? Override `_adjustment_factor`.
-    - A baseline that isn't an average of historical days at all (e.g. a
-      contracted firm level)? Override `compute` -- see `FixedLevelBaseline`
-      and `UnilateralInterruptionBaseline`.
-
-    Subclasses must preserve `compute`'s return-value contract (a bare
-    value when `model` is `None`, a `(value, model)` tuple otherwise), since
-    callers such as `calculate_event_baseline` and `build_dr_revenue`
-    unpack it positionally.
+    Override `_rank_days` or `_adjustment_factor` for the common extension
+    points, or `compute` for a baseline that is not a historical average.
 
     Parameters
     ----------
     n_baseline_days : int
         Number of valid baseline days to average over.
 
-    adjustment_hours : int or None
-        Number of hours immediately before the event used to compute the
-        day-of adjustment factor. If `None`, no adjustment is applied.
+    adjustment_offset_hours : int or None
+        Number of hours before the event start where the day-of adjustment
+        window begins. If `None`, no adjustment is applied.
+
+    adjustment_duration_hours : int
+        Length, in hours, of the day-of adjustment window. Combined with
+        `adjustment_offset_hours`, the window is
+        `[event_start - adjustment_offset_hours,
+        event_start - adjustment_offset_hours + adjustment_duration_hours)`
+        -- e.g. `adjustment_offset_hours=4, adjustment_duration_hours=2`
+        looks at the window starting 4 hours before the event and ending 2
+        hours before it. Ignored when `adjustment_offset_hours` is `None`.
 
     adjustment_clip : tuple of float
         `(low, high)` bounds the day-of adjustment factor is clipped to,
@@ -133,31 +97,28 @@ class BaselineMethod:
         multiplied into the baseline symbolically, rather than being folded
         in as a hard-coded number. This lets the caller retune the factor
         (`model.<varstr>_adjustment_factor.fix(1.15)`) and re-solve without
-        rebuilding the model -- useful for sensitivity analysis on a
-        baseline assumption that materially moves revenue.
-
-        The `Var` is fixed on creation, which is what keeps it an input
-        rather than a decision: pyomo treats a fixed variable as a constant
-        coefficient, so `baseline * factor` stays linear even when the
-        baseline is itself a decision-variable expression. Unfixing it
-        would both make that product bilinear and let the solver choose the
-        factor that maximizes revenue, so callers should retune it with
-        `.fix(...)` rather than `.unfix()`.
-
-        `False` by default, which folds the factor in as a constant and
-        keeps `compute`'s return value a plain `float` whenever every
-        baseline day is historical.
+        rebuilding the model. The `Var` is fixed on creation, which is what
+        keeps it an input rather than a decision: retune it with
+        `.fix(...)` rather than `.unfix()`, since unfixing it would both let
+        the solver choose the revenue-maximizing factor and make
+        `baseline * factor` bilinear. `False` by default, which folds the
+        factor in as a constant and keeps `compute`'s return value a plain
+        `float` whenever every baseline day is historical.
 
     Raises
     ------
     ValueError
-        When `n_baseline_days` is not positive.
+        When `n_baseline_days` is not positive, or when
+        `adjustment_offset_hours` is not `None` and `adjustment_duration_hours`
+        is not positive or exceeds `adjustment_offset_hours` (the adjustment
+        window must fall strictly before the event start).
     """
 
     def __init__(
         self,
         n_baseline_days=10,
-        adjustment_hours=3,
+        adjustment_offset_hours=3,
+        adjustment_duration_hours=3,
         adjustment_clip=(0.8, 1.2),
         exclude_weekends=True,
         exclude_holidays=True,
@@ -166,52 +127,41 @@ class BaselineMethod:
     ):
         if n_baseline_days <= 0:
             raise ValueError("n_baseline_days must be positive")
+        if adjustment_offset_hours is not None:
+            if adjustment_duration_hours <= 0:
+                raise ValueError("adjustment_duration_hours must be positive")
+            if adjustment_duration_hours > adjustment_offset_hours:
+                raise ValueError(
+                    "adjustment_duration_hours must not exceed "
+                    "adjustment_offset_hours, so the adjustment window ends at "
+                    "or before the event start"
+                )
         self.n_baseline_days = n_baseline_days
-        self.adjustment_hours = adjustment_hours
+        self.adjustment_offset_hours = adjustment_offset_hours
+        self.adjustment_duration_hours = adjustment_duration_hours
         self.adjustment_clip = adjustment_clip
         self.exclude_weekends = exclude_weekends
         self.exclude_holidays = exclude_holidays
         self.holiday_dates = list(holiday_dates) if holiday_dates else []
         self.adjustment_in_model = adjustment_in_model
 
-    def _filter_days(self, candidate_days):
-        """Drop candidate days that are ineligible for use in a baseline.
+    def _rank_days(self, candidate_days, historical_power_kW, event):
+        """Drop ineligible candidate days and rank the remainder by
+        preference, most-preferred first.
 
-        Hook method. The foundation implementation applies the
-        `exclude_weekends`/`exclude_holidays` configuration; override to add
-        program-specific eligibility rules (e.g. also excluding days on
-        which a prior event was called).
+        `select_days` keeps the first `n_baseline_days` of
+        whatever this returns, so this method alone decides both which days
+        are eligible and which survive when more are available than are
+        needed. The foundation implementation applies the
+        `exclude_weekends`/`exclude_holidays` configuration, then prefers
+        the most recent days; override to change either rule (see
+        `TopUsageDaysBaseline`, which calls `super()._rank_days(...)` to
+        reuse the eligibility rule and only replaces the ranking).
 
         Parameters
         ----------
         candidate_days : list of pandas.Timestamp
             Days proposed for this event's baseline.
-
-        Returns
-        -------
-        list of pandas.Timestamp
-            The eligible subset, in the order given.
-        """
-        if self.exclude_weekends:
-            candidate_days = [d for d in candidate_days if d.weekday() < 5]
-        if self.exclude_holidays:
-            holidays = {pd.Timestamp(d) for d in self.holiday_dates}
-            candidate_days = [d for d in candidate_days if d not in holidays]
-        return candidate_days
-
-    def _order_days(self, candidate_days, historical_power_kW, event):
-        """Rank eligible days by preference, most-preferred first.
-
-        Hook method. `select_days` keeps the first `n_baseline_days` of
-        whatever this returns, so this method alone decides *which* days
-        survive when more are available than are needed. The foundation
-        implementation prefers the most recent days; override this rather
-        than `select_days` to change the rule (see `TopUsageDaysBaseline`).
-
-        Parameters
-        ----------
-        candidate_days : list of pandas.Timestamp
-            Eligible days, as returned by `_filter_days`.
 
         historical_power_kW : pandas.Series
             Historical realized power consumption in kW, indexed by
@@ -226,17 +176,22 @@ class BaselineMethod:
         Returns
         -------
         list of pandas.Timestamp
-            All of `candidate_days`, reordered most-preferred first.
+            The eligible subset of `candidate_days`, most-preferred first.
         """
+        if self.exclude_weekends:
+            candidate_days = [d for d in candidate_days if d.weekday() < 5]
+        if self.exclude_holidays:
+            holidays = {pd.Timestamp(d) for d in self.holiday_dates}
+            candidate_days = [d for d in candidate_days if d not in holidays]
         return sorted(candidate_days, reverse=True)
 
     def select_days(self, candidate_days, historical_power_kW, event):
         """Filter, rank, and truncate candidate days to the ones actually
         used in the baseline average.
 
-        Composes the `_filter_days` and `_order_days` hooks, then keeps the
-        top `n_baseline_days`. Prefer overriding one of those two hooks
-        instead of this method.
+        Composes the `_rank_days` method, then keeps the top
+        `n_baseline_days`. Prefer overriding `_rank_days` instead of this
+        method.
 
         Parameters
         ----------
@@ -245,11 +200,11 @@ class BaselineMethod:
 
         historical_power_kW : pandas.Series
             Historical realized power consumption in kW, indexed by
-            `pandas.DatetimeIndex`. Passed through to `_order_days`.
+            `pandas.DatetimeIndex`. Passed through to `_rank_days`.
 
         event : dict
             A single event, as produced by `add_event`. Passed through to
-            `_order_days`.
+            `_rank_days`.
 
         Raises
         ------
@@ -257,49 +212,33 @@ class BaselineMethod:
             When zero eligible days remain after filtering.
 
         Warnings
-            When fewer eligible days remain than `n_baseline_days`.
+        --------
+        When fewer eligible days remain than `n_baseline_days`.
 
         Returns
         -------
         list of pandas.Timestamp
             At most `n_baseline_days` days, most-preferred first.
         """
-        filtered = self._filter_days(candidate_days)
-        if len(filtered) == 0:
+        ranked = self._rank_days(candidate_days, historical_power_kW, event)
+        if len(ranked) == 0:
             raise ValueError("No valid baseline days remain after filtering")
-        if len(filtered) < self.n_baseline_days:
+        if len(ranked) < self.n_baseline_days:
             warnings.warn(
-                f"Only {len(filtered)} valid baseline days available, "
+                f"Only {len(ranked)} valid baseline days available, "
                 f"fewer than the requested {self.n_baseline_days}",
                 UserWarning,
             )
-        ordered = self._order_days(filtered, historical_power_kW, event)
-        return ordered[: self.n_baseline_days]
+        return ranked[: self.n_baseline_days]
 
     def _adjustment_factor(self, valid_days, historical_power_kW, event):
         """Compute the day-of adjustment factor for this event.
 
-        The multi-day average is a lagging estimate: it cannot know whether
-        the event day itself is running hot or cold. This factor corrects
-        for that by comparing the event day's own consumption over the
-        `adjustment_hours` immediately preceding the event against the same
-        pre-event window averaged across the baseline days. A factor of
-        1.1, for instance, means the site was drawing 10% above its usual
-        pre-event level that morning, so the baseline is scaled up 10% to
-        match. The result is clipped to `adjustment_clip` so one anomalous
-        morning cannot distort the baseline without bound.
-
-        Hook method. Override to derive the factor differently; `compute`
-        applies whatever scalar this returns multiplicatively. A subclass
-        needing a non-multiplicative correction should override `compute`
-        instead.
-
-        This is always computed from `historical_power_kW`, never from a
-        model decision variable, even when the adjustment window falls
-        inside an optimization horizon: the factor is a ratio of two power
-        averages, and both dividing and clipping decision-variable
-        expressions are nonlinear operations with no linear pyomo
-        representation.
+        Compares the event day's own consumption over the window
+        `[event_start - adjustment_offset_hours, event_start -
+        adjustment_offset_hours + adjustment_duration_hours)` against the
+        same pre-event window averaged across the baseline days, clipped to
+        `adjustment_clip`. Always computed from `historical_power_kW`.
 
         Parameters
         ----------
@@ -315,23 +254,24 @@ class BaselineMethod:
             A single event, as produced by `add_event`.
 
         Warnings
-            When the denominator is near zero, in which case the adjustment
-            is skipped by returning a factor of `1.0`.
+        --------
+        When the denominator is near zero, in which case the adjustment is
+        skipped by returning a factor of `1.0`.
 
         Returns
         -------
         float or None
             The clipped multiplicative factor, or `None` when
-            `adjustment_hours` is `None` (no adjustment configured).
+            `adjustment_offset_hours` is `None` (no adjustment configured).
         """
-        if self.adjustment_hours is None:
+        if self.adjustment_offset_hours is None:
             return None
-        adjustment_hours = self.adjustment_hours
+        window_start_hour = event[EVENT_START_HOUR] - self.adjustment_offset_hours
         event_adj_mask = _event_window_mask(
             historical_power_kW.index,
             event[EVENT_DATE],
-            event[EVENT_START_HOUR] - adjustment_hours,
-            adjustment_hours,
+            window_start_hour,
+            self.adjustment_duration_hours,
         )
         event_adj_mean = historical_power_kW.loc[event_adj_mask].mean()
 
@@ -340,8 +280,8 @@ class BaselineMethod:
             mask = _event_window_mask(
                 historical_power_kW.index,
                 day,
-                event[EVENT_START_HOUR] - adjustment_hours,
-                adjustment_hours,
+                window_start_hour,
+                self.adjustment_duration_hours,
             )
             baseline_adj_means.append(historical_power_kW.loc[mask].mean())
         baseline_adj_mean = np.mean(baseline_adj_means)
@@ -371,17 +311,10 @@ class BaselineMethod:
 
         This is the implementation behind the module-level
         `calculate_event_baseline`, whose docstring carries the full
-        parameter and return-value contract. In brief: pass no `model` for
-        an ex-post calculation returning a plain `float`; pass a `model`
-        (plus `model_power_kW`, `model_datetime_index`, and `varstr`) to
-        have any baseline day falling entirely inside the optimization
-        horizon computed from the decision variable instead of history,
-        returning `(baseline, model)`.
-
-        When `adjustment_in_model` is set, the day-of adjustment factor is
-        additionally registered on `model` as a fixed `Var` and applied
-        symbolically, so the baseline is always materialized as a `Var`
-        with a defining constraint the caller can retune post-build.
+        parameter and return-value contract: pass no `model` for a plain
+        `float`, or a `model` (plus `model_power_kW`, `model_datetime_index`,
+        and `varstr`) to compute in-horizon baseline days from the decision
+        variable, returning `(baseline, model)`.
         """
         if model is not None and any(
             a is None for a in (model_power_kW, model_datetime_index, varstr)
@@ -462,34 +395,22 @@ class BaselineMethod:
 
 class TopUsageDaysBaseline(BaselineMethod):
     """Ranks candidate days by consumption (highest first) rather than by
-    recency, so the baseline averages the site's busiest similar days.
-
-    This raises the baseline relative to the foundation method, which
-    generally raises the measured reduction and therefore the payment --
-    which is precisely why programs that use it specify the rule tightly.
-    Matches LADWP ("average of the three highest energy usage days over the
-    past 10 weekdays"), Appalachian Power TN ("highest 4 of the 5 most
-    recent similar weekdays"), and Delmarva DE ("three days with the
-    highest energy usage during the past 30 days").
-
-    Takes the same constructor parameters as `BaselineMethod`; only the
-    day-ranking hook differs, so `n_baseline_days` still controls how many
-    of the top days are kept.
+    recency, so the baseline averages the similar days with highest power draw.
+    This takes the same constructor parameters as `BaselineMethod`.
     """
 
-    def _order_days(self, candidate_days, historical_power_kW, event):
-        """Rank eligible days by mean power over the event window,
-        highest first.
+    def _rank_days(self, candidate_days, historical_power_kW, event):
+        """Rank eligible days by mean power over the event window, highest
+        first, keeping the base eligibility rule (weekend/holiday exclusion).
 
         A day with no data in the event window sorts last (rather than
-        raising) so that a single gap in the historical series degrades the
-        ranking instead of failing the whole calculation; if such a day is
-        still selected, `_baseline_day_terms` raises on it downstream.
+        raising); if such a day is still selected, `_baseline_day_terms`
+        raises on it downstream.
 
         Parameters
         ----------
         candidate_days : list of pandas.Timestamp
-            Eligible days, as returned by `_filter_days`.
+            Days proposed for this event's baseline, before filtering.
 
         historical_power_kW : pandas.Series
             Historical realized power consumption in kW, indexed by
@@ -502,8 +423,10 @@ class TopUsageDaysBaseline(BaselineMethod):
         Returns
         -------
         list of pandas.Timestamp
-            All of `candidate_days`, highest mean event-window power first.
+            The eligible subset of `candidate_days`, highest mean
+            event-window power first.
         """
+        eligible_days = super()._rank_days(candidate_days, historical_power_kW, event)
 
         def day_mean(day):
             mask = _event_window_mask(
@@ -515,25 +438,14 @@ class TopUsageDaysBaseline(BaselineMethod):
             day_slice = historical_power_kW.loc[mask]
             return day_slice.mean() if not day_slice.empty else -np.inf
 
-        return sorted(candidate_days, key=day_mean, reverse=True)
+        return sorted(eligible_days, key=day_mean, reverse=True)
 
 
 class FixedLevelBaseline(BaselineMethod):
-    """Baseline is a constant contracted "firm" demand level agreed with
-    the utility up front, never inferred from history.
-
-    Under these tariffs the customer commits to holding load at or below a
-    nominated level during events, and performance is measured against that
-    number directly -- so there is no similar-day average, no day-of
-    adjustment, and no dependence on `historical_power_kW` at all. Matches
-    VT Curtailable Load Rider, WI Commercial and Industrial Interruptible
-    Rider, IA Interruptible Service Option, and SC Large Load Curtailable
-    Rider.
-
-    Deliberately does not call `super().__init__()`: none of the
-    day-selection or adjustment configuration on `BaselineMethod` is
-    meaningful here, so those attributes are intentionally absent. Because
-    `compute` is fully overridden, no inherited method reads them.
+    """Baseline is a constant contracted "firm" demand level agreed with the
+    utility up front. This does not call `super().__init__()`, therefore,
+    none of `BaselineMethod`'s day-selection or adjustment configuration is used.
+    
 
     Parameters
     ----------
@@ -605,31 +517,10 @@ class UnilateralInterruptionBaseline(BaselineMethod):
     """The utility interrupts service itself, holding load at a fixed level
     for the duration of an event.
 
-    Modeled as a hard constraint rather than a revenue opportunity, because
-    the operator has no decision to make: the utility physically interrupts
-    the load, so consumption during the window is imposed, not chosen. The
-    Alaska Chugach Electric interruptible tariff is the motivating example
-    -- its own documentation notes the power company interrupts the
-    operator's service itself and the operator does not choose how much to
-    reduce load by. Compensation there takes the form of an eliminated
-    demand charge, not a per-event payment.
-
-    Consequently there is no ex-post evaluation path: with no counterfactual
-    and no operator choice, "what revenue did this event earn" is not a
-    meaningful question to ask of realized data, so `compute` raises
-    `NotImplementedError` when called without a `model`. Inside a model, it
-    caps `model_power_kW` at `interruption_level_kW` across the event
-    window so the rest of the optimization plans around the outage.
-
-    The cap is an upper bound rather than an equality: the utility's
-    interruption puts a ceiling on what the facility *can* draw, and going
-    below it stays a legitimate operating choice. Forcing equality would
-    also make the window infeasible for any site whose other constraints
-    (a minimum charge rate, a process that cannot idle at exactly that
-    level) prevent it from landing precisely on the interruption level.
-
-    Deliberately does not call `super().__init__()`, for the same reason as
-    `FixedLevelBaseline`.
+    Modeled as a hard constraint (an upper bound on `model_power_kW`), not a
+    revenue opportunity: the operator has no decision to make, so `compute`
+    raises `NotImplementedError` when called without a `model` (there is no
+    ex-post evaluation path).
 
     Parameters
     ----------
@@ -651,8 +542,8 @@ class UnilateralInterruptionBaseline(BaselineMethod):
         model_datetime_index=None,
         varstr=None,
     ):
-        """Constrain modeled power to the interruption level over the
-        event window.
+        """Constrain modeled power to the interruption level over the event
+        window.
 
         Adds an indexed `Constraint` named
         `varstr + "_interruption_constraint"` over exactly the positions
@@ -738,11 +629,9 @@ class UnilateralInterruptionBaseline(BaselineMethod):
 def _coerce_baseline_method(baseline_params):
     """Normalize a baseline configuration into a `BaselineMethod`.
 
-    Lets every public entry point accept either representation: the
-    original dict from `make_baseline_parameters` (kept working for
-    backward compatibility, and wrapped here into a foundation
-    `BaselineMethod`) or a `BaselineMethod` instance, which is how callers
-    opt into a subclass such as `TopUsageDaysBaseline`.
+    Lets every public entry point accept either a dict from
+    `make_baseline_parameters` or an already-constructed `BaselineMethod`
+    instance (e.g. `TopUsageDaysBaseline`).
 
     Parameters
     ----------
@@ -761,7 +650,8 @@ def _coerce_baseline_method(baseline_params):
         return baseline_params
     return BaselineMethod(
         n_baseline_days=baseline_params[N_BASELINE_DAYS],
-        adjustment_hours=baseline_params[ADJUSTMENT_HOURS],
+        adjustment_offset_hours=baseline_params[ADJUSTMENT_OFFSET_HOURS],
+        adjustment_duration_hours=baseline_params[ADJUSTMENT_DURATION_HOURS],
         adjustment_clip=baseline_params[ADJUSTMENT_CLIP],
         exclude_weekends=baseline_params[EXCLUDE_WEEKENDS],
         exclude_holidays=baseline_params[EXCLUDE_HOLIDAYS],
@@ -773,8 +663,8 @@ def _event_window_mask(index, event_date, start_hour, duration_hours):
     """Boolean mask selecting timestamps in `index` within the half-open window
     [event_date + start_hour, event_date + start_hour + duration_hours).
 
-    Use this as opposed to the pandas.Series.between_time method to identify
-    the window on a specific event day, as opposed to every day present.
+    Use this over `pandas.Series.between_time`, which would match the window
+    on every day present rather than the one event day.
 
     Parameters
     ----------
@@ -804,33 +694,11 @@ class PaymentStructure:
     """Foundation payment structure: a piecewise-linear capacity payment
     keyed on how much of the bid the site actually delivered.
 
-    Revenue is expressed as a function of the *delivered ratio* --
-    `reduction_kW / bid_capacity_kW`, i.e. the fraction of the nominated
-    capacity the site actually shed. The `regions` list maps that ratio to
-    a payment ratio through consecutive linear segments, and revenue is
-    `payment_ratio * capacity_price * bid_capacity_kW`. Casting payment in
-    terms of ratios keeps one schedule reusable across events with
-    different bid sizes and prices.
-
-    Each region is a dict with keys `REGION_X1`/`REGION_X2` (the half-open
-    delivered-ratio interval `[x1, x2)` it covers) and
-    `REGION_Y1`/`REGION_Y2` (the payment ratio at each end, interpolated
-    linearly between). Regions express real tariff structure: a negative
-    `y` encodes an underdelivery penalty, and a final region with
-    `x2 = inf` encodes a cap where overdelivery earns no more.
-
-    Extending this class
-    --------------------
-    Override `evaluate` and `build_expression` as a pair -- `evaluate` is
-    the realized-value path and `build_expression` the optimization path,
-    and they must agree or an optimized plan will not reconcile with its
-    ex-post settlement. Call `super()` for the capacity term and add to it,
-    as `CapacityEnergyPayment` does, or transform the event before
-    delegating, as `MarketIndexedPayment` does.
-
-    Both methods take the whole `event` dict rather than loose scalars
-    precisely so subclasses can reach other event fields (duration, date)
-    without changing the signature.
+    Revenue is `payment_ratio * capacity_price * bid_capacity_kW`, where the
+    `regions` list maps the delivered ratio (`reduction_kW / bid_capacity_kW`)
+    to a payment ratio through consecutive linear segments. Override
+    `evaluate` and `build_expression` as a pair to extend -- they must agree
+    or an optimized plan will not reconcile with its ex-post settlement.
 
     Parameters
     ----------
@@ -838,22 +706,16 @@ class PaymentStructure:
         Payment schedule, each dict having keys `REGION_X1`, `REGION_X2`,
         `REGION_Y1`, and `REGION_Y2`. Expected to cover the delivered
         ratios that can occur; `find_region` raises if one is uncovered.
+        A bound may be given as the string `"Infinity"`/`"-Infinity"`
+        (as produced by `json.load` on a quoted JSON value) instead of a
+        float; these are coerced to `inf`/`-inf` on construction.
     """
 
     def __init__(self, regions):
-        self.regions = regions  # list of dicts with REGION_X1/X2/Y1/Y2 keys
+        self.regions = [{k: float(v) for k, v in region.items()} for region in regions]
 
     def find_region(self, delivered_ratio=None, region_x1=None):
         """Look up the applicable payment region.
-
-        Exactly one of `delivered_ratio`/`region_x1` should be given.
-        Looking up by `delivered_ratio` finds the region whose `[x1, x2)`
-        interval contains it, and is used ex-post once the realized ratio
-        is known. Looking up by `region_x1` finds the region whose `x1`
-        matches, and is used when building an optimization expression,
-        where the region must be assumed before solving; the match uses
-        `numpy.isclose` because such a value often carries floating-point
-        noise from an upstream solver.
 
         Parameters
         ----------
@@ -894,12 +756,7 @@ class PaymentStructure:
         return region
 
     def evaluate(self, event, reduction_kW):
-        """Calculate realized revenue for a known reduction.
-
-        Determines the applicable region from the delivered ratio and
-        interpolates the payment ratio linearly between that region's
-        `(x1, y1)` and `(x2, y2)` endpoints. In a capped region
-        (`x2 = inf`) the payment ratio is flat at `y1`.
+        """Calculate realized revenue for a known reduction. Interpolates based on payment function.
 
         Parameters
         ----------
@@ -939,27 +796,32 @@ class PaymentStructure:
     def build_expression(
         self, event, reduction_kW, region_x1=None, model=None, varstr=""
     ):
-        """Build the revenue expression for a single, specified region.
+        """Build the revenue expression for this event.
 
-        The optimization counterpart to `evaluate`. Because the delivered
-        ratio is unknown before solving, the caller must nominate which
-        region applies via `region_x1`; this method then emits that
-        region's linear payment expression together with bound constraints
-        holding the solution inside the region, so the assumption cannot be
-        silently violated. Sweeping `region_x1` across regions and keeping
-        the best solution is how a caller explores the full schedule.
-
-        Dispatches on the type of `reduction_kW`:
-
+        Based on the type of `reduction_kW`:
         - `numpy.ndarray` or Python number: the region is already
-          determined, so this delegates to `evaluate` and `region_x1` is
-          ignored.
-        - `cvxpy.Expression`/`cvxpy.Variable`: returns the expression plus
-          a list of 1-2 region-bound constraints for the caller to add to
-          their own `cvxpy.Problem`.
-        - `pyomo.environ.Var`/expression: adds a `varstr + "_revenue"`
-          `Var`, its defining constraint, and 1-2 region-bound constraints
-          to `model` (which may be a `pyomo.environ.Block`).
+          determined, via `evaluate`.
+        - `cvxpy.Expression`/`cvxpy.Variable`: still requires a known
+          `region_x1` (raises if missing) and builds only that one region.
+        - `pyomo.environ.Var`/expression: builds *every* region onto
+          `model` at once, using a disaggregated binary-selection
+          formulation (Balas' extended form). To optimize over the regions, 
+          use `region_x1=None`. 
+
+          Pyomo components added under `varstr` (`R` = `len(self.regions)`,
+          indexed `0..R-1`):
+          - `_region_active`: binary `Var`, 1 iff region `r` is active.
+          - `_region_select_constraint`: exactly one region is active.
+          - `_region_reduction`: `Var`, region `r`'s disaggregated share of
+            `reduction_kW` -- forced to `0` when region `r` is inactive,
+            bounded by region `r`'s own `[x1, x2] * bid_capacity_kW` box
+            when active.
+          - `_region_reduction_lower_constraint` / `_upper_constraint`:
+            the bounds above.
+          - `_region_reduction_sum_constraint`: `reduction_kW` equals the
+            sum of the per-region shares.
+          - `_revenue` / `_revenue_constraint`: total revenue, summed from
+            each region's own (exact, region-local) contribution.
 
         Parameters
         ----------
@@ -972,22 +834,22 @@ class PaymentStructure:
             expression.
 
         region_x1 : float or None
-            The `x1` value identifying which region to build. Required for
-            the cvxpy and pyomo cases.
+            The `x1` value identifying which region to fix. Required for
+            the cvxpy case.
 
         model : pyomo.environ.Model or pyomo.environ.Block or None
-            The model or block to add pyomo components to. Only used in the
-            pyomo case.
+            Only used in the pyomo case. 
 
         varstr : str
             Name prefix for pyomo components created on `model`. Must be
-            unique per call on a given `model`, since reusing one raises a
-            pyomo "component already exists" error.
-
+            unique per call on a given `model` or `block`.
+            
         Raises
         ------
         ValueError
-            When no region matches `region_x1`.
+            When `reduction_kW` is a cvxpy type and no region matches
+            `region_x1` (including when it's `None`), or when `reduction_kW`
+            is a pyomo type and a given `region_x1` matches no region.
 
         TypeError
             When `reduction_kW` is not a supported type.
@@ -1006,15 +868,15 @@ class PaymentStructure:
         ):
             return self.evaluate(event, reduction_kW), model
 
-        region = self.find_region(region_x1=region_x1)
-        x1, x2, y1, y2 = (
-            region[k] for k in (REGION_X1, REGION_X2, REGION_Y1, REGION_Y2)
-        )
-        slope_ratio = 0.0 if np.isinf(x2) else (y2 - y1) / (x2 - x1)
-        slope = capacity_price * slope_ratio
-        intercept = capacity_price * bid_capacity_kW * (y1 - slope_ratio * x1)
-
         if ut.check_cvx_type(reduction_kW):
+            # TODO: cvxpy still requires a known region.
+            region = self.find_region(region_x1=region_x1)
+            x1, x2, y1, y2 = (
+                region[k] for k in (REGION_X1, REGION_X2, REGION_Y1, REGION_Y2)
+            )
+            slope_ratio = 0.0 if np.isinf(x2) else (y2 - y1) / (x2 - x1)
+            slope = capacity_price * slope_ratio
+            intercept = capacity_price * bid_capacity_kW * (y1 - slope_ratio * x1)
             revenue_expr = slope * reduction_kW + intercept
             constraints = [reduction_kW >= x1 * bid_capacity_kW]
             if not np.isinf(x2):
@@ -1023,32 +885,97 @@ class PaymentStructure:
         elif ut.check_indexed_pyomo_type(
             reduction_kW
         ) or ut.check_nonindexed_pyomo_type(reduction_kW):
+            if model is None:
+                raise ValueError("model is required for pyomo expressions")
+
+            region_idx = range(len(self.regions))
+
+            finite_edges = [
+                v
+                for region in self.regions
+                for v in (region[REGION_X1], region[REGION_X2])
+                if not np.isinf(v)
+            ]
+            lo, hi = min(finite_edges), max(finite_edges)
+            span = hi - lo
+            if any(np.isinf(region[REGION_X1]) for region in self.regions):
+                lo -= span * (self.big_m_safety_factor - 1)
+            if any(np.isinf(region[REGION_X2]) for region in self.regions):
+                hi += span * (self.big_m_safety_factor - 1)
+
+            model.add_component(
+                varstr + "_region_active", pyo.Var(region_idx, within=pyo.Binary)
+            )
+            z = model.find_component(varstr + "_region_active")
+            model.add_component(
+                varstr + "_region_select_constraint",
+                pyo.Constraint(expr=pyo.quicksum(z[r] for r in region_idx) == 1),
+            )
+
+            model.add_component(varstr + "_region_reduction", pyo.Var(region_idx))
+            region_reduction = model.find_component(varstr + "_region_reduction")
+
+            slopes = []
+            intercepts = []
+            for region in self.regions:
+                x1, x2, y1, y2 = (
+                    region[k] for k in (REGION_X1, REGION_X2, REGION_Y1, REGION_Y2)
+                )
+                slope_ratio = 0.0 if np.isinf(x2) else (y2 - y1) / (x2 - x1)
+                slopes.append(capacity_price * slope_ratio)
+                intercepts.append(
+                    capacity_price * bid_capacity_kW * (y1 - slope_ratio * x1)
+                )
+
+            def lower_rule(model, r):
+                x1 = self.regions[r][REGION_X1]
+                lower = lo if np.isinf(x1) else x1
+                return region_reduction[r] >= lower * bid_capacity_kW * z[r]
+
+            model.add_component(
+                varstr + "_region_reduction_lower_constraint",
+                pyo.Constraint(region_idx, rule=lower_rule),
+            )
+
+            def upper_rule(model, r):
+                x2 = self.regions[r][REGION_X2]
+                upper = hi if np.isinf(x2) else x2
+                return region_reduction[r] <= upper * bid_capacity_kW * z[r]
+
+            model.add_component(
+                varstr + "_region_reduction_upper_constraint",
+                pyo.Constraint(region_idx, rule=upper_rule),
+            )
+
+            model.add_component(
+                varstr + "_region_reduction_sum_constraint",
+                pyo.Constraint(
+                    expr=reduction_kW
+                    == pyo.quicksum(region_reduction[r] for r in region_idx)
+                ),
+            )
+
             model.add_component(varstr + "_revenue", pyo.Var())
             revenue_var = model.find_component(varstr + "_revenue")
-
-            def revenue_rule(model):
-                return revenue_var == slope * reduction_kW + intercept
-
             model.add_component(
-                varstr + "_revenue_constraint", pyo.Constraint(rule=revenue_rule)
+                varstr + "_revenue_constraint",
+                pyo.Constraint(
+                    expr=revenue_var
+                    == pyo.quicksum(
+                        slopes[r] * region_reduction[r] + intercepts[r] * z[r]
+                        for r in region_idx
+                    )
+                ),
             )
 
-            def lower_bound_rule(model):
-                return reduction_kW >= x1 * bid_capacity_kW
-
-            model.add_component(
-                varstr + "_lower_bound_constraint",
-                pyo.Constraint(rule=lower_bound_rule),
-            )
-            if not np.isinf(x2):
-
-                def upper_bound_rule(model):
-                    return reduction_kW <= x2 * bid_capacity_kW
-
-                model.add_component(
-                    varstr + "_upper_bound_constraint",
-                    pyo.Constraint(rule=upper_bound_rule),
+            if region_x1 is not None:
+                matched_region = self.find_region(region_x1=region_x1)
+                fixed_idx = next(
+                    i for i, r in enumerate(self.regions) if r is matched_region
                 )
+                for r in region_idx:
+                    z[r].fix(1 if r == fixed_idx else 0)
+
             return revenue_var, model
         else:
             raise TypeError(
@@ -1060,11 +987,6 @@ class PaymentStructure:
 class CapacityEnergyPayment(PaymentStructure):
     """Two-part payment: the foundation capacity payment plus a flat $/kWh
     payment on the energy actually curtailed.
-
-    The most common structure among the surveyed US programs. The capacity
-    term pays for *availability* (scaled by the bid), while the energy term
-    pays for *delivery* (scaled by kWh shed, i.e. `reduction_kW` times the
-    event's duration in hours).
 
     Parameters
     ----------
@@ -1082,14 +1004,16 @@ class CapacityEnergyPayment(PaymentStructure):
     def evaluate(self, event, reduction_kW):
         """Realized capacity payment plus the energy payment.
 
+        Needs the full `event` dict for `EVENT_DURATION`, which is why the
+        scalar-argument `evaluate_payment_function` wrapper cannot be used
+        with this class.
+
         Parameters
         ----------
         event : dict
             A single event, as produced by `add_event`. Supplies
             `EVENT_DURATION` in addition to the fields the capacity term
-            needs -- note this is why a full event is required here, and
-            why the scalar-argument `evaluate_payment_function` wrapper
-            cannot be used with this class.
+            needs.
 
         reduction_kW : float or numpy.ndarray
             Realized load reduction in kW.
@@ -1107,14 +1031,6 @@ class CapacityEnergyPayment(PaymentStructure):
         self, event, reduction_kW, region_x1=None, model=None, varstr=""
     ):
         """Build the combined capacity-plus-energy revenue expression.
-
-        Takes the same parameters as `PaymentStructure.build_expression`.
-        For pyomo, the capacity and energy terms each get their own `Var`
-        and defining constraint (named `varstr + "_revenue"` and
-        `varstr + "_energy_revenue"`), and a third `varstr +
-        "_total_revenue"` nets them, so the objective sees one combined
-        revenue variable per event while each component stays separately
-        inspectable after solving.
 
         Returns
         -------
@@ -1135,9 +1051,6 @@ class CapacityEnergyPayment(PaymentStructure):
             )
             return capacity_expr + energy_term, constraints
 
-        # pyomo case: capacity_var and energy_var each get their own defining
-        # Var + Constraint, then a third total_var nets them together, so the
-        # model's objective sees one combined revenue variable per event.
         capacity_var, model = super().build_expression(
             event, reduction_kW, region_x1=region_x1, model=model, varstr=varstr
         )
@@ -1165,18 +1078,7 @@ class CapacityEnergyPayment(PaymentStructure):
 
 
 class MarketIndexedPayment(PaymentStructure):
-    """Resolves the capacity price from a lookup at calculation time rather
-    than reading a static value off the event.
-
-    Under market-referenced programs the price is not known when the event
-    is defined -- it comes from a clearing price or index (CAISO RTD/FMM
-    real-time dispatch, PJM Capacity Performance auction results, or an
-    LMP-referenced credit such as Appalachian Power's). Rather than
-    duplicating the payment maths, this substitutes the resolved price into
-    a copy of the event and delegates to the foundation implementation.
-
-    The event is copied, never mutated, so the caller's events collection
-    is unchanged and re-running with a different `price_lookup` is safe.
+    """Resolves the capacity price from a lookup.
 
     Parameters
     ----------
@@ -1194,8 +1096,8 @@ class MarketIndexedPayment(PaymentStructure):
         self.price_lookup = price_lookup  # callable: price_lookup(event) -> float
 
     def _resolve_event(self, event):
-        """Return a copy of `event` with `CAPACITY_PRICE` replaced by the
-        looked-up market price.
+        """Return a shallow copy of `event` with `CAPACITY_PRICE` replaced
+        by the looked-up market price.
 
         Parameters
         ----------
@@ -1222,9 +1124,8 @@ class MarketIndexedPayment(PaymentStructure):
         """Revenue expression at the looked-up market price. Takes and
         returns the same things as `PaymentStructure.build_expression`.
 
-        The price is resolved once, at build time, and enters the model as
-        a constant coefficient -- so a model built this way is tied to the
-        prices in force when it was built.
+        The price is resolved once, at build time, so a model built this
+        way is tied to the prices in force when it was built.
         """
         return super().build_expression(
             self._resolve_event(event),
@@ -1239,10 +1140,9 @@ def _coerce_payment_structure(payment_function):
     """Normalize a payment configuration into a `PaymentStructure`.
 
     The payment-side counterpart to `_coerce_baseline_method`: lets every
-    public entry point accept either the original list of region dicts
-    (kept working for backward compatibility, and wrapped here into a
-    foundation `PaymentStructure`) or a `PaymentStructure` instance, which
-    is how callers opt into a subclass such as `CapacityEnergyPayment`.
+    public entry point accept either a list of region dicts or an
+    already-constructed `PaymentStructure` instance (e.g.
+    `CapacityEnergyPayment`).
 
     Parameters
     ----------
@@ -1264,11 +1164,8 @@ def _coerce_payment_structure(payment_function):
 def _find_payment_region(payment_function, delivered_ratio=None, region_x1=None):
     """Find a region in `payment_function`, by interval or by `x1`.
 
-    Exactly one of `delivered_ratio`/`region_x1` must be given: `delivered_ratio`
-    looks up the region whose `[x1, x2)` interval contains it; `region_x1` looks
-    up the region whose `x1` matches it (via `numpy.isclose`, since callers such
-    as `build_payment_expression` may pass a value with floating-point noise
-    from an upstream solver).
+    Exactly one of `delivered_ratio`/`region_x1` must be given; see
+    `PaymentStructure.find_region`, which this delegates to.
 
     Parameters
     ----------
@@ -1303,21 +1200,16 @@ def evaluate_payment_function(
 ):
     """Calculate ex-post revenue for a known reduction.
 
-    Automatically determines the applicable region and linearly interpolates
-    the payment ratio between its `(x1, y1)` and `(x2, y2)` endpoints, since
-    the delivered ratio is already known -- no iterative region search is
-    needed here.
+    Note this function passes only `bid_capacity_kW` and `capacity_price`
+    through to `payment_function` -- a subclass needing other event fields
+    (e.g. `CapacityEnergyPayment`) must be used via `build_event_revenue` or
+    `calculate_dr_revenue` instead, which have the full event to hand.
 
     Parameters
     ----------
     payment_function : list of dict or PaymentStructure
         Each dict has keys `REGION_X1`, `REGION_X2`, `REGION_Y1`,
-        `REGION_Y2`. A `PaymentStructure` instance is also accepted, but
-        note that this function passes only `bid_capacity_kW` and
-        `capacity_price` through -- a subclass needing other event fields
-        (as `CapacityEnergyPayment` needs `EVENT_DURATION`) must be used
-        via `build_event_revenue`, `calculate_dr_revenue`, or
-        `build_dr_revenue`, which have the full event to hand.
+        `REGION_Y2`. A `PaymentStructure` instance is also accepted.
 
     reduction_kW : float
         Realized load reduction (baseline minus actual power) in kW.
@@ -1354,16 +1246,8 @@ def build_payment_expression(
 ):
     """Build the revenue expression for a single, specified region.
 
-    Dispatches on the type of `reduction_kW`:
-
-    - `numpy.ndarray` or Python number: delegates to `evaluate_payment_function`
-      (`region_x1` is ignored, since the actual region is already fully
-      determined).
-    - `cvxpy.Expression`/`cvxpy.Variable`: builds `revenue_expr` directly and
-      a list of 1-2 cvxpy constraints for the region bounds.
-    - `pyomo.environ.Var`/expression: adds a `varstr + "_revenue"` `Var` plus
-      a defining constraint and 1-2 region-bound constraints onto `model`
-      (which may be a `pyomo.environ.Block`) via `model.add_component`.
+    Dispatches on `reduction_kW`'s type (numpy/scalar, cvxpy, or pyomo); see
+    `PaymentStructure.build_expression`, which this delegates to.
 
     Parameters
     ----------
@@ -1372,9 +1256,9 @@ def build_payment_expression(
         `REGION_Y2`. A `PaymentStructure` instance is also accepted, but
         note that this function passes only `bid_capacity_kW` and
         `capacity_price` through -- a subclass needing other event fields
-        (as `CapacityEnergyPayment` needs `EVENT_DURATION`) must be used
-        via `build_event_revenue`, `calculate_dr_revenue`, or
-        `build_dr_revenue`, which have the full event to hand.
+        (as `CapacityEnergyPayment` needs `EVENT_DURATION`) must be used via
+        `build_event_revenue`, `calculate_dr_revenue`, or `build_dr_revenue`,
+        which have the full event to hand.
 
     reduction_kW : numpy.ndarray, float, cvxpy.Expression, or pyomo.environ.Var
         Load reduction, as a realized value or a decision-variable expression.
@@ -1427,11 +1311,11 @@ def add_event(
     bid_capacity_kW,
     capacity_price,
 ):
-    """Add a demand response event to an events collection.
+    """Adds a demand response event to an events collection, returning a new
+    list.
 
     `baseline_days` should already exclude any date that is itself another
-    event's date -- this function does not check that for you, since doing so
-    would require knowing every other event's date rather than just this one.
+    event's date; this is not checked here.
 
     Parameters
     ----------
@@ -1468,7 +1352,8 @@ def add_event(
         positive.
 
     Warnings
-        When `capacity_price` is zero.
+    --------
+    When `capacity_price` is zero.
 
     Returns
     -------
@@ -1519,7 +1404,8 @@ def events_to_dataframe(events):
 def make_baseline_parameters(
     baseline_method="average_similar_days",
     n_baseline_days=10,
-    adjustment_hours=3,
+    adjustment_offset_hours=3,
+    adjustment_duration_hours=3,
     adjustment_clip=(0.8, 1.2),
     exclude_weekends=True,
     exclude_holidays=True,
@@ -1539,9 +1425,18 @@ def make_baseline_parameters(
     n_baseline_days : int
         Number of valid baseline days to average over.
 
-    adjustment_hours : int or None
-        Number of hours immediately before the event to use for a day-of
-        adjustment factor. If `None`, no day-of adjustment is applied.
+    adjustment_offset_hours : int or None
+        Number of hours before the event start where the day-of adjustment
+        window begins. If `None`, no day-of adjustment is applied.
+
+    adjustment_duration_hours : int
+        Length, in hours, of the day-of adjustment window. Combined with
+        `adjustment_offset_hours`, the window is `[event_start -
+        adjustment_offset_hours, event_start - adjustment_offset_hours +
+        adjustment_duration_hours)` -- e.g. `adjustment_offset_hours=4,
+        adjustment_duration_hours=2` looks at the window starting 4 hours
+        before the event and ending 2 hours before it. Ignored when
+        `adjustment_offset_hours` is `None`.
 
     adjustment_clip : tuple of float or None
         `(low, high)` bounds the day-of adjustment factor is clipped to.
@@ -1559,15 +1454,18 @@ def make_baseline_parameters(
     Raises
     ------
     ValueError
-        When `baseline_method` is not `"average_similar_days"`,
-        or `n_baseline_days` is not positive.
+        When `baseline_method` is not `"average_similar_days"`; when
+        `n_baseline_days` is not positive; or when `adjustment_offset_hours`
+        is not `None` and `adjustment_duration_hours` is not positive or
+        exceeds `adjustment_offset_hours`.
 
     Returns
     -------
     dict
         Baseline parameters keyed by the module's `BASELINE_METHOD`,
-        `N_BASELINE_DAYS`, `ADJUSTMENT_HOURS`, `ADJUSTMENT_CLIP`,
-        `EXCLUDE_WEEKENDS`, `EXCLUDE_HOLIDAYS`, and `HOLIDAY_DATES` constants.
+        `N_BASELINE_DAYS`, `ADJUSTMENT_OFFSET_HOURS`,
+        `ADJUSTMENT_DURATION_HOURS`, `ADJUSTMENT_CLIP`, `EXCLUDE_WEEKENDS`,
+        `EXCLUDE_HOLIDAYS`, and `HOLIDAY_DATES` constants.
     """
     if baseline_method != "average_similar_days":
         raise ValueError(
@@ -1576,11 +1474,21 @@ def make_baseline_parameters(
         )
     if n_baseline_days <= 0:
         raise ValueError("n_baseline_days must be positive")
+    if adjustment_offset_hours is not None:
+        if adjustment_duration_hours <= 0:
+            raise ValueError("adjustment_duration_hours must be positive")
+        if adjustment_duration_hours > adjustment_offset_hours:
+            raise ValueError(
+                "adjustment_duration_hours must not exceed "
+                "adjustment_offset_hours, so the adjustment window ends at or "
+                "before the event start"
+            )
 
     return {
         BASELINE_METHOD: baseline_method,
         N_BASELINE_DAYS: n_baseline_days,
-        ADJUSTMENT_HOURS: adjustment_hours,
+        ADJUSTMENT_OFFSET_HOURS: adjustment_offset_hours,
+        ADJUSTMENT_DURATION_HOURS: adjustment_duration_hours,
         ADJUSTMENT_CLIP: adjustment_clip,
         EXCLUDE_WEEKENDS: exclude_weekends,
         EXCLUDE_HOLIDAYS: exclude_holidays,
@@ -1739,27 +1647,11 @@ def calculate_event_baseline(
 ):
     """Calculate the mean baseline power for a single event's window.
 
-    When `model` is `None` (the default), every baseline day is computed
-    from `historical_power_kW` and a plain `float` is returned, exactly as
-    for a purely ex-post calculation.
-
-    When `model` is given (along with `model_power_kW` and
-    `model_datetime_index`), any baseline day whose full event-window is
-    contained within the simulation horizon spanned by `model_datetime_index`
-    is instead computed as a decision-variable average over `model_power_kW`
-    -- a baseline day whose window only partially overlaps the horizon falls
-    back fully to historical data, never mixing sources within one day. If
-    at least one day was dynamic, a `pyo.Var` + defining linear `Constraint`
-    named `varstr`/`varstr + "_constraint"` is added to `model`, and
-    `(baseline_var, model)` is returned; if every day stayed historical,
-    `(baseline_kW, model)` is returned instead, with no new components
-    added.
-
-    The day-of adjustment factor is always computed from historical
-    `historical_power_kW`, never from `model_power_kW`, even for events
-    whose adjustment window falls inside the simulation horizon -- clipping
-    a ratio of decision-variable expressions has no linear pyomo
-    representation.
+    Pass no `model` for a plain `float`, ex-post. Pass a `model` (plus
+    `model_power_kW` and `model_datetime_index`) to compute any baseline day
+    fully inside the simulation horizon from the decision variable instead
+    of history, returning `(baseline, model)`. The day-of adjustment factor
+    is always computed from `historical_power_kW`, never from the model.
 
     Parameters
     ----------
@@ -1804,7 +1696,8 @@ def calculate_event_baseline(
         when `model_datetime_index` has fewer than 2 entries.
 
     Warnings
-        When fewer valid baseline days remain than `N_BASELINE_DAYS`.
+    --------
+    When fewer valid baseline days remain than `N_BASELINE_DAYS`.
 
     Returns
     -------
@@ -1865,11 +1758,13 @@ def build_event_revenue(
         non-default payment structure.
 
     region_x1 : float or None
-        The `x1` value identifying which payment-function region to build.
-        Required when `power_kW` is a cvxpy or pyomo type, since the
-        applicable region cannot be known before solving. Ignored when
-        `power_kW` is numpy/scalar, since the actual region is already fully
-        determined.
+        The `x1` value identifying which payment-function region to fix.
+        Required when `power_kW` is a cvxpy type, since the applicable
+        region cannot be known before solving. Optional when `power_kW` is
+        a pyomo type: fixes that region when given, or leaves the region
+        choice to the solver (via `PaymentStructure.build_expression`'s
+        all-regions formulation) when `None`. Ignored when `power_kW` is
+        numpy/scalar, since the actual region is already fully determined.
 
     model : pyomo.environ.Model or pyomo.environ.Block
         The model or block to add pyomo components to.
@@ -1881,7 +1776,7 @@ def build_event_revenue(
     Raises
     ------
     ValueError
-        When `power_kW` is a cvxpy or pyomo type and `region_x1` is `None`.
+        When `power_kW` is a cvxpy type and `region_x1` is `None`.
 
     TypeError
         When `power_kW` is not a supported type.
@@ -1909,8 +1804,6 @@ def build_event_revenue(
     elif ut.check_indexed_pyomo_type(power_kW) or ut.check_nonindexed_pyomo_type(
         power_kW
     ):
-        if region_x1 is None:
-            raise ValueError("region_x1 must be specified for pyomo power_kW")
         n = len(power_kW)
         mean_power = pyo.quicksum(power_kW[t] for t in power_kW.index_set()) / n
         reduction_kW = baseline_kW - mean_power
@@ -1988,19 +1881,64 @@ def calculate_event_revenue(
     }
 
 
-def calculate_dr_revenue(
-    historical_power_kW, events, baseline_params, payment_function
-):
-    """Calculate ex-post demand response revenue across all events.
+def _as_power_series(power_kW, datetime_index):
+    """Normalizes realized power data into a pandas Series indexed by timestamp.
 
-    Each event is processed independently: its own window is re-sliced from
-    `historical_power_kW` and its own baseline is recomputed, so results
-    never mix time windows across different events.
+    A `pandas.Series`/`DataFrame` is returned unchanged (it is assumed to
+    already carry a timestamp index); a bare `numpy.ndarray` is paired with
+    `datetime_index` to build one.
 
     Parameters
     ----------
-    historical_power_kW : pandas.Series
-        Realized power consumption in kW, indexed by `pandas.DatetimeIndex`.
+    power_kW : numpy.ndarray or pandas.Series
+        Realized power consumption in kW. If already a `pandas.Series` (or
+        `DataFrame`), `datetime_index` is ignored.
+
+    datetime_index : pandas.DatetimeIndex or None
+        Calendar timestamp for each entry of `power_kW`. Required, and used,
+        only when `power_kW` is a bare `numpy.ndarray`.
+
+    Raises
+    ------
+    ValueError
+        When `power_kW` is a `numpy.ndarray` and `datetime_index` is `None`,
+        or when their lengths differ.
+
+    Returns
+    -------
+    pandas.Series
+        `power_kW` unchanged if already pandas, otherwise
+        `pandas.Series(power_kW, index=datetime_index)`.
+    """
+    if ut.check_pandas_type(power_kW):
+        return power_kW
+    if datetime_index is None:
+        raise ValueError(
+            "datetime_index is required when power_kW is a numpy.ndarray; "
+            "otherwise pass power_kW as a pandas.Series indexed by timestamps"
+        )
+    if len(power_kW) != len(datetime_index):
+        raise ValueError(
+            f"power_kW has {len(power_kW)} entries but datetime_index has "
+            f"{len(datetime_index)}; they must be the same length"
+        )
+    return pd.Series(power_kW, index=datetime_index)
+
+
+def calculate_itemized_dr_revenue(
+    power_kW, events, baseline_params, payment_function, datetime_index=None
+):
+    """Calculates ex-post demand response revenue with a row per event.
+
+    Each event is re-sliced from `power_kW` and re-baselined independently, so
+    results never mix time windows across events.
+
+    Parameters
+    ----------
+    power_kW : pandas.Series or numpy.ndarray
+        Realized power consumption in kW. A `pandas.Series` must be indexed
+        by `pandas.DatetimeIndex`; a bare `numpy.ndarray` is paired with
+        `datetime_index` via `_as_power_series`.
 
     events : list of dict or pandas.DataFrame
         Events collection, as produced by `add_event`.
@@ -2016,6 +1954,18 @@ def calculate_dr_revenue(
         `PaymentStructure` instance (e.g. `CapacityEnergyPayment`) to use a
         non-default payment structure.
 
+    datetime_index : pandas.DatetimeIndex or None
+        Calendar timestamp for each entry of `power_kW`. Only needed (and
+        only used) when `power_kW` is a bare `numpy.ndarray` rather than a
+        `pandas.Series`.
+
+    Raises
+    ------
+    ValueError
+        When `power_kW` is a `numpy.ndarray` and `datetime_index` is missing
+        or mismatched in length (see `_as_power_series`), or when
+        `historical_power_kW` has no data in some event's window.
+
     Returns
     -------
     tuple
@@ -2024,6 +1974,7 @@ def calculate_dr_revenue(
         `calculate_event_revenue`) and `total_revenue` is the sum of the
         `REVENUE` column in USD.
     """
+    historical_power_kW = _as_power_series(power_kW, datetime_index)
     events_df = events_to_dataframe(events)
     results = [
         calculate_event_revenue(
@@ -2036,7 +1987,133 @@ def calculate_dr_revenue(
     return per_event_df, total_revenue
 
 
-def build_dr_revenue(
+def calculate_dr_revenue(
+    power_kW,
+    events,
+    baseline_params,
+    payment_function,
+    historical_power_kW=None,
+    datetime_index=None,
+    model=None,
+    region_x1s=None,
+    varstr_prefix="dr_event",
+):
+    """Calculates demand response revenue across all events.
+
+    Dispatches on `power_kW`: realized numpy/pandas data is settled ex-post,
+    while a pyomo variable has its baseline and revenue components built onto
+    `model`. Use `build_dr_revenue` to also net the result into the objective.
+
+    Parameters
+    ----------
+    power_kW : pandas.Series, numpy.ndarray, or pyomo.environ.Var
+        Power consumption in kW, determining which branch runs. A
+        `pandas.Series`/`numpy.ndarray` is realized data, settled ex-post via
+        `calculate_itemized_dr_revenue`. A `pyomo.environ.Var` is the model's
+        decision variable, built onto `model` via
+        `_build_dr_revenue_components`.
+
+    events : list of dict or pandas.DataFrame
+        Events collection, as produced by `add_event`. Used in both branches.
+
+    baseline_params : dict or BaselineMethod
+        Baseline parameters, as produced by `make_baseline_parameters`, or a
+        `BaselineMethod` instance (e.g. `TopUsageDaysBaseline`). Used in both
+        branches.
+
+    payment_function : list of dict or PaymentStructure
+        Payment/penalty schedule to apply, as a list of region dicts or a
+        `PaymentStructure` instance (e.g. `CapacityEnergyPayment`). Used in
+        both branches.
+
+    historical_power_kW : pandas.Series or None
+        Realized historical power consumption, indexed by
+        `pandas.DatetimeIndex`. Only used (and required) in the pyomo
+        branch, as the fallback baseline source -- see
+        `calculate_event_baseline`.
+
+    datetime_index : pandas.DatetimeIndex or None
+        Calendar timestamp for each position in `power_kW`. In the
+        numpy/pandas branch, only needed (and used) when `power_kW` is a
+        bare `numpy.ndarray` (see `_as_power_series`). In the pyomo branch,
+        required, and must align with `list(power_kW.index_set())`.
+
+    model : pyomo.environ.Model, pyomo.environ.Block, or None
+        The model to add components to, in the pyomo branch. Required (and
+        only used) there; passed through unchanged in the numpy/pandas
+        branch.
+
+    region_x1s : dict or None
+        Assumed payment-function region's `x1`, keyed by event date (any
+        value `pandas.Timestamp` can parse). Only used in the pyomo branch,
+        and optional there: an event missing from the dict (or the dict
+        being `None` entirely) leaves that event's region choice to the
+        solver, via `PaymentStructure.build_expression`'s all-regions
+        formulation; an event with an entry fixes that region instead.
+
+    varstr_prefix : str
+        Prefix for the per-event `varstr` passed to `build_payment_expression`
+        in the pyomo branch. Must be unique per call on a given `model`.
+        Unused in the numpy/pandas branch.
+
+    Raises
+    ------
+    NotImplementedError
+        When `power_kW` is a `cvxpy` type, which this function does not
+        support.
+
+    ValueError
+        In the pyomo branch, when `datetime_index`, `historical_power_kW`,
+        or `model` is missing, or when an event's window has no matching
+        positions in `datetime_index` (delegated from
+        `_build_dr_revenue_components`).
+
+    TypeError
+        When `power_kW` is not a `pandas.Series`, `numpy.ndarray`, or
+        `pyomo.environ.Var`.
+
+    Returns
+    -------
+    tuple
+        `(total_revenue, model)` in both branches. In the numpy/pandas
+        branch, `total_revenue` is a `float` and `model` is passed through
+        unchanged (typically `None`). In the pyomo branch, `total_revenue`
+        is a pyomo expression built from newly-added revenue variables, and
+        `model` has those components (and each event's baseline) added to it.
+    """
+    if ut.check_cvx_type(power_kW):
+        raise NotImplementedError(
+            "cvxpy power_kW is not supported for demand response revenue. Pass a "
+            "pandas.Series or numpy.ndarray for ex-post evaluation, or a "
+            "pyomo.environ.Var to build an optimization model."
+        )
+    elif ut.check_indexed_pyomo_type(power_kW) or ut.check_nonindexed_pyomo_type(
+        power_kW
+    ):
+        return _build_dr_revenue_components(
+            power_kW,
+            datetime_index,
+            events,
+            historical_power_kW,
+            baseline_params,
+            model,
+            payment_function,
+            region_x1s,
+            varstr_prefix,
+        )
+    elif ut.check_indexed_np_array(power_kW) or ut.check_pandas_type(power_kW):
+        _, total_revenue = calculate_itemized_dr_revenue(
+            power_kW, events, baseline_params, payment_function, datetime_index
+        )
+        return total_revenue, model
+    else:
+        raise TypeError(
+            "power_kW must be of type pandas.Series, numpy.ndarray, "
+            "or pyomo.environ.Var"
+        )
+
+
+def _build_dr_revenue_components(
     power_kW,
     datetime_index,
     events,
@@ -2045,24 +2122,156 @@ def build_dr_revenue(
     model,
     payment_function,
     region_x1s,
-    varstr_prefix="dr_event",
+    varstr_prefix,
 ):
-    """Build pyomo revenue expressions for all events and net them into model.objective.
+    """Builds each event's baseline and revenue components onto a pyomo model.
 
     Slices `power_kW` to each event's window internally (via `datetime_index`)
     and computes each event's baseline internally (via `historical_power_kW`
     and `calculate_event_baseline`) -- the caller only needs to supply the
     model's full power variable, a historical consumption series, and an
-    assumed payment-function region per event.
+    assumed payment-function region per event. Does not touch
+    `model.objective`; see `build_dr_revenue` for that.
 
     Processes events in `EVENT_DATE` order (like `calculate_dr_revenue`).
 
-    If `model` already has an `objective` component (e.g. built by
-    `costs.build_pyomo_costing`), the total DR revenue is subtracted from it
-    in place, the same way `calculate_cost` already nets export revenue
-    against cost (`cost -= new_cost`). Otherwise a new minimize objective of
-    `-total_revenue` is created (minimizing negative revenue == maximizing
-    revenue).
+    Parameters
+    ----------
+    power_kW : pyomo.environ.Var
+        Full time-indexed decision variable for actual power consumption
+        over the optimization horizon.
+
+    datetime_index : pandas.DatetimeIndex
+        Calendar timestamp for each position in `power_kW`'s index set, in
+        the same order as `list(power_kW.index_set())` -- pyomo index sets
+        carry no calendar information of their own, so this is required to
+        determine which positions fall in each event's window.
+
+    events : list of dict or pandas.DataFrame
+        Events collection, as produced by `add_event`.
+
+    historical_power_kW : pandas.Series
+        Realized historical power consumption, indexed by
+        `pandas.DatetimeIndex`. Used as a fallback source for each event's
+        baseline: a baseline day whose window is fully contained in the
+        simulation horizon spanned by `power_kW`/`datetime_index` is instead
+        computed as a decision-variable average over `power_kW` itself (see
+        `calculate_event_baseline`), and the day-of adjustment factor (if
+        configured) is always computed from `historical_power_kW` -- see
+        `calculate_event_baseline`'s docstring for why.
+
+    baseline_params : dict or BaselineMethod
+        Baseline parameters, as produced by `make_baseline_parameters`, or
+        a `BaselineMethod` instance (e.g. `TopUsageDaysBaseline`) to use a
+        non-default baselining strategy.
+
+    model : pyomo.environ.Model or pyomo.environ.Block
+        The model to add components to.
+
+    payment_function : list of dict or PaymentStructure
+        Payment/penalty schedule shared by all events, as a list of region
+        dicts or a `PaymentStructure` instance (e.g.
+        `CapacityEnergyPayment`).
+
+    region_x1s : dict or None
+        Assumed payment-function region's `x1`, keyed by event date (any
+        value `pandas.Timestamp` can parse), e.g.
+        `{"2024-01-08": 0.6, "2024-01-15": 0.75}`. Optional: an event
+        missing from the dict (or `None` entirely) leaves that event's
+        region choice to the solver instead of fixing it -- see
+        `PaymentStructure.build_expression`.
+
+    varstr_prefix : str
+        Prefix for the per-event `varstr` passed to `build_payment_expression`
+        (combined with the event's position in date order). Must be unique
+        per call on a given `model`.
+
+    Raises
+    ------
+    ValueError
+        When `datetime_index`, `historical_power_kW`, or `model` is `None`,
+        or when an event's window has no matching positions in
+        `datetime_index`.
+
+    Returns
+    -------
+    tuple
+        `(total_revenue, model)`, where `total_revenue` is a pyomo
+        expression summing each event's revenue variable.
+    """
+    if any(a is None for a in (datetime_index, historical_power_kW, model)):
+        raise ValueError(
+            "datetime_index, historical_power_kW, and model are all "
+            "required when power_kW is a pyomo variable"
+        )
+    varstr_prefix = ut.sanitize_varstr(varstr_prefix)
+    events_df = events_to_dataframe(events)
+    var_index = list(power_kW.index_set())
+    region_x1_by_date = (
+        {pd.Timestamp(k): v for k, v in region_x1s.items()} if region_x1s else {}
+    )
+    payment_structure = _coerce_payment_structure(payment_function)
+
+    total_revenue = 0
+    for i, row in events_df.iterrows():
+        event = row.to_dict()
+        baseline_kW, model = calculate_event_baseline(
+            historical_power_kW,
+            event,
+            baseline_params,
+            model=model,
+            model_power_kW=power_kW,
+            model_datetime_index=datetime_index,
+            varstr=f"{varstr_prefix}_{i}_baseline_kW",
+        )
+
+        mask = _event_window_mask(
+            datetime_index,
+            event[EVENT_DATE],
+            event[EVENT_START_HOUR],
+            event[EVENT_DURATION],
+        )
+        matched_indices = [idx for idx, keep in zip(var_index, mask) if keep]
+        if not matched_indices:
+            raise ValueError(
+                f"No data available for event window on {event[EVENT_DATE]}"
+            )
+        mean_power = pyo.quicksum(power_kW[idx] for idx in matched_indices) / len(
+            matched_indices
+        )
+        reduction_kW = baseline_kW - mean_power
+
+        revenue_var, model = payment_structure.build_expression(
+            event,
+            reduction_kW,
+            region_x1=region_x1_by_date.get(event[EVENT_DATE]),
+            model=model,
+            varstr=f"{varstr_prefix}_{i}",
+        )
+        total_revenue += revenue_var
+
+    return total_revenue, model
+
+
+def build_dr_revenue(
+    power_kW,
+    datetime_index,
+    events,
+    historical_power_kW,
+    baseline_params,
+    model,
+    payment_function,
+    region_x1s=None,
+    varstr_prefix="dr_event",
+):
+    """Wrapper for `calculate_dr_revenue` that nets DR revenue into the objective.
+
+    Delegates the baseline/revenue component building to `calculate_dr_revenue`
+    (which for a pyomo `power_kW` builds onto `model` via
+    `_build_dr_revenue_components`), then itself only adds the objective
+    netting: subtracts total revenue from an existing `model.objective` if
+    there is one (composing with `costs.build_pyomo_costing`), otherwise
+    creates a minimize objective of `-total_revenue`.
 
     Parameters
     ----------
@@ -2102,10 +2311,13 @@ def build_dr_revenue(
         dicts or a `PaymentStructure` instance (e.g.
         `CapacityEnergyPayment`).
 
-    region_x1s : dict
+    region_x1s : dict or None
         Assumed payment-function region's `x1`, keyed by event date (any
         value `pandas.Timestamp` can parse), e.g.
-        `{"2024-01-08": 0.6, "2024-01-15": 0.75}`.
+        `{"2024-01-08": 0.6, "2024-01-15": 0.75}`. Optional: an event
+        missing from the dict (or `None` entirely) leaves that event's
+        region choice to the solver instead of fixing it -- see
+        `PaymentStructure.build_expression`.
 
     varstr_prefix : str
         Prefix for the per-event `varstr` passed to `build_payment_expression`
@@ -2115,62 +2327,27 @@ def build_dr_revenue(
     Raises
     ------
     ValueError
-        When an event's window has no matching positions in `datetime_index`.
-
-    KeyError
-        When `region_x1s` has no entry for an event's date.
+        When an event's window has no matching positions in `datetime_index`
+        (delegated from `_build_dr_revenue_components`).
 
     Returns
     -------
     tuple
         `(total_revenue, model)`.
     """
-    events_df = events_to_dataframe(events)
-    var_index = list(power_kW.index_set())
-    region_x1_by_date = {pd.Timestamp(k): v for k, v in region_x1s.items()}
-    payment_structure = _coerce_payment_structure(payment_function)
-
-    total_revenue = 0
-    for i, row in events_df.iterrows():
-        event = row.to_dict()
-        baseline_kW, model = calculate_event_baseline(
-            historical_power_kW,
-            event,
-            baseline_params,
-            model=model,
-            model_power_kW=power_kW,
-            model_datetime_index=datetime_index,
-            varstr=f"{varstr_prefix}_{i}_baseline_kW",
-        )
-
-        mask = _event_window_mask(
-            datetime_index,
-            event[EVENT_DATE],
-            event[EVENT_START_HOUR],
-            event[EVENT_DURATION],
-        )
-        matched_indices = [idx for idx, keep in zip(var_index, mask) if keep]
-        if not matched_indices:
-            raise ValueError(
-                f"No data available for event window on {event[EVENT_DATE]}"
-            )
-        mean_power = pyo.quicksum(power_kW[idx] for idx in matched_indices) / len(
-            matched_indices
-        )
-        reduction_kW = baseline_kW - mean_power
-
-        revenue_var, model = payment_structure.build_expression(
-            event,
-            reduction_kW,
-            region_x1=region_x1_by_date[event[EVENT_DATE]],
-            model=model,
-            varstr=f"{varstr_prefix}_{i}",
-        )
-        total_revenue += revenue_var
-
+    total_revenue, model = calculate_dr_revenue(
+        power_kW,
+        events,
+        baseline_params,
+        payment_function,
+        historical_power_kW=historical_power_kW,
+        datetime_index=datetime_index,
+        model=model,
+        region_x1s=region_x1s,
+        varstr_prefix=varstr_prefix,
+    )
     if hasattr(model, "objective"):
         model.objective.expr -= total_revenue
     else:
         model.objective = pyo.Objective(expr=-total_revenue, sense=pyo.minimize)
-
     return total_revenue, model
