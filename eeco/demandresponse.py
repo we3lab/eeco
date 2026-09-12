@@ -890,19 +890,6 @@ class PaymentStructure:
 
             region_idx = range(len(self.regions))
 
-            finite_edges = [
-                v
-                for region in self.regions
-                for v in (region[REGION_X1], region[REGION_X2])
-                if not np.isinf(v)
-            ]
-            lo, hi = min(finite_edges), max(finite_edges)
-            span = hi - lo
-            if any(np.isinf(region[REGION_X1]) for region in self.regions):
-                lo -= span * (self.big_m_safety_factor - 1)
-            if any(np.isinf(region[REGION_X2]) for region in self.regions):
-                hi += span * (self.big_m_safety_factor - 1)
-
             model.add_component(
                 varstr + "_region_active", pyo.Var(region_idx, within=pyo.Binary)
             )
@@ -929,8 +916,10 @@ class PaymentStructure:
 
             def lower_rule(model, r):
                 x1 = self.regions[r][REGION_X1]
-                lower = lo if np.isinf(x1) else x1
-                return region_reduction[r] >= lower * bid_capacity_kW * z[r]
+                # implicitly bounds the DR bid to be > 0.1% of max power production
+                if np.isinf(x1):
+                    x1 = -1000.0
+                return region_reduction[r] >= x1 * bid_capacity_kW * z[r]
 
             model.add_component(
                 varstr + "_region_reduction_lower_constraint",
@@ -939,8 +928,10 @@ class PaymentStructure:
 
             def upper_rule(model, r):
                 x2 = self.regions[r][REGION_X2]
-                upper = hi if np.isinf(x2) else x2
-                return region_reduction[r] <= upper * bid_capacity_kW * z[r]
+                # implicitly bounds the DR bid to be > 0.1% of max power consumption
+                if np.isinf(x2):
+                    x2 = 1000.0
+                return region_reduction[r] <= x2 * bid_capacity_kW * z[r]
 
             model.add_component(
                 varstr + "_region_reduction_upper_constraint",
