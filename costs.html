@@ -87,6 +87,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.detect_charge_periods"><code class="docutils literal notranslate"><span class="pre">detect_charge_periods()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.get_billing_period_scale_factor"><code class="docutils literal notranslate"><span class="pre">get_billing_period_scale_factor()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.get_charge_array_duration"><code class="docutils literal notranslate"><span class="pre">get_charge_array_duration()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.costs.get_charge_array_length"><code class="docutils literal notranslate"><span class="pre">get_charge_array_length()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.get_charge_df"><code class="docutils literal notranslate"><span class="pre">get_charge_df()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.get_charge_dict"><code class="docutils literal notranslate"><span class="pre">get_charge_dict()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.get_charge_name"><code class="docutils literal notranslate"><span class="pre">get_charge_name()</span></code></a></li>
@@ -168,7 +169,7 @@ cubic meter (gas energy), or $ / month (customer)</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.build_pyomo_costing">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">build_pyomo_costing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional_objective_terms=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#build_pyomo_costing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.build_pyomo_costing" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">build_pyomo_costing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=Unit(&quot;kilowatt&quot;)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=Unit(&quot;meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour&quot;)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional_objective_terms=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#build_pyomo_costing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.build_pyomo_costing" title="Permalink to this definition"></a></dt>
 <dd><p>Wrapper for <cite>calculate_cost</cite> to build the cost components into a Pyomo model.
 An objective function will be created in <cite>model.objective</cite>.</p>
 <dl class="field-list">
@@ -215,9 +216,16 @@ Default is 1</p></li>
 Can be a single pyomo Expression or a list of pyomo Expressions.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <li><p><strong>decomposition_type</strong> (<em>str or None</em>) – Type of decomposition to use for consumption data.
-- “absolute_value”: Linear problem using absolute value
-- “binary_variable”: <cite>NotImplementedError</cite>
-- None (default): No decomposition, treats all consumption as imports</p></li>
+- “absolute_value”: Uses max(x, 0) constraints. Creates nonlinear problem</p>
+<blockquote>
+<div><p>for Pyomo due to abs() constraint.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>“binary_big_M”: Uses binary indicator with Big-M constraints.
+Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.</p></li>
+<li><p>None (default): No decomposition, treats all consumption as imports</p></li>
+</ul>
+</li>
 <li><p><strong>varstr_alias_func</strong> (<em>function</em>) – Function to generate variable name for pyomo,
 should take in a 6 inputs and generate a string output.
 The function will receive following six inputs:</p>
@@ -241,7 +249,7 @@ f”{utility}_{charge_type}_{name}_{charge_limit}”</p>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
     is provided in <cite>charge_arrays</cite></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -255,7 +263,7 @@ f”{utility}_{charge_type}_{name}_{charge_limit}”</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.calculate_cost">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_cost" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=Unit(&quot;kilowatt&quot;)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=Unit(&quot;meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour&quot;)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_charge_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">big_m=1000000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_cost" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates the cost of given charges (demand or energy) for the given
 billing rate structure, utility, and consumption information as a
 cvxpy expression or numpy array</p>
@@ -317,9 +325,16 @@ in full regardless of horizon length. Default is 1</p></li>
 <li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <li><p><strong>decomposition_type</strong> (<em>str or None</em>) – Type of decomposition to use for consumption data.
-- “absolute_value”: Linear problem using absolute value
-- “binary_variable”: <cite>NotImplementedError</cite>
-- None (default): No decomposition, treats all consumption as imports</p></li>
+- “absolute_value”: Uses max(x, 0) constraints. Creates nonlinear problem</p>
+<blockquote>
+<div><p>for Pyomo due to abs() constraint.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>“binary_big_M”: Uses binary indicator with Big-M constraints.
+Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.</p></li>
+<li><p>None (default): No decomposition, treats all consumption as imports</p></li>
+</ul>
+</li>
 <li><p><strong>varstr_alias_func</strong> (<em>function</em>) – Function to generate variable name for pyomo,
 should take in a 6 inputs and generate a string output.
 The function will receive following six inputs:</p>
@@ -343,17 +358,20 @@ f”{utility}_{charge_type}_{name}_{charge_limit}”</p>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
     is provided in <cite>charge_arrays</cite></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tuple with the first entry being a float,
-cvxpy Expression, or pyomo Var representing energy charge costs
-in USD for the given <cite>charge_array</cite> and <cite>consumption_data</cite>
-and the second entry being the pyomo model object (or None)</p>
+<dd class="field-odd"><p><ul class="simple">
+<li><p>First entry: float, cvxpy Expression, or pyomo Var representing energy
+charge costs in USD for the given <cite>charge_array</cite> and <cite>consumption_data</cite></p></li>
+<li><p>Second entry: pyomo ConcreteModel (pyomo path), list of cvxpy constraints
+from decomposition (cvxpy + decomposition_type path), or None otherwise</p></li>
+</ul>
+</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>(numpy.Array, cvxpy.Expression, or pyomo.environ.Var),  pyomo.Model</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -398,7 +416,7 @@ in USD for the given <cite>charge_array</cite> and <cite>consumption_data</cite>
 and the second entry being the pyomo model object (or None)</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a>), pyomo.Model</p>
+<dd class="field-odd"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)">float</a>), pyomo.Model</p>
 </dd>
 </dl>
 </dd></dl>
@@ -433,7 +451,7 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
     is provided in <cite>charge_arrays</cite></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -443,7 +461,7 @@ in USD for the given <cite>charge_array</cite> and <cite>consumption_data</cite>
 and the second entry being the pyomo model object (or None)</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a>), pyomo.Model</p>
+<dd class="field-even"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)">float</a>), pyomo.Model</p>
 </dd>
 </dl>
 </dd></dl>
@@ -470,7 +488,7 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
     is provided in <cite>charge_arrays</cite></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -480,18 +498,18 @@ in USD for the given <cite>charge_array</cite> and <cite>export_data</cite>
 and the second entry being the pyomo model object (or None)</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a>), pyomo.Model</p>
+<dd class="field-even"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)">float</a>), pyomo.Model</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.calculate_itemized_cost">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_itemized_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=&lt;Unit('kilowatt')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=&lt;Unit('meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour')&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">by_charge_key=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_itemized_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_itemized_cost" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">calculate_itemized_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electric_consumption_units=Unit(&quot;kilowatt&quot;)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units=Unit(&quot;meter</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">hour&quot;)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution='15m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_demand_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_consumption_dict=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consumption_estimate=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_utility=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">demand_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_scale_factor=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">big_m=1000000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">by_charge_key=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_alias_func=&lt;function</span> <span class="pre">default_varstr_alias_func&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#calculate_itemized_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.calculate_itemized_cost" title="Permalink to this definition"></a></dt>
 <dd><p>Calculates itemized costs as a nested dictionary</p>
-<dl class="field-list simple">
+<dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
+<dd class="field-odd"><ul>
 <li><p><strong>charge_dict</strong> (<em>dict</em>) – dictionary of arrays with keys of the form
 <cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite>
 and values being the $ per kW (electric demand), kWh (electric energy/export),
@@ -532,13 +550,21 @@ in full regardless of horizon length. Default is 1</p></li>
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <li><p><strong>decomposition_type</strong> (<em>str or None</em>) – Type of decomposition to use for consumption data.
 - “absolute_value”: Linear problem using absolute value
-- “binary_variable”: <cite>NotImplementedError</cite>
-- None (default): No decomposition, treats all consumption as imports</p></li>
+- “binary_big_M”: Uses binary indicator with Big-M constraints.</p>
+<blockquote>
+<div><p>Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>None (default): No decomposition, treats all consumption as imports</p></li>
+</ul>
+</li>
 <li><p><strong>by_charge_key</strong> (<em>bool</em>) – Whether to further itemize the results by charge key. Default is False.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p>{</p>
+<dd class="field-even"><p><ul>
+<li><p><em>dict</em> –</p>
+<p>{</p>
 <blockquote>
 <div><p>“electric”: {</p>
 <blockquote>
@@ -561,10 +587,10 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <p>”total”: <cite>float</cite> or dict (key -&gt; cost) if by_charge_key</p>
 </div></blockquote>
 <p>}</p>
+</li>
+<li><p><strong>model_objects</strong> (<em>pyomo ConcreteModel, list of cvxpy constraints, or None</em>) – Same as the second return value of <cite>calculate_cost</cite>.</p></li>
+</ul>
 </p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -585,7 +611,7 @@ If a DataFrame it must have a column “DateTime” and row for each timestep</p
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>datetime</cite> is not pandas.DataFrame, pandas.Series, or numpy.ndarray</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>datetime</cite> is not pandas.DataFrame, pandas.Series, or numpy.ndarray</p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>timeseries of the cost of the charge with irrelevant timesteps zeroed out</p>
@@ -618,7 +644,7 @@ to customize variable names.</p>
 <cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite></p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -675,7 +701,7 @@ not include <cite>end_dt</cite></p></li>
 <dd class="field-even"><p>the horizon’s length as a fraction of a monthly billing period</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -693,10 +719,27 @@ where start_date and end_date are in YYYYMMDD or YYYY-MM-DD format</p>
 <dd class="field-even"><p>Duration of the charge period in days</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If the key format is invalid or dates cannot be parsed</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If the key format is invalid or dates cannot be parsed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.costs.get_charge_array_length">
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">get_charge_array_length</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#get_charge_array_length"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.get_charge_array_length" title="Permalink to this definition"></a></dt>
+<dd><p>Number of timesteps in a charge array for np and cvxpy objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>charge_array</strong> (<em>numpy.ndarray or cvxpy.Expression</em>) – array of charges per timestep</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>number of timesteps in <cite>charge_array</cite></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -756,7 +799,7 @@ not include <cite>end_dt</cite></p></li>
 <dd class="field-even"><p>dictionary of charge arrays</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -776,7 +819,7 @@ not include <cite>end_dt</cite></p></li>
 <dd class="field-even"><p>A unique name with underscores converted to dashes</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -796,14 +839,14 @@ not include <cite>end_dt</cite></p></li>
 <dd class="field-even"><p>Dictionary with conversion factors for each utility type</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.get_converted_consumption_data">
-<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">get_converted_consumption_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conversion_factors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#get_converted_consumption_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.get_converted_consumption_data" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">get_converted_consumption_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conversion_factors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">big_m</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000000.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#get_converted_consumption_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.get_converted_consumption_data" title="Permalink to this definition"></a></dt>
 <dd><p>Ensure consumption_data_dict has imports/exports structure
 with proper unit conversion.</p>
 <dl class="field-list simple">
@@ -816,10 +859,14 @@ with proper unit conversion.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Updated consumption_data_dict with imports/exports structure</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p>consumption_data_dict with imports/exports structure</p></li>
+<li><p>pyomo ConcreteModel, list of cvxpy constraints, or None</p></li>
+</ul>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -841,7 +888,7 @@ with proper unit conversion.</p>
 <dd class="field-even"><p>limit in the tier after <cite>key</cite>, which is <cite>inf</cite> if there is no higher tier</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -867,7 +914,7 @@ start of the relevant timeframe. Then accumulates the running maximum.</p>
 “cost”: running max of usage * charge}</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -891,7 +938,7 @@ Accepts <cite>datetime.datetime</cite>, <cite>numpy.datetime64</cite>, and ISO-8
 <dd class="field-even"><p>the number of timesteps and a single-column DataFrame of their datetimes</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a> of (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a>, <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a>)</p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a> of (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a>, <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a>)</p>
 </dd>
 <dt class="field-even">Warns<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>UserWarning</strong> – when the horizon is not a whole multiple of <cite>resolution</cite>, since the
@@ -925,10 +972,10 @@ not include <cite>end_dt</cite></p></li>
 <dd class="field-even"><p>dictionary of charge_dicts with different variations</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – If global scaling overrides individual ratios in any variant
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – If global scaling overrides individual ratios in any variant
     (inherited from parametrize_rate_data)</p>
 </dd>
 </dl>
@@ -1009,9 +1056,9 @@ parametrized charges and windows</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If percent_change_dict contains both period-based scaling and individual charge
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If percent_change_dict contains both period-based scaling and individual charge
     scaling for the same charge type</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – If percent_change_dict contains exact charge keys that are not found in the data</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – If percent_change_dict contains exact charge keys that are not found in the data</p></li>
 </ul>
 </dd>
 </dl>

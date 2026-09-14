@@ -250,7 +250,7 @@ the previous consumption during this billing period in conjunction with <cite>co
 <p>When <cite>demand_scale_factor &lt; 1.0</cite>, demand charges are proportionally reduced to reflect the shorter optimization horizon. This is useful for:
 - Moving horizon optimization where you solve for sub-periods of the billing cycle
 - Sequential optimization where you want to reduce demand charge weighting as time goes on in the month</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">eeco</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
 
 <span class="c1"># E.g. solving for 3 days out of a 30-day billing period</span>
 <span class="n">demand_scale_factor</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">30</span>
@@ -291,33 +291,62 @@ the previous consumption during this billing period in conjunction with <cite>co
 <p>The <cite>decomposition_type</cite> parameter allows you to decompose consumption data into positive (imports) and negative (exports) components. This is useful when you have export charges or credits in your rate structure.
 Options include:</p>
 <ul class="simple">
-<li><p>Default <cite>None</cite></p></li>
-<li><p><cite>“binary_variable”</cite>: To be implemented</p></li>
-<li><p><cite>“absolute_value”</cite></p></li>
+<li><p>Default <cite>None</cite>: No decomposition, consumption treated as imports only.</p></li>
+<li><p><cite>“binary_big_M”</cite>: Uses binary variable with Big-M constraints. Creates a MILP requiring a MIP solver (e.g., SCIP, Gurobi). Supported for both CVXPY and Pyomo.</p></li>
+<li><p><cite>“absolute_value”</cite>: Uses absolute value constraints. Creates a nonlinear problem for Pyomo. <strong>Not supported for CVXPY</strong> (not DCP-compliant).</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">electric_emission_cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
+<p>For numpy arrays, <cite>decomposition_type</cite> is ignored since decomposition is a direct calculation.</p>
+<p><strong>Using Pyomo</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">eeco</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
 
-<span class="c1"># Example with export charges</span>
+<span class="c1"># Example with export charges using Pyomo</span>
 <span class="n">charge_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"electric_energy_0_2024-07-10_2024-07-10_0"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">96</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.05</span><span class="p">,</span>
     <span class="s2">"electric_export_0_2024-07-10_2024-07-10_0"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">96</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.025</span><span class="p">,</span>
 <span class="p">}</span>
 
+<span class="c1"># Create Pyomo model with consumption variable</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">ConcreteModel</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">RangeSet</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">95</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">consumption</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+
 <span class="n">consumption_data</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">"electric"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">48</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">48</span><span class="p">)</span> <span class="o">*</span> <span class="mi">5</span><span class="p">]),</span>
-    <span class="s2">"gas"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">96</span><span class="p">),</span>
+    <span class="s2">"electric"</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">consumption</span><span class="p">,</span>
+    <span class="s2">"gas"</span><span class="p">:</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Param</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">initialize</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
 <span class="p">}</span>
 
 <span class="c1"># Decompose consumption into imports and exports</span>
 <span class="n">result</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
     <span class="n">consumption_data</span><span class="p">,</span>
-    <span class="n">decomposition_type</span><span class="o">=</span><span class="s2">"absolute_value"</span>
+    <span class="n">decomposition_type</span><span class="o">=</span><span class="s2">"binary_big_M"</span><span class="p">,</span>  <span class="c1"># or "absolute_value" for Pyomo</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p>When decomposition_type is not None the function creates separate variables for positive consumption (imports) and negative consumption (exports)
-and applies export charges only to the export component.
-For Pyomo models, decomposition_type adds a constraint total_consumption = imports - exports</p>
+<p><strong>Using CVXPY</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">eeco</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span><span class="p">,</span> <span class="n">utils</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
+
+<span class="c1"># Create CVXPY variable for consumption</span>
+<span class="n">consumption</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">96</span><span class="p">)</span>
+
+<span class="c1"># Decompose into imports/exports (returns constraints for CVXPY)</span>
+<span class="n">imports</span><span class="p">,</span> <span class="n">exports</span><span class="p">,</span> <span class="n">decomp_constraints</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">decompose_consumption</span><span class="p">(</span>
+    <span class="n">consumption</span><span class="p">,</span> <span class="n">decomposition_type</span><span class="o">=</span><span class="s2">"binary_big_M"</span>
+<span class="p">)</span>
+
+<span class="c1"># Build your optimization problem with decomposition constraints</span>
+<span class="n">objective</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Minimize</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>  <span class="c1"># your objective</span>
+<span class="n">constraints</span> <span class="o">=</span> <span class="n">decomp_constraints</span> <span class="o">+</span> <span class="p">[</span><span class="o">...</span><span class="p">]</span>  <span class="c1"># add other constraints</span>
+
+<span class="n">prob</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">constraints</span><span class="p">)</span>
+<span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">SCIP</span><span class="p">)</span>  <span class="c1"># requires MIP solver</span>
+</pre></div>
+</div>
+<p>When <cite>decomposition_type</cite> is not <cite>None</cite>, the function creates separate variables for positive consumption (imports) and negative consumption (exports), applying export charges only to the export component.
+A constraint <cite>total_consumption = imports - exports</cite> is added to balance the decomposition.</p>
 </section>
 <section id="how-to-use-varstr-alias-func">
 <span id="varstr-alias"></span><h2><a class="toc-backref" href="#id6" role="doc-backlink">How to Use <cite>varstr_alias_func</cite></a><a class="headerlink" href="#how-to-use-varstr-alias-func" title="Permalink to this heading"></a></h2>

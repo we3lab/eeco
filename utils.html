@@ -84,8 +84,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#eeco.utils.check_nonindexed_pyomo_type"><code class="docutils literal notranslate"><span class="pre">check_nonindexed_pyomo_type()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.utils.check_nonindexed_python_type"><code class="docutils literal notranslate"><span class="pre">check_nonindexed_python_type()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.utils.convert_utc_to_timezone"><code class="docutils literal notranslate"><span class="pre">convert_utc_to_timezone()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.create_pyomo_model_index_from_dict"><code class="docutils literal notranslate"><span class="pre">create_pyomo_model_index_from_dict()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.utils.create_pyomo_model_index_ref"><code class="docutils literal notranslate"><span class="pre">create_pyomo_model_index_ref()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#eeco.utils.createa_pyomo_model_index_from_dict"><code class="docutils literal notranslate"><span class="pre">createa_pyomo_model_index_from_dict()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.utils.decompose_consumption"><code class="docutils literal notranslate"><span class="pre">decompose_consumption()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.utils.get_decomposed_var_names"><code class="docutils literal notranslate"><span class="pre">get_decomposed_var_names()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.utils.get_freq_binsize_minutes"><code class="docutils literal notranslate"><span class="pre">get_freq_binsize_minutes()</span></code></a></li>
@@ -142,7 +142,7 @@
 <dd class="field-odd"><p><strong>input_var</strong> (<em>object</em>) – Input parameter to check</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)">bool</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -156,7 +156,7 @@
 <dd class="field-odd"><p><strong>input_var</strong> (<em>object</em>) – Input parameter to check</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)">bool</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -188,7 +188,7 @@ or expression (or non-Pyomo type).</p>
 <dd class="field-odd"><p><strong>input_var</strong> (<em>object</em>) – Input parameter to check</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)">bool</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -203,7 +203,7 @@ or expression (or non-Pyomo type).</p>
 <dd class="field-odd"><p><strong>input_var</strong> (<em>object</em>) – Input parameter to check</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)">bool</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -220,6 +220,50 @@ or expression (or non-Pyomo type).</p>
 <li><p><strong>Returns</strong></p></li>
 <li><p><strong>int</strong> (<em>Corresponding hour in the specified timezone.</em>)</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.create_pyomo_model_index_from_dict">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">create_pyomo_model_index_from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#create_pyomo_model_index_from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.create_pyomo_model_index_from_dict" title="Permalink to this definition"></a></dt>
+<dd><p>Attach time index to the model for Pyomo variables and expressions.</p>
+<p>Builds a mapping between the entries in <cite>var</cite>’s index set and their
+positional order, and stores both on the model as private attributes.
+This makes it easy to translate between a Pyomo indexed variable’s index
+values and plain integer positions (e.g. when aligning with a NumPy
+array or another positional data structure).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>pyomo.environ.Model</em>) – The Pyomo model (or Block) to attach the index bookkeeping to.</p></li>
+<li><p><strong>dict</strong> (<em>dict that contains {key: pyomo.environ.Param or pyomo.environ.Var} or</em>) – dict of dicts like {key: {key: pyomo.environ.Param or pyomo.environ.Var}},
+Can also be an indexed pyomo var, experssion or param</p></li>
+<li><p><strong>overwrite</strong> (<em>bool</em>) – Ignored if index does not exist yet.
+If index exists, must be set to True for updates to take effect.
+If False, no changes are made to the index and a warning is raised.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When pyomo var is not found in supplied dict, will raise an error</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><p>Sets the following attributes on <cite>model</cite>:
+- <cite>_var_index_ref</cite> (dict): maps each index value in</p>
+<blockquote>
+<div><p><cite>var.index_set()</cite> to its integer position.</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt><cite>_var_index</cite> (list): the index values of <cite>var.index_set()</cite></dt><dd><p>in enumeration order.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -245,7 +289,7 @@ If False, no changes are made to the index and a warning is raised.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – When the index already exists and <cite>overwrite</cite> is False,
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – When the index already exists and <cite>overwrite</cite> is False,
     then the function with a warning to the user to set <cite>overwrite</cite> to True
     if they’d like to enforce index updates.</p>
 </dd>
@@ -271,59 +315,15 @@ If False, no changes are made to the index and a warning is raised.</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="eeco.utils.createa_pyomo_model_index_from_dict">
-<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">createa_pyomo_model_index_from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#createa_pyomo_model_index_from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.createa_pyomo_model_index_from_dict" title="Permalink to this definition"></a></dt>
-<dd><p>Attach time index to the model for Pyomo variables and expressions.</p>
-<p>Builds a mapping between the entries in <cite>var</cite>’s index set and their
-positional order, and stores both on the model as private attributes.
-This makes it easy to translate between a Pyomo indexed variable’s index
-values and plain integer positions (e.g. when aligning with a NumPy
-array or another positional data structure).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model</strong> (<em>pyomo.environ.Model</em>) – The Pyomo model (or Block) to attach the index bookkeeping to.</p></li>
-<li><p><strong>dict</strong> (<em>dict that contains {key: pyomo.environ.Param or pyomo.environ.Var} or</em>) – dict of dicts like {key: {key: pyomo.environ.Param or pyomo.environ.Var}},
-Can also be an indexed pyomo var, experssion or param</p></li>
-<li><p><strong>overwrite</strong> (<em>bool</em>) – Ignored if index does not exist yet.
-If index exists, must be set to True for updates to take effect.
-If False, no changes are made to the index and a warning is raised.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When pyomo var is not found in supplied dict, will raise an error</p>
-</dd>
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p><p>Sets the following attributes on <cite>model</cite>:
-- <cite>_var_index_ref</cite> (dict): maps each index value in</p>
-<blockquote>
-<div><p><cite>var.index_set()</cite> to its integer position.</p>
-</div></blockquote>
-<ul class="simple">
-<li><dl class="simple">
-<dt><cite>_var_index</cite> (list): the index values of <cite>var.index_set()</cite></dt><dd><p>in enumeration order.</p>
-</dd>
-</dl>
-</li>
-</ul>
-</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
 <dt class="sig sig-object py" id="eeco.utils.decompose_consumption">
-<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">decompose_consumption</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'absolute_value'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#decompose_consumption"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.decompose_consumption" title="Permalink to this definition"></a></dt>
-<dd><p>Decomposes consumption data into positive and negative components
-And adds constraint such that total consumption equals
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">decompose_consumption</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomposition_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'absolute_value'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">big_m</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000000.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#decompose_consumption"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.decompose_consumption" title="Permalink to this definition"></a></dt>
+<dd><p>Decomposes consumption data into positive and negative components.</p>
+<p>Adds constraint such that total consumption equals
 positive values minus negative values
 (where negative values are stored as positive magnitudes).</p>
-<dl class="field-list simple">
+<dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
+<dd class="field-odd"><ul>
 <li><p><strong>expression</strong> (<em>[</em>) – numpy.Array,
 cvxpy.Expression,
 pyomo.core.expr.numeric_expr.NumericExpression,
@@ -335,17 +335,45 @@ pyomo.environ.Var</p></li>
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for the variables to be created if using a Pyomo <cite>model</cite></p></li>
 <li><p><strong>decomposition_type</strong> (<em>str</em>) – Type of decomposition to use.
-- “binary_variable”: To be implemented
-- “absolute_value”: Creates nonlinear problem</p></li>
+- “absolute_value”: Uses max(x, 0) constraints. Creates nonlinear problem</p>
+<blockquote>
+<div><p>for Pyomo due to abs() constraint. Not supported for CVXPY.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>“binary_big_M”: Uses binary indicator with Big-M constraints.
+Creates a MILP (mixed-integer linear program).
+Supported for both Pyomo and CVXPY (requires MIP solver).</p></li>
+</ul>
+<p>Note: For numpy.ndarray inputs, decomposition_type is ignored</p>
+</li>
+<li><p><strong>big_m</strong> (<em>float, optional</em>) – Big-M value for binary decomposition. Should be larger than maximum
+possible consumption magnitude. Default is 1e6. Only used when
+decomposition_type=”binary_big_M”.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>(positive_values, negative_values, model) where
-positive_values and negative_values are both positive
-with the constraint that total = positive - negative</p>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#NotImplementedError" title="(in Python v3.14)"><strong>NotImplementedError</strong></a> – When <cite>decomposition_type</cite> is anything other than “absolute_value”
+    or “binary_big_M” for Pyomo, or anything other than “binary_big_M” for
+    CVXPY. Never raised for <cite>numpy.Array</cite>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>expression</cite> is not of type <cite>numpy.Array</cite>, <cite>cvxpy.Expression</cite>,
+    <cite>pyomo.core.expr.numeric_expr.NumericExpression</cite>,
+    <cite>pyomo.core.expr.numeric_expr.NumericNDArray</cite>,
+    <cite>pyomo.environ.Param</cite>, or <cite>pyomo.environ.Var</cite></p></li>
+</ul>
 </dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><p>(positive, negative, model_objects), where <cite>model_objects</cite> matches the
+second return value of <cite>calculate_cost</cite>:</p>
+<ul class="simple">
+<li><p>numpy: (positive_values, negative_values, model) - <cite>model</cite> is untouched</p></li>
+<li><p>Pyomo: (positive_var, negative_var, model) - constraints added to <cite>model</cite></p></li>
+<li><p>CVXPY: (positive_var, negative_var, constraints) - list of constraints</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -368,13 +396,13 @@ of increments of <cite>type</cite> of one binned increment of our time variable
 (for example ‘6h’ means the data are grouped into increments of 6 hours)</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – when resolution is not minute, hourly, or daily</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – when resolution is not minute, hourly, or daily</p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>integer giving the number of minutes in the given time frequency unit</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -416,7 +444,7 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>expression</cite> is not of type <cite>numpy.Array</cite>, <cite>cvxpy.Expression</cite>,
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>expression</cite> is not of type <cite>numpy.Array</cite>, <cite>cvxpy.Expression</cite>,
     <cite>pyomo.core.expr.numeric_expr.NumericExpression</cite>,
     <cite>pyomo.core.expr.numeric_expr.NumericNDArray</cite>,
     <cite>pyomo.environ.Param</cite>, or <cite>pyomo.environ.Var</cite></p>
@@ -451,7 +479,7 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>expression</cite> is not of type <cite>numpy.Array</cite>, <cite>cvxpy.Expression</cite>,
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>expression</cite> is not of type <cite>numpy.Array</cite>, <cite>cvxpy.Expression</cite>,
     <cite>pyomo.core.expr.numeric_expr.NumericNDArray</cite>,
     <cite>pyomo.core.expr.numeric_expr.NumericExpression</cite>,
     <cite>pyomo.environ.Param</cite>,  or <cite>pyomo.environ.Var</cite></p>
@@ -495,7 +523,7 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>expression</cite> is not of type <cite>numpy.Array</cite>, <cite>cvxpy.Expression</cite>,
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>expression</cite> is not of type <cite>numpy.Array</cite>, <cite>cvxpy.Expression</cite>,
     <cite>pyomo.core.expr.numeric_expr.NumericNDArray</cite>,
     <cite>pyomo.core.expr.numeric_expr.NumericExpression</cite>,
     <cite>pyomo.environ.Param</cite>, or <cite>pyomo.environ.Var</cite></p>
@@ -528,7 +556,7 @@ of increments of <cite>type</cite> of one binned increment of our time variable
 <dd class="field-even"><p>tuple of the form (<cite>int</cite>,`str`) giving the binsize and units (freq_type)</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -546,7 +574,7 @@ characters and replacing spaces with underscores.</p>
 <dd class="field-even"><p>The sanitized variable string.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -572,7 +600,7 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>expression</cite> is not of type <cite>numpy.Array</cite>, <cite>cvxpy.Expression</cite>,
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>expression</cite> is not of type <cite>numpy.Array</cite>, <cite>cvxpy.Expression</cite>,
     <cite>pyomo.core.expr.numeric_expr.NumericExpression</cite>,
     <cite>pyomo.core.expr.numeric_expr.NumericNDArray</cite> <cite>pyomo.environ.Param</cite>,
     or <cite>pyomo.environ.Var</cite></p>
