@@ -131,14 +131,7 @@ def idxparam_value(idx_param):
     return np.array([idx_param[i].value for i in range(len(idx_param))])
 
 
-def max(
-    expression,
-    model=None,
-    varstr=None,
-    index_set=None,
-    lower_bound=None,
-    initialize=None,
-):
+def max(expression, model=None, varstr=None, index_set=None):
     """Elementwise maximum of an expression or array
 
     Parameters
@@ -165,14 +158,6 @@ def max(
         Default is None, meaning the model-wide `_var_index`. Pass a subset to
         skip timesteps that cannot affect the maximum.
 
-    lower_bound : float
-        Lower bound for the variable created if using a Pyomo `model`.
-        Default is None, meaning the maximum is unbounded below.
-
-    initialize : float
-        Starting value for the variable created if using a Pyomo `model`.
-        Default is None, meaning Pyomo leaves the variable uninitialized.
-
     Raises
     ------
     TypeError
@@ -187,9 +172,7 @@ def max(
         Expression representing max of `expression`
     """
     if check_nonindexed_pyomo_type(expression):
-        model.add_component(
-            varstr, pyo.Var(initialize=initialize, bounds=(lower_bound, None))
-        )
+        model.add_component(varstr, pyo.Var())
         var = model.find_component(varstr)
 
         def const_rule(model):
@@ -199,9 +182,7 @@ def max(
         model.add_component(varstr + "_constraint", constraint)
         return (var, model)
     elif check_indexed_pyomo_type(expression):
-        model.add_component(
-            varstr, pyo.Var(initialize=initialize, bounds=(lower_bound, None))
-        )
+        model.add_component(varstr, pyo.Var())
         var = model.find_component(varstr)
 
         def const_rule(model, t):

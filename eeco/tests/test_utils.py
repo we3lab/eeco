@@ -129,34 +129,18 @@ def test_multiply_pyo(consumption_data, varstr1, varstr2, time_set, expected):
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "consumption_data, varstr, index_set, lower_bound, expected",
+    "consumption_data, varstr, index_set, expected",
     [
-        (
-            {"electric": np.ones(96) * 100, "gas": np.ones(96)},
-            "electric",
-            None,
-            None,
-            100,
-        ),
-        ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", None, None, 95),
-        ({"electric": np.arange(96), "gas": np.ones(96)}, "gas", None, None, 1),
+        ({"electric": np.ones(96) * 100, "gas": np.ones(96)}, "electric", None, 100),
+        ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", None, 95),
+        ({"electric": np.arange(96), "gas": np.ones(96)}, "gas", None, 1),
         # a subset index_set only sees the timesteps it is given
-        (
-            {"electric": np.arange(96), "gas": np.ones(96)},
-            "electric",
-            range(10),
-            None,
-            9,
-        ),
-        # a lower_bound below the true maximum leaves the result unchanged
-        ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", None, 0, 95),
+        ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", range(10), 9),
         # scalar consumption estimates
-        ({"electric": 45.0, "gas": -10.0}, "electric", None, None, 45.0),
-        # scalar consumption estimates with a lower_bound
-        ({"electric": 45.0, "gas": -10.0}, "electric", None, 100, 100.0),
+        ({"electric": 45.0, "gas": -10.0}, "electric", None, 45.0),
     ],
 )
-def test_max_pyo(consumption_data, varstr, index_set, lower_bound, expected):
+def test_max_pyo(consumption_data, varstr, index_set, expected):
     model = pyo.ConcreteModel()
 
     if isinstance(consumption_data["electric"], (int, float)):
@@ -180,7 +164,6 @@ def test_max_pyo(consumption_data, varstr, index_set, lower_bound, expected):
             model=model,
             varstr="test",
             index_set=index_set,
-            lower_bound=lower_bound,
         )
         model.objective = pyo.Objective(expr=0)
         pyo.SolverFactory("scip").solve(model)
@@ -212,7 +195,6 @@ def test_max_pyo(consumption_data, varstr, index_set, lower_bound, expected):
         model=model,
         varstr="test",
         index_set=index_set,
-        lower_bound=lower_bound,
     )
 
     model.objective = pyo.Objective(expr=0)

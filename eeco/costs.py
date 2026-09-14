@@ -712,9 +712,7 @@ def _record_charge(model, key, varstr, charge_type):
     charge_type : str
         One of 'demand', 'energy', 'export', or 'customer'
     """
-    if model is None:
-        return
-    if not hasattr(model, "_eeco_charges"):
+    if not hasattr(model, "_eeco_charges"):  # TODO: check if necessary
         model._eeco_charges = {}
     record = {"varstr": varstr, "charge_type": charge_type}
     for suffix in CHARGE_COMPONENT_SUFFIXES:
@@ -913,11 +911,6 @@ def calculate_demand_cost(
                 )
         else:
             demand_charged = np.array([0])
-            warnings.warn(
-                f"Charge {varstr!r} (limit={limit}) was zeroed out of the expression "
-                "as consumption_estimate and prev_demand do not reach its tier limit",
-                UserWarning,
-            )
     elif ut.check_cvx_type(consumption_data):
         _use_param = consumption_max is None  # True when prev_demand is a cp.Parameter
         if _use_param or consumption_max >= limit:
@@ -937,11 +930,6 @@ def calculate_demand_cost(
                 )
         else:
             demand_charged = np.array([0])
-            warnings.warn(
-                f"Charge {varstr!r} (limit={limit}) was zeroed out of the expression "
-                "as consumption_estimate and prev_demand do not reach its tier limit",
-                UserWarning,
-            )
     else:
         raise ValueError(
             "consumption_data must be of type numpy.ndarray, "
@@ -953,16 +941,14 @@ def calculate_demand_cost(
         max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
         return max_pos_val * scale_factor, max_pos_model
     else:
-        # Skipping unassessed timesteps drops rows that enforced `_max >= 0`
-        # A `lower_bound` prevents negative values while keeping `_max`
-        max_var, model = ut.max(
+        # Clamp at zero so demand below the tier limit isn't calculated as a credit
+        max_raw, model = ut.max(
             demand_charged,
             model=model,
-            varstr=varstr + "_max",
+            varstr=varstr + "_max_raw",
             index_set=get_charge_window(charge_array, model),
-            lower_bound=0,
-            initialize=0,
         )
+        max_var, model = ut.max_pos(max_raw, model=model, varstr=varstr + "_max")
         max_pos_val, max_pos_model = ut.max_pos(
             max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
         )
@@ -1085,38 +1071,31 @@ def calculate_energy_cost(
         charge_array = np.array(charge_array, copy=True)
         tier_active = not np.isinf(next_limit) or (not np.isinf(limit) and limit > 0)
 
-        if (
-            tier_active
-            and np.isinf(next_limit)
-            and charge_array.size > 0
-            and np.all(charge_array == charge_array[0])
-        ):
-            # A flat top tier is exact in an LP, no relaxation or estimate needed
-            rate = float(charge_array[0])
-            total_expr, model = ut.sum(
-                consumption_data, model=model, varstr=varstr + "_sum"
-            )
-            over_limit, model = ut.max_pos(
-                total_expr / n_per_hour + prev_consumption - limit,
-                model=model,
-                varstr=varstr + "_over_limit",
-            )
-            return rate * over_limit, model
-
         if tier_active:
-            # Which tier a timestep falls in depends on cumulative consumption.
-            # We approximate this with `consumption_estimate` to fix the tier's
-            # timestep window up front, then zero `charge_array` outside it.
-            # Assume scaler estimates are split evenly.
-            # NOTE: this convex approximation breaks global optimality
-            # guarantees, since the window is only as good as the estimate.
-            # It is needed only for a finite next_limit or an hour-specific top
-            # tier
+            if (
+                np.isinf(next_limit)
+                and charge_array.size > 0
+                and np.all(charge_array == charge_array[0])
+            ):
+                # A flat top tier can skip the relaxation
+                rate = float(charge_array[0])
+                total_expr, model = ut.sum(
+                    consumption_data, model=model, varstr=varstr + "_sum"
+                )
+                over_limit, model = ut.max_pos(
+                    total_expr / n_per_hour + prev_consumption - limit,
+                    model=model,
+                    varstr=varstr + "_over_limit",
+                )
+                return rate * over_limit, model
+
+            # Convex approximation: `consumption_estimate` fixes this tier's
+            # timestep window up front, zeroing `charge_array` outside it.
+            # Scalar estimates are assumed to be split evenly.
             if ut.check_nonindexed_python_type(consumption_estimate):
                 consumption_per_timestep = consumption_estimate / n_steps
                 consumption_estimate = np.ones(n_steps) * consumption_per_timestep
             else:
-                # Attempt to convert the estimate to an array before erroring
                 consumption_estimate = np.asarray(consumption_estimate, dtype=float)
                 if consumption_estimate.shape != (n_steps,):
                     raise ValueError(
@@ -1698,7 +1677,8 @@ def calculate_cost(
         else:
             raise ValueError("Invalid charge_type: " + charge_type)
 
-        _record_charge(model, key, varstr, charge_type)
+        if model is not None:
+            _record_charge(model, key, varstr, charge_type)
 
     return cost, model_objects
 

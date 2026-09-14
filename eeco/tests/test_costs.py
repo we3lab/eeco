@@ -2195,7 +2195,6 @@ test_list = [
         None,
         pytest.approx(260),
         None,
-        False,
     ),
     # demand charge with previous consumption
     (
@@ -2244,7 +2243,6 @@ test_list = [
         None,
         pytest.approx(138),
         [24, 28, 96],  # off-peak over full horizon and TOU over smaller scope
-        False,
     ),
     # demand charge with no previous consumption
     (
@@ -2291,7 +2289,6 @@ test_list = [
         None,
         pytest.approx(1188),
         [24, 28, 96],  # off-peak over full horizon and TOU over smaller scope
-        False,
     ),
     # export charges
     (
@@ -2310,7 +2307,6 @@ test_list = [
         "absolute_value",
         pytest.approx(-0.3),
         None,
-        False,
     ),
     # energy and export charges
     (
@@ -2330,7 +2326,6 @@ test_list = [
         "absolute_value",
         pytest.approx(0.6 - 0.3),  # 48*1*0.05/4 - 48*1*0.025/4 = 0.6 - 0.3 = 0.3
         None,
-        False,
     ),
     # energy charge with charge limit and time-varying consumption estimate
     (
@@ -2359,7 +2354,6 @@ test_list = [
         None,
         260,
         None,
-        False,
     ),
     # energy charge with charge limit and dictionary consumption estimate
     (
@@ -2388,7 +2382,6 @@ test_list = [
         None,
         260,
         None,
-        False,
     ),
     # energy charge with charge limit and dictionary consumption estimate
     (
@@ -2417,7 +2410,6 @@ test_list = [
         None,
         260,
         None,
-        False,
     ),
     # energy charge that won't hit charge limit + time-varying consumption estimate
     (
@@ -2449,7 +2441,6 @@ test_list = [
         None,
         260,
         None,
-        False,
     ),
     # extended format with pre-decomposed variables (imports/exports)
     (
@@ -2475,7 +2466,6 @@ test_list = [
         None,
         pytest.approx(9.0),
         None,
-        False,
     ),
     # tiered demand charge that the consumption estimate never reaches
     (
@@ -2491,7 +2481,6 @@ test_list = [
         None,
         pytest.approx(0),
         None,
-        True,
     ),
     # three demand tiers
     (
@@ -2511,7 +2500,6 @@ test_list = [
         None,
         pytest.approx(13000.0),
         [96],
-        True,
     ),
 ]
 
@@ -2520,7 +2508,7 @@ test_list = [
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
     "consumption_estimate, desired_utility, desired_charge_type, "
-    "decomposition_type, expected_cost, expected_epigraph_rows, expect_warning",
+    "decomposition_type, expected_cost, expected_epigraph_rows",
     test_list,
 )
 def test_calculate_cost_pyo(
@@ -2534,25 +2522,20 @@ def test_calculate_cost_pyo(
     decomposition_type,
     expected_cost,
     expected_epigraph_rows,
-    expect_warning,
 ):
     model, consumption_input = setup_pyo_vars_constraints(consumption_data_dict)
 
-    expectation = (
-        pytest.warns(UserWarning) if expect_warning else contextlib.nullcontext()
+    result, model = costs.calculate_cost(
+        charge_dict,
+        consumption_input,
+        resolution=resolution,
+        prev_demand_dict=prev_demand_dict,
+        consumption_estimate=consumption_estimate,
+        desired_utility=desired_utility,
+        desired_charge_type=desired_charge_type,
+        model=model,
+        decomposition_type=decomposition_type,
     )
-    with expectation:
-        result, model = costs.calculate_cost(
-            charge_dict,
-            consumption_input,
-            resolution=resolution,
-            prev_demand_dict=prev_demand_dict,
-            consumption_estimate=consumption_estimate,
-            desired_utility=desired_utility,
-            desired_charge_type=desired_charge_type,
-            model=model,
-            decomposition_type=decomposition_type,
-        )
 
     solve_pyo_problem(
         model,
@@ -2587,7 +2570,7 @@ def test_get_charge_records_before_costing():
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
     "consumption_estimate, desired_utility, desired_charge_type, "
-    "decomposition_type, expected_cost, expected_epigraph_rows, expect_warning",
+    "decomposition_type, expected_cost, expected_epigraph_rows",
     test_list,
 )
 def test_calculate_cost_pyo_non_standard_index(
@@ -2601,27 +2584,22 @@ def test_calculate_cost_pyo_non_standard_index(
     decomposition_type,
     expected_cost,
     expected_epigraph_rows,
-    expect_warning,
 ):
     model, consumption_input = setup_pyo_vars_with_non_standard_indexing_constraints(
         consumption_data_dict
     )
 
-    expectation = (
-        pytest.warns(UserWarning) if expect_warning else contextlib.nullcontext()
+    result, model = costs.calculate_cost(
+        charge_dict,
+        consumption_input,
+        resolution=resolution,
+        prev_demand_dict=prev_demand_dict,
+        consumption_estimate=consumption_estimate,
+        desired_utility=desired_utility,
+        desired_charge_type=desired_charge_type,
+        model=model,
+        decomposition_type=decomposition_type,
     )
-    with expectation:
-        result, model = costs.calculate_cost(
-            charge_dict,
-            consumption_input,
-            resolution=resolution,
-            prev_demand_dict=prev_demand_dict,
-            consumption_estimate=consumption_estimate,
-            desired_utility=desired_utility,
-            desired_charge_type=desired_charge_type,
-            model=model,
-            decomposition_type=decomposition_type,
-        )
 
     solve_pyo_problem(
         model,
@@ -2637,12 +2615,13 @@ def test_calculate_cost_pyo_non_standard_index(
         epigraphs = [
             component
             for component in model.component_objects(pyo.Constraint)
-            if component.name.endswith("_max_constraint")
+            if component.name.endswith("_max_raw_constraint")
         ]
         assert sorted(len(e) for e in epigraphs) == expected_epigraph_rows
         for epigraph in epigraphs:  # each charge has its own constraint
-            max_var = model.find_component(epigraph.name[: -len("_constraint")])
-            assert max_var.lb == 0  # bound is alternative to max >= 0
+            charge_varstr = epigraph.name[: -len("_max_raw_constraint")]
+            max_var = model.find_component(charge_varstr + "_max")
+            assert max_var.lb == 0  # max_pos clamp replaces the dropped max >= 0 rows
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
