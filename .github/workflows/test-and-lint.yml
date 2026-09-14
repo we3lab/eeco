@@ -75,18 +75,12 @@ jobs:
           pytest --cov-report xml --cov=eeco eeco/tests/ -vv
           codecov -t ${{ secrets.CODECOV_TOKEN }}
 
-  test:  # This job does nothing and is only used for the branch protection
-  # based on https://github.com/pytest-dev/pytest/blob/main/.github/workflows/test.yml
-  # edited with Claude Opus
+  test: # this job is only used to check all `pytest` jobs passed for branch protection
     if: ${{ !cancelled() }}
-
-    needs:
-    - pytest
-
+    needs: [pytest]
     runs-on: ubuntu-latest
-
     steps:
-    - name: Decide whether the needed jobs succeeded or failed
-      uses: re-actors/alls-green@a638d6464689bbb24c325bb3fe9404d63a913030
-      with:
-        jobs: ${{ toJSON(needs) }}
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}
