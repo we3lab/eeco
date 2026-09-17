@@ -595,7 +595,7 @@ def get_charge_window(charge_array, model=None):
         Positions into `charge_array` where the charge is nonzero, or the
         corresponding `model._var_index` values when a Pyomo `model` is given
     """
-    positions = np.nonzero(np.asarray(charge_array, dtype=float).ravel())[0]
+    positions = np.nonzero(np.asarray(charge_array, dtype=float))[0]
     if model is None or not hasattr(model, "_var_index"):
         return [int(position) for position in positions]
     return [model._var_index[position] for position in positions]
@@ -658,8 +658,7 @@ def get_prev_demand_dict(
 def get_charge_records(model):
     """Handles on the Pyomo components built for each charge.
 
-    The symbolic counterpart of `get_prev_demand_dict`, which answers the same
-    question with numbers from history. Both are keyed by the original
+    Keyed the same way as `prev_demand_dict` by the original
     `charge_dict` key, so a caller never has to rebuild a variable name that
     `varstr_alias_func` may have changed.
 
@@ -712,7 +711,8 @@ def _record_charge(model, key, varstr, charge_type):
     charge_type : str
         One of 'demand', 'energy', 'export', or 'customer'
     """
-    if not hasattr(model, "_eeco_charges"):  # TODO: check if necessary
+    # Accumulate across multiple calculate_itemized_cost calls on one model
+    if not hasattr(model, "_eeco_charges"):
         model._eeco_charges = {}
     record = {"varstr": varstr, "charge_type": charge_type}
     for suffix in CHARGE_COMPONENT_SUFFIXES:
