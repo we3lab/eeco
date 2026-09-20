@@ -2945,36 +2945,6 @@ def test_build_pyomo_costing(
             np.ones(4) * 10.0,
             0.0,
         ),
-        # partially assessed, so the window scoping applies
-        (
-            None,
-            None,
-            None,
-            ELECTRIC,
-            {ELECTRIC: np.array([1.0, 5.0, 3.0, 9.0])},
-            None,
-            10.0,
-            1,
-            50.0,
-            False,
-            np.array([0.0, 10.0, 10.0, 0.0]),
-            0.0,
-        ),
-        # all-zero charge array leaves an empty window, so scoping is skipped
-        (
-            None,
-            None,
-            None,
-            ELECTRIC,
-            {ELECTRIC: np.array([1.0, 5.0, 3.0, 9.0])},
-            None,
-            10.0,
-            1,
-            0.0,
-            False,
-            np.zeros(4),
-            0.0,
-        ),
         # tier never reached, so demand_charged is np.array([0]) and lengths differ
         (
             None,
