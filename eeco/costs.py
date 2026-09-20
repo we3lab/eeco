@@ -688,38 +688,6 @@ def get_charge_records(model):
     return dict(model._eeco_charges)
 
 
-def _record_charge(model, key, varstr, charge_type):
-    """Record the components `calculate_cost` just built for one charge.
-
-    Resolving the names here keeps the `_max` / `_max_pos` / `_limit` suffix
-    convention private to this module. A charge whose tier was saturated or
-    zeroed builds nothing, so its components are recorded as None rather than
-    dropping the key, which would be indistinguishable from a filtered charge.
-
-    Parameters
-    ----------
-    model : pyomo.environ.Model or None
-        The model costs are being built on. Nothing is recorded when None,
-        since the numpy and cvxpy paths have no model to record onto
-
-    key : str
-        The `charge_dict` key for this charge
-
-    varstr : str
-        The sanitized variable name prefix used for this charge
-
-    charge_type : str
-        One of 'demand', 'energy', 'export', or 'customer'
-    """
-    # Accumulate across multiple calculate_itemized_cost calls on one model
-    if not hasattr(model, "_eeco_charges"):
-        model._eeco_charges = {}
-    record = {"varstr": varstr, "charge_type": charge_type}
-    for suffix in CHARGE_COMPONENT_SUFFIXES:
-        record[suffix] = model.find_component(varstr + "_" + suffix)
-    model._eeco_charges[key] = record
-
-
 def default_varstr_alias_func(
     utility, charge_type, name, start_date, end_date, charge_limit
 ):
@@ -937,7 +905,16 @@ def calculate_demand_cost(
         )
 
     if model is None:
-        max_var, _ = ut.max(demand_charged)
+        # Skip unassessed timesteps, then clamp back the >= 0 they provided
+        window = (
+            []
+            if isinstance(charge_array, cp.Expression)
+            else get_charge_window(charge_array)
+        )
+        if window and get_charge_array_length(demand_charged) == len(charge_array):
+            demand_charged = demand_charged[window]
+        max_raw, _ = ut.max(demand_charged)
+        max_var, _ = ut.max_pos(max_raw)
         max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
         return max_pos_val * scale_factor, max_pos_model
     else:
@@ -1111,12 +1088,6 @@ def calculate_energy_cost(
             # if not found argmax returns 0, but whole charge array should be zeroed
             if (start_idx == 0) and (total_consumption <= float(limit)):
                 charge_array[:] = 0
-                warnings.warn(
-                    f"Charge {varstr!r} (limit={limit}) was zeroed out of "
-                    "the expression as consumption_estimate and "
-                    "prev_consumption do not reach its tier limit",
-                    UserWarning,
-                )
             else:
                 charge_array[:start_idx] = 0  # 0 for charge array before start index
             end_idx = np.argmax(cumulative_consumption > float(next_limit))
@@ -1678,7 +1649,14 @@ def calculate_cost(
             raise ValueError("Invalid charge_type: " + charge_type)
 
         if model is not None:
-            _record_charge(model, key, varstr, charge_type)
+            # Accumulate across calculate_itemized_cost's repeated calls
+            if not hasattr(model, "_eeco_charges"):
+                model._eeco_charges = {}
+            # Components are None when a saturated or zeroed tier built none
+            record = {"varstr": varstr, "charge_type": charge_type}
+            for suffix in CHARGE_COMPONENT_SUFFIXES:
+                record[suffix] = model.find_component(varstr + "_" + suffix)
+            model._eeco_charges[key] = record
 
     return cost, model_objects
 

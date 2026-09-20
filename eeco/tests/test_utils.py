@@ -339,6 +339,46 @@ def test_max_pos_pyo(consumption_data, varstr, expected, expect_error):
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
+    "values, expected",
+    [
+        (np.array([1.0, 5.0, 3.0]), 5.0),
+        (np.array([-1.0, -5.0, -3.0]), -1.0),
+        (np.array([0.0, -5.0, 0.0]), 0.0),
+    ],
+)
+def test_max_cvx(values, expected):
+    var = cp.Variable(len(values))
+    result, model = ut.max(var)
+    cp.Problem(cp.Minimize(result), [var == values]).solve()
+
+    assert model is None
+    assert result.value == pytest.approx(expected)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "values, expected_cvx, expected_numpy",
+    [
+        # cvxpy clamps element-wise. numpy reduces to one clamped scalar
+        (np.array([1.0, -5.0, 3.0]), np.array([1.0, 0.0, 3.0]), 3.0),
+        (np.array([-1.0, -5.0]), np.array([0.0, 0.0]), 0.0),
+        (-4.0, 0.0, 0.0),
+        (4.0, 4.0, 4.0),
+    ],
+)
+def test_max_pos_cvx(values, expected_cvx, expected_numpy):
+    var = cp.Variable(np.shape(values))
+    result, model = ut.max_pos(var, model=pyo.ConcreteModel())
+    cp.Problem(cp.Minimize(cp.sum(result)), [var == values]).solve()
+
+    assert model is None  # checking that empty model is not returned
+    assert np.shape(result) == np.shape(values)
+    assert result.value == pytest.approx(expected_cvx)
+    assert ut.max_pos(values)[0] == pytest.approx(expected_numpy)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
     "consumption_data, expected_positive, expected_negative, expect_error",
     [
         (
