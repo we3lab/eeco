@@ -1,4 +1,5 @@
 import os
+import contextlib
 import pytest
 import warnings
 import numpy as np
@@ -7,6 +8,7 @@ import pandas as pd
 import pyomo.environ as pyo
 import datetime
 from eeco import costs
+from eeco import utils as ut
 from eeco.units import u
 from eeco.costs import (
     CHARGE,
@@ -1607,6 +1609,38 @@ def test_get_charge_dict(
             False,
             False,
         ),
+        # consumption_data that is not an array, cvxpy or pyomo variable
+        (
+            {"electric_demand_all-day_2024-07-10_2024-07-10_0": np.ones(96) * 20.0},
+            {ELECTRIC: 5.0, GAS: np.ones(96)},
+            "15m",
+            None,
+            1000,
+            None,
+            "demand",
+            1,  # fixed_scale_factor
+            None,
+            False,
+            True,
+        ),
+        # three demand tiers
+        (
+            {
+                "electric_demand_all-day_2024-07-10_2024-07-10_0": np.ones(96) * 20.0,
+                "electric_demand_all-day_2024-07-10_2024-07-10_500": np.ones(96) * 10.0,
+                "electric_demand_all-day_2024-07-10_2024-07-10_1000": np.ones(96) * 5.0,
+            },
+            {ELECTRIC: np.ones(96) * 800, GAS: np.ones(96)},
+            "15m",
+            None,
+            800,
+            None,
+            "demand",
+            1,  # fixed_scale_factor
+            pytest.approx(13000.0),
+            False,
+            False,
+        ),
     ],
 )
 def test_calculate_cost_np(
@@ -1666,7 +1700,8 @@ def test_calculate_cost_np(
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
-    "consumption_estimate, desired_utility, desired_charge_type, expected_cost",
+    "consumption_estimate, desired_utility, desired_charge_type, expected_cost, "
+    "expect_error",
     [
         # demand charge with previous consumption
         (
@@ -1713,6 +1748,7 @@ def test_calculate_cost_np(
             None,
             None,
             pytest.approx(140),
+            False,
         ),
         # demand charge with no previous consumption
         (
@@ -1757,6 +1793,7 @@ def test_calculate_cost_np(
             None,
             None,
             pytest.approx(1191),
+            False,
         ),
         # demand charge with consumption estimate as an array
         (
@@ -1801,6 +1838,7 @@ def test_calculate_cost_np(
             None,
             None,
             pytest.approx(140),
+            False,
         ),
         # demand charge with consumption estimate as an array and a charge tier
         (
@@ -1850,6 +1888,7 @@ def test_calculate_cost_np(
             None,
             None,
             pytest.approx(115),
+            False,
         ),
         # energy charge with charge limit
         (
@@ -1876,6 +1915,7 @@ def test_calculate_cost_np(
             None,
             None,
             260,
+            False,
         ),
         # energy charge with charge limit and time-varying consumption estimate
         (
@@ -1902,6 +1942,7 @@ def test_calculate_cost_np(
             None,
             None,
             260,
+            False,
         ),
         # energy charge with charge limit and dictionary consumption estimate
         (
@@ -1928,6 +1969,7 @@ def test_calculate_cost_np(
             None,
             None,
             260,
+            False,
         ),
         # energy charge with charge limit and dictionary consumption estimate
         (
@@ -1954,6 +1996,7 @@ def test_calculate_cost_np(
             None,
             None,
             260,
+            False,
         ),
         # energy charge that won't hit charge limit + time-varying consumption estimate
         (
@@ -1983,6 +2026,7 @@ def test_calculate_cost_np(
             None,
             None,
             pytest.approx(260),
+            False,
         ),
         # energy charge without charge limits
         (
@@ -1994,6 +2038,7 @@ def test_calculate_cost_np(
             None,
             None,
             pytest.approx(120.0),
+            False,
         ),
         (
             {
@@ -2033,6 +2078,38 @@ def test_calculate_cost_np(
             None,  # desired_utility
             None,  # desired_charge_type
             pytest.approx(1191),  # same expected as float-zero version
+            False,
+        ),
+        # tiers the estimate never reaches are zeroed out
+        (
+            {
+                "electric_demand_all-day_2024-07-10_2024-07-10_500": np.ones(96) * 20.0,
+                "electric_energy_all-day_2024-07-10_2024-07-10_500": np.ones(96) * 0.1,
+                "electric_energy_all-day_2024-07-10_2024-07-10_900": np.ones(96) * 0.2,
+            },
+            {ELECTRIC: np.ones(96) * 10, GAS: np.ones(96)},
+            "15m",
+            None,
+            1,  # consumption_estimate
+            None,
+            None,
+            pytest.approx(0),
+            False,
+        ),
+        # consumption_estimate array whose length does not match the horizon
+        (
+            {
+                "electric_energy_all-day_2024-07-10_2024-07-10_500": np.ones(96) * 0.1,
+                "electric_energy_all-day_2024-07-10_2024-07-10_900": np.ones(96) * 0.2,
+            },
+            {ELECTRIC: np.ones(96) * 10, GAS: np.ones(96)},
+            "15m",
+            None,
+            np.ones(48),  # consumption_estimate
+            None,
+            None,
+            None,
+            True,
         ),
     ],
 )
@@ -2045,18 +2122,27 @@ def test_calculate_cost_cvx(
     desired_utility,
     desired_charge_type,
     expected_cost,
+    expect_error,
 ):
     cvx_vars, constraints = setup_cvx_vars_constraints(consumption_data_dict)
 
-    result, model = costs.calculate_cost(
-        charge_dict,
-        cvx_vars,
-        resolution=resolution,
-        prev_demand_dict=prev_demand_dict,
-        consumption_estimate=consumption_estimate,
-        desired_utility=desired_utility,
-        desired_charge_type=desired_charge_type,
-    )
+    def calculate():
+        return costs.calculate_cost(
+            charge_dict,
+            cvx_vars,
+            resolution=resolution,
+            prev_demand_dict=prev_demand_dict,
+            consumption_estimate=consumption_estimate,
+            desired_utility=desired_utility,
+            desired_charge_type=desired_charge_type,
+        )
+
+    if expect_error:
+        with pytest.raises(ValueError):
+            calculate()
+        return
+
+    result, model = calculate()
     solve_cvx_problem(result, constraints)
     assert result.value == expected_cost
     assert model is None
@@ -2089,6 +2175,7 @@ test_list = [
         None,
         None,
         pytest.approx(260),
+        [],
     ),
     # demand charge with previous consumption
     (
@@ -2136,6 +2223,7 @@ test_list = [
         None,
         None,
         pytest.approx(138),
+        [24, 28, 96],  # off-peak over full horizon and TOU over smaller scope
     ),
     # demand charge with no previous consumption
     (
@@ -2181,6 +2269,7 @@ test_list = [
         None,
         None,
         pytest.approx(1188),
+        [24, 28, 96],  # off-peak over full horizon and TOU over smaller scope
     ),
     # export charges
     (
@@ -2198,6 +2287,7 @@ test_list = [
         None,
         "absolute_value",
         pytest.approx(-0.3),
+        [],
     ),
     # energy and export charges
     (
@@ -2216,6 +2306,7 @@ test_list = [
         None,
         "absolute_value",
         pytest.approx(0.6 - 0.3),  # 48*1*0.05/4 - 48*1*0.025/4 = 0.6 - 0.3 = 0.3
+        [],
     ),
     # energy charge with charge limit and time-varying consumption estimate
     (
@@ -2243,6 +2334,7 @@ test_list = [
         None,
         None,
         260,
+        [],
     ),
     # energy charge with charge limit and dictionary consumption estimate
     (
@@ -2270,6 +2362,7 @@ test_list = [
         None,
         None,
         260,
+        [],
     ),
     # energy charge with charge limit and dictionary consumption estimate
     (
@@ -2297,6 +2390,7 @@ test_list = [
         None,
         None,
         260,
+        [],
     ),
     # energy charge that won't hit charge limit + time-varying consumption estimate
     (
@@ -2327,6 +2421,7 @@ test_list = [
         None,
         None,
         260,
+        [],
     ),
     # extended format with pre-decomposed variables (imports/exports)
     (
@@ -2351,6 +2446,40 @@ test_list = [
         None,
         None,
         pytest.approx(9.0),
+        [],
+    ),
+    # tiered demand charge that the consumption estimate never reaches
+    (
+        {
+            "electric_demand_all-day_2024-07-10_2024-07-10_500": np.ones(96) * 20.0,
+        },
+        {ELECTRIC: np.ones(96) * 10, GAS: np.ones(96)},
+        "15m",
+        None,
+        1,
+        None,
+        None,
+        None,
+        pytest.approx(0),
+        [],
+    ),
+    # three demand tiers
+    (
+        {
+            "electric_demand_all-day_2024-07-10_2024-07-10_0": np.ones(96) * 20.0,
+            "electric_demand_all-day_2024-07-10_2024-07-10_500": np.ones(96) * 10.0,
+            "electric_demand_all-day_2024-07-10_2024-07-10_1000": np.ones(96) * 5.0,
+        },
+        {ELECTRIC: np.ones(96) * 800, GAS: np.ones(96)},
+        "15m",
+        None,
+        # an array estimate picks the tier from peak demand
+        np.ones(96) * 800,
+        None,
+        None,
+        None,
+        pytest.approx(13000.0),
+        [96],
     ),
 ]
 
@@ -2359,7 +2488,7 @@ test_list = [
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
     "consumption_estimate, desired_utility, desired_charge_type, "
-    "decomposition_type, expected_cost",
+    "decomposition_type, expected_cost, expected_epigraph_rows",
     test_list,
 )
 def test_calculate_cost_pyo(
@@ -2372,6 +2501,7 @@ def test_calculate_cost_pyo(
     desired_charge_type,
     decomposition_type,
     expected_cost,
+    expected_epigraph_rows,
 ):
     model, consumption_input = setup_pyo_vars_constraints(consumption_data_dict)
 
@@ -2398,12 +2528,34 @@ def test_calculate_cost_pyo(
     assert pyo.value(result) == expected_cost
     assert model is not None
 
+    records = costs.get_charge_records(model)
+    assert set(records) <= set(charge_dict)
+    for key, record in records.items():
+        assert record["charge_type"] in key
+        for suffix in costs.CHARGE_COMPONENT_SUFFIXES:
+            expected_component = model.find_component(record["varstr"] + "_" + suffix)
+            assert record[suffix] is expected_component
+
+    epigraphs = [
+        component
+        for component in model.component_objects(pyo.Constraint)
+        if component.name.endswith("_max_raw_constraint")
+    ]
+    assert sorted(len(e) for e in epigraphs) == expected_epigraph_rows
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_get_charge_records_before_costing():
+    model = pyo.ConcreteModel()
+    with pytest.raises(ValueError, match="No charges recorded"):
+        costs.get_charge_records(model)
+
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "charge_dict, consumption_data_dict, resolution, prev_demand_dict, "
     "consumption_estimate, desired_utility, desired_charge_type, "
-    "decomposition_type, expected_cost",
+    "decomposition_type, expected_cost, expected_epigraph_rows",
     test_list,
 )
 def test_calculate_cost_pyo_non_standard_index(
@@ -2416,6 +2568,7 @@ def test_calculate_cost_pyo_non_standard_index(
     desired_charge_type,
     decomposition_type,
     expected_cost,
+    expected_epigraph_rows,
 ):
     model, consumption_input = setup_pyo_vars_with_non_standard_indexing_constraints(
         consumption_data_dict
@@ -2443,6 +2596,14 @@ def test_calculate_cost_pyo_non_standard_index(
     )
     assert pyo.value(result) == expected_cost
     assert model is not None
+
+    # this m labels timesteps 0, 60, 120... instead of 0, 1, 2...
+    epigraphs = [
+        component
+        for component in model.component_objects(pyo.Constraint)
+        if component.name.endswith("_max_raw_constraint")
+    ]
+    assert sorted(len(e) for e in epigraphs) == expected_epigraph_rows
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -2556,7 +2717,8 @@ def test_build_pyomo_costing(
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "start_dt, end_dt, billing_data, utility, consumption_data_dict, "
-    "prev_demand_dict, consumption_estimate, scale_factor, expected, expect_warning",
+    "prev_demand_dict, consumption_estimate, scale_factor, expected, expect_warning, "
+    "charge_array, limit",
     [
         (
             np.datetime64("2024-07-10"),  # Summer weekday
@@ -2569,6 +2731,8 @@ def test_build_pyomo_costing(
             1,  # default scale factor
             np.float64(4027.79),
             False,
+            None,
+            0.0,
         ),
         (
             np.datetime64("2024-07-10"),  # Summer weekday
@@ -2581,6 +2745,8 @@ def test_build_pyomo_costing(
             1,  # default scale factor
             np.float64(4027.79),
             False,
+            None,
+            0.0,
         ),
         # daily demand should be scaled because this is the inner function
         # scaling logic should all be handled in the outer `calculate_cost` loop
@@ -2595,6 +2761,8 @@ def test_build_pyomo_costing(
             1.1,  # non-default scale factor
             np.float64(4430.569),
             False,
+            None,
+            0.0,
         ),
         (
             np.datetime64("2024-07-13"),  # Summer weekend
@@ -2607,6 +2775,8 @@ def test_build_pyomo_costing(
             1,  # default scale factor
             np.float64(2023.5),
             False,
+            None,
+            0.0,
         ),
         (
             np.datetime64("2024-03-07"),  # Winter weekday
@@ -2619,6 +2789,8 @@ def test_build_pyomo_costing(
             1,  # default scale factor
             np.float64(2028.6),
             False,
+            None,
+            0.0,
         ),
         (
             np.datetime64("2024-03-09"),  # Winter weekend
@@ -2652,6 +2824,8 @@ def test_build_pyomo_costing(
             1,  # default scale factor
             np.float64(2023.5),
             False,
+            None,
+            0.0,
         ),
         (
             np.datetime64("2024-07-10"),  # Summer weekday
@@ -2685,6 +2859,8 @@ def test_build_pyomo_costing(
             1,  # default scale factor
             np.float64(2897.79),
             False,
+            None,
+            0.0,
         ),
         (
             np.datetime64("2024-07-10"),  # Summer weekday
@@ -2697,6 +2873,8 @@ def test_build_pyomo_costing(
             1,  # default scale factor
             np.float64(0),
             False,
+            None,
+            0.0,
         ),
         (
             np.datetime64("2024-07-10"),  # Summer weekday
@@ -2712,6 +2890,8 @@ def test_build_pyomo_costing(
             1.1,  # non-default scale factor
             pytest.approx(14646.313),  # 13314.83 * 1.1
             False,
+            None,
+            0.0,
         ),
         (
             np.datetime64("2024-07-10"),  # Summer weekday
@@ -2727,6 +2907,8 @@ def test_build_pyomo_costing(
             1,  # default scale factor
             np.float64(1277.46),  # based on 47 kW
             True,  # negative values warning
+            None,
+            0.0,
         ),
         (
             np.datetime64("2024-07-10"),  # Summer weekday
@@ -2739,6 +2921,89 @@ def test_build_pyomo_costing(
             1,  # default scale factor
             np.float64(4027.79),
             False,
+            None,
+            0.0,
+        ),
+        # synthetic charges pin the assessed window
+        # assessed every timestep, so the clamp is all that keeps the backends equal
+        (
+            None,
+            None,
+            None,
+            ELECTRIC,
+            {ELECTRIC: np.array([-3.0, -2.0, -4.0, -1.0])},
+            {
+                "electric_demand-monthly_test_20240101_20240131_0": {
+                    "demand": 0,
+                    "cost": -27,
+                }
+            },
+            10.0,
+            1,
+            27.0,
+            True,
+            np.ones(4) * 10.0,
+            0.0,
+        ),
+        # partially assessed, so the window scoping applies
+        (
+            None,
+            None,
+            None,
+            ELECTRIC,
+            {ELECTRIC: np.array([1.0, 5.0, 3.0, 9.0])},
+            None,
+            10.0,
+            1,
+            50.0,
+            False,
+            np.array([0.0, 10.0, 10.0, 0.0]),
+            0.0,
+        ),
+        # all-zero charge array leaves an empty window, so scoping is skipped
+        (
+            None,
+            None,
+            None,
+            ELECTRIC,
+            {ELECTRIC: np.array([1.0, 5.0, 3.0, 9.0])},
+            None,
+            10.0,
+            1,
+            0.0,
+            False,
+            np.zeros(4),
+            0.0,
+        ),
+        # tier never reached, so demand_charged is np.array([0]) and lengths differ
+        (
+            None,
+            None,
+            None,
+            ELECTRIC,
+            {ELECTRIC: np.array([1.0, 5.0, 3.0, 9.0])},
+            None,
+            10.0,
+            1,
+            0.0,
+            False,
+            np.ones(4) * 10.0,
+            500.0,
+        ),
+        # get_charge_window cannot coerce a cvxpy charge array, so scoping is skipped
+        (
+            None,
+            None,
+            None,
+            ELECTRIC,
+            {ELECTRIC: np.array([1.0, 5.0, 3.0, 9.0])},
+            None,
+            10.0,
+            1,
+            50.0,
+            False,
+            cp.Parameter(4, value=np.array([0.0, 10.0, 10.0, 0.0])),
+            0.0,
         ),
     ],
 )
@@ -2753,36 +3018,88 @@ def test_calculate_demand_costs(
     scale_factor,
     expected,
     expect_warning,
+    charge_array,
+    limit,
 ):
-    billing_data = pd.read_csv(billing_data)
-    charge_dict = costs.get_charge_dict(
-        start_dt,
-        end_dt,
-        billing_data,
-    )
-    if expect_warning:
-        with pytest.warns(UserWarning):
-            result, model = costs.calculate_cost(
-                charge_dict,
-                consumption_data_dict,
-                prev_demand_dict=prev_demand_dict,
-                consumption_estimate=consumption_estimate,
-                desired_utility=utility,
-                desired_charge_type="demand",
-                demand_scale_factor=scale_factor,
-            )
+    if charge_array is None:
+        charge_dict = costs.get_charge_dict(start_dt, end_dt, pd.read_csv(billing_data))
     else:
+        key = f"electric_demand-monthly_test_20240101_20240131_{limit:g}"
+        charge_dict = {key: charge_array}
+
+    # calculate_cost rewrites consumption_data_dict into imports/exports in place
+    usage = consumption_data_dict.get(utility)
+    kwargs = {
+        "prev_demand_dict": prev_demand_dict,
+        "consumption_estimate": consumption_estimate,
+        "desired_utility": utility,
+        "desired_charge_type": "demand",
+        "demand_scale_factor": scale_factor,
+    }
+    with pytest.warns(UserWarning) if expect_warning else contextlib.nullcontext():
         result, model = costs.calculate_cost(
-            charge_dict,
-            consumption_data_dict,
-            prev_demand_dict=prev_demand_dict,
-            consumption_estimate=consumption_estimate,
-            desired_utility=utility,
-            desired_charge_type="demand",
-            demand_scale_factor=scale_factor,
+            charge_dict, consumption_data_dict, **kwargs
         )
-    assert result == expected
     assert model is None
+    if isinstance(result, cp.Expression):  # a cvxpy charge array keeps the cost cvxpy
+        result = result.value
+    assert result == pytest.approx(expected)
+
+    if charge_array is None or isinstance(charge_array, cp.Expression):
+        return  # the remaining backends need a numeric charge array
+
+    # the same charge must cost the same however the consumption is expressed
+    cvx_var = cp.Variable(len(usage))
+    cvx_cost, cvx_model = costs.calculate_cost(
+        charge_dict, {utility: cvx_var}, **kwargs
+    )
+    assert cvx_model is None
+    if isinstance(cvx_cost, cp.Expression):  # a never-reached tier builds no expression
+        cp.Problem(cp.Minimize(cvx_cost), [cvx_var == usage]).solve()
+        cvx_cost = cvx_cost.value
+    assert cvx_cost == pytest.approx(expected)
+
+    model = pyo.ConcreteModel()
+    model.dummy_t = pyo.RangeSet(0, len(usage) - 1)
+    model.consumption = pyo.Var(model.dummy_t, bounds=(None, None))
+    for t in range(len(usage)):
+        model.consumption[t].fix(float(usage[t]))
+    ut.create_pyomo_model_index_ref(model, model.consumption)
+    pyo_cost, model = costs.calculate_cost(
+        charge_dict, {utility: model.consumption}, model=model, **kwargs
+    )
+    if ut.check_nonindexed_python_type(pyo_cost):  # never-reached tier is constant
+        assert pyo_cost == pytest.approx(expected)
+        return
+    model.objective = pyo.Objective(expr=pyo_cost, sense=pyo.minimize)
+    pyo.SolverFactory("scip").solve(model)
+    assert pyo.value(pyo_cost) == pytest.approx(expected)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "charge_array, index_values, expected",
+    [
+        (np.ones(4), None, [0, 1, 2, 3]),
+        (np.array([0.0, 20.0, 20.0, 0.0]), None, [1, 2]),
+        (np.zeros(4), None, []),
+        # assessed with negative rates
+        (np.array([0.0, -20.0, 0.0, 0.0]), None, [1]),
+        (np.array([0.0, 20.0, 20.0, 0.0]), [0, 60, 120, 180], [60, 120]),
+        (np.array([0.0, 20.0, 0.0, 0.0]), [2.0, 4.0, 5.0, 8.0], [4.0]),
+    ],
+)
+def test_get_charge_window(charge_array, index_values, expected):
+    if index_values is None:
+        assert costs.get_charge_window(charge_array) == expected
+        return
+
+    model = pyo.ConcreteModel()
+    model.dummy_t = pyo.Set(initialize=index_values)
+    model.consumption = pyo.Var(model.dummy_t, bounds=(None, None))
+    ut.create_pyomo_model_index_ref(model, model.consumption)
+
+    assert costs.get_charge_window(charge_array, model) == expected
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")

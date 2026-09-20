@@ -129,15 +129,48 @@ def test_multiply_pyo(consumption_data, varstr1, varstr2, time_set, expected):
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "consumption_data, varstr, expected",
+    "consumption_data, varstr, index_set, expected",
     [
-        ({"electric": np.ones(96) * 100, "gas": np.ones(96)}, "electric", 100),
-        ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", 95),
-        ({"electric": np.arange(96), "gas": np.ones(96)}, "gas", 1),
+        ({"electric": np.ones(96) * 100, "gas": np.ones(96)}, "electric", None, 100),
+        ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", None, 95),
+        ({"electric": np.arange(96), "gas": np.ones(96)}, "gas", None, 1),
+        # a subset index_set only sees the timesteps it is given
+        ({"electric": np.arange(96), "gas": np.ones(96)}, "electric", range(10), 9),
+        # scalar consumption estimates
+        ({"electric": 45.0, "gas": -10.0}, "electric", None, 45.0),
     ],
 )
-def test_max_pyo(consumption_data, varstr, expected):
+def test_max_pyo(consumption_data, varstr, index_set, expected):
     model = pyo.ConcreteModel()
+
+    if isinstance(consumption_data["electric"], (int, float)):
+        # LinearExpression case
+        for key, val in consumption_data.items():
+            model.add_component(key, pyo.Var(initialize=0))
+
+        @model.Constraint()
+        def electric_scalar_constraint(m):
+            return consumption_data["electric"] == m.electric
+
+        @model.Constraint()
+        def gas_scalar_constraint(m):
+            return consumption_data["gas"] == m.gas
+
+        var = getattr(model, varstr)
+        ut.create_pyomo_model_index_ref(model, var)
+
+        result, model = ut.max(
+            var - 0,  # like max_var - prev_demand_cost
+            model=model,
+            varstr="test",
+            index_set=index_set,
+        )
+        model.objective = pyo.Objective(expr=0)
+        pyo.SolverFactory("scip").solve(model)
+        assert pyo.value(result) == expected
+        assert model is not None
+        return
+
     model.T = len(consumption_data["electric"])
     model.t = range(model.T)
     pyo_vars = {}
@@ -157,7 +190,12 @@ def test_max_pyo(consumption_data, varstr, expected):
     var = getattr(model, varstr)
 
     ut.create_pyomo_model_index_ref(model, var)
-    result, model = ut.max(var, model=model, varstr="test")
+    result, model = ut.max(
+        var,
+        model=model,
+        varstr="test",
+        index_set=index_set,
+    )
 
     model.objective = pyo.Objective(expr=0)
     solver = pyo.SolverFactory("scip")
@@ -297,6 +335,46 @@ def test_max_pos_pyo(consumption_data, varstr, expected, expect_error):
             assert pyo.value(result[t]) == expected_element
 
     assert model is not None
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "values, expected",
+    [
+        (np.array([1.0, 5.0, 3.0]), 5.0),
+        (np.array([-1.0, -5.0, -3.0]), -1.0),
+        (np.array([0.0, -5.0, 0.0]), 0.0),
+    ],
+)
+def test_max_cvx(values, expected):
+    var = cp.Variable(len(values))
+    result, model = ut.max(var)
+    cp.Problem(cp.Minimize(result), [var == values]).solve()
+
+    assert model is None
+    assert result.value == pytest.approx(expected)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "values, expected_cvx, expected_numpy",
+    [
+        # cvxpy clamps element-wise. numpy reduces to one clamped scalar
+        (np.array([1.0, -5.0, 3.0]), np.array([1.0, 0.0, 3.0]), 3.0),
+        (np.array([-1.0, -5.0]), np.array([0.0, 0.0]), 0.0),
+        (-4.0, 0.0, 0.0),
+        (4.0, 4.0, 4.0),
+    ],
+)
+def test_max_pos_cvx(values, expected_cvx, expected_numpy):
+    var = cp.Variable(np.shape(values))
+    result, model = ut.max_pos(var, model=pyo.ConcreteModel())
+    cp.Problem(cp.Minimize(cp.sum(result)), [var == values]).solve()
+
+    assert model is None  # checking that empty model is not returned
+    assert np.shape(result) == np.shape(values)
+    assert result.value == pytest.approx(expected_cvx)
+    assert ut.max_pos(values)[0] == pytest.approx(expected_numpy)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
