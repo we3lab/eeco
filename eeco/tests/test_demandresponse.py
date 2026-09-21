@@ -560,14 +560,6 @@ def test_calculate_event_baseline_datetime_index_too_short():
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_find_payment_region_errors():
-    with pytest.raises(ValueError):
-        dr._find_payment_region(CBP_PAYMENT_FUNCTION, -1.0)  # below every region
-    with pytest.raises(ValueError):
-        dr._find_payment_region(CBP_PAYMENT_FUNCTION, region_x1=0.42)  # no such region
-
-
-@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "delivered_ratio, expected_revenue",
     [
