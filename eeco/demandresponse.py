@@ -330,11 +330,14 @@ class BaselineMethod:
         model_var_index = (
             list(model_power_kW.index_set()) if model_power_kW is not None else None
         )
-        step = (
-            _infer_datetime_index_step(model_datetime_index)
-            if model_datetime_index is not None
-            else None
-        )
+        step = None
+        if model_datetime_index is not None:
+            if len(model_datetime_index) < 2:
+                raise ValueError(
+                    "model_datetime_index must have at least 2 entries to infer "
+                    "its step size"
+                )
+            step = model_datetime_index[1] - model_datetime_index[0]
 
         all_terms = []
         any_dynamic = False
@@ -1152,40 +1155,6 @@ def _coerce_payment_structure(payment_function):
     return PaymentStructure(payment_function)
 
 
-def _find_payment_region(payment_function, delivered_ratio=None, region_x1=None):
-    """Find a region in `payment_function`, by interval or by `x1`.
-
-    Exactly one of `delivered_ratio`/`region_x1` must be given; see
-    `PaymentStructure.find_region`, which this delegates to.
-
-    Parameters
-    ----------
-    payment_function : list of dict or PaymentStructure
-        Each dict has keys `REGION_X1`, `REGION_X2`, `REGION_Y1`,
-        `REGION_Y2`. A `PaymentStructure` instance is also accepted, in
-        which case its own regions are searched.
-
-    delivered_ratio : float or None
-        Known delivered ratio to look up by interval containment.
-
-    region_x1 : float or None
-        The `x1` value identifying the region to look up.
-
-    Raises
-    ------
-    ValueError
-        When no region matches.
-
-    Returns
-    -------
-    dict
-        The matching region.
-    """
-    return _coerce_payment_structure(payment_function).find_region(
-        delivered_ratio=delivered_ratio, region_x1=region_x1
-    )
-
-
 def evaluate_payment_function(
     payment_function, reduction_kW, bid_capacity_kW, capacity_price
 ):
@@ -1487,31 +1456,6 @@ def make_baseline_parameters(
     }
 
 
-def _infer_datetime_index_step(datetime_index):
-    """Infer the regular spacing of a `DatetimeIndex`.
-
-    Parameters
-    ----------
-    datetime_index : pandas.DatetimeIndex
-        Index to infer the step size of.
-
-    Raises
-    ------
-    ValueError
-        When `datetime_index` has fewer than 2 entries.
-
-    Returns
-    -------
-    pandas.Timedelta
-        The spacing between the first two entries.
-    """
-    if len(datetime_index) < 2:
-        raise ValueError(
-            "model_datetime_index must have at least 2 entries to infer its step size"
-        )
-    return datetime_index[1] - datetime_index[0]
-
-
 def _baseline_day_in_horizon(day, start_hour, duration_hours, datetime_index, step):
     """Check whether a baseline day's event-window is fully contained in the
     simulation horizon spanned by `datetime_index`.
@@ -1534,8 +1478,8 @@ def _baseline_day_in_horizon(day, start_hour, duration_hours, datetime_index, st
         Calendar timestamps spanned by the simulation horizon.
 
     step : pandas.Timedelta
-        Regular spacing of `datetime_index`, as returned by
-        `_infer_datetime_index_step`.
+        Regular spacing of `datetime_index` (e.g. the gap between its first
+        two entries).
 
     Returns
     -------
@@ -1816,7 +1760,7 @@ def calculate_event_revenue(
     Parameters
     ----------
     historical_power_kW : pandas.Series
-        Realized power consumption in kW, indexed by `pandas.DatetimeIndex`,
+        Power consumption in kW, indexed by `pandas.DatetimeIndex`,
         covering at least the event's window and its baseline days.
 
     event : dict
@@ -1921,7 +1865,7 @@ def calculate_itemized_dr_revenue(
 ):
     """Calculates ex-post demand response revenue with a row per event.
 
-    Each event is re-sliced from `power_kW` and re-baselined independently, so
+    Each event is sliced from `power_kW` and re-baselined independently, so
     results never mix time windows across events.
 
     Parameters
@@ -1998,11 +1942,10 @@ def calculate_dr_revenue(
     Parameters
     ----------
     power_kW : pandas.Series, numpy.ndarray, or pyomo.environ.Var
-        Power consumption in kW, determining which branch runs. A
-        `pandas.Series`/`numpy.ndarray` is realized data, settled ex-post via
-        `calculate_itemized_dr_revenue`. A `pyomo.environ.Var` is the model's
-        decision variable, built onto `model` via
-        `_build_dr_revenue_components`.
+        Power consumption in kW. A `pandas.Series`/`numpy.ndarray` is data and 
+        uses `calculate_itemized_dr_revenue`. A `pyomo.environ.Var` is a model
+        decision variable and uses `_build_dr_revenue_components`. CVXPy vars
+        are not currently implemented. 
 
     events : list of dict or pandas.DataFrame
         Events collection, as produced by `add_event`. Used in both branches.
@@ -2119,37 +2062,23 @@ def _build_dr_revenue_components(
 
     Slices `power_kW` to each event's window internally (via `datetime_index`)
     and computes each event's baseline internally (via `historical_power_kW`
-    and `calculate_event_baseline`) -- the caller only needs to supply the
-    model's full power variable, a historical consumption series, and an
-    assumed payment-function region per event. Does not touch
-    `model.objective`; see `build_dr_revenue` for that.
+    and `calculate_event_baseline`).
 
     Processes events in `EVENT_DATE` order (like `calculate_dr_revenue`).
 
     Parameters
     ----------
     power_kW : pyomo.environ.Var
-        Full time-indexed decision variable for actual power consumption
+        Time-indexed decision variable for actual power consumption
         over the optimization horizon.
 
     datetime_index : pandas.DatetimeIndex
-        Calendar timestamp for each position in `power_kW`'s index set, in
-        the same order as `list(power_kW.index_set())` -- pyomo index sets
-        carry no calendar information of their own, so this is required to
-        determine which positions fall in each event's window.
-
+        Calendar timestamp for each position in `power_kW`'s index set.
     events : list of dict or pandas.DataFrame
         Events collection, as produced by `add_event`.
 
     historical_power_kW : pandas.Series
-        Realized historical power consumption, indexed by
-        `pandas.DatetimeIndex`. Used as a fallback source for each event's
-        baseline: a baseline day whose window is fully contained in the
-        simulation horizon spanned by `power_kW`/`datetime_index` is instead
-        computed as a decision-variable average over `power_kW` itself (see
-        `calculate_event_baseline`), and the day-of adjustment factor (if
-        configured) is always computed from `historical_power_kW` -- see
-        `calculate_event_baseline`'s docstring for why.
+        Historical power consumption, indexed by `pandas.DatetimeIndex`. 
 
     baseline_params : dict or BaselineMethod
         Baseline parameters, as produced by `make_baseline_parameters`, or
@@ -2255,39 +2184,23 @@ def build_dr_revenue(
     region_x1s=None,
     varstr_prefix="dr_event",
 ):
-    """Wrapper for `calculate_dr_revenue` that nets DR revenue into the objective.
-
-    Delegates the baseline/revenue component building to `calculate_dr_revenue`
-    (which for a pyomo `power_kW` builds onto `model` via
-    `_build_dr_revenue_components`), then itself only adds the objective
-    netting: subtracts total revenue from an existing `model.objective` if
-    there is one (composing with `costs.build_pyomo_costing`), otherwise
-    creates a minimize objective of `-total_revenue`.
+    """Wrapper for `calculate_dr_revenue` that adds DR revenue to the objective.
 
     Parameters
     ----------
     power_kW : pyomo.environ.Var
-        Full time-indexed decision variable for actual power consumption
+        Time-indexed decision variable for actual power consumption
         over the optimization horizon.
 
     datetime_index : pandas.DatetimeIndex
-        Calendar timestamp for each position in `power_kW`'s index set, in
-        the same order as `list(power_kW.index_set())` -- pyomo index sets
-        carry no calendar information of their own, so this is required to
-        determine which positions fall in each event's window.
+        Calendar timestamp for each position in `power_kW`'s index set.
 
     events : list of dict or pandas.DataFrame
         Events collection, as produced by `add_event`.
 
     historical_power_kW : pandas.Series
         Realized historical power consumption, indexed by
-        `pandas.DatetimeIndex`. Used as a fallback source for each event's
-        baseline: a baseline day whose window is fully contained in the
-        simulation horizon spanned by `power_kW`/`datetime_index` is instead
-        computed as a decision-variable average over `power_kW` itself (see
-        `calculate_event_baseline`), and the day-of adjustment factor (if
-        configured) is always computed from `historical_power_kW` -- see
-        `calculate_event_baseline`'s docstring for why.
+        `pandas.DatetimeIndex`. 
 
     baseline_params : dict or BaselineMethod
         Baseline parameters, as produced by `make_baseline_parameters`, or
