@@ -1432,7 +1432,7 @@ def make_baseline_parameters(
             "baseline_method must be 'average_similar_days'; "
             "other methods are not yet supported"
         )
-    if n_baseline_days <= 0:
+    if n_baseline_days < 0:
         raise ValueError("n_baseline_days must be positive")
     if adjustment_offset_hours is not None:
         if adjustment_duration_hours <= 0:
