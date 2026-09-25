@@ -41,6 +41,7 @@ Welcome to the Electric Emissions & Cost Optimizer (EECO) documentation!
    :caption: Code
 
    costs
+   demandresponse
    emissions
    metrics
    units
