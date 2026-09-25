@@ -67,12 +67,8 @@ PAYMENT_BASES = (BASIS_PER_EVENT, BASIS_PER_HOUR)
 
 
 class BaselineMethod:
-    """
-    The baseline method uses the power from the average of the N most recent valid
-    similar days, optionally scaled by a day-of adjustment factor.
-
-    Override `_rank_days` or `_adjustment_factor` for the common extension
-    points, or `compute` for a baseline that is not a historical average.
+    """Default baseline method. See :doc:`/demandresponse` for a description
+    of this class and how to extend it.
 
     Parameters
     ----------
@@ -460,9 +456,8 @@ class BaselineMethod:
 
 
 class TopUsageDaysBaseline(BaselineMethod):
-    """Ranks candidate days by consumption (highest first) rather than by
-    recency, so the baseline averages the similar days with highest power draw.
-    This takes the same constructor parameters as `BaselineMethod`.
+    """See :doc:`/demandresponse` for a description of this class. Takes the
+    same constructor parameters as `BaselineMethod`.
     """
 
     def _rank_days(self, candidate_days, historical_power_kW, event):
@@ -508,9 +503,9 @@ class TopUsageDaysBaseline(BaselineMethod):
 
 
 class FixedLevelBaseline(BaselineMethod):
-    """Baseline is a constant contracted "firm" demand level agreed with the
-    utility up front. This does not call `super().__init__()`, therefore,
-    none of `BaselineMethod`'s day-selection or adjustment configuration is used.
+    """See :doc:`/demandresponse` for a description of this class. Does not
+    call `super().__init__()`, so none of `BaselineMethod`'s day-selection or
+    adjustment configuration applies.
 
     Parameters
     ----------
@@ -598,8 +593,7 @@ class FixedLevelBaseline(BaselineMethod):
 
 
 class UnilateralInterruptionBaseline(BaselineMethod):
-    """The utility interrupts service itself, holding load at a fixed level
-    for the duration of an event.
+    """See :doc:`/demandresponse` for a description of this class.
 
     Modeled as a hard constraint (an upper bound on `model_power_kW`), not a
     revenue opportunity: the operator has no decision to make, so `compute`
@@ -982,16 +976,12 @@ def _as_pyomo_terms(reduction_kW):
 
 
 class PaymentStructure:
-    """Foundation payment structure: a piecewise-linear capacity payment
-    keyed on how much of the bid the site actually delivered, plus an
-    optional flat participation payout.
+    """Foundation payment structure. See :doc:`/demandresponse` for a
+    description of this class and how to extend it.
 
     The capacity payment is `payment_ratio * capacity_price * bid_capacity_kW`,
     where the `regions` list maps the delivered ratio (`reduction_kW /
     bid_capacity_kW`) to a payment ratio through consecutive linear segments.
-    Override `evaluate` and `build_expression` as a pair to extend -- they
-    must agree or an optimized plan will not reconcile with its ex-post
-    settlement.
 
     Parameters
     ----------
@@ -1004,9 +994,7 @@ class PaymentStructure:
         float; these are coerced to `inf`/`-inf` on construction. `None`
         (or an empty list) means no capacity payment at all -- a
         payout-only structure, for programs whose revenue is entirely the
-        flat `payout` below (e.g. paired with
-        `UnilateralInterruptionBaseline`, which has no delivered-ratio
-        payment of its own).
+        flat `payout` below.
 
     settlement : str
         How the capacity payment is aggregated over the event window's
@@ -1766,8 +1754,7 @@ class PaymentStructure:
 
 
 class CapacityEnergyPayment(PaymentStructure):
-    """Two-part payment: the foundation capacity payment plus a flat $/kWh
-    payment on the energy actually curtailed.
+    """See :doc:`/demandresponse` for a description of this class.
 
     Parameters
     ----------
@@ -1877,7 +1864,7 @@ class CapacityEnergyPayment(PaymentStructure):
 
 
 class MarketIndexedPayment(PaymentStructure):
-    """Resolves the capacity price from a lookup.
+    """See :doc:`/demandresponse` for a description of this class.
 
     Parameters
     ----------
