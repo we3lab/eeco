@@ -35,6 +35,7 @@ ADJUSTMENT_CLIP = "adjustment_clip"
 EXCLUDE_WEEKENDS = "exclude_weekends"
 EXCLUDE_HOLIDAYS = "exclude_holidays"
 HOLIDAY_DATES = "holiday_dates"
+RESOLUTION = "resolution"
 
 # Output/result column keys
 BASELINE_KW = "baseline_kW"
@@ -42,12 +43,27 @@ ACTUAL_KW = "actual_kW"
 REDUCTION_KW = "reduction_kW"
 DELIVERED_RATIO = "delivered_ratio"
 REVENUE = "revenue"
+# Per-interval companions to the scalar (event-window-mean) keys above.
+BASELINE_PROFILE_KW = "baseline_profile_kW"
+ACTUAL_PROFILE_KW = "actual_profile_kW"
+REDUCTION_PROFILE_KW = "reduction_profile_kW"
+INTERVAL_DATETIME = "interval_datetime"
 
 # Payment function region dict keys.
 REGION_X1 = "x1"
 REGION_X2 = "x2"
 REGION_Y1 = "y1"
 REGION_Y2 = "y2"
+
+# PaymentStructure settlement modes.
+SETTLEMENT_AVERAGE = "average"
+SETTLEMENT_INTERVAL = "interval"
+SETTLEMENT_MODES = (SETTLEMENT_AVERAGE, SETTLEMENT_INTERVAL)
+
+# PaymentStructure payment_basis / payout_basis values.
+BASIS_PER_EVENT = "per_event"
+BASIS_PER_HOUR = "per_hour"
+PAYMENT_BASES = (BASIS_PER_EVENT, BASIS_PER_HOUR)
 
 
 class BaselineMethod:
@@ -61,7 +77,15 @@ class BaselineMethod:
     Parameters
     ----------
     n_baseline_days : int
-        Number of valid baseline days to average over.
+        Number of valid baseline days to average over. `0` means "no
+        baselining": `compute` skips day selection and the day-of adjustment
+        entirely and returns an all-zero profile, for programs (e.g. some
+        interruption-based ones) whose settlement has no historical
+        counterfactual. A zero baseline makes `reduction_kW` negative, so
+        pair it with a payment function whose lowest region extends to
+        `-Infinity`, or with a payout-only `PaymentStructure`
+        (`regions=None`) -- the CBP-style schedules bundled with this module
+        do not cover a negative delivered ratio and `find_region` will raise.
 
     adjustment_offset_hours : int or None
         Number of hours before the event start where the day-of adjustment
@@ -103,12 +127,24 @@ class BaselineMethod:
         the solver choose the revenue-maximizing factor and make
         `baseline * factor` bilinear. `False` by default, which folds the
         factor in as a constant and keeps `compute`'s return value a plain
-        `float` whenever every baseline day is historical.
+        `numpy.ndarray` whenever every baseline day is historical.
+
+    resolution : str or None
+        Settlement interval width, as a string of the form `"[int][unit]"`
+        (e.g. `"15m"`, `"1h"`), parsed by `utils.get_freq_binsize_minutes`.
+        The event window is divided into intervals of this width, and
+        `compute` returns one baseline value per interval. If `None`
+        (default), the width is inferred from the spacing of
+        `model_datetime_index` (when a model is given) or
+        `historical_power_kW.index` otherwise -- pass this explicitly when
+        that index is coarser or finer than the settlement interval you
+        actually want (e.g. hourly meter data settled at 15-minute
+        resolution).
 
     Raises
     ------
     ValueError
-        When `n_baseline_days` is not positive, or when
+        When `n_baseline_days` is negative, or when
         `adjustment_offset_hours` is not `None` and `adjustment_duration_hours`
         is not positive or exceeds `adjustment_offset_hours` (the adjustment
         window must fall strictly before the event start).
@@ -124,9 +160,10 @@ class BaselineMethod:
         exclude_holidays=True,
         holiday_dates=None,
         adjustment_in_model=False,
+        resolution=None,
     ):
-        if n_baseline_days <= 0:
-            raise ValueError("n_baseline_days must be positive")
+        if n_baseline_days < 0:
+            raise ValueError("n_baseline_days must be non-negative")
         if adjustment_offset_hours is not None:
             if adjustment_duration_hours <= 0:
                 raise ValueError("adjustment_duration_hours must be positive")
@@ -144,6 +181,7 @@ class BaselineMethod:
         self.exclude_holidays = exclude_holidays
         self.holiday_dates = list(holiday_dates) if holiday_dates else []
         self.adjustment_in_model = adjustment_in_model
+        self.resolution = resolution
 
     def _rank_days(self, candidate_days, historical_power_kW, event):
         """Drop ineligible candidate days and rank the remainder by
@@ -307,14 +345,18 @@ class BaselineMethod:
         model_datetime_index=None,
         varstr=None,
     ):
-        """Calculate the mean baseline power for a single event's window.
+        """Calculate the per-interval baseline power for a single event's window.
 
         This is the implementation behind the module-level
         `calculate_event_baseline`, whose docstring carries the full
         parameter and return-value contract: pass no `model` for a plain
-        `float`, or a `model` (plus `model_power_kW`, `model_datetime_index`,
-        and `varstr`) to compute in-horizon baseline days from the decision
-        variable, returning `(baseline, model)`.
+        `numpy.ndarray`, or a `model` (plus `model_power_kW`,
+        `model_datetime_index`, and `varstr`) to compute in-horizon baseline
+        days from the decision variable, returning `(baseline, model)`.
+
+        `t`, the index of the returned array/`Var`, is a **position within
+        the event window** (`0` at `event[EVENT_START_HOUR]`), not a
+        position in `model_datetime_index` or in calendar time.
         """
         if model is not None and any(
             a is None for a in (model_power_kW, model_datetime_index, varstr)
@@ -324,42 +366,56 @@ class BaselineMethod:
                 "when model is given"
             )
 
+        step = _resolve_step(
+            self.resolution,
+            model_datetime_index,
+            getattr(historical_power_kW, "index", None),
+        )
+        n_intervals = _window_interval_count(event[EVENT_DURATION], step)
+
+        if self.n_baseline_days == 0:
+            # "No baselining": skip day selection and the day-of adjustment
+            # entirely (there are no days to compute either from). See the
+            # class docstring for the payment-function implications of a
+            # zero baseline.
+            baseline_kW = np.zeros(n_intervals)
+            if model is None:
+                return baseline_kW
+            return baseline_kW, model
+
         candidate_days = [pd.Timestamp(d) for d in event[BASELINE_DAYS]]
         valid_days = self.select_days(candidate_days, historical_power_kW, event)
 
         model_var_index = (
             list(model_power_kW.index_set()) if model_power_kW is not None else None
         )
-        step = None
-        if model_datetime_index is not None:
-            if len(model_datetime_index) < 2:
-                raise ValueError(
-                    "model_datetime_index must have at least 2 entries to infer "
-                    "its step size"
-                )
-            step = model_datetime_index[1] - model_datetime_index[0]
 
-        all_terms = []
+        interval_values = [[] for _ in range(n_intervals)]
         any_dynamic = False
         for day in valid_days:
-            terms, is_dynamic = _baseline_day_terms(
+            values, is_dynamic = _baseline_day_interval_values(
                 day,
                 event[EVENT_START_HOUR],
                 event[EVENT_DURATION],
+                step,
+                n_intervals,
                 historical_power_kW,
                 model_power_kW,
                 model_var_index,
                 model_datetime_index,
-                step,
             )
-            all_terms.extend(terms)
+            for k, value in enumerate(values):
+                interval_values[k].append(value)
             any_dynamic = any_dynamic or is_dynamic
 
-        baseline_kW = sum(weight * value for weight, value in all_terms) / len(
-            valid_days
-        )
-        if not any_dynamic:
-            baseline_kW = float(baseline_kW)
+        if any_dynamic:
+            baseline_kW = [
+                pyo.quicksum(vals) / len(valid_days) for vals in interval_values
+            ]
+        else:
+            baseline_kW = np.array(
+                [sum(vals) / len(valid_days) for vals in interval_values]
+            )
 
         factor = self._adjustment_factor(valid_days, historical_power_kW, event)
         factor_in_model = (
@@ -375,24 +431,31 @@ class BaselineMethod:
             # would be bilinear; fixed, it collapses to a linear coefficient.
             # Retune with `.fix(new_value)` and re-solve -- no rebuild needed.
             factor_var.fix(factor)
-            baseline_kW = baseline_kW * factor_var
+            baseline_kW = [value * factor_var for value in baseline_kW]
+            any_dynamic = True
         elif factor is not None:
-            baseline_kW = baseline_kW * factor
+            if any_dynamic:
+                baseline_kW = [value * factor for value in baseline_kW]
+            else:
+                baseline_kW = baseline_kW * factor
 
         if model is None:
             return baseline_kW
         # A factor-scaled baseline is a symbolic expression, so it needs a Var
         # to stand for it even when every baseline day was historical.
-        if not any_dynamic and not factor_in_model:
+        if not any_dynamic:
             return baseline_kW, model
 
-        model.add_component(varstr, pyo.Var())
+        interval_idx = range(n_intervals)
+        model.add_component(varstr, pyo.Var(interval_idx))
         baseline_var = model.find_component(varstr)
 
-        def baseline_rule(m):
-            return baseline_var == baseline_kW
+        def baseline_rule(m, t):
+            return baseline_var[t] == baseline_kW[t]
 
-        model.add_component(varstr + "_constraint", pyo.Constraint(rule=baseline_rule))
+        model.add_component(
+            varstr + "_constraint", pyo.Constraint(interval_idx, rule=baseline_rule)
+        )
         return baseline_var, model
 
 
@@ -448,7 +511,6 @@ class FixedLevelBaseline(BaselineMethod):
     """Baseline is a constant contracted "firm" demand level agreed with the
     utility up front. This does not call `super().__init__()`, therefore,
     none of `BaselineMethod`'s day-selection or adjustment configuration is used.
-    
 
     Parameters
     ----------
@@ -456,16 +518,23 @@ class FixedLevelBaseline(BaselineMethod):
         The contracted firm demand level in kW, used as the baseline for
         every event.
 
+    resolution : str or None
+        Settlement interval width, as for `BaselineMethod`. Only consulted
+        to decide how many (identical) values `compute` returns; if `None`,
+        the width is inferred from `model_datetime_index` or
+        `historical_power_kW.index`.
+
     Raises
     ------
     ValueError
         When `firm_level_kW` is negative.
     """
 
-    def __init__(self, firm_level_kW):
+    def __init__(self, firm_level_kW, resolution=None):
         if firm_level_kW < 0:
             raise ValueError("firm_level_kW must be non-negative")
         self.firm_level_kW = firm_level_kW
+        self.resolution = resolution
 
     def compute(
         self,
@@ -477,20 +546,24 @@ class FixedLevelBaseline(BaselineMethod):
         model_datetime_index=None,
         varstr=None,
     ):
-        """Return the contracted firm level as the baseline.
+        """Return the contracted firm level as a flat per-interval baseline.
 
         Adds nothing to `model`: the baseline is a constant, so there is no
         expression for a `Var` to stand in for. Every parameter other than
-        `model` is accepted for interface compatibility with
-        `BaselineMethod.compute` and is unused.
+        `event` and `model` is accepted for interface compatibility with
+        `BaselineMethod.compute`.
 
         Parameters
         ----------
         historical_power_kW : pandas.Series
-            Ignored -- this baseline is not derived from history.
+            Not used as a data source -- this baseline is not derived from
+            history -- but its index is consulted to infer the settlement
+            interval width when `resolution` is `None` and no
+            `model_datetime_index` is given.
 
         event : dict
-            Ignored -- the same firm level applies to every event.
+            A single event, as produced by `add_event`. Supplies
+            `EVENT_DURATION`, used to size the returned array.
 
         model : pyomo.environ.Model or pyomo.environ.Block or None
             Only consulted to decide the return shape, matching
@@ -500,20 +573,28 @@ class FixedLevelBaseline(BaselineMethod):
             Ignored.
 
         model_datetime_index : pandas.DatetimeIndex or None
-            Ignored.
+            Consulted only to infer the settlement interval width when
+            `resolution` is `None`.
 
         varstr : str or None
             Ignored -- no components are created.
 
         Returns
         -------
-        float or tuple
-            `firm_level_kW` when `model` is `None`, otherwise
-            `(firm_level_kW, model)`.
+        numpy.ndarray or tuple
+            An array of `firm_level_kW` repeated once per settlement
+            interval when `model` is `None`, otherwise `(that array, model)`.
         """
+        step = _resolve_step(
+            self.resolution,
+            model_datetime_index,
+            getattr(historical_power_kW, "index", None),
+        )
+        n_intervals = _window_interval_count(event[EVENT_DURATION], step)
+        baseline_kW = np.full(n_intervals, self.firm_level_kW, dtype=float)
         if model is None:
-            return self.firm_level_kW
-        return self.firm_level_kW, model
+            return baseline_kW
+        return baseline_kW, model
 
 
 class UnilateralInterruptionBaseline(BaselineMethod):
@@ -530,10 +611,16 @@ class UnilateralInterruptionBaseline(BaselineMethod):
     interruption_level_kW : float
         Power level in kW the load is held at during an event. Defaults to
         `0.0` (a full interruption).
+
+    resolution : str or None
+        Settlement interval width, as for `BaselineMethod`. Only consulted
+        to decide how many (identical) values `compute` returns; if `None`,
+        the width is inferred from `model_datetime_index`.
     """
 
-    def __init__(self, interruption_level_kW=0.0):
+    def __init__(self, interruption_level_kW=0.0, resolution=None):
         self.interruption_level_kW = interruption_level_kW
+        self.resolution = resolution
 
     def compute(
         self,
@@ -590,10 +677,13 @@ class UnilateralInterruptionBaseline(BaselineMethod):
         Returns
         -------
         tuple
-            `(interruption_level_kW, model)`. The level is returned in the
-            baseline's position so downstream payment logic keeps a
-            consistent interface, though for this program the reduction it
-            implies is not paid per-event.
+            `(baseline_kW, model)`, where `baseline_kW` is a `numpy.ndarray`
+            of `interruption_level_kW` repeated once per settlement
+            interval. The level is returned in the baseline's position so
+            downstream payment logic keeps a consistent interface, though
+            for this program the reduction it implies is not paid per-event
+            -- pair a payout-only `PaymentStructure` with this baseline to
+            pay for the interruption itself.
         """
         if model is None:
             raise NotImplementedError(
@@ -619,6 +709,10 @@ class UnilateralInterruptionBaseline(BaselineMethod):
                 f"No data available for event window on {event[EVENT_DATE]}"
             )
 
+        step = _resolve_step(self.resolution, model_datetime_index)
+        n_intervals = _window_interval_count(event[EVENT_DURATION], step)
+        baseline_kW = np.full(n_intervals, self.interruption_level_kW, dtype=float)
+
         def interruption_rule(m, idx):
             return model_power_kW[idx] <= self.interruption_level_kW
 
@@ -626,7 +720,7 @@ class UnilateralInterruptionBaseline(BaselineMethod):
             varstr + "_interruption_constraint",
             pyo.Constraint(matched_indices, rule=interruption_rule),
         )
-        return self.interruption_level_kW, model
+        return baseline_kW, model
 
 
 def _coerce_baseline_method(baseline_params):
@@ -659,6 +753,7 @@ def _coerce_baseline_method(baseline_params):
         exclude_weekends=baseline_params[EXCLUDE_WEEKENDS],
         exclude_holidays=baseline_params[EXCLUDE_HOLIDAYS],
         holiday_dates=baseline_params[HOLIDAY_DATES],
+        resolution=baseline_params.get(RESOLUTION),
     )
 
 
@@ -693,29 +788,295 @@ def _event_window_mask(index, event_date, start_hour, duration_hours):
     return (index >= window_start) & (index < window_end)
 
 
-class PaymentStructure:
-    """Foundation payment structure: a piecewise-linear capacity payment
-    keyed on how much of the bid the site actually delivered.
-
-    Revenue is `payment_ratio * capacity_price * bid_capacity_kW`, where the
-    `regions` list maps the delivered ratio (`reduction_kW / bid_capacity_kW`)
-    to a payment ratio through consecutive linear segments. Override
-    `evaluate` and `build_expression` as a pair to extend -- they must agree
-    or an optimized plan will not reconcile with its ex-post settlement.
+def _index_step(index):
+    """Infer a `pandas.DatetimeIndex`'s regular spacing as a `pandas.Timedelta`.
 
     Parameters
     ----------
-    regions : list of dict
+    index : pandas.DatetimeIndex or None
+        Index to infer the spacing of. `None` is passed through as `None`,
+        so callers can try a fallback index without a separate `is None`
+        check.
+
+    Raises
+    ------
+    ValueError
+        When `index` has fewer than 2 entries.
+
+    Returns
+    -------
+    pandas.Timedelta or None
+        `None` if `index` is `None`, otherwise the gap between its first two
+        entries.
+    """
+    if index is None:
+        return None
+    if len(index) < 2:
+        raise ValueError("index must have at least 2 entries to infer its step size")
+    return index[1] - index[0]
+
+
+def _resolve_step(resolution, *indices):
+    """Pick the settlement interval width for a baseline calculation.
+
+    Precedence: an explicit `resolution` string first, then the step of the
+    first non-`None` index in `indices`.
+
+    Parameters
+    ----------
+    resolution : str or None
+        Interval width as a string of the form `"[int][unit]"` (e.g.
+        `"15m"`, `"1h"`), parsed by `utils.get_freq_binsize_minutes`. Takes
+        precedence over every index when given.
+
+    *indices : pandas.DatetimeIndex or None
+        Candidate indices to infer the step from, in preference order.
+        `None` entries are skipped.
+
+    Raises
+    ------
+    ValueError
+        When `resolution` is `None` and every index is either `None` or has
+        fewer than 2 entries.
+
+    Returns
+    -------
+    pandas.Timedelta
+        The resolved interval width.
+    """
+    if resolution is not None:
+        return pd.Timedelta(minutes=ut.get_freq_binsize_minutes(resolution))
+    for index in indices:
+        if index is None:
+            continue
+        return _index_step(index)
+    raise ValueError(
+        "Could not infer a settlement interval width: pass resolution explicitly, "
+        "or supply an index with at least 2 entries"
+    )
+
+
+def _window_interval_count(duration_hours, step):
+    """Number of equal-width settlement intervals spanning an event window.
+
+    Parameters
+    ----------
+    duration_hours : float
+        Length of the event window in hours.
+
+    step : pandas.Timedelta
+        Width of one settlement interval.
+
+    Raises
+    ------
+    ValueError
+        When `duration_hours` is not (approximately) an integer multiple of
+        `step`.
+
+    Returns
+    -------
+    int
+        The number of intervals.
+    """
+    n = duration_hours * 3600.0 / step.total_seconds()
+    if not np.isclose(n, round(n), atol=1e-6):
+        raise ValueError(
+            f"duration_hours ({duration_hours}) is not an integer multiple of the "
+            f"settlement interval ({step}); pass a resolution that evenly divides "
+            "the event duration"
+        )
+    return int(round(n))
+
+
+def _window_interval_starts(event_date, start_hour, duration_hours, step):
+    """Calendar start timestamp of each settlement interval in an event window.
+
+    Parameters
+    ----------
+    event_date : datetime.date, datetime.datetime, or str
+        Calendar date the window is anchored to.
+
+    start_hour : float
+        Hour of day (0-24) the window begins.
+
+    duration_hours : float
+        Length of the window in hours.
+
+    step : pandas.Timedelta
+        Width of one settlement interval.
+
+    Returns
+    -------
+    pandas.DatetimeIndex
+        One entry per interval, its start timestamp.
+    """
+    window_start = pd.Timestamp(event_date) + pd.Timedelta(hours=start_hour)
+    n_intervals = _window_interval_count(duration_hours, step)
+    return pd.DatetimeIndex([window_start + i * step for i in range(n_intervals)])
+
+
+def _window_interval_buckets(index, event_date, start_hour, duration_hours, step):
+    """Bucket `index`'s positions within an event window by settlement interval.
+
+    Parameters
+    ----------
+    index : pandas.DatetimeIndex
+        Index of timestamps to bucket.
+
+    event_date : datetime.date, datetime.datetime, or str
+        Calendar date the window is anchored to.
+
+    start_hour : float
+        Hour of day (0-24) the window begins.
+
+    duration_hours : float
+        Length of the window in hours.
+
+    step : pandas.Timedelta
+        Width of one settlement interval; must evenly divide `duration_hours`
+        (see `_window_interval_count`).
+
+    Returns
+    -------
+    list of numpy.ndarray
+        One entry per interval, holding the positions of `index` (as used by
+        `.iloc`/`values[...]`) whose timestamp falls in that interval. An
+        interval with no matching positions is an empty array -- callers
+        decide whether that is an error.
+    """
+    window_start = pd.Timestamp(event_date) + pd.Timedelta(hours=start_hour)
+    n_intervals = _window_interval_count(duration_hours, step)
+    mask = _event_window_mask(index, event_date, start_hour, duration_hours)
+    positions = np.flatnonzero(mask)
+    if positions.size == 0:
+        return [np.empty(0, dtype=int) for _ in range(n_intervals)]
+    offsets = (index[positions] - window_start) / step
+    interval_idx = np.floor(offsets.values.astype(float) + 1e-9).astype(int)
+    buckets = [np.empty(0, dtype=int) for _ in range(n_intervals)]
+    for k in range(n_intervals):
+        buckets[k] = positions[interval_idx == k]
+    return buckets
+
+
+def _as_pyomo_terms(reduction_kW):
+    """Normalize a pyomo-side `reduction_kW` into a list of per-interval terms.
+
+    Parameters
+    ----------
+    reduction_kW : pyomo.environ.Var, pyomo expression, or list/tuple
+        An indexed `Var`/expression (one entry per settlement interval), a
+        scalar `Var`/expression (treated as a single interval), or an
+        already-built list/tuple of per-interval expressions (as
+        `build_event_revenue` passes).
+
+    Returns
+    -------
+    list
+        Per-interval terms.
+    """
+    if isinstance(reduction_kW, (list, tuple)):
+        return list(reduction_kW)
+    if ut.check_indexed_pyomo_type(reduction_kW):
+        return [reduction_kW[i] for i in reduction_kW.index_set()]
+    return [reduction_kW]
+
+
+class PaymentStructure:
+    """Foundation payment structure: a piecewise-linear capacity payment
+    keyed on how much of the bid the site actually delivered, plus an
+    optional flat participation payout.
+
+    The capacity payment is `payment_ratio * capacity_price * bid_capacity_kW`,
+    where the `regions` list maps the delivered ratio (`reduction_kW /
+    bid_capacity_kW`) to a payment ratio through consecutive linear segments.
+    Override `evaluate` and `build_expression` as a pair to extend -- they
+    must agree or an optimized plan will not reconcile with its ex-post
+    settlement.
+
+    Parameters
+    ----------
+    regions : list of dict or None
         Payment schedule, each dict having keys `REGION_X1`, `REGION_X2`,
         `REGION_Y1`, and `REGION_Y2`. Expected to cover the delivered
         ratios that can occur; `find_region` raises if one is uncovered.
         A bound may be given as the string `"Infinity"`/`"-Infinity"`
         (as produced by `json.load` on a quoted JSON value) instead of a
-        float; these are coerced to `inf`/`-inf` on construction.
+        float; these are coerced to `inf`/`-inf` on construction. `None`
+        (or an empty list) means no capacity payment at all -- a
+        payout-only structure, for programs whose revenue is entirely the
+        flat `payout` below (e.g. paired with
+        `UnilateralInterruptionBaseline`, which has no delivered-ratio
+        payment of its own).
+
+    settlement : str
+        How the capacity payment is aggregated over the event window's
+        settlement intervals when `reduction_kW` carries more than one
+        (see `calculate_event_baseline`'s `resolution`):
+
+        - `SETTLEMENT_AVERAGE` (`"average"`, default): mean the per-interval
+          reduction to a scalar delivered ratio, then evaluate the
+          piecewise function once. This is the historical behavior of this
+          class, and stays the default because it keeps the pyomo
+          formulation to one region-selection block per event.
+        - `SETTLEMENT_INTERVAL` (`"interval"`): evaluate the piecewise
+          function at each interval's own delivered ratio, then mean the
+          resulting payments (equivalently, a duration-weighted mean, since
+          this module's settlement intervals are equal-width). This is the
+          more rigorous reading whenever the payment function is
+          nonlinear over the realized range -- the two modes agree exactly
+          when it is linear there, and always agree when `reduction_kW` is
+          a single scalar. In the pyomo path, this multiplies the number of
+          region-selection binaries by the number of intervals; budget for
+          that when choosing it.
+
+    payment_basis : str
+        Whether `capacity_price` is settled once per event
+        (`BASIS_PER_EVENT`, `"per_event"`, default) or scales with the
+        event's duration (`BASIS_PER_HOUR`, `"per_hour"`, i.e.
+        `capacity_price` is $/kW-hour rather than $/kW-event). `"per_hour"`
+        requires `event[EVENT_DURATION]`.
+
+    payout : float
+        A flat, performance-independent participation payment in
+        **$/kW of `event[BID_CAPACITY_KW]`** (not a flat dollar amount --
+        this structure is shared across events with different bid sizes),
+        added on top of the capacity payment. `0.0` (default) adds nothing.
+
+    payout_basis : str
+        Whether `payout` is settled once per event (`BASIS_PER_EVENT`,
+        default) or scales with the event's duration (`BASIS_PER_HOUR`,
+        requires `event[EVENT_DURATION]`).
+
+    Raises
+    ------
+    ValueError
+        When `settlement`, `payment_basis`, or `payout_basis` is not one of
+        its documented values.
     """
 
-    def __init__(self, regions):
-        self.regions = [{k: float(v) for k, v in region.items()} for region in regions]
+    def __init__(
+        self,
+        regions,
+        settlement=SETTLEMENT_AVERAGE,
+        payment_basis=BASIS_PER_EVENT,
+        payout=0.0,
+        payout_basis=BASIS_PER_EVENT,
+    ):
+        if settlement not in SETTLEMENT_MODES:
+            raise ValueError(f"settlement must be one of {SETTLEMENT_MODES}")
+        if payment_basis not in PAYMENT_BASES:
+            raise ValueError(f"payment_basis must be one of {PAYMENT_BASES}")
+        if payout_basis not in PAYMENT_BASES:
+            raise ValueError(f"payout_basis must be one of {PAYMENT_BASES}")
+        self.regions = (
+            [{k: float(v) for k, v in region.items()} for region in regions]
+            if regions
+            else []
+        )
+        self.settlement = settlement
+        self.payment_basis = payment_basis
+        self.payout = payout
+        self.payout_basis = payout_basis
 
     def find_region(self, delivered_ratio=None, region_x1=None):
         """Look up the applicable payment region.
@@ -732,13 +1093,19 @@ class PaymentStructure:
         Raises
         ------
         ValueError
-            When no region matches.
+            When no region matches, or when this structure has no regions
+            at all (a payout-only structure).
 
         Returns
         -------
         dict
             The matching region.
         """
+        if not self.regions:
+            raise ValueError(
+                "This PaymentStructure has no regions (payout-only); there is no "
+                "capacity payment region to look up"
+            )
         if region_x1 is not None:
 
             def predicate(r):
@@ -758,43 +1125,189 @@ class PaymentStructure:
             raise ValueError(error_msg)
         return region
 
-    def evaluate(self, event, reduction_kW):
-        """Calculate realized revenue for a known reduction. Interpolates based on payment function.
+    def _basis_multiplier(self, event, basis, label):
+        """1.0 for `BASIS_PER_EVENT`, `event[EVENT_DURATION]` for
+        `BASIS_PER_HOUR`.
 
         Parameters
         ----------
         event : dict
-            A single event, as produced by `add_event`. Supplies
-            `BID_CAPACITY_KW` and `CAPACITY_PRICE`.
+            A single event, or the minimal synthetic dict built by
+            `evaluate_payment_function`/`build_payment_expression`.
 
-        reduction_kW : float or numpy.ndarray
-            Realized load reduction (baseline minus actual power) in kW.
+        basis : str
+            `self.payment_basis` or `self.payout_basis`.
+
+        label : str
+            Name of the attribute being resolved, used only to phrase the
+            error message (`"payment_basis"` or `"payout_basis"`).
 
         Raises
         ------
         ValueError
-            When the event's `BID_CAPACITY_KW` is not positive, or no
-            region covers the resulting delivered ratio.
+            When `basis` is `BASIS_PER_HOUR` and `event` has no
+            `EVENT_DURATION`.
 
         Returns
         -------
         float
-            Revenue (positive) or penalty (negative) in USD.
+            The multiplier.
         """
-        bid_capacity_kW = event[BID_CAPACITY_KW]
-        capacity_price = event[CAPACITY_PRICE]
-        if bid_capacity_kW <= 0:
-            raise ValueError("bid_capacity_kW must be positive")
-        delivered_ratio = reduction_kW / bid_capacity_kW
+        if basis == BASIS_PER_EVENT:
+            return 1.0
+        if EVENT_DURATION not in event:
+            raise ValueError(
+                f"{label}='per_hour' requires event[EVENT_DURATION] (duration_hours) "
+                "-- pass duration_hours to evaluate_payment_function/"
+                "build_payment_expression, or use the full event dict via "
+                "build_event_revenue/calculate_dr_revenue"
+            )
+        return event[EVENT_DURATION]
+
+    def _payout_amount(self, event):
+        """Flat participation payout for this event, in USD.
+
+        Parameters
+        ----------
+        event : dict
+            A single event, or the minimal synthetic dict built by
+            `evaluate_payment_function`/`build_payment_expression`.
+
+        Returns
+        -------
+        float
+            `0.0` when `self.payout == 0.0` (regardless of whether
+            `event[EVENT_DURATION]` is available), otherwise
+            `payout * bid_capacity_kW * basis_multiplier`.
+        """
+        if self.payout == 0.0:
+            return 0.0
+        basis_mult = self._basis_multiplier(event, self.payout_basis, "payout_basis")
+        return self.payout * event[BID_CAPACITY_KW] * basis_mult
+
+    def _payment_ratio(self, delivered_ratio):
+        """Piecewise-linear payment ratio `f(delivered_ratio)`.
+
+        Parameters
+        ----------
+        delivered_ratio : float
+            A single interval's (or the window-mean) delivered ratio.
+
+        Returns
+        -------
+        float
+            The interpolated payment ratio.
+        """
         region = self.find_region(delivered_ratio=delivered_ratio)
         x1, x2, y1, y2 = (
             region[k] for k in (REGION_X1, REGION_X2, REGION_Y1, REGION_Y2)
         )
         if np.isinf(x2):
-            payment_ratio = y1
+            return y1
+        return y1 + (y2 - y1) * (delivered_ratio - x1) / (x2 - x1)
+
+    def _region_coefficients(self, event):
+        """Per-region `(slope, intercept)` pairs, with `capacity_price`,
+        `bid_capacity_kW`, and the `payment_basis` multiplier folded in, so
+        every backend (cvxpy, pyomo) and `evaluate` compute revenue from the
+        same numbers.
+
+        Parameters
+        ----------
+        event : dict
+            A single event, as produced by `add_event`.
+
+        Returns
+        -------
+        tuple
+            `(slopes, intercepts)`, parallel lists, one entry per region in
+            `self.regions`.
+        """
+        bid_capacity_kW = event[BID_CAPACITY_KW]
+        capacity_price = event[CAPACITY_PRICE]
+        basis_mult = self._basis_multiplier(event, self.payment_basis, "payment_basis")
+        slopes = []
+        intercepts = []
+        for region in self.regions:
+            x1, x2, y1, y2 = (
+                region[k] for k in (REGION_X1, REGION_X2, REGION_Y1, REGION_Y2)
+            )
+            slope_ratio = 0.0 if np.isinf(x2) else (y2 - y1) / (x2 - x1)
+            slopes.append(capacity_price * slope_ratio * basis_mult)
+            intercepts.append(
+                capacity_price * bid_capacity_kW * (y1 - slope_ratio * x1) * basis_mult
+            )
+        return slopes, intercepts
+
+    @staticmethod
+    def _as_interval_terms(reduction_kW):
+        """Normalize a numeric `reduction_kW` into per-interval terms.
+
+        Parameters
+        ----------
+        reduction_kW : float or numpy.ndarray
+            A scalar or a 1-D array of per-interval reductions.
+
+        Returns
+        -------
+        tuple
+            `(terms, n_intervals)`, where `terms` is a `list` of `float`.
+        """
+        arr = np.atleast_1d(np.asarray(reduction_kW, dtype=float))
+        return list(arr), arr.size
+
+    def evaluate(self, event, reduction_kW):
+        """Calculate realized revenue for a known reduction. Interpolates
+        based on the payment function, honoring `self.settlement`.
+
+        Parameters
+        ----------
+        event : dict
+            A single event, as produced by `add_event`. Supplies
+            `BID_CAPACITY_KW` and `CAPACITY_PRICE`, and `EVENT_DURATION` if
+            `payment_basis`/`payout_basis` is `"per_hour"`.
+
+        reduction_kW : float or numpy.ndarray
+            Realized load reduction (baseline minus actual power) in kW, as
+            a window-mean scalar or a 1-D array of per-interval values. A
+            scalar is always evaluated the same way regardless of
+            `self.settlement`.
+
+        Raises
+        ------
+        ValueError
+            When the event's `BID_CAPACITY_KW` is not positive; when no
+            region covers a resulting delivered ratio; or when a `"per_hour"`
+            basis is configured and `event` has no `EVENT_DURATION`.
+
+        Returns
+        -------
+        float
+            Revenue (positive) or penalty (negative) in USD, including any
+            configured `payout`.
+        """
+        bid_capacity_kW = event[BID_CAPACITY_KW]
+        if bid_capacity_kW <= 0:
+            raise ValueError("bid_capacity_kW must be positive")
+
+        if not self.regions:
+            capacity_payment = 0.0
         else:
-            payment_ratio = y1 + (y2 - y1) * (delivered_ratio - x1) / (x2 - x1)
-        return payment_ratio * capacity_price * bid_capacity_kW
+            capacity_price = event[CAPACITY_PRICE]
+            basis_mult = self._basis_multiplier(
+                event, self.payment_basis, "payment_basis"
+            )
+            terms, _ = self._as_interval_terms(reduction_kW)
+            if self.settlement == SETTLEMENT_INTERVAL and len(terms) > 1:
+                ratios = [self._payment_ratio(t / bid_capacity_kW) for t in terms]
+                payment_ratio = float(np.mean(ratios))
+            else:
+                mean_reduction = float(np.mean(terms))
+                payment_ratio = self._payment_ratio(mean_reduction / bid_capacity_kW)
+            capacity_payment = payment_ratio * capacity_price * bid_capacity_kW
+            capacity_payment *= basis_mult
+
+        return capacity_payment + self._payout_amount(event)
 
     def build_expression(
         self, event, reduction_kW, region_x1=None, model=None, varstr=""
@@ -806,47 +1319,84 @@ class PaymentStructure:
           determined, via `evaluate`.
         - `cvxpy.Expression`/`cvxpy.Variable`: still requires a known
           `region_x1` (raises if missing) and builds only that one region.
-        - `pyomo.environ.Var`/expression: builds *every* region onto
-          `model` at once, using a disaggregated binary-selection
-          formulation (Balas' extended form). To optimize over the regions, 
-          use `region_x1=None`. 
+          A vector `reduction_kW` (one entry per settlement interval) is
+          meaned for `"average"` settlement; for `"interval"` settlement the
+          region bound constraints apply to every interval elementwise,
+          though the revenue expression is identical in both modes (the
+          payment ratio is affine within one fixed region, so its mean
+          equals the mean reduction's payment ratio).
+        - `pyomo.environ.Var`/expression, or a `list`/`tuple` of pyomo
+          expressions (one per settlement interval): builds *every* region
+          onto `model` at once, using a disaggregated binary-selection
+          formulation (Balas' extended form). To optimize over the regions,
+          use `region_x1=None`.
 
-          Pyomo components added under `varstr` (`R` = `len(self.regions)`,
-          indexed `0..R-1`):
+          For `"average"` settlement, components added under `varstr`
+          (`R` = `len(self.regions)`, indexed `0..R-1`):
           - `_region_active`: binary `Var`, 1 iff region `r` is active.
           - `_region_select_constraint`: exactly one region is active.
           - `_region_reduction`: `Var`, region `r`'s disaggregated share of
-            `reduction_kW` -- forced to `0` when region `r` is inactive,
-            bounded by region `r`'s own `[x1, x2] * bid_capacity_kW` box
-            when active.
+            the mean reduction -- forced to `0` when region `r` is
+            inactive, bounded by region `r`'s own `[x1, x2] *
+            bid_capacity_kW` box when active.
           - `_region_reduction_lower_constraint` / `_upper_constraint`:
             the bounds above.
-          - `_region_reduction_sum_constraint`: `reduction_kW` equals the
-            sum of the per-region shares.
-          - `_revenue` / `_revenue_constraint`: total revenue, summed from
-            each region's own (exact, region-local) contribution.
+          - `_region_reduction_sum_constraint`: the mean reduction equals
+            the sum of the per-region shares.
+          - `_revenue` / `_revenue_constraint`: total revenue (capacity
+            payment, summed from each region's own contribution, plus any
+            `payout`).
+
+          For `"interval"` settlement, every component above gains a
+          leading interval index `t` (`0..n_intervals-1`), one
+          region-selection block per interval --
+          `_region_active`/`_region_reduction` become `Var(interval_idx,
+          region_idx, ...)`, `_region_select_constraint`/
+          `_region_reduction_sum_constraint` become one-per-interval, and
+          an `_interval_revenue : Var(interval_idx)` is added so a solved
+          model can be audited per interval; `_revenue` is their mean plus
+          `payout`. This multiplies the number of binaries by
+          `n_intervals` relative to `"average"` settlement -- the cost of
+          the more rigorous formulation. A scalar `region_x1` fixes the
+          same region for every interval; passing a sequence of length
+          `n_intervals` fixes them individually. Fixing one region for
+          every interval is a *tighter* feasible set than `"average"`
+          settlement (which only constrains the mean), and can render a
+          previously-feasible plan infeasible -- prefer `region_x1=None`
+          in `"interval"` settlement and let the solver choose per
+          interval.
+
+          If `self.regions` is empty (a payout-only structure), no region
+          components are created in either backend; `_revenue` (or the
+          cvxpy/numpy return value) is just the constant payout.
 
         Parameters
         ----------
         event : dict
             A single event, as produced by `add_event`. Supplies
-            `BID_CAPACITY_KW` and `CAPACITY_PRICE`.
+            `BID_CAPACITY_KW` and `CAPACITY_PRICE`, and `EVENT_DURATION` if
+            `payment_basis`/`payout_basis` is `"per_hour"`.
 
-        reduction_kW : numpy.ndarray, float, cvxpy.Expression, or pyomo.environ.Var
+        reduction_kW : numpy.ndarray, float, cvxpy.Expression, pyomo.environ.Var,
+            or list/tuple of pyomo expressions
             Load reduction, as a realized value or a decision-variable
-            expression.
+            expression, per settlement interval (or a single scalar/window
+            mean).
 
-        region_x1 : float or None
+        region_x1 : float, list of float, or None
             The `x1` value identifying which region to fix. Required for
-            the cvxpy case.
+            the cvxpy case. For the pyomo case under `"interval"`
+            settlement, a list of length `n_intervals` fixes each
+            interval's region individually; a scalar fixes the same region
+            for every interval.
 
         model : pyomo.environ.Model or pyomo.environ.Block or None
-            Only used in the pyomo case. 
+            Only used in the pyomo case.
 
         varstr : str
             Name prefix for pyomo components created on `model`. Must be
             unique per call on a given `model` or `block`.
-            
+
         Raises
         ------
         ValueError
@@ -863,119 +1413,356 @@ class PaymentStructure:
             `(revenue, model)` for numpy/scalar, `(revenue_var, model)` for
             pyomo, or `(revenue_expr, constraints_list)` for cvxpy.
         """
-        bid_capacity_kW = event[BID_CAPACITY_KW]
-        capacity_price = event[CAPACITY_PRICE]
-
         if ut.check_indexed_np_array(reduction_kW) or ut.check_nonindexed_python_type(
             reduction_kW
         ):
             return self.evaluate(event, reduction_kW), model
 
         if ut.check_cvx_type(reduction_kW):
-            # TODO: cvxpy still requires a known region.
-            region = self.find_region(region_x1=region_x1)
-            x1, x2, y1, y2 = (
-                region[k] for k in (REGION_X1, REGION_X2, REGION_Y1, REGION_Y2)
+            return self._build_cvxpy_expression(event, reduction_kW, region_x1)
+        elif (
+            ut.check_indexed_pyomo_type(reduction_kW)
+            or ut.check_nonindexed_pyomo_type(reduction_kW)
+            or isinstance(reduction_kW, (list, tuple))
+        ):
+            if model is None:
+                raise ValueError("model is required for pyomo expressions")
+            terms = _as_pyomo_terms(reduction_kW)
+            if not self.regions:
+                return self._build_payout_only_pyomo(event, model, varstr)
+            if self.settlement == SETTLEMENT_INTERVAL:
+                return self._build_pyomo_regions_indexed(
+                    event, terms, region_x1, model, varstr
+                )
+            return self._build_pyomo_regions_scalar(
+                event, terms, region_x1, model, varstr
             )
-            slope_ratio = 0.0 if np.isinf(x2) else (y2 - y1) / (x2 - x1)
-            slope = capacity_price * slope_ratio
-            intercept = capacity_price * bid_capacity_kW * (y1 - slope_ratio * x1)
-            revenue_expr = slope * reduction_kW + intercept
+        else:
+            raise TypeError(
+                "reduction_kW must be numpy.ndarray, a Python number, "
+                "cvxpy.Expression/Variable, pyomo.environ.Var, or a list/tuple of "
+                "pyomo expressions"
+            )
+
+    def _build_cvxpy_expression(self, event, reduction_kW, region_x1):
+        """The cvxpy branch of `build_expression`.
+
+        Parameters
+        ----------
+        event : dict
+            A single event, as produced by `add_event`.
+
+        reduction_kW : cvxpy.Expression or cvxpy.Variable
+            Load reduction, scalar or a vector over settlement intervals.
+
+        region_x1 : float or None
+            The `x1` value identifying which region to fix. Required.
+
+        Raises
+        ------
+        ValueError
+            When no region matches `region_x1` (including when it's `None`
+            and `self.regions` is non-empty).
+
+        Returns
+        -------
+        tuple
+            `(revenue_expr, constraints_list)`.
+        """
+        payout_amt = self._payout_amount(event)
+        if not self.regions:
+            return payout_amt, []
+
+        bid_capacity_kW = event[BID_CAPACITY_KW]
+        region = self.find_region(region_x1=region_x1)
+        x1, x2 = region[REGION_X1], region[REGION_X2]
+        slopes, intercepts = self._region_coefficients(event)
+        idx = next(i for i, r in enumerate(self.regions) if r is region)
+        slope, intercept = slopes[idx], intercepts[idx]
+
+        mean_reduction = cp.sum(reduction_kW) / reduction_kW.size
+        # The payment ratio is affine within one fixed region, so meaning the
+        # per-interval payments equals paying the mean reduction: the revenue
+        # expression is identical in both settlement modes. Only the region
+        # bound constraints differ -- "interval" settlement requires every
+        # interval (not just the mean) to fall in the fixed region.
+        revenue_expr = slope * mean_reduction + intercept + payout_amt
+        if self.settlement == SETTLEMENT_INTERVAL:
             constraints = [reduction_kW >= x1 * bid_capacity_kW]
             if not np.isinf(x2):
                 constraints.append(reduction_kW <= x2 * bid_capacity_kW)
-            return revenue_expr, constraints
-        elif ut.check_indexed_pyomo_type(
-            reduction_kW
-        ) or ut.check_nonindexed_pyomo_type(reduction_kW):
-            if model is None:
-                raise ValueError("model is required for pyomo expressions")
+        else:
+            constraints = [mean_reduction >= x1 * bid_capacity_kW]
+            if not np.isinf(x2):
+                constraints.append(mean_reduction <= x2 * bid_capacity_kW)
+        return revenue_expr, constraints
 
-            region_idx = range(len(self.regions))
+    def _build_payout_only_pyomo(self, event, model, varstr):
+        """Build a constant-revenue expression for a payout-only structure
+        (`self.regions` is empty), for the pyomo backend.
 
-            model.add_component(
-                varstr + "_region_active", pyo.Var(region_idx, within=pyo.Binary)
-            )
-            z = model.find_component(varstr + "_region_active")
-            model.add_component(
-                varstr + "_region_select_constraint",
-                pyo.Constraint(expr=pyo.quicksum(z[r] for r in region_idx) == 1),
-            )
+        Parameters
+        ----------
+        event : dict
+            A single event, as produced by `add_event`.
 
-            model.add_component(varstr + "_region_reduction", pyo.Var(region_idx))
-            region_reduction = model.find_component(varstr + "_region_reduction")
+        model : pyomo.environ.Model or pyomo.environ.Block
+            The model to add components to.
 
-            slopes = []
-            intercepts = []
-            for region in self.regions:
-                x1, x2, y1, y2 = (
-                    region[k] for k in (REGION_X1, REGION_X2, REGION_Y1, REGION_Y2)
+        varstr : str
+            Name prefix for the `_revenue`/`_revenue_constraint` components.
+
+        Returns
+        -------
+        tuple
+            `(revenue_var, model)`.
+        """
+        model.add_component(varstr + "_revenue", pyo.Var())
+        revenue_var = model.find_component(varstr + "_revenue")
+        model.add_component(
+            varstr + "_revenue_constraint",
+            pyo.Constraint(expr=revenue_var == self._payout_amount(event)),
+        )
+        return revenue_var, model
+
+    def _build_pyomo_regions_scalar(self, event, terms, region_x1, model, varstr):
+        """`"average"` settlement: one region-selection block for the
+        window-mean reduction. See `build_expression` for the component
+        names this creates.
+
+        Parameters
+        ----------
+        event : dict
+            A single event, as produced by `add_event`.
+
+        terms : list
+            Per-interval reduction expressions (length 1 for a scalar
+            reduction); meaned here before region selection.
+
+        region_x1 : float or None
+            The `x1` value identifying which region to fix, or `None` to
+            leave the choice to the solver.
+
+        model : pyomo.environ.Model or pyomo.environ.Block
+            The model to add components to.
+
+        varstr : str
+            Name prefix for the components created on `model`.
+
+        Returns
+        -------
+        tuple
+            `(revenue_var, model)`.
+        """
+        bid_capacity_kW = event[BID_CAPACITY_KW]
+        mean_reduction = pyo.quicksum(terms) / len(terms)
+        region_idx = range(len(self.regions))
+        slopes, intercepts = self._region_coefficients(event)
+
+        model.add_component(
+            varstr + "_region_active", pyo.Var(region_idx, within=pyo.Binary)
+        )
+        z = model.find_component(varstr + "_region_active")
+        model.add_component(
+            varstr + "_region_select_constraint",
+            pyo.Constraint(expr=pyo.quicksum(z[r] for r in region_idx) == 1),
+        )
+
+        model.add_component(varstr + "_region_reduction", pyo.Var(region_idx))
+        region_reduction = model.find_component(varstr + "_region_reduction")
+
+        def lower_rule(m, r):
+            x1 = self.regions[r][REGION_X1]
+            # implicitly bounds the DR bid to be > 0.1% of max power production
+            if np.isinf(x1):
+                x1 = -1000.0
+            return region_reduction[r] >= x1 * bid_capacity_kW * z[r]
+
+        model.add_component(
+            varstr + "_region_reduction_lower_constraint",
+            pyo.Constraint(region_idx, rule=lower_rule),
+        )
+
+        def upper_rule(m, r):
+            x2 = self.regions[r][REGION_X2]
+            # implicitly bounds the DR bid to be > 0.1% of max power consumption
+            if np.isinf(x2):
+                x2 = 1000.0
+            return region_reduction[r] <= x2 * bid_capacity_kW * z[r]
+
+        model.add_component(
+            varstr + "_region_reduction_upper_constraint",
+            pyo.Constraint(region_idx, rule=upper_rule),
+        )
+
+        model.add_component(
+            varstr + "_region_reduction_sum_constraint",
+            pyo.Constraint(
+                expr=mean_reduction
+                == pyo.quicksum(region_reduction[r] for r in region_idx)
+            ),
+        )
+
+        model.add_component(varstr + "_revenue", pyo.Var())
+        revenue_var = model.find_component(varstr + "_revenue")
+        payout_amt = self._payout_amount(event)
+        model.add_component(
+            varstr + "_revenue_constraint",
+            pyo.Constraint(
+                expr=revenue_var
+                == pyo.quicksum(
+                    slopes[r] * region_reduction[r] + intercepts[r] * z[r]
+                    for r in region_idx
                 )
-                slope_ratio = 0.0 if np.isinf(x2) else (y2 - y1) / (x2 - x1)
-                slopes.append(capacity_price * slope_ratio)
-                intercepts.append(
-                    capacity_price * bid_capacity_kW * (y1 - slope_ratio * x1)
-                )
+                + payout_amt
+            ),
+        )
 
-            def lower_rule(model, r):
-                x1 = self.regions[r][REGION_X1]
-                # implicitly bounds the DR bid to be > 0.1% of max power production
-                if np.isinf(x1):
-                    x1 = -1000.0
-                return region_reduction[r] >= x1 * bid_capacity_kW * z[r]
-
-            model.add_component(
-                varstr + "_region_reduction_lower_constraint",
-                pyo.Constraint(region_idx, rule=lower_rule),
+        if region_x1 is not None:
+            matched_region = self.find_region(region_x1=region_x1)
+            fixed_idx = next(
+                i for i, r in enumerate(self.regions) if r is matched_region
             )
+            for r in region_idx:
+                z[r].fix(1 if r == fixed_idx else 0)
 
-            def upper_rule(model, r):
-                x2 = self.regions[r][REGION_X2]
-                # implicitly bounds the DR bid to be > 0.1% of max power consumption
-                if np.isinf(x2):
-                    x2 = 1000.0
-                return region_reduction[r] <= x2 * bid_capacity_kW * z[r]
+        return revenue_var, model
 
-            model.add_component(
-                varstr + "_region_reduction_upper_constraint",
-                pyo.Constraint(region_idx, rule=upper_rule),
-            )
+    def _build_pyomo_regions_indexed(self, event, terms, region_x1, model, varstr):
+        """`"interval"` settlement: one region-selection block per settlement
+        interval. See `build_expression` for the component names this
+        creates and the feasibility caveat around fixing `region_x1`.
 
-            model.add_component(
-                varstr + "_region_reduction_sum_constraint",
-                pyo.Constraint(
-                    expr=reduction_kW
-                    == pyo.quicksum(region_reduction[r] for r in region_idx)
+        Parameters
+        ----------
+        event : dict
+            A single event, as produced by `add_event`.
+
+        terms : list
+            Per-interval reduction expressions, length `n_intervals`.
+
+        region_x1 : float, list of float, or None
+            The `x1` value fixing every interval's region (scalar), each
+            interval's region individually (a length-`n_intervals` list),
+            or `None` to leave every interval's choice to the solver.
+
+        model : pyomo.environ.Model or pyomo.environ.Block
+            The model to add components to.
+
+        varstr : str
+            Name prefix for the components created on `model`.
+
+        Raises
+        ------
+        ValueError
+            When `region_x1` is a sequence whose length does not match
+            `len(terms)`.
+
+        Returns
+        -------
+        tuple
+            `(revenue_var, model)`.
+        """
+        bid_capacity_kW = event[BID_CAPACITY_KW]
+        n_intervals = len(terms)
+        interval_idx = range(n_intervals)
+        region_idx = range(len(self.regions))
+        slopes, intercepts = self._region_coefficients(event)
+
+        model.add_component(
+            varstr + "_region_active",
+            pyo.Var(interval_idx, region_idx, within=pyo.Binary),
+        )
+        z = model.find_component(varstr + "_region_active")
+        model.add_component(
+            varstr + "_region_select_constraint",
+            pyo.Constraint(
+                interval_idx,
+                rule=lambda m, t: pyo.quicksum(z[t, r] for r in region_idx) == 1,
+            ),
+        )
+
+        model.add_component(
+            varstr + "_region_reduction", pyo.Var(interval_idx, region_idx)
+        )
+        region_reduction = model.find_component(varstr + "_region_reduction")
+
+        def lower_rule(m, t, r):
+            x1 = self.regions[r][REGION_X1]
+            if np.isinf(x1):
+                x1 = -1000.0
+            return region_reduction[t, r] >= x1 * bid_capacity_kW * z[t, r]
+
+        model.add_component(
+            varstr + "_region_reduction_lower_constraint",
+            pyo.Constraint(interval_idx, region_idx, rule=lower_rule),
+        )
+
+        def upper_rule(m, t, r):
+            x2 = self.regions[r][REGION_X2]
+            if np.isinf(x2):
+                x2 = 1000.0
+            return region_reduction[t, r] <= x2 * bid_capacity_kW * z[t, r]
+
+        model.add_component(
+            varstr + "_region_reduction_upper_constraint",
+            pyo.Constraint(interval_idx, region_idx, rule=upper_rule),
+        )
+
+        model.add_component(
+            varstr + "_region_reduction_sum_constraint",
+            pyo.Constraint(
+                interval_idx,
+                rule=lambda m, t: terms[t]
+                == pyo.quicksum(region_reduction[t, r] for r in region_idx),
+            ),
+        )
+
+        model.add_component(varstr + "_interval_revenue", pyo.Var(interval_idx))
+        interval_revenue = model.find_component(varstr + "_interval_revenue")
+        model.add_component(
+            varstr + "_interval_revenue_constraint",
+            pyo.Constraint(
+                interval_idx,
+                rule=lambda m, t: interval_revenue[t]
+                == pyo.quicksum(
+                    slopes[r] * region_reduction[t, r] + intercepts[r] * z[t, r]
+                    for r in region_idx
                 ),
-            )
+            ),
+        )
 
-            model.add_component(varstr + "_revenue", pyo.Var())
-            revenue_var = model.find_component(varstr + "_revenue")
-            model.add_component(
-                varstr + "_revenue_constraint",
-                pyo.Constraint(
-                    expr=revenue_var
-                    == pyo.quicksum(
-                        slopes[r] * region_reduction[r] + intercepts[r] * z[r]
-                        for r in region_idx
+        model.add_component(varstr + "_revenue", pyo.Var())
+        revenue_var = model.find_component(varstr + "_revenue")
+        payout_amt = self._payout_amount(event)
+        model.add_component(
+            varstr + "_revenue_constraint",
+            pyo.Constraint(
+                expr=revenue_var
+                == pyo.quicksum(interval_revenue[t] for t in interval_idx) / n_intervals
+                + payout_amt
+            ),
+        )
+
+        if region_x1 is not None:
+            if isinstance(region_x1, (list, tuple)):
+                if len(region_x1) != n_intervals:
+                    raise ValueError(
+                        f"region_x1 must have length {n_intervals} to match "
+                        f"reduction_kW's intervals, got {len(region_x1)}"
                     )
-                ),
-            )
-
-            if region_x1 is not None:
-                matched_region = self.find_region(region_x1=region_x1)
+                region_x1_per_t = list(region_x1)
+            else:
+                region_x1_per_t = [region_x1] * n_intervals
+            for t in interval_idx:
+                matched_region = self.find_region(region_x1=region_x1_per_t[t])
                 fixed_idx = next(
                     i for i, r in enumerate(self.regions) if r is matched_region
                 )
                 for r in region_idx:
-                    z[r].fix(1 if r == fixed_idx else 0)
+                    z[t, r].fix(1 if r == fixed_idx else 0)
 
-            return revenue_var, model
-        else:
-            raise TypeError(
-                "reduction_kW must be numpy.ndarray, a Python number, "
-                "cvxpy.Expression/Variable, or pyomo.environ.Var"
-            )
+        return revenue_var, model
 
 
 class CapacityEnergyPayment(PaymentStructure):
@@ -984,15 +1771,26 @@ class CapacityEnergyPayment(PaymentStructure):
 
     Parameters
     ----------
-    regions : list of dict
+    regions : list of dict or None
         Capacity payment schedule, as for `PaymentStructure`.
 
     energy_price : float
-        Energy payment rate in $/kWh applied to the curtailed energy.
+        Energy payment rate in $/kWh applied to the curtailed energy. When
+        `reduction_kW` carries more than one settlement interval, this is
+        `energy_price * mean(reduction_kW) * event[EVENT_DURATION]` --
+        equivalently, the sum of each interval's own energy
+        (`reduction_t * interval_hours`), since the intervals are
+        equal-width and `interval_hours = EVENT_DURATION / n_intervals`.
+        Independent of `self.settlement`, which only affects the capacity
+        term.
+
+    **payment_kwargs
+        Forwarded to `PaymentStructure.__init__` (`settlement`,
+        `payment_basis`, `payout`, `payout_basis`).
     """
 
-    def __init__(self, regions, energy_price):
-        super().__init__(regions)
+    def __init__(self, regions, energy_price, **payment_kwargs):
+        super().__init__(regions, **payment_kwargs)
         self.energy_price = energy_price
 
     def evaluate(self, event, reduction_kW):
@@ -1010,7 +1808,7 @@ class CapacityEnergyPayment(PaymentStructure):
             needs.
 
         reduction_kW : float or numpy.ndarray
-            Realized load reduction in kW.
+            Realized load reduction in kW, window-mean or per-interval.
 
         Returns
         -------
@@ -1018,7 +1816,10 @@ class CapacityEnergyPayment(PaymentStructure):
             Combined revenue in USD.
         """
         capacity_payment = super().evaluate(event, reduction_kW)
-        energy_payment = self.energy_price * reduction_kW * event[EVENT_DURATION]
+        terms, _ = self._as_interval_terms(reduction_kW)
+        energy_payment = (
+            self.energy_price * float(np.mean(terms)) * event[EVENT_DURATION]
+        )
         return capacity_payment + energy_payment
 
     def build_expression(
@@ -1037,13 +1838,17 @@ class CapacityEnergyPayment(PaymentStructure):
         ):
             return self.evaluate(event, reduction_kW), model
 
-        energy_term = self.energy_price * reduction_kW * event[EVENT_DURATION]
-
         if ut.check_cvx_type(reduction_kW):
+            mean_reduction = cp.sum(reduction_kW) / reduction_kW.size
+            energy_term = self.energy_price * mean_reduction * event[EVENT_DURATION]
             capacity_expr, constraints = super().build_expression(
                 event, reduction_kW, region_x1=region_x1, model=model, varstr=varstr
             )
             return capacity_expr + energy_term, constraints
+
+        terms = _as_pyomo_terms(reduction_kW)
+        mean_reduction = pyo.quicksum(terms) / len(terms)
+        energy_term = self.energy_price * mean_reduction * event[EVENT_DURATION]
 
         capacity_var, model = super().build_expression(
             event, reduction_kW, region_x1=region_x1, model=model, varstr=varstr
@@ -1076,17 +1881,21 @@ class MarketIndexedPayment(PaymentStructure):
 
     Parameters
     ----------
-    regions : list of dict
+    regions : list of dict or None
         Payment schedule, as for `PaymentStructure`.
 
     price_lookup : callable
         Called as `price_lookup(event)` and must return the capacity price
         in $/kW to use for that event. Typically closes over a price series
         and keys off `event[EVENT_DATE]`.
+
+    **payment_kwargs
+        Forwarded to `PaymentStructure.__init__` (`settlement`,
+        `payment_basis`, `payout`, `payout_basis`).
     """
 
-    def __init__(self, regions, price_lookup):
-        super().__init__(regions)
+    def __init__(self, regions, price_lookup, **payment_kwargs):
+        super().__init__(regions, **payment_kwargs)
         self.price_lookup = price_lookup  # callable: price_lookup(event) -> float
 
     def _resolve_event(self, event):
@@ -1156,14 +1965,20 @@ def _coerce_payment_structure(payment_function):
 
 
 def evaluate_payment_function(
-    payment_function, reduction_kW, bid_capacity_kW, capacity_price
+    payment_function,
+    reduction_kW,
+    bid_capacity_kW,
+    capacity_price,
+    duration_hours=None,
 ):
     """Calculate ex-post revenue for a known reduction.
 
-    Note this function passes only `bid_capacity_kW` and `capacity_price`
-    through to `payment_function` -- a subclass needing other event fields
-    (e.g. `CapacityEnergyPayment`) must be used via `build_event_revenue` or
-    `calculate_dr_revenue` instead, which have the full event to hand.
+    Note this function passes only `bid_capacity_kW`, `capacity_price`, and
+    (if given) `duration_hours` through to `payment_function` -- a subclass
+    needing other event fields (e.g. `CapacityEnergyPayment`, or any
+    `"per_hour"` basis without `duration_hours` supplied here) must be used
+    via `build_event_revenue` or `calculate_dr_revenue` instead, which have
+    the full event to hand.
 
     Parameters
     ----------
@@ -1171,8 +1986,9 @@ def evaluate_payment_function(
         Each dict has keys `REGION_X1`, `REGION_X2`, `REGION_Y1`,
         `REGION_Y2`. A `PaymentStructure` instance is also accepted.
 
-    reduction_kW : float
-        Realized load reduction (baseline minus actual power) in kW.
+    reduction_kW : float or numpy.ndarray
+        Realized load reduction (baseline minus actual power) in kW,
+        window-mean or per-interval.
 
     bid_capacity_kW : float
         Nominated capacity bid in kW.
@@ -1180,11 +1996,17 @@ def evaluate_payment_function(
     capacity_price : float
         Program capacity price in $/kW.
 
+    duration_hours : float or None
+        Event duration in hours, populating `EVENT_DURATION` in the
+        synthetic event dict. Required only when `payment_function`'s
+        `payment_basis` or `payout_basis` is `"per_hour"`.
+
     Raises
     ------
     ValueError
-        When `bid_capacity_kW` is not positive, or `payment_function` has no
-        region covering the resulting delivered ratio.
+        When `bid_capacity_kW` is not positive; when `payment_function` has
+        no region covering the resulting delivered ratio; or when a
+        `"per_hour"` basis is configured and `duration_hours` is not given.
 
     Returns
     -------
@@ -1192,6 +2014,8 @@ def evaluate_payment_function(
         Revenue (positive) or penalty (negative) in USD.
     """
     event = {BID_CAPACITY_KW: bid_capacity_kW, CAPACITY_PRICE: capacity_price}
+    if duration_hours is not None:
+        event[EVENT_DURATION] = duration_hours
     return _coerce_payment_structure(payment_function).evaluate(event, reduction_kW)
 
 
@@ -1203,6 +2027,7 @@ def build_payment_expression(
     region_x1=None,
     model=None,
     varstr="",
+    duration_hours=None,
 ):
     """Build the revenue expression for a single, specified region.
 
@@ -1214,14 +2039,17 @@ def build_payment_expression(
     payment_function : list of dict or PaymentStructure
         Each dict has keys `REGION_X1`, `REGION_X2`, `REGION_Y1`,
         `REGION_Y2`. A `PaymentStructure` instance is also accepted, but
-        note that this function passes only `bid_capacity_kW` and
-        `capacity_price` through -- a subclass needing other event fields
-        (as `CapacityEnergyPayment` needs `EVENT_DURATION`) must be used via
-        `build_event_revenue`, `calculate_dr_revenue`, or `build_dr_revenue`,
-        which have the full event to hand.
+        note that this function passes only `bid_capacity_kW`,
+        `capacity_price`, and (if given) `duration_hours` through -- a
+        subclass needing other event fields (as `CapacityEnergyPayment`
+        needs `EVENT_DURATION`) must be used via `build_event_revenue`,
+        `calculate_dr_revenue`, or `build_dr_revenue`, which have the full
+        event to hand.
 
-    reduction_kW : numpy.ndarray, float, cvxpy.Expression, or pyomo.environ.Var
-        Load reduction, as a realized value or a decision-variable expression.
+    reduction_kW : numpy.ndarray, float, cvxpy.Expression, pyomo.environ.Var,
+        or list/tuple of pyomo expressions
+        Load reduction, as a realized value or a decision-variable
+        expression, per settlement interval (or a single scalar/window mean).
 
     bid_capacity_kW : float
         Nominated capacity bid in kW.
@@ -1229,7 +2057,7 @@ def build_payment_expression(
     capacity_price : float
         Program capacity price in $/kW.
 
-    region_x1 : float or None
+    region_x1 : float, list of float, or None
         The `x1` value identifying which region to build. Required (and
         used) only for the cvxpy/pyomo cases.
 
@@ -1242,8 +2070,18 @@ def build_payment_expression(
         Must be unique per call on a given `model`, since reusing a `varstr`
         will raise a pyomo "component already exists" error.
 
+    duration_hours : float or None
+        Event duration in hours, populating `EVENT_DURATION` in the
+        synthetic event dict. Required only when `payment_function`'s
+        `payment_basis` or `payout_basis` is `"per_hour"`.
+
     Raises
     ------
+    ValueError
+        When a `"per_hour"` basis is configured and `duration_hours` is not
+        given, in addition to the cases documented on
+        `PaymentStructure.build_expression`.
+
     TypeError
         When `reduction_kW` is not a supported type.
 
@@ -1256,6 +2094,8 @@ def build_payment_expression(
         to add to their own `cvxpy.Problem`.
     """
     event = {BID_CAPACITY_KW: bid_capacity_kW, CAPACITY_PRICE: capacity_price}
+    if duration_hours is not None:
+        event[EVENT_DURATION] = duration_hours
     return _coerce_payment_structure(payment_function).build_expression(
         event, reduction_kW, region_x1=region_x1, model=model, varstr=varstr
     )
@@ -1370,6 +2210,7 @@ def make_baseline_parameters(
     exclude_weekends=True,
     exclude_holidays=True,
     holiday_dates=None,
+    resolution=None,
 ):
     """Build a dictionary of program-specific baseline calculation parameters.
 
@@ -1383,7 +2224,9 @@ def make_baseline_parameters(
         currently supported.
 
     n_baseline_days : int
-        Number of valid baseline days to average over.
+        Number of valid baseline days to average over. `0` means "no
+        baselining" -- see `BaselineMethod`'s docstring for what this
+        implies for the resulting delivered ratio.
 
     adjustment_offset_hours : int or None
         Number of hours before the event start where the day-of adjustment
@@ -1411,11 +2254,15 @@ def make_baseline_parameters(
     holiday_dates : list or None
         Calendar dates treated as holidays. Defaults to an empty list.
 
+    resolution : str or None
+        Settlement interval width, as for `BaselineMethod`. If `None`
+        (default), inferred from the data/model index at compute time.
+
     Raises
     ------
     ValueError
         When `baseline_method` is not `"average_similar_days"`; when
-        `n_baseline_days` is not positive; or when `adjustment_offset_hours`
+        `n_baseline_days` is negative; or when `adjustment_offset_hours`
         is not `None` and `adjustment_duration_hours` is not positive or
         exceeds `adjustment_offset_hours`.
 
@@ -1425,7 +2272,7 @@ def make_baseline_parameters(
         Baseline parameters keyed by the module's `BASELINE_METHOD`,
         `N_BASELINE_DAYS`, `ADJUSTMENT_OFFSET_HOURS`,
         `ADJUSTMENT_DURATION_HOURS`, `ADJUSTMENT_CLIP`, `EXCLUDE_WEEKENDS`,
-        `EXCLUDE_HOLIDAYS`, and `HOLIDAY_DATES` constants.
+        `EXCLUDE_HOLIDAYS`, `HOLIDAY_DATES`, and `RESOLUTION` constants.
     """
     if baseline_method != "average_similar_days":
         raise ValueError(
@@ -1433,7 +2280,7 @@ def make_baseline_parameters(
             "other methods are not yet supported"
         )
     if n_baseline_days < 0:
-        raise ValueError("n_baseline_days must be positive")
+        raise ValueError("n_baseline_days must be non-negative")
     if adjustment_offset_hours is not None:
         if adjustment_duration_hours <= 0:
             raise ValueError("adjustment_duration_hours must be positive")
@@ -1453,6 +2300,7 @@ def make_baseline_parameters(
         EXCLUDE_WEEKENDS: exclude_weekends,
         EXCLUDE_HOLIDAYS: exclude_holidays,
         HOLIDAY_DATES: list(holiday_dates) if holiday_dates else [],
+        RESOLUTION: resolution,
     }
 
 
@@ -1494,17 +2342,18 @@ def _baseline_day_in_horizon(day, start_hour, duration_hours, datetime_index, st
     return (window_start >= horizon_start) and (window_end <= horizon_end)
 
 
-def _baseline_day_terms(
+def _baseline_day_interval_values(
     day,
     start_hour,
     duration_hours,
+    step,
+    n_intervals,
     historical_power_kW,
     model_power_kW,
     model_var_index,
     model_datetime_index,
-    step,
 ):
-    """Compute a single baseline day's window-mean as weighted terms.
+    """Compute a single baseline day's per-interval values.
 
     Parameters
     ----------
@@ -1516,6 +2365,13 @@ def _baseline_day_terms(
 
     duration_hours : float
         Length of the window in hours.
+
+    step : pandas.Timedelta
+        Settlement interval width, as resolved by `_resolve_step`.
+
+    n_intervals : int
+        Number of settlement intervals in the event window
+        (`_window_interval_count(duration_hours, step)`).
 
     historical_power_kW : pandas.Series
         Historical realized power consumption in kW, indexed by
@@ -1531,43 +2387,51 @@ def _baseline_day_terms(
     model_datetime_index : pandas.DatetimeIndex or None
         Calendar timestamp for each position in `model_var_index`, or `None`.
 
-    step : pandas.Timedelta or None
-        Regular spacing of `model_datetime_index`, or `None`.
-
     Raises
     ------
     ValueError
-        When the day is in-horizon but no positions matched, or when the
-        day is historical but has no data in its window.
+        When the day is in-horizon but some interval matched no positions in
+        `model_datetime_index`; when the day is historical and some interval
+        has no data or only `NaN` data.
 
     Returns
     -------
     tuple
-        `(terms, is_dynamic)`, where `terms` is a list of `(weight, value)`
-        pairs whose weights sum to `1.0` and whose weighted sum equals the
-        day's window-mean.
+        `(values, is_dynamic)`, where `values` is a list of length
+        `n_intervals`: floats for a historical day, pyomo expressions (each
+        interval's own mean, as a `quicksum`) for a day inside the
+        optimization horizon.
     """
     if model_power_kW is not None and _baseline_day_in_horizon(
         day, start_hour, duration_hours, model_datetime_index, step
     ):
-        mask = _event_window_mask(model_datetime_index, day, start_hour, duration_hours)
-        matched = [idx for idx, keep in zip(model_var_index, mask) if keep]
-        if not matched:
-            raise ValueError(
-                f"Baseline day {day}'s window bounds fall inside the simulation "
-                "horizon but no matching positions were found in "
-                "model_datetime_index (is it gap-free and regularly spaced?)"
-            )
-        terms = [(1.0 / len(matched), model_power_kW[idx]) for idx in matched]
-        return terms, True
+        buckets = _window_interval_buckets(
+            model_datetime_index, day, start_hour, duration_hours, step
+        )
+        values = []
+        for k, bucket in enumerate(buckets):
+            if bucket.size == 0:
+                raise ValueError(
+                    f"Baseline day {day}'s window bounds fall inside the simulation "
+                    f"horizon but interval {k} matched no positions in "
+                    "model_datetime_index (is it gap-free and regularly spaced?)"
+                )
+            terms = [model_power_kW[model_var_index[i]] for i in bucket]
+            values.append(pyo.quicksum(terms) / len(terms))
+        return values, True
 
-    mask = _event_window_mask(
-        historical_power_kW.index, day, start_hour, duration_hours
+    buckets = _window_interval_buckets(
+        historical_power_kW.index, day, start_hour, duration_hours, step
     )
-    day_slice = historical_power_kW.loc[mask]
-    if day_slice.empty:
-        raise ValueError(f"No data available for baseline day {day}")
-    return [(1.0, day_slice.mean())], False
+    values = []
+    for k, bucket in enumerate(buckets):
+        if bucket.size == 0:
+            raise ValueError(f"No data available for baseline day {day}, interval {k}")
+        day_values = historical_power_kW.values[bucket]
+        if np.any(pd.isna(day_values)):
+            raise ValueError(f"Baseline day {day}, interval {k} has missing (NaN) data")
+        values.append(float(np.mean(day_values)))
+    return values, False
 
 
 def calculate_event_baseline(
@@ -1580,13 +2444,18 @@ def calculate_event_baseline(
     model_datetime_index=None,
     varstr=None,
 ):
-    """Calculate the mean baseline power for a single event's window.
+    """Calculate the per-interval baseline power for a single event's window.
 
-    Pass no `model` for a plain `float`, ex-post. Pass a `model` (plus
-    `model_power_kW` and `model_datetime_index`) to compute any baseline day
-    fully inside the simulation horizon from the decision variable instead
-    of history, returning `(baseline, model)`. The day-of adjustment factor
-    is always computed from `historical_power_kW`, never from the model.
+    The event window is divided into settlement intervals (see
+    `resolution` in `make_baseline_parameters`/`BaselineMethod`) and one
+    baseline value is returned per interval, not a single window-mean.
+
+    Pass no `model` for a plain `numpy.ndarray`, ex-post. Pass a `model`
+    (plus `model_power_kW` and `model_datetime_index`) to compute any
+    baseline day fully inside the simulation horizon from the decision
+    variable instead of history, returning `(baseline, model)`. The day-of
+    adjustment factor is always computed from `historical_power_kW`, never
+    from the model.
 
     Parameters
     ----------
@@ -1636,11 +2505,12 @@ def calculate_event_baseline(
 
     Returns
     -------
-    float or tuple
-        `float`: mean baseline power in kW, when `model` is `None`.
-        `(baseline_kW, model)`: when `model` is given, where `baseline_kW`
-        is a `float` if every baseline day stayed historical, or a
-        `pyomo.environ.Var` if at least one was dynamic.
+    numpy.ndarray or tuple
+        `numpy.ndarray`: per-interval baseline power in kW, when `model` is
+        `None`. `(baseline_kW, model)`: when `model` is given, where
+        `baseline_kW` is a `numpy.ndarray` if every baseline day stayed
+        historical, or a `pyomo.environ.Var` indexed `0..n_intervals-1` if
+        at least one was dynamic.
     """
     baseline_method = _coerce_baseline_method(baseline_params)
     return baseline_method.compute(
@@ -1651,6 +2521,52 @@ def calculate_event_baseline(
         model_datetime_index=model_datetime_index,
         varstr=varstr,
     )
+
+
+def _baseline_terms(baseline_kW, n):
+    """Normalize `baseline_kW` into a list of `n` per-interval values.
+
+    Parameters
+    ----------
+    baseline_kW : float, numpy.ndarray, list/tuple, or pyomo.environ.Var
+        A single value (broadcast to every interval), or one value per
+        interval -- as an array/list, or an indexed pyomo `Var` (from the
+        dynamic-baseline path of `calculate_event_baseline`).
+
+    n : int
+        Number of intervals `power_kW` (the event-window slice) covers.
+
+    Raises
+    ------
+    ValueError
+        When `baseline_kW` carries more than one value and its count does
+        not match `n`.
+
+    Returns
+    -------
+    list
+        Length-`n` list of values/expressions.
+    """
+    if ut.check_indexed_pyomo_type(baseline_kW):
+        idx = list(baseline_kW.index_set())
+        if len(idx) != n:
+            raise ValueError(
+                f"baseline_kW has {len(idx)} entries but power_kW has {n}; "
+                "they must match"
+            )
+        return [baseline_kW[i] for i in idx]
+    if isinstance(baseline_kW, (list, tuple, np.ndarray)):
+        values = list(baseline_kW)
+        if len(values) == 1:
+            return values * n
+        if len(values) != n:
+            raise ValueError(
+                f"baseline_kW has {len(values)} entries but power_kW has {n}; "
+                "they must match, or baseline_kW must be a scalar"
+            )
+        return values
+    # A scalar: Python number, 0-d array, or nonindexed pyomo Var/expression.
+    return [baseline_kW] * n
 
 
 def build_event_revenue(
@@ -1676,15 +2592,19 @@ def build_event_revenue(
     ----------
     power_kW : numpy.ndarray, cvxpy.Expression, cvxpy.Variable, or pyomo.environ.Var
         Actual power consumption during the event window, either a realized
-        numpy array or a decision-variable expression.
+        numpy array or a decision-variable expression. Its length (or
+        `.size`) sets the number of settlement intervals.
 
     event : dict
         A single event, as produced by `add_event`.
 
-    baseline_kW : float
-        Precomputed baseline power in kW for this event's window (e.g., from
-        `calculate_event_baseline`). Always a constant, never a decision
-        variable.
+    baseline_kW : float, numpy.ndarray, or pyomo.environ.Var
+        Precomputed baseline power in kW for this event's window (e.g.,
+        from `calculate_event_baseline`), as a single value (broadcast
+        across the window) or one value per interval, matching `power_kW`'s
+        length. Always a constant with respect to the model's decision
+        variables (a `numpy.ndarray`, or a `pyomo.environ.Var` fixed
+        upstream), never itself a free decision variable.
 
     payment_function : list of dict or PaymentStructure
         Payment/penalty schedule to apply, as a list of region dicts (see
@@ -1692,14 +2612,15 @@ def build_event_revenue(
         `PaymentStructure` instance (e.g. `CapacityEnergyPayment`) to use a
         non-default payment structure.
 
-    region_x1 : float or None
+    region_x1 : float, list of float, or None
         The `x1` value identifying which payment-function region to fix.
         Required when `power_kW` is a cvxpy type, since the applicable
         region cannot be known before solving. Optional when `power_kW` is
-        a pyomo type: fixes that region when given, or leaves the region
-        choice to the solver (via `PaymentStructure.build_expression`'s
-        all-regions formulation) when `None`. Ignored when `power_kW` is
-        numpy/scalar, since the actual region is already fully determined.
+        a pyomo type: fixes that region when given (a list, under
+        `settlement="interval"`, fixes each interval's region individually),
+        or leaves the region choice to the solver when `None`. Ignored when
+        `power_kW` is numpy/scalar, since the actual region is already
+        fully determined.
 
     model : pyomo.environ.Model or pyomo.environ.Block
         The model or block to add pyomo components to.
@@ -1711,7 +2632,9 @@ def build_event_revenue(
     Raises
     ------
     ValueError
-        When `power_kW` is a cvxpy type and `region_x1` is `None`.
+        When `power_kW` is a cvxpy type and `region_x1` is `None`, or when
+        `baseline_kW` carries more than one value and its count does not
+        match `power_kW`'s.
 
     TypeError
         When `power_kW` is not a supported type.
@@ -1726,24 +2649,31 @@ def build_event_revenue(
     payment_structure = _coerce_payment_structure(payment_function)
 
     if ut.check_indexed_np_array(power_kW) or ut.check_nonindexed_python_type(power_kW):
-        reduction_kW = baseline_kW - np.mean(power_kW)
+        power = np.atleast_1d(np.asarray(power_kW, dtype=float))
+        baseline_arr = np.asarray(_baseline_terms(baseline_kW, power.size), dtype=float)
+        reduction_kW = baseline_arr - power
         return payment_structure.evaluate(event, reduction_kW), model
     elif ut.check_cvx_type(power_kW):
         if region_x1 is None:
             raise ValueError("region_x1 must be specified for cvxpy power_kW")
-        mean_power = cp.sum(power_kW) / power_kW.size
-        reduction_kW = baseline_kW - mean_power
+        n = power_kW.size if hasattr(power_kW, "size") else 1
+        baseline_arr = np.asarray(_baseline_terms(baseline_kW, n), dtype=float)
+        reduction_kW = baseline_arr - power_kW
         return payment_structure.build_expression(
             event, reduction_kW, region_x1=region_x1, model=model, varstr=varstr
         )
     elif ut.check_indexed_pyomo_type(power_kW) or ut.check_nonindexed_pyomo_type(
         power_kW
     ):
-        n = len(power_kW)
-        mean_power = pyo.quicksum(power_kW[t] for t in power_kW.index_set()) / n
-        reduction_kW = baseline_kW - mean_power
+        if ut.check_indexed_pyomo_type(power_kW):
+            var_index = list(power_kW.index_set())
+            power_terms = [power_kW[idx] for idx in var_index]
+        else:
+            power_terms = [power_kW]
+        baseline_values = _baseline_terms(baseline_kW, len(power_terms))
+        reduction_terms = [b - p for b, p in zip(baseline_values, power_terms)]
         return payment_structure.build_expression(
-            event, reduction_kW, region_x1=region_x1, model=model, varstr=varstr
+            event, reduction_terms, region_x1=region_x1, model=model, varstr=varstr
         )
     else:
         raise TypeError(
@@ -1786,7 +2716,9 @@ def calculate_event_revenue(
     -------
     dict
         Per-event results with keys `EVENT_DATE`, `BASELINE_KW`, `ACTUAL_KW`,
-        `REDUCTION_KW`, `DELIVERED_RATIO`, and `REVENUE`.
+        `REDUCTION_KW`, `DELIVERED_RATIO`, and `REVENUE` -- each an
+        event-window mean -- plus the per-interval `BASELINE_PROFILE_KW`,
+        `ACTUAL_PROFILE_KW`, `REDUCTION_PROFILE_KW`, and `INTERVAL_DATETIME`.
     """
     mask = _event_window_mask(
         historical_power_kW.index,
@@ -1794,25 +2726,37 @@ def calculate_event_revenue(
         event[EVENT_START_HOUR],
         event[EVENT_DURATION],
     )
-    actual_kW = historical_power_kW.loc[mask].values
-    if actual_kW.size == 0:
+    actual_profile = historical_power_kW.loc[mask].values
+    if actual_profile.size == 0:
         raise ValueError("No data available for event window")
+    interval_datetime = historical_power_kW.index[mask]
 
-    baseline_kW = calculate_event_baseline(historical_power_kW, event, baseline_params)
+    baseline_profile = calculate_event_baseline(
+        historical_power_kW, event, baseline_params
+    )
+    baseline_profile = np.asarray(
+        _baseline_terms(baseline_profile, actual_profile.size), dtype=float
+    )
     revenue, _ = build_event_revenue(
-        actual_kW, event, baseline_kW, payment_function=payment_function
+        actual_profile, event, baseline_profile, payment_function=payment_function
     )
 
-    actual_mean = float(np.mean(actual_kW))
-    reduction_kW = baseline_kW - actual_mean
+    reduction_profile = baseline_profile - actual_profile
+    baseline_mean = float(np.mean(baseline_profile))
+    actual_mean = float(np.mean(actual_profile))
+    reduction_mean = baseline_mean - actual_mean
 
     return {
         EVENT_DATE: event[EVENT_DATE],
-        BASELINE_KW: baseline_kW,
+        BASELINE_KW: baseline_mean,
         ACTUAL_KW: actual_mean,
-        REDUCTION_KW: reduction_kW,
-        DELIVERED_RATIO: reduction_kW / event[BID_CAPACITY_KW],
+        REDUCTION_KW: reduction_mean,
+        DELIVERED_RATIO: reduction_mean / event[BID_CAPACITY_KW],
         REVENUE: revenue,
+        BASELINE_PROFILE_KW: baseline_profile,
+        ACTUAL_PROFILE_KW: actual_profile,
+        REDUCTION_PROFILE_KW: reduction_profile,
+        INTERVAL_DATETIME: interval_datetime,
     }
 
 
@@ -1942,10 +2886,10 @@ def calculate_dr_revenue(
     Parameters
     ----------
     power_kW : pandas.Series, numpy.ndarray, or pyomo.environ.Var
-        Power consumption in kW. A `pandas.Series`/`numpy.ndarray` is data and 
+        Power consumption in kW. A `pandas.Series`/`numpy.ndarray` is data and
         uses `calculate_itemized_dr_revenue`. A `pyomo.environ.Var` is a model
         decision variable and uses `_build_dr_revenue_components`. CVXPy vars
-        are not currently implemented. 
+        are not currently implemented.
 
     events : list of dict or pandas.DataFrame
         Events collection, as produced by `add_event`. Used in both branches.
@@ -2078,7 +3022,7 @@ def _build_dr_revenue_components(
         Events collection, as produced by `add_event`.
 
     historical_power_kW : pandas.Series
-        Historical power consumption, indexed by `pandas.DatetimeIndex`. 
+        Historical power consumption, indexed by `pandas.DatetimeIndex`.
 
     baseline_params : dict or BaselineMethod
         Baseline parameters, as produced by `make_baseline_parameters`, or
@@ -2156,14 +3100,13 @@ def _build_dr_revenue_components(
             raise ValueError(
                 f"No data available for event window on {event[EVENT_DATE]}"
             )
-        mean_power = pyo.quicksum(power_kW[idx] for idx in matched_indices) / len(
-            matched_indices
-        )
-        reduction_kW = baseline_kW - mean_power
+        power_terms = [power_kW[idx] for idx in matched_indices]
+        baseline_values = _baseline_terms(baseline_kW, len(power_terms))
+        reduction_terms = [b - p for b, p in zip(baseline_values, power_terms)]
 
         revenue_var, model = payment_structure.build_expression(
             event,
-            reduction_kW,
+            reduction_terms,
             region_x1=region_x1_by_date.get(event[EVENT_DATE]),
             model=model,
             varstr=f"{varstr_prefix}_{i}",
@@ -2200,7 +3143,7 @@ def build_dr_revenue(
 
     historical_power_kW : pandas.Series
         Realized historical power consumption, indexed by
-        `pandas.DatetimeIndex`. 
+        `pandas.DatetimeIndex`.
 
     baseline_params : dict or BaselineMethod
         Baseline parameters, as produced by `make_baseline_parameters`, or
