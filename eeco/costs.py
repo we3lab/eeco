@@ -54,6 +54,9 @@ HALF_PEAK = "half_peak"
 SUPER_OFF_PEAK = "super_off_peak"
 OFF_PEAK = "off_peak"
 
+# Components `calculate_demand_cost` builds, as suffixes on a charge's `varstr`
+CHARGE_COMPONENT_SUFFIXES = ("limit", "max", "max_pos")
+
 
 def get_charge_name(charge, index=None):
     """
@@ -574,6 +577,30 @@ def get_charge_df(
     return charge_df
 
 
+def get_charge_window(charge_array, model=None):
+    """Timesteps at which a charge is actually assessed and nonzero.
+
+    Parameters
+    ----------
+    charge_array : numpy.ndarray
+        Array of charges in $/kWh, $/kW, $/therm, or $/m3
+
+    model : pyomo.environ.Model
+        The model object associated with the problem. Default is None, in which
+        case positions into `charge_array` are returned rather than index values.
+
+    Returns
+    -------
+    list
+        Positions into `charge_array` where the charge is nonzero, or the
+        corresponding `model._var_index` values when a Pyomo `model` is given
+    """
+    positions = np.nonzero(np.asarray(charge_array, dtype=float))[0]
+    if model is None or not hasattr(model, "_var_index"):
+        return [int(position) for position in positions]
+    return [model._var_index[position] for position in positions]
+
+
 def get_prev_demand_dict(
     charge_dict,
     usage_data,
@@ -619,13 +646,46 @@ def get_prev_demand_dict(
         ):
             entry = {DEMAND: 0.0, COST: 0.0}
         charge_array = np.asarray(charge_array, dtype=float)
-        active = charge_array > 0
-        window_demand = float(np.max(usage_data[active])) if active.any() else 0.0
+        active = get_charge_window(charge_array)
+        window_demand = float(np.max(usage_data[active])) if active else 0.0
         prev_dict[charge_name] = {
             DEMAND: max(entry[DEMAND], window_demand),
             COST: max(entry[COST], float(np.max(usage_data * charge_array))),
         }
     return prev_dict
+
+
+def get_charge_records(model):
+    """Handles on the Pyomo components built for each charge.
+
+    Keyed the same way as `prev_demand_dict` by the original
+    `charge_dict` key, so a caller never has to rebuild a variable name that
+    `varstr_alias_func` may have changed.
+
+    Parameters
+    ----------
+    model : pyomo.environ.Model
+        A model that `calculate_cost` has already built costs on
+
+    Raises
+    ------
+    ValueError
+        When no charges have been recorded on `model`
+
+    Returns
+    -------
+    dict
+        Keyed by `charge_dict` key. Each entry holds the `varstr` and
+        `charge_type` strings alongside the `limit`, `max`, and `max_pos`
+        components named in `CHARGE_COMPONENT_SUFFIXES`, which are None for
+        charges that built none
+    """
+    if not hasattr(model, "_eeco_charges"):
+        raise ValueError(
+            "No charges recorded on this model. Call calculate_cost or "
+            "calculate_itemized_cost with a Pyomo model first."
+        )
+    return dict(model._eeco_charges)
 
 
 def default_varstr_alias_func(
@@ -845,11 +905,27 @@ def calculate_demand_cost(
         )
 
     if model is None:
-        max_var, _ = ut.max(demand_charged)
+        # Skip unassessed timesteps, then clamp back the >= 0 they provided
+        window = (
+            []
+            if isinstance(charge_array, cp.Expression)
+            else get_charge_window(charge_array)
+        )
+        if window and get_charge_array_length(demand_charged) == len(charge_array):
+            demand_charged = demand_charged[window]
+        max_raw, _ = ut.max(demand_charged)
+        max_var, _ = ut.max_pos(max_raw)
         max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
         return max_pos_val * scale_factor, max_pos_model
     else:
-        max_var, model = ut.max(demand_charged, model=model, varstr=varstr + "_max")
+        # Clamp at zero so demand below the tier limit isn't calculated as a credit
+        max_raw, model = ut.max(
+            demand_charged,
+            model=model,
+            varstr=varstr + "_max_raw",
+            index_set=get_charge_window(charge_array, model),
+        )
+        max_var, model = ut.max_pos(max_raw, model=model, varstr=varstr + "_max")
         max_pos_val, max_pos_model = ut.max_pos(
             max_var - prev_demand_cost, model=model, varstr=varstr + "_max_pos"
         )
@@ -968,13 +1044,42 @@ def calculate_energy_cost(
     elif ut.check_indexed_pyomo_type(consumption_data) or ut.check_cvx_type(
         consumption_data
     ):
-        # For tiered charges, approximate extimated consumption being split evenly
-        # Only necessary if we have a finite next_limit OR if current limit > 0
-        # NOTE: this convex approximation breaks global optimality guarantees
-        if not np.isinf(next_limit) or (not np.isinf(limit) and limit > 0):
+        # private copy of charge array to avoid carrying over zeroed tiered charges
+        charge_array = np.array(charge_array, copy=True)
+        tier_active = not np.isinf(next_limit) or (not np.isinf(limit) and limit > 0)
+
+        if tier_active:
+            if (
+                np.isinf(next_limit)
+                and charge_array.size > 0
+                and np.all(charge_array == charge_array[0])
+            ):
+                # A flat top tier can skip the relaxation
+                rate = float(charge_array[0])
+                total_expr, model = ut.sum(
+                    consumption_data, model=model, varstr=varstr + "_sum"
+                )
+                over_limit, model = ut.max_pos(
+                    total_expr / n_per_hour + prev_consumption - limit,
+                    model=model,
+                    varstr=varstr + "_over_limit",
+                )
+                return rate * over_limit, model
+
+            # Convex approximation: `consumption_estimate` fixes this tier's
+            # timestep window up front, zeroing `charge_array` outside it.
+            # Scalar estimates are assumed to be split evenly.
             if ut.check_nonindexed_python_type(consumption_estimate):
                 consumption_per_timestep = consumption_estimate / n_steps
                 consumption_estimate = np.ones(n_steps) * consumption_per_timestep
+            else:
+                consumption_estimate = np.asarray(consumption_estimate, dtype=float)
+                if consumption_estimate.shape != (n_steps,):
+                    raise ValueError(
+                        "consumption_estimate must be a scalar or a 1-D array of "
+                        f"length {n_steps} (one value per timestep); got shape "
+                        f"{consumption_estimate.shape}."
+                    )
 
             cumulative_consumption = np.cumsum(consumption_estimate) + prev_consumption
             total_consumption = cumulative_consumption[-1]
@@ -1542,6 +1647,16 @@ def calculate_cost(
             cost += charge_array.sum() * fixed_scale_factor
         else:
             raise ValueError("Invalid charge_type: " + charge_type)
+
+        if model is not None:
+            # Accumulate across calculate_itemized_cost's repeated calls
+            if not hasattr(model, "_eeco_charges"):
+                model._eeco_charges = {}
+            # Components are None when a saturated or zeroed tier built none
+            record = {"varstr": varstr, "charge_type": charge_type}
+            for suffix in CHARGE_COMPONENT_SUFFIXES:
+                record[suffix] = model.find_component(varstr + "_" + suffix)
+            model._eeco_charges[key] = record
 
     return cost, model_objects
 
