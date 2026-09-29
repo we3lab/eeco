@@ -426,7 +426,7 @@ of increments of <cite>type</cite> of one binned increment of our time variable
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.utils.max">
-<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">max</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#max"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.max" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">max</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_set</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#max"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.max" title="Permalink to this definition"></a></dt>
 <dd><p>Elementwise maximum of an expression or array</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -441,6 +441,9 @@ pyomo.environ.Var</p></li>
 <li><p><strong>model</strong> (<em>pyomo.environ.Model</em>) – The model object associated with the problem.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <li><p><strong>varstr</strong> (<em>str</em>) – Name of the variable to be created if using a Pyomo <cite>model</cite></p></li>
+<li><p><strong>index_set</strong> (<em>[pyomo.environ.Set, list]</em>) – Index values to constrain the maximum over when using a Pyomo <cite>model</cite>.
+Default is None, meaning the model-wide <cite>_var_index</cite>. Pass a subset to
+skip timesteps that cannot affect the maximum.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>

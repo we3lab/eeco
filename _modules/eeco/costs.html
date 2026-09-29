@@ -160,6 +160,9 @@
 <span class="n">SUPER_OFF_PEAK</span> <span class="o">=</span> <span class="s2">"super_off_peak"</span>
 <span class="n">OFF_PEAK</span> <span class="o">=</span> <span class="s2">"off_peak"</span>
 
+<span class="c1"># Components `calculate_demand_cost` builds, as suffixes on a charge's `varstr`</span>
+<span class="n">CHARGE_COMPONENT_SUFFIXES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"limit"</span><span class="p">,</span> <span class="s2">"max"</span><span class="p">,</span> <span class="s2">"max_pos"</span><span class="p">)</span>
+
 
 <div class="viewcode-block" id="get_charge_name"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_charge_name">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_name</span><span class="p">(</span><span class="n">charge</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
@@ -680,6 +683,30 @@
     <span class="k">return</span> <span class="n">charge_df</span></div>
 
 
+<div class="viewcode-block" id="get_charge_window"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_charge_window">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_window</span><span class="p">(</span><span class="n">charge_array</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Timesteps at which a charge is actually assessed and nonzero.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    charge_array : numpy.ndarray</span>
+<span class="sd">        Array of charges in $/kWh, $/kW, $/therm, or $/m3</span>
+
+<span class="sd">    model : pyomo.environ.Model</span>
+<span class="sd">        The model object associated with the problem. Default is None, in which</span>
+<span class="sd">        case positions into `charge_array` are returned rather than index values.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list</span>
+<span class="sd">        Positions into `charge_array` where the charge is nonzero, or the</span>
+<span class="sd">        corresponding `model._var_index` values when a Pyomo `model` is given</span>
+<span class="sd">    """</span>
+    <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">charge_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"_var_index"</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">position</span><span class="p">)</span> <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">[</span><span class="n">position</span><span class="p">]</span> <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">]</span></div>
+
+
 <div class="viewcode-block" id="get_prev_demand_dict"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_prev_demand_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_prev_demand_dict</span><span class="p">(</span>
     <span class="n">charge_dict</span><span class="p">,</span>
     <span class="n">usage_data</span><span class="p">,</span>
@@ -725,13 +752,46 @@
         <span class="p">):</span>
             <span class="n">entry</span> <span class="o">=</span> <span class="p">{</span><span class="n">DEMAND</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">COST</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">}</span>
         <span class="n">charge_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">charge_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-        <span class="n">active</span> <span class="o">=</span> <span class="n">charge_array</span> <span class="o">&gt;</span> <span class="mi">0</span>
-        <span class="n">window_demand</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">usage_data</span><span class="p">[</span><span class="n">active</span><span class="p">]))</span> <span class="k">if</span> <span class="n">active</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="n">active</span> <span class="o">=</span> <span class="n">get_charge_window</span><span class="p">(</span><span class="n">charge_array</span><span class="p">)</span>
+        <span class="n">window_demand</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">usage_data</span><span class="p">[</span><span class="n">active</span><span class="p">]))</span> <span class="k">if</span> <span class="n">active</span> <span class="k">else</span> <span class="mf">0.0</span>
         <span class="n">prev_dict</span><span class="p">[</span><span class="n">charge_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">DEMAND</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="n">DEMAND</span><span class="p">],</span> <span class="n">window_demand</span><span class="p">),</span>
             <span class="n">COST</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="n">COST</span><span class="p">],</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">usage_data</span> <span class="o">*</span> <span class="n">charge_array</span><span class="p">))),</span>
         <span class="p">}</span>
     <span class="k">return</span> <span class="n">prev_dict</span></div>
+
+
+<div class="viewcode-block" id="get_charge_records"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_charge_records">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_charge_records</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Handles on the Pyomo components built for each charge.</span>
+
+<span class="sd">    Keyed the same way as `prev_demand_dict` by the original</span>
+<span class="sd">    `charge_dict` key, so a caller never has to rebuild a variable name that</span>
+<span class="sd">    `varstr_alias_func` may have changed.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : pyomo.environ.Model</span>
+<span class="sd">        A model that `calculate_cost` has already built costs on</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        When no charges have been recorded on `model`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        Keyed by `charge_dict` key. Each entry holds the `varstr` and</span>
+<span class="sd">        `charge_type` strings alongside the `limit`, `max`, and `max_pos`</span>
+<span class="sd">        components named in `CHARGE_COMPONENT_SUFFIXES`, which are None for</span>
+<span class="sd">        charges that built none</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"_eeco_charges"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"No charges recorded on this model. Call calculate_cost or "</span>
+            <span class="s2">"calculate_itemized_cost with a Pyomo model first."</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_eeco_charges</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="default_varstr_alias_func"><a class="viewcode-back" href="../../eeco.html#eeco.costs.default_varstr_alias_func">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">default_varstr_alias_func</span><span class="p">(</span>
@@ -951,11 +1011,27 @@
         <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">max_var</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">demand_charged</span><span class="p">)</span>
+        <span class="c1"># Skip unassessed timesteps, then clamp back the &gt;= 0 they provided</span>
+        <span class="n">window</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">[]</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">charge_array</span><span class="p">,</span> <span class="n">cp</span><span class="o">.</span><span class="n">Expression</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">get_charge_window</span><span class="p">(</span><span class="n">charge_array</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">window</span> <span class="ow">and</span> <span class="n">get_charge_array_length</span><span class="p">(</span><span class="n">demand_charged</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">charge_array</span><span class="p">):</span>
+            <span class="n">demand_charged</span> <span class="o">=</span> <span class="n">demand_charged</span><span class="p">[</span><span class="n">window</span><span class="p">]</span>
+        <span class="n">max_raw</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">demand_charged</span><span class="p">)</span>
+        <span class="n">max_var</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span><span class="n">max_raw</span><span class="p">)</span>
         <span class="n">max_pos_val</span><span class="p">,</span> <span class="n">max_pos_model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span><span class="n">max_var</span> <span class="o">-</span> <span class="n">prev_demand_cost</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">max_pos_val</span> <span class="o">*</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">max_pos_model</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">max_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">demand_charged</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_max"</span><span class="p">)</span>
+        <span class="c1"># Clamp at zero so demand below the tier limit isn't calculated as a credit</span>
+        <span class="n">max_raw</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max</span><span class="p">(</span>
+            <span class="n">demand_charged</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_max_raw"</span><span class="p">,</span>
+            <span class="n">index_set</span><span class="o">=</span><span class="n">get_charge_window</span><span class="p">(</span><span class="n">charge_array</span><span class="p">,</span> <span class="n">model</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">max_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span><span class="n">max_raw</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_max"</span><span class="p">)</span>
         <span class="n">max_pos_val</span><span class="p">,</span> <span class="n">max_pos_model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span>
             <span class="n">max_var</span> <span class="o">-</span> <span class="n">prev_demand_cost</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_max_pos"</span>
         <span class="p">)</span>
@@ -1074,13 +1150,42 @@
     <span class="k">elif</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">consumption_data</span><span class="p">)</span> <span class="ow">or</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_cvx_type</span><span class="p">(</span>
         <span class="n">consumption_data</span>
     <span class="p">):</span>
-        <span class="c1"># For tiered charges, approximate extimated consumption being split evenly</span>
-        <span class="c1"># Only necessary if we have a finite next_limit OR if current limit &gt; 0</span>
-        <span class="c1"># NOTE: this convex approximation breaks global optimality guarantees</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">next_limit</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span> <span class="ow">and</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="c1"># private copy of charge array to avoid carrying over zeroed tiered charges</span>
+        <span class="n">charge_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">charge_array</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">tier_active</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">next_limit</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span> <span class="ow">and</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">tier_active</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">next_limit</span><span class="p">)</span>
+                <span class="ow">and</span> <span class="n">charge_array</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">charge_array</span> <span class="o">==</span> <span class="n">charge_array</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="p">):</span>
+                <span class="c1"># A flat top tier can skip the relaxation</span>
+                <span class="n">rate</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">charge_array</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">total_expr</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                    <span class="n">consumption_data</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_sum"</span>
+                <span class="p">)</span>
+                <span class="n">over_limit</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">max_pos</span><span class="p">(</span>
+                    <span class="n">total_expr</span> <span class="o">/</span> <span class="n">n_per_hour</span> <span class="o">+</span> <span class="n">prev_consumption</span> <span class="o">-</span> <span class="n">limit</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">varstr</span><span class="o">=</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_over_limit"</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="n">rate</span> <span class="o">*</span> <span class="n">over_limit</span><span class="p">,</span> <span class="n">model</span>
+
+            <span class="c1"># Convex approximation: `consumption_estimate` fixes this tier's</span>
+            <span class="c1"># timestep window up front, zeroing `charge_array` outside it.</span>
+            <span class="c1"># Scalar estimates are assumed to be split evenly.</span>
             <span class="k">if</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">):</span>
                 <span class="n">consumption_per_timestep</span> <span class="o">=</span> <span class="n">consumption_estimate</span> <span class="o">/</span> <span class="n">n_steps</span>
                 <span class="n">consumption_estimate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_steps</span><span class="p">)</span> <span class="o">*</span> <span class="n">consumption_per_timestep</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">consumption_estimate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">consumption_estimate</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">n_steps</span><span class="p">,):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">"consumption_estimate must be a scalar or a 1-D array of "</span>
+                        <span class="sa">f</span><span class="s2">"length </span><span class="si">{</span><span class="n">n_steps</span><span class="si">}</span><span class="s2"> (one value per timestep); got shape "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">consumption_estimate</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">."</span>
+                    <span class="p">)</span>
 
             <span class="n">cumulative_consumption</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">consumption_estimate</span><span class="p">)</span> <span class="o">+</span> <span class="n">prev_consumption</span>
             <span class="n">total_consumption</span> <span class="o">=</span> <span class="n">cumulative_consumption</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -1648,6 +1753,16 @@
             <span class="n">cost</span> <span class="o">+=</span> <span class="n">charge_array</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">*</span> <span class="n">fixed_scale_factor</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Invalid charge_type: "</span> <span class="o">+</span> <span class="n">charge_type</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Accumulate across calculate_itemized_cost's repeated calls</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"_eeco_charges"</span><span class="p">):</span>
+                <span class="n">model</span><span class="o">.</span><span class="n">_eeco_charges</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="c1"># Components are None when a saturated or zeroed tier built none</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"varstr"</span><span class="p">:</span> <span class="n">varstr</span><span class="p">,</span> <span class="s2">"charge_type"</span><span class="p">:</span> <span class="n">charge_type</span><span class="p">}</span>
+            <span class="k">for</span> <span class="n">suffix</span> <span class="ow">in</span> <span class="n">CHARGE_COMPONENT_SUFFIXES</span><span class="p">:</span>
+                <span class="n">record</span><span class="p">[</span><span class="n">suffix</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_"</span> <span class="o">+</span> <span class="n">suffix</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">_eeco_charges</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">record</span>
 
     <span class="k">return</span> <span class="n">cost</span><span class="p">,</span> <span class="n">model_objects</span></div>
 

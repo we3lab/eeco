@@ -796,6 +796,54 @@ not include <cite>end_dt</cite></p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="eeco.costs.get_charge_records">
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">get_charge_records</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#get_charge_records"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.get_charge_records" title="Permalink to this definition"></a></dt>
+<dd><p>Handles on the Pyomo components built for each charge.</p>
+<p>Keyed the same way as <cite>prev_demand_dict</cite> by the original
+<cite>charge_dict</cite> key, so a caller never has to rebuild a variable name that
+<cite>varstr_alias_func</cite> may have changed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>pyomo.environ.Model</em>) – A model that <cite>calculate_cost</cite> has already built costs on</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When no charges have been recorded on <cite>model</cite></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Keyed by <cite>charge_dict</cite> key. Each entry holds the <cite>varstr</cite> and
+<cite>charge_type</cite> strings alongside the <cite>limit</cite>, <cite>max</cite>, and <cite>max_pos</cite>
+components named in <cite>CHARGE_COMPONENT_SUFFIXES</cite>, which are None for
+charges that built none</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.costs.get_charge_window">
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">get_charge_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#get_charge_window"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.get_charge_window" title="Permalink to this definition"></a></dt>
+<dd><p>Timesteps at which a charge is actually assessed and nonzero.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>charge_array</strong> (<em>numpy.ndarray</em>) – Array of charges in $/kWh, $/kW, $/therm, or $/m3</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model</em>) – The model object associated with the problem. Default is None, in which
+case positions into <cite>charge_array</cite> are returned rather than index values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Positions into <cite>charge_array</cite> where the charge is nonzero, or the
+corresponding <cite>model._var_index</cite> values when a Pyomo <cite>model</cite> is given</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="eeco.costs.get_conversion_factors">
 <span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">get_conversion_factors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">electric_consumption_units</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_consumption_units</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#get_conversion_factors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.get_conversion_factors" title="Permalink to this definition"></a></dt>
 <dd><p>Calculate conversion factors for electric and gas utilities.</p>
@@ -1570,7 +1618,7 @@ of increments of <cite>type</cite> of one binned increment of our time variable
 
 <dl class="py function">
 <dt class="sig sig-object py" id="eeco.utils.max">
-<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">max</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#max"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.max" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">max</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expression</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_set</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#max"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.max" title="Permalink to this definition"></a></dt>
 <dd><p>Elementwise maximum of an expression or array</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1585,6 +1633,9 @@ pyomo.environ.Var</p></li>
 <li><p><strong>model</strong> (<em>pyomo.environ.Model</em>) – The model object associated with the problem.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <li><p><strong>varstr</strong> (<em>str</em>) – Name of the variable to be created if using a Pyomo <cite>model</cite></p></li>
+<li><p><strong>index_set</strong> (<em>[pyomo.environ.Set, list]</em>) – Index values to constrain the maximum over when using a Pyomo <cite>model</cite>.
+Default is None, meaning the model-wide <cite>_var_index</cite>. Pass a subset to
+skip timesteps that cannot affect the maximum.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>

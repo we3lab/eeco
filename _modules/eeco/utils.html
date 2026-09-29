@@ -237,7 +237,7 @@
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">idx_param</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_param</span><span class="p">))])</span></div>
 
 
-<div class="viewcode-block" id="max"><a class="viewcode-back" href="../../utils.html#eeco.utils.max">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">max</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="max"><a class="viewcode-back" href="../../utils.html#eeco.utils.max">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">max</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">index_set</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Elementwise maximum of an expression or array</span>
 
 <span class="sd">    Parameters</span>
@@ -258,6 +258,11 @@
 
 <span class="sd">    varstr : str</span>
 <span class="sd">        Name of the variable to be created if using a Pyomo `model`</span>
+
+<span class="sd">    index_set : [pyomo.environ.Set, list]</span>
+<span class="sd">        Index values to constrain the maximum over when using a Pyomo `model`.</span>
+<span class="sd">        Default is None, meaning the model-wide `_var_index`. Pass a subset to</span>
+<span class="sd">        skip timesteps that cannot affect the maximum.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -289,7 +294,9 @@
         <span class="k">def</span><span class="w"> </span><span class="nf">const_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">var</span> <span class="o">&gt;=</span> <span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
 
-        <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">index_set</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">index_set</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">_var_index</span>
+        <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">index_set</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
         <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_constraint"</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">check_indexed_np_array</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span> <span class="ow">or</span> <span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
