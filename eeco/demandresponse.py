@@ -21,6 +21,7 @@ BASELINE_DAYS = "baseline_days"
 BID_CAPACITY_KW = "bid_capacity_kW"
 CAPACITY_PRICE = "capacity_price"
 ADJUSTMENT_FACTOR = "adjustment_factor"
+MONTHLY_CALLED_CAPACITY_KWH = "monthly_called_capacity_kWh"
 
 # Baseline parameter dict keys
 BASELINE_METHOD = "baseline_method"
@@ -61,7 +62,8 @@ SETTLEMENT_MODES = (SETTLEMENT_AVERAGE, SETTLEMENT_INTERVAL)
 # PaymentStructure payment_basis / payout_basis values.
 BASIS_PER_EVENT = "per_event"
 BASIS_PER_HOUR = "per_hour"
-PAYMENT_BASES = (BASIS_PER_EVENT, BASIS_PER_HOUR)
+BASIS_MONTHLY_SHARE = "monthly_share"
+PAYMENT_BASES = (BASIS_PER_EVENT, BASIS_PER_HOUR, BASIS_MONTHLY_SHARE)
 
 # Pyomo component suffixes, appended to a `varstr` as `varstr + "_" + suffix`
 CONSTRAINT_SUFFIX = "constraint"
@@ -1038,13 +1040,16 @@ class PaymentStructure:
         `"average"` (default) or `"interval"`.
 
     payment_basis : str
-        `"per_event"` (default) or `"per_hour"`.
+        `"per_event"` (default), `"per_hour"`, or `"monthly_share"`. With
+        `"monthly_share"`, the capacity price is $/kW-month and each event
+        is paid its share `bid_capacity_kW * duration_hours /
+        monthly_called_capacity_kWh` of the monthly payment.
 
     payout : float
         Flat participation payment in $/kW of bid capacity.
 
     payout_basis : str
-        `"per_event"` (default) or `"per_hour"`.
+        `"per_event"` (default), `"per_hour"`, or `"monthly_share"`.
 
     Raises
     ------
@@ -1142,7 +1147,7 @@ class PaymentStructure:
             Single event dict. See `add_event` for the keys.
 
         basis : str
-            `"per_event"` or `"per_hour"`.
+            `"per_event"`, `"per_hour"`, or `"monthly_share"`.
 
         label : str
             Attribute name used in the error message.
@@ -1150,24 +1155,48 @@ class PaymentStructure:
         Raises
         ------
         ValueError
-            If `basis` is `"per_hour"` and `event` has no `"duration_hours"`.
+            If `basis` is `"per_hour"` or `"monthly_share"` and `event` has no
+            `"duration_hours"`, or if `basis` is `"monthly_share"` and
+            `event["monthly_called_capacity_kWh"]` is missing, not positive,
+            or less than the event's own called capacity.
 
         Returns
         -------
         float
             `1.0` for `"per_event"`, `event["duration_hours"]` for
-            `"per_hour"`.
+            `"per_hour"`, and the event's share of the month's called
+            capacity for `"monthly_share"`.
         """
         if basis == BASIS_PER_EVENT:
             return 1.0
         if EVENT_DURATION not in event:
             raise ValueError(
-                f"{label}='per_hour' requires event[EVENT_DURATION] (duration_hours) "
+                f"{label}='{basis}' requires event[EVENT_DURATION] (duration_hours) "
                 "-- pass duration_hours to evaluate_payment_function/"
                 "build_payment_expression, or use the full event dict via "
                 "build_event_revenue/calculate_dr_revenue"
             )
-        return event[EVENT_DURATION]
+        if basis == BASIS_PER_HOUR:
+            return event[EVENT_DURATION]
+
+        monthly_kWh = event.get(MONTHLY_CALLED_CAPACITY_KWH)
+        if monthly_kWh is None or pd.isna(monthly_kWh):
+            raise ValueError(
+                f"{label}='monthly_share' requires "
+                "event[MONTHLY_CALLED_CAPACITY_KWH] (monthly_called_capacity_kWh) "
+                "-- pass it to add_event/evaluate_payment_function/"
+                "build_payment_expression, or use calculate_dr_revenue/"
+                "build_dr_revenue to fill it from the events list"
+            )
+        if monthly_kWh <= 0:
+            raise ValueError("monthly_called_capacity_kWh must be positive")
+        event_kWh = event[BID_CAPACITY_KW] * event[EVENT_DURATION]
+        if monthly_kWh < event_kWh and not np.isclose(monthly_kWh, event_kWh):
+            raise ValueError(
+                f"monthly_called_capacity_kWh ({monthly_kWh}) is less than this "
+                f"event's own called capacity ({event_kWh} kWh)"
+            )
+        return event_kWh / monthly_kWh
 
     def _payout_amount(self, event):
         """Calculate the flat participation payout for an event.
@@ -1975,6 +2004,7 @@ def evaluate_payment_function(
     bid_capacity_kW,
     capacity_price,
     duration_hours=None,
+    monthly_called_capacity_kWh=None,
 ):
     """Calculate realized revenue for a known reduction without an event dict.
 
@@ -1994,21 +2024,30 @@ def evaluate_payment_function(
         Capacity price in $/kW.
 
     duration_hours : float or None
-        Event duration in hours. Required for a `"per_hour"` basis.
+        Event duration in hours. Required for a `"per_hour"` or
+        `"monthly_share"` basis.
+
+    monthly_called_capacity_kWh : float or None
+        Sum of called capacity in kWh over the event's month. Required for a
+        `"monthly_share"` basis.
 
     Raises
     ------
     ValueError
         If `bid_capacity_kW` is not positive, if no region contains a
-        resulting delivered ratio, or if a `"per_hour"` basis is used without
-        `duration_hours`.
+        resulting delivered ratio, or if a `"per_hour"` or `"monthly_share"`
+        basis is used without the arguments it requires.
 
     Returns
     -------
     float
         Revenue (positive) or penalty (negative) in USD.
     """
-    event = {BID_CAPACITY_KW: bid_capacity_kW, CAPACITY_PRICE: capacity_price}
+    event = {
+        BID_CAPACITY_KW: bid_capacity_kW,
+        CAPACITY_PRICE: capacity_price,
+        MONTHLY_CALLED_CAPACITY_KWH: monthly_called_capacity_kWh,
+    }
     if duration_hours is not None:
         event[EVENT_DURATION] = duration_hours
     return _coerce_payment_structure(payment_function).evaluate(event, reduction_kW)
@@ -2023,6 +2062,7 @@ def build_payment_expression(
     model=None,
     varstr="",
     duration_hours=None,
+    monthly_called_capacity_kWh=None,
 ):
     """Build the revenue expression for a reduction without an event dict.
 
@@ -2053,13 +2093,19 @@ def build_payment_expression(
         Name prefix for pyomo components created on `model`.
 
     duration_hours : float or None
-        Event duration in hours. Required for a `"per_hour"` basis.
+        Event duration in hours. Required for a `"per_hour"` or
+        `"monthly_share"` basis.
+
+    monthly_called_capacity_kWh : float or None
+        Sum of called capacity in kWh over the event's month. Required for a
+        `"monthly_share"` basis.
 
     Raises
     ------
     ValueError
-        If a `"per_hour"` basis is used without `duration_hours`, or in the
-        cases listed for `PaymentStructure.build_expression`.
+        If a `"per_hour"` or `"monthly_share"` basis is used without the
+        arguments it requires, or in the cases listed for
+        `PaymentStructure.build_expression`.
 
     TypeError
         If `reduction_kW` is not a supported type.
@@ -2071,7 +2117,11 @@ def build_payment_expression(
         `(revenue_var, model)` for pyomo, or `(revenue_expr, constraints)` for
         cvxpy.
     """
-    event = {BID_CAPACITY_KW: bid_capacity_kW, CAPACITY_PRICE: capacity_price}
+    event = {
+        BID_CAPACITY_KW: bid_capacity_kW,
+        CAPACITY_PRICE: capacity_price,
+        MONTHLY_CALLED_CAPACITY_KWH: monthly_called_capacity_kWh,
+    }
     if duration_hours is not None:
         event[EVENT_DURATION] = duration_hours
     return _coerce_payment_structure(payment_function).build_expression(
@@ -2089,6 +2139,7 @@ def add_event(
     bid_capacity_kW,
     capacity_price,
     adjustment_factor=None,
+    monthly_called_capacity_kWh=None,
 ):
     """Append a demand response event to an events list.
 
@@ -2122,12 +2173,17 @@ def add_event(
         Day-of adjustment factor to apply as-is. `None` calculates it from
         historical data.
 
+    monthly_called_capacity_kWh : float or None
+        Sum of called capacity in kWh over every event hour in the event's
+        month, used by the `"monthly_share"` basis. `None` sums it over the
+        events passed to `events_to_dataframe` and the entry points.
+
     Raises
     ------
     ValueError
         If `duration_hours`, `bid_capacity_kW`, or a given
-        `adjustment_factor` is not positive, `notification_hours` is
-        negative, or `baseline_days` is empty.
+        `adjustment_factor` or `monthly_called_capacity_kWh` is not positive,
+        `notification_hours` is negative, or `baseline_days` is empty.
 
     Warns
     -----
@@ -2147,6 +2203,7 @@ def add_event(
         - `"bid_capacity_kW"` : float
         - `"capacity_price"` : float
         - `"adjustment_factor"` : float or None
+        - `"monthly_called_capacity_kWh"` : float or None
     """
     if duration_hours <= 0:
         raise ValueError("duration_hours must be positive")
@@ -2158,6 +2215,8 @@ def add_event(
         raise ValueError("bid_capacity_kW must be positive")
     if adjustment_factor is not None and adjustment_factor <= 0:
         raise ValueError("adjustment_factor must be positive")
+    if monthly_called_capacity_kWh is not None and monthly_called_capacity_kWh <= 0:
+        raise ValueError("monthly_called_capacity_kWh must be positive")
     if capacity_price == 0:
         warnings.warn("capacity_price is zero", UserWarning)
 
@@ -2170,6 +2229,7 @@ def add_event(
         BID_CAPACITY_KW: bid_capacity_kW,
         CAPACITY_PRICE: capacity_price,
         ADJUSTMENT_FACTOR: adjustment_factor,
+        MONTHLY_CALLED_CAPACITY_KWH: monthly_called_capacity_kWh,
     }
     return (events or []) + [new_event]
 
@@ -2182,13 +2242,66 @@ def events_to_dataframe(events):
     events : list of dict or pandas.DataFrame
         Events from `add_event`.
 
+    Raises
+    ------
+    ValueError
+        If two events in the same month give different
+        `"monthly_called_capacity_kWh"` values.
+
     Returns
     -------
     pandas.DataFrame
-        One row per event, sorted by `"event_date"`.
+        One row per event, sorted by `"event_date"`, with missing
+        `"monthly_called_capacity_kWh"` values filled in by
+        `_fill_monthly_called_capacity`.
     """
     events_df = events if isinstance(events, pd.DataFrame) else pd.DataFrame(events)
-    return events_df.sort_values(EVENT_DATE).reset_index(drop=True)
+    events_df = events_df.sort_values(EVENT_DATE).reset_index(drop=True)
+    return _fill_monthly_called_capacity(events_df)
+
+
+def _fill_monthly_called_capacity(events_df):
+    """Fill in each event's month-total called capacity from the events list.
+
+    Parameters
+    ----------
+    events_df : pandas.DataFrame
+        One row per event.
+
+    Raises
+    ------
+    ValueError
+        If two events in the same month give different
+        `"monthly_called_capacity_kWh"` values.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Copy of `events_df` where a missing `"monthly_called_capacity_kWh"`
+        is the sum of `bid_capacity_kW * duration_hours` over the events in
+        the same calendar month. Given values are kept as-is.
+    """
+    events_df = events_df.copy()
+    month = pd.to_datetime(events_df[EVENT_DATE]).dt.to_period("M")
+    called_kWh = events_df[BID_CAPACITY_KW] * events_df[EVENT_DURATION]
+    computed = called_kWh.groupby(month).transform("sum")
+    if MONTHLY_CALLED_CAPACITY_KWH not in events_df:
+        events_df[MONTHLY_CALLED_CAPACITY_KWH] = computed.astype(float)
+        return events_df
+
+    given = pd.to_numeric(events_df[MONTHLY_CALLED_CAPACITY_KWH], errors="coerce")
+    for period, values in given.dropna().groupby(month[given.notna()]):
+        if not np.allclose(values, values.iloc[0]):
+            raise ValueError(
+                f"Events in {period} give different monthly_called_capacity_kWh "
+                f"values ({sorted(values.unique())}); give one or make them match"
+            )
+    # A value given on any event in a month applies to the whole month
+    given_by_month = given.groupby(month).transform("first")
+    events_df[MONTHLY_CALLED_CAPACITY_KWH] = given_by_month.fillna(computed).astype(
+        float
+    )
+    return events_df
 
 
 def make_baseline_parameters(
@@ -2439,8 +2552,10 @@ def calculate_event_baseline(
         Single event dict with the keys `"event_date"` (pandas.Timestamp),
         `"start_hour"` (float), `"duration_hours"` (float),
         `"notification_hours"` (float), `"baseline_days"` (list),
-        `"bid_capacity_kW"` (float), `"capacity_price"` (float), and
-        `"adjustment_factor"` (float or None), as returned by `add_event`.
+        `"bid_capacity_kW"` (float), `"capacity_price"` (float),
+        `"adjustment_factor"` (float or None), and
+        `"monthly_called_capacity_kWh"` (float or None), as returned by
+        `add_event`.
 
     baseline_params : dict or BaselineMethod
         Baseline parameter dict from `make_baseline_parameters`, or a
@@ -2561,6 +2676,7 @@ def build_event_revenue(
         - `"bid_capacity_kW"` : float
         - `"capacity_price"` : float
         - `"adjustment_factor"` : float or None
+        - `"monthly_called_capacity_kWh"` : float or None
 
         as returned by `add_event`.
 
@@ -2647,8 +2763,10 @@ def calculate_event_revenue(
         Single event dict with the keys `"event_date"` (pandas.Timestamp),
         `"start_hour"` (float), `"duration_hours"` (float),
         `"notification_hours"` (float), `"baseline_days"` (list),
-        `"bid_capacity_kW"` (float), `"capacity_price"` (float), and
-        `"adjustment_factor"` (float or None), as returned by `add_event`.
+        `"bid_capacity_kW"` (float), `"capacity_price"` (float),
+        `"adjustment_factor"` (float or None), and
+        `"monthly_called_capacity_kWh"` (float or None), as returned by
+        `add_event`.
 
     baseline_params : dict or BaselineMethod
         Baseline parameter dict from `make_baseline_parameters`, or a

@@ -1667,3 +1667,192 @@ def test_adjustment_factor_event_and_argument():
         dr.add_event(
             None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5, adjustment_factor=0
         )
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_events_to_dataframe_fills_monthly_called_capacity():
+    events = dr.add_event(None, "2024-01-08", 13, 4, 17, ["2024-01-01"], 100, 10)
+    events = dr.add_event(events, "2024-01-15", 13, 2, 17, ["2024-01-01"], 100, 10)
+    events = dr.add_event(events, "2024-02-05", 13, 3, 17, ["2024-01-01"], 50, 10)
+    events_df = dr.events_to_dataframe(events)
+    assert list(events_df[dr.MONTHLY_CALLED_CAPACITY_KWH]) == pytest.approx(
+        [600.0, 600.0, 150.0]
+    )
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_events_to_dataframe_monthly_called_capacity_override():
+    """A value given on any event applies to its whole month; values given
+    for the same month must agree."""
+    events = dr.add_event(
+        None,
+        "2024-01-08",
+        13,
+        4,
+        17,
+        ["2024-01-01"],
+        100,
+        10,
+        monthly_called_capacity_kWh=1000,
+    )
+    events = dr.add_event(events, "2024-01-15", 13, 2, 17, ["2024-01-01"], 100, 10)
+    events = dr.add_event(events, "2024-02-05", 13, 3, 17, ["2024-01-01"], 50, 10)
+    events_df = dr.events_to_dataframe(events)
+    assert list(events_df[dr.MONTHLY_CALLED_CAPACITY_KWH]) == pytest.approx(
+        [1000.0, 1000.0, 150.0]
+    )
+
+    conflicting = dr.add_event(
+        events,
+        "2024-01-22",
+        13,
+        2,
+        17,
+        ["2024-01-01"],
+        100,
+        10,
+        monthly_called_capacity_kWh=800,
+    )
+    with pytest.raises(ValueError, match="different monthly_called_capacity_kWh"):
+        dr.events_to_dataframe(conflicting)
+    with pytest.raises(ValueError, match="must be positive"):
+        dr.add_event(
+            None,
+            "2024-01-08",
+            13,
+            2,
+            17,
+            ["2024-01-01"],
+            100,
+            10,
+            monthly_called_capacity_kWh=0,
+        )
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_payment_basis_monthly_share_evaluate():
+    structure = dr.PaymentStructure(
+        CBP_PAYMENT_FUNCTION, payment_basis=dr.BASIS_MONTHLY_SHARE
+    )
+    event = dr.add_event(
+        None,
+        "2024-01-08",
+        13,
+        2,
+        17,
+        ["2024-01-01"],
+        100,
+        10,
+        monthly_called_capacity_kWh=800,
+    )[0]
+    # Full delivery pays the Base Capacity Payment (10 $/kW-month * 100 kW)
+    # times this event's share of the month (200 / 800 kWh).
+    assert structure.evaluate(event, 100) == pytest.approx(1000 * 0.25)
+    # delivered ratio 0.6 -> payment ratio 0.3
+    assert structure.evaluate(event, 60) == pytest.approx(0.3 * 1000 * 0.25)
+
+    with pytest.raises(ValueError, match="requires"):
+        structure.evaluate({**event, dr.MONTHLY_CALLED_CAPACITY_KWH: None}, 100)
+    with pytest.raises(ValueError, match="less than this event's own"):
+        structure.evaluate({**event, dr.MONTHLY_CALLED_CAPACITY_KWH: 150}, 100)
+    with pytest.raises(ValueError, match="requires"):
+        dr.evaluate_payment_function(
+            structure, 60, 100, 10, duration_hours=2
+        )  # no monthly_called_capacity_kWh
+    assert dr.evaluate_payment_function(
+        structure, 60, 100, 10, duration_hours=2, monthly_called_capacity_kWh=800
+    ) == pytest.approx(75.0)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_payment_basis_monthly_share_allocates_base_payment():
+    """Same-month events at full delivery together earn exactly one Base
+    Capacity Payment, split in proportion to their called capacity."""
+    power_kW = _flat_power_series(value_by_hour=100)
+    for day in ("2024-01-08", "2024-01-15"):
+        start = pd.Timestamp(f"{day} 13:00")
+        end = start + pd.Timedelta(hours=1)
+        power_kW.loc[start:end] = 0
+
+    baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
+    events = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)
+    events = dr.add_event(events, "2024-01-15", 13, 1, 17, baseline_days, 100, 10)
+    params = dr.make_baseline_parameters(
+        n_baseline_days=5, adjustment_offset_hours=None
+    )
+    structure = dr.PaymentStructure(
+        CBP_PAYMENT_FUNCTION,
+        settlement=dr.SETTLEMENT_INTERVAL,
+        payment_basis=dr.BASIS_MONTHLY_SHARE,
+    )
+
+    per_event_df, total_revenue = dr.calculate_itemized_dr_revenue(
+        power_kW, events, params, structure
+    )
+    assert list(per_event_df[dr.REVENUE]) == pytest.approx([1000 * 2 / 3, 1000 * 1 / 3])
+    assert total_revenue == pytest.approx(1000)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_payment_basis_monthly_share_cvxpy_matches_evaluate():
+    structure = dr.PaymentStructure(
+        CBP_PAYMENT_FUNCTION, payment_basis=dr.BASIS_MONTHLY_SHARE
+    )
+    reduction = cp.Variable(2)
+    reduction.value = np.array([70.0, 70.0])
+    revenue_expr, _ = dr.build_payment_expression(
+        structure,
+        reduction,
+        100,
+        10,
+        region_x1=0.60,
+        duration_hours=2,
+        monthly_called_capacity_kWh=800,
+    )
+    expected = dr.evaluate_payment_function(
+        structure,
+        np.array([70.0, 70.0]),
+        100,
+        10,
+        duration_hours=2,
+        monthly_called_capacity_kWh=800,
+    )
+    assert revenue_expr.value == pytest.approx(expected)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_build_dr_revenue_monthly_share_pyomo():
+    """Both fixture events are 2 h at 100 kW in January, so each gets half
+    of the monthly payment: 300 / 2 and 900 / 2."""
+    (
+        model,
+        datetime_index,
+        events,
+        historical_power_kW,
+        baseline_params,
+        region_x1s,
+    ) = _build_dr_revenue_fixture()
+    structure = dr.PaymentStructure(
+        CBP_PAYMENT_FUNCTION, payment_basis=dr.BASIS_MONTHLY_SHARE
+    )
+
+    total_revenue, model = dr.build_dr_revenue(
+        model.power,
+        datetime_index,
+        events,
+        historical_power_kW,
+        baseline_params,
+        model,
+        structure,
+        region_x1s,
+    )
+
+    _fix_region_choice(model, "dr_event_0", active_idx=1, reduction_value=60)
+    model.find_component("dr_event_0_revenue").fix(150)
+    _assert_region_components_satisfied(model, "dr_event_0")
+
+    _fix_region_choice(model, "dr_event_1", active_idx=2, reduction_value=90)
+    model.find_component("dr_event_1_revenue").fix(450)
+    _assert_region_components_satisfied(model, "dr_event_1")
+
+    assert pyo.value(total_revenue) == pytest.approx(600)
