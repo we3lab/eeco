@@ -1521,3 +1521,149 @@ def test_evaluate_payment_function_raises_without_duration_for_per_hour_basis():
         dr.evaluate_payment_function(
             per_hour_structure, reduction_kW=60, bid_capacity_kW=100, capacity_price=10
         )
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        ({}, "One of delivered_ratio or region_x1"),
+        ({"delivered_ratio": 0.1, "region_x1": 0.6}, "outside the region"),
+    ],
+)
+def test_find_region_argument_errors(kwargs, match):
+    structure = dr.PaymentStructure(CBP_PAYMENT_FUNCTION)
+    with pytest.raises(ValueError, match=match):
+        structure.find_region(**kwargs)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_find_region_both_arguments_agree():
+    structure = dr.PaymentStructure(CBP_PAYMENT_FUNCTION)
+    by_x1 = structure.find_region(region_x1=0.6)
+    assert structure.find_region(delivered_ratio=0.7, region_x1=0.6) is by_x1
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_rank_days_excludes_country_and_custom_holidays():
+    # 2024-07-04 is a US federal holiday; 2024-07-08 is a custom holiday
+    candidate_days = list(pd.date_range("2024-07-01", "2024-07-09", freq="D"))
+    event = dr.add_event(None, "2024-07-10", 13, 2, 17, candidate_days, 100, 10)[0]
+    method = dr.BaselineMethod(holiday_country="US", holiday_dates=["2024-07-08"])
+
+    ranked = method._rank_days(candidate_days, None, event)
+    assert pd.Timestamp("2024-07-04") not in ranked
+    assert pd.Timestamp("2024-07-08") not in ranked
+    assert pd.Timestamp("2024-07-05") in ranked
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_rank_days_holiday_subdivision():
+    # The day after Thanksgiving is a California state holiday only
+    day = pd.Timestamp("2024-11-29")
+    event = dr.add_event(None, "2024-12-02", 13, 2, 17, [day], 100, 10)[0]
+    federal = dr.BaselineMethod(holiday_country="US")
+    california = dr.BaselineMethod(holiday_country="US", holiday_subdiv="CA")
+
+    assert federal._rank_days([day], None, event) == [day]
+    assert california._rank_days([day], None, event) == []
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_make_baseline_parameters_holiday_country_round_trip():
+    params = dr.make_baseline_parameters(holiday_country="US", holiday_subdiv="CA")
+    method = dr._coerce_baseline_method(params)
+    assert method.holiday_country == "US"
+    assert method.holiday_subdiv == "CA"
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_payment_component_names_use_suffixes():
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    model = pyo.ConcreteModel()
+    model.power = pyo.Var(range(2))
+    structure = dr.PaymentStructure(CBP_PAYMENT_FUNCTION)
+    structure.build_expression(
+        event, [10 - model.power[0], 10 - model.power[1]], model=model, varstr="e0"
+    )
+    for suffix in dr.PAYMENT_COMPONENT_SUFFIXES:
+        component = model.find_component(dr._component_name("e0", suffix))
+        if suffix.startswith(("interval_", "energy_", "total_")):
+            assert component is None
+        else:
+            assert component is not None
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_compute_uses_supplied_adjustment_factor():
+    idx = pd.date_range("2024-03-04", "2024-03-09", freq="1h", inclusive="left")
+    historical_power_kW = pd.Series(np.random.uniform(50, 150, len(idx)), index=idx)
+    baseline_days = pd.to_datetime(["2024-03-04", "2024-03-05", "2024-03-06"])
+    event = dr.add_event(None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5)[0]
+    unadjusted = dr.BaselineMethod(n_baseline_days=3, adjustment_offset_hours=None)
+    adjusted = dr.BaselineMethod(n_baseline_days=3)
+
+    expected = unadjusted.compute(historical_power_kW, event) * 1.5
+    # Supplied factors are applied as-is, not clipped to adjustment_clip
+    result = adjusted.compute(historical_power_kW, event, adjustment_factor=1.5)
+    np.testing.assert_allclose(result, expected)
+
+
+def _adjustment_fixture():
+    idx = pd.date_range("2024-03-04", "2024-03-09", freq="1h", inclusive="left")
+    historical_power_kW = pd.Series(np.random.uniform(50, 150, len(idx)), index=idx)
+    baseline_days = pd.to_datetime(["2024-03-04", "2024-03-05", "2024-03-06"])
+    unadjusted = dr.BaselineMethod(n_baseline_days=3, adjustment_offset_hours=None)
+    return historical_power_kW, baseline_days, unadjusted
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_event_adjustment_factor_used_by_calculate_event_baseline():
+    historical_power_kW, baseline_days, unadjusted = _adjustment_fixture()
+    plain = dr.add_event(None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5)[0]
+    event = dr.add_event(
+        None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5, adjustment_factor=1.5
+    )[0]
+    params = dr.make_baseline_parameters(n_baseline_days=3)
+
+    result = dr.calculate_event_baseline(historical_power_kW, event, params)
+    expected = unadjusted.compute(historical_power_kW, plain) * 1.5
+    np.testing.assert_allclose(result, expected)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_event_adjustment_factor_survives_dataframe_round_trip():
+    # Mixing None and a float in one column turns None into NaN
+    historical_power_kW, baseline_days, unadjusted = _adjustment_fixture()
+    events = dr.add_event(None, "2024-03-07", 14, 2, 24, baseline_days, 10, 5)
+    events = dr.add_event(
+        events, "2024-03-08", 14, 2, 24, baseline_days, 10, 5, adjustment_factor=1.5
+    )
+    params = dr.make_baseline_parameters(n_baseline_days=3)
+
+    per_event_df, _ = dr.calculate_itemized_dr_revenue(
+        historical_power_kW, events, params, dr.PaymentStructure(None, payout=1.0)
+    )
+    calculated = dr.calculate_event_baseline(historical_power_kW, events[0], params)
+    plain = {**events[1], dr.ADJUSTMENT_FACTOR: None}
+    supplied = unadjusted.compute(historical_power_kW, plain) * 1.5
+    np.testing.assert_allclose(per_event_df[dr.BASELINE_PROFILE_KW][0], calculated)
+    np.testing.assert_allclose(per_event_df[dr.BASELINE_PROFILE_KW][1], supplied)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_adjustment_factor_event_and_argument():
+    historical_power_kW, baseline_days, _ = _adjustment_fixture()
+    event = dr.add_event(
+        None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5, adjustment_factor=1.5
+    )[0]
+    method = dr.BaselineMethod(n_baseline_days=3)
+
+    matching = method.compute(historical_power_kW, event, adjustment_factor=1.5)
+    np.testing.assert_allclose(matching, method.compute(historical_power_kW, event))
+    with pytest.raises(ValueError, match="conflicts"):
+        method.compute(historical_power_kW, event, adjustment_factor=1.2)
+    with pytest.raises(ValueError, match="must be positive"):
+        dr.add_event(
+            None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5, adjustment_factor=0
+        )
