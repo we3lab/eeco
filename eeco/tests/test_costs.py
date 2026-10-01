@@ -4565,6 +4565,38 @@ def test_calculate_itemized_cost_np(
             None,  # No expected cost - should raise NotImplementedError
             None,  # No expected itemized - should raise NotImplementedError
         ),
+        # energy and export charges with decomposition_type="linear" (LP)
+        (
+            {
+                "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
+                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+            },
+            {
+                ELECTRIC: np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            "linear",
+            240,
+            False,
+            pytest.approx(
+                6.0 - 1.5, abs=1e-3
+            ),  # interior-point tolerance  # 48*10*0.05/4 - 48*5*0.025/4 = 4.5
+            {
+                "electric": {
+                    "energy": pytest.approx(6.0, abs=1e-3),
+                    "export": pytest.approx(-1.5, abs=1e-3),
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
+        ),
         # by_charge_key=True
         (
             {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
@@ -4606,7 +4638,7 @@ def test_calculate_itemized_cost_cvx(
     """Test calculate_itemized_cost with CVXPY variables."""
     cvx_vars, constraints = setup_cvx_vars_constraints(consumption_data_dict)
 
-    if decomposition_type:
+    if decomposition_type == "absolute_value":
         with pytest.raises(NotImplementedError):
             costs.calculate_itemized_cost(
                 charge_dict,
@@ -4617,7 +4649,7 @@ def test_calculate_itemized_cost_cvx(
                 by_charge_key=by_charge_key,
             )
     else:
-        result, _ = costs.calculate_itemized_cost(
+        result, decomp_constraints = costs.calculate_itemized_cost(
             charge_dict,
             cvx_vars,
             resolution=resolution,
@@ -4626,7 +4658,7 @@ def test_calculate_itemized_cost_cvx(
             by_charge_key=by_charge_key,
         )
         total_expr = sum(result["total"].values()) if by_charge_key else result["total"]
-        solve_cvx_problem(total_expr, constraints)
+        solve_cvx_problem(total_expr, constraints + (decomp_constraints or []))
 
         total_value = (
             sum(getattr(v, "value", v) for v in result["total"].values())
@@ -4832,6 +4864,38 @@ def test_calculate_itemized_cost_cvx(
                 },
             },
         ),
+        # energy and export charges with decomposition_type="linear" (LP)
+        (
+            {
+                "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
+                "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+            },
+            {
+                ELECTRIC: np.concatenate([np.ones(48) * 10, -np.ones(48) * 5]),
+                GAS: np.ones(96),
+            },
+            "15m",
+            "linear",
+            240,
+            None,
+            None,
+            False,
+            pytest.approx(6.0 - 1.5),  # 48*10*0.05/4 - 48*5*0.025/4 = 4.5
+            {
+                "electric": {
+                    "energy": pytest.approx(6.0),
+                    "export": pytest.approx(-1.5),
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+                "gas": {
+                    "energy": 0.0,
+                    "export": 0.0,
+                    "customer": 0.0,
+                    "demand": 0.0,
+                },
+            },
+        ),
         # by_charge_key=True
         (
             {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05},
@@ -5004,3 +5068,63 @@ def test_get_prev_demand_dict(start_dt, billing_period_starts, prev_dict, expect
         charge_dict, usage_data, start_dt, billing_period_starts, prev_dict
     )
     assert result == expected
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "energy_rate, export_rate, expected_warning",
+    [
+        (0.05, 0.10, "export rate exceeds energy rate"),
+        (-0.05, None, "Negative electric energy rate"),
+        (0.05, 0.025, None),
+        (0.05, 0.05, None),  # equal rates are still exact
+    ],
+)
+def test_linear_decomposition_rate_warning(energy_rate, export_rate, expected_warning):
+    """decomposition_type="linear" warns when the LP split may be inexact."""
+    charge_dict = {
+        "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * energy_rate,
+    }
+    if export_rate is not None:
+        charge_dict["electric_export_0_2024-07-10_2024-07-10_0"] = (
+            np.ones(96) * export_rate
+        )
+    cvx_vars, _ = setup_cvx_vars_constraints(
+        {ELECTRIC: np.zeros(96), GAS: np.zeros(96)}
+    )
+    kwargs = {"resolution": "15m", "decomposition_type": "linear"}
+
+    if expected_warning:
+        with pytest.warns(UserWarning, match=expected_warning):
+            costs.calculate_cost(charge_dict, cvx_vars, **kwargs)
+    else:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            costs.calculate_cost(charge_dict, cvx_vars, **kwargs)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_linear_decomposition_lp_avoids_arbitrage():
+    """With export <= energy rate the LP split never imports and exports at once."""
+    charge_dict = {
+        "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
+        "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,
+    }
+    net = cp.Variable(96)
+    cost, constraints = costs.calculate_cost(
+        charge_dict,
+        {ELECTRIC: net, GAS: np.zeros(96)},
+        decomposition_type="linear",
+    )
+    constraints = constraints + [net >= -100, net <= 100]
+    prob = cp.Problem(cp.Minimize(cost), constraints)
+    assert prob.is_dcp()
+    prob.solve()
+    imports, exports = ut.get_decomposed_var_names(ELECTRIC)
+    # all exporting at the bound; the split is exact so no simultaneous flow
+    np.testing.assert_allclose(net.value, -100, atol=1e-4)
+    positive = [v for v in prob.variables() if v is not net]
+    assert len(positive) == 2
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        ut.check_simultaneous_import_export(*positive)

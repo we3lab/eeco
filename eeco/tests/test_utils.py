@@ -1,5 +1,6 @@
 import os
 import pytest
+import warnings
 import numpy as np
 import pyomo.environ as pyo
 import cvxpy as cp
@@ -447,6 +448,21 @@ def test_decompose_consumption_np(
             "binary_big_M",
             False,
         ),
+        # linear LP split, no MIP solver needed
+        (
+            np.array([10, -5, 3, -2, 0]),
+            np.array([10, 0, 3, 0, 0]),
+            np.array([0, 5, 0, 2, 0]),
+            "linear",
+            False,
+        ),
+        (
+            np.array([-10, -5, -1]),
+            np.array([0, 0, 0]),
+            np.array([10, 5, 1]),
+            "linear",
+            False,
+        ),
     ],
 )
 def test_decompose_consumption_cvx(
@@ -472,12 +488,20 @@ def test_decompose_consumption_cvx(
         assert isinstance(positive_var, cp.Variable)
         assert isinstance(negative_var, cp.Variable)
         assert isinstance(constraints, list)
-        assert len(constraints) == 3  # decomposition + 2 Big-M constraints
-
-        # Solve with SCIP and verify values
         constraints.append(x == consumption_data)
-        prob = cp.Problem(cp.Minimize(0), constraints)
-        prob.solve(solver=cp.SCIP)
+        if decomposition_type == "linear":
+            assert len(constraints) == 2  # decomposition + data
+            # Minimizing pos + neg picks the unique split for an LP
+            prob = cp.Problem(
+                cp.Minimize(cp.sum(positive_var + negative_var)), constraints
+            )
+            assert prob.is_dcp()
+            prob.solve()
+        else:
+            assert len(constraints) == 4  # decomposition + 2 Big-M + data
+            # Solve with SCIP and verify values
+            prob = cp.Problem(cp.Minimize(0), constraints)
+            prob.solve(solver=cp.SCIP)
 
         np.testing.assert_array_almost_equal(positive_var.value, expected_positive)
         np.testing.assert_array_almost_equal(negative_var.value, expected_negative)
@@ -495,6 +519,9 @@ def test_decompose_consumption_cvx(
         (np.array([1, -2, 3]), 4, 2, "binary_big_M", False),
         (np.array([-10, -5, -1]), 0, 16, "binary_big_M", False),
         (np.array([10, 5, 1]), 16, 0, "binary_big_M", False),
+        (np.array([1, -2, 3]), 4, 2, "linear", False),
+        (np.array([-10, -5, -1]), 0, 16, "linear", False),
+        (np.array([10, 5, 1]), 16, 0, "linear", False),
         (np.array([1, -2, 3]), 4, 2, "unsupported_type", True),
     ],
 )
@@ -536,9 +563,48 @@ def test_decompose_consumption_pyo(
             assert hasattr(model, "electric_is_importing")
             assert hasattr(model, "electric_import_bigm_constraint")
             assert hasattr(model, "electric_export_bigm_constraint")
+        elif decomposition_type == "linear":
+            assert not hasattr(model, "electric_is_importing")
+            assert not hasattr(model, "electric_magnitude_constraint")
         assert len(positive_var) == len(consumption_data)
         assert len(negative_var) == len(consumption_data)
         # Testing of values handled after solving problem in test_costs.py
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_check_simultaneous_import_export():
+    # overlapping timesteps 1 and 3 warn and are returned
+    with pytest.warns(UserWarning, match="Simultaneous import and export"):
+        idx = ut.check_simultaneous_import_export(
+            np.array([1, 2, 0, 3]), np.array([0, 1, 4, 2]), varstr="electric"
+        )
+    np.testing.assert_array_equal(idx, [1, 3])
+
+    # mutually exclusive, or below tolerance: no warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        idx = ut.check_simultaneous_import_export(
+            np.array([1, 0, 3]), np.array([0, 2, 1e-9])
+        )
+    assert idx.size == 0
+
+    # solved CVXPY variables
+    pos, neg = cp.Variable(3, nonneg=True), cp.Variable(3, nonneg=True)
+    prob = cp.Problem(
+        cp.Minimize(cp.sum(pos + neg)), [pos - neg == np.array([1, -2, 0])]
+    )
+    prob.solve()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert ut.check_simultaneous_import_export(pos, neg).size == 0
+
+    # solved Pyomo variables
+    model = pyo.ConcreteModel()
+    model.pos = pyo.Var([0, 1], initialize={0: 1.0, 1: 2.0})
+    model.neg = pyo.Var([0, 1], initialize={0: 0.0, 1: 3.0})
+    with pytest.warns(UserWarning):
+        idx = ut.check_simultaneous_import_export(model.pos, model.neg)
+    np.testing.assert_array_equal(idx, [1])
 
 
 def test_pyomo_type():
