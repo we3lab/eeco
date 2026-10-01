@@ -724,6 +724,32 @@ def default_varstr_alias_func(
     return f"{utility}_{charge_type}_{name}_{start_date}_{end_date}_{charge_limit}"
 
 
+def parse_charge_key(key):
+    """Splits a charge key into its fields, inverting `default_varstr_alias_func`.
+
+    Parameters
+    ----------
+    key : str
+        Charge key of the form
+        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`
+
+    Raises
+    ------
+    ValueError
+        When `key` has fewer than six underscore-separated fields
+
+    Returns
+    -------
+    tuple of str
+        `utility`, `charge_type`, `name`, `start_date`, `end_date`, `charge_limit`
+    """
+    parts = key.split("_")
+    if len(parts) < 6:
+        raise ValueError(f"Invalid charge key format: {key}")
+    # read from both ends, since `name` may itself contain underscores
+    return (*parts[:2], "_".join(parts[2:-3]), *parts[-3:])
+
+
 def get_next_limit(key_substr, current_limit, keys):
     """Finds the next charge limit for the charge represented by `key`
 
@@ -746,7 +772,7 @@ def get_next_limit(key_substr, current_limit, keys):
     """
     matching_keys = [key_substr in key for key in keys]
     limits = sorted(
-        [float(key.split("_")[-1]) for key in compress(keys, matching_keys)]
+        [float(parse_charge_key(key)[-1]) for key in compress(keys, matching_keys)]
     )
     try:
         matching_idx = limits.index(current_limit)
@@ -1345,12 +1371,7 @@ def get_charge_array_duration(key):
     ValueError
         If the key format is invalid or dates cannot be parsed
     """
-    parts = key.split("_")
-    if len(parts) < 6:
-        raise ValueError(f"Invalid charge key format: {key}")
-
-    start_date_str = parts[-3]
-    end_date_str = parts[-2]
+    _, _, _, start_date_str, end_date_str, _ = parse_charge_key(key)
 
     # Allow 2 date formats
     date_formats = ["%Y%m%d", "%Y-%m-%d"]
@@ -1535,7 +1556,9 @@ def calculate_cost(
     )
 
     for key, charge_array in charge_dict.items():
-        utility, full_charge_type, name, eff_start, eff_end, limit_str = key.split("_")
+        utility, full_charge_type, name, eff_start, eff_end, limit_str = (
+            parse_charge_key(key)
+        )
         varstr = ut.sanitize_varstr(
             varstr_alias_func(
                 utility, full_charge_type, name, eff_start, eff_end, limit_str
