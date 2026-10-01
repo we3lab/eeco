@@ -31,6 +31,7 @@ requirements = [
     "pyomo>=6.8",
     "pint>=0.19.2",
     "pytz>=2025.1",
+    "holidays>=0.40",
 ]
 
 extra_requirements = {
