@@ -192,6 +192,7 @@ Options include:
 
 - Default `None`: No decomposition, consumption treated as imports only.
 - `"binary_big_M"`: Uses binary variable with Big-M constraints. Creates a MILP requiring a MIP solver (e.g., SCIP, Gurobi). Supported for both CVXPY and Pyomo.
+- `"linear"`: Plain LP split into non-negative imports and exports (`net = imports - exports`) with no magnitude constraint, `abs()`, or binaries. Supported for both CVXPY and Pyomo and needs no MIP or NLP solver. This is the recommended option when the export rate is at most the energy rate and demand rates are non-negative, because importing and exporting in the same period then never lowers the cost. If those conditions do not hold, `calculate_cost` warns, since the solver could import and export simultaneously (arbitrage).
 - `"absolute_value"`: Uses absolute value constraints. Creates a nonlinear problem for Pyomo. **Not supported for CVXPY** (not DCP-compliant).
 
 For numpy arrays, `decomposition_type` is ignored since decomposition is a direct calculation.
@@ -247,7 +248,13 @@ For numpy arrays, `decomposition_type` is ignored since decomposition is a direc
     constraints = decomp_constraints + [...]  # add other constraints
     
     prob = cp.Problem(objective, constraints)
-    prob.solve(solver=cp.SCIP)  # requires MIP solver
+    prob.solve(solver=cp.SCIP)  # requires MIP solver (not needed for "linear")
+
+With `"linear"`, you can confirm the split was exact after solving. This warns and returns the offending timesteps if any period has both imports and exports above `tol`:
+
+.. code-block:: python
+
+    utils.check_simultaneous_import_export(imports, exports, tol=1e-6)
 
 When `decomposition_type` is not `None`, the function creates separate variables for positive consumption (imports) and negative consumption (exports), applying export charges only to the export component.
 A constraint `total_consumption = imports - exports` is added to balance the decomposition.
