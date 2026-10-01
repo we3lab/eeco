@@ -59,10 +59,16 @@ An event is a ``dict`` built by ``add_event``. A collection of events is a
      - Bid capacity in kW
    * - ``"capacity_price"`` (``CAPACITY_PRICE``)
      - ``float``
-     - Capacity price in $/kW (or $/kW-hour with ``payment_basis="per_hour"``)
+     - Capacity price in $/kW (or $/kW-hour with ``payment_basis="per_hour"``,
+       or $/kW-month with ``payment_basis="monthly_share"``)
    * - ``"adjustment_factor"`` (``ADJUSTMENT_FACTOR``)
      - ``float`` or ``None``
      - Day-of adjustment factor to apply as-is; ``None`` calculates it
+   * - ``"monthly_called_capacity_kWh"`` (``MONTHLY_CALLED_CAPACITY_KWH``)
+     - ``float`` or ``None``
+     - Called capacity summed over every event hour in the event's month, used
+       by ``payment_basis="monthly_share"``; ``None`` sums it over the events
+       passed in
 
 ``baseline_days`` should already exclude any date that is itself another
 event's date; ``add_event`` does not check this.
@@ -256,8 +262,35 @@ interval, ``settlement`` controls how the capacity payment is aggregated:
 
 **Payment basis.** ``payment_basis`` and ``payout_basis`` choose whether the
 capacity price and payout are settled once per event (``"per_event"``,
-default) or scale with the event's duration (``"per_hour"``, i.e. $/kW-hour).
-``"per_hour"`` requires ``"duration_hours"`` on the event.
+default), scale with the event's duration (``"per_hour"``, i.e. $/kW-hour),
+or split a monthly payment across the month's called hours
+(``"monthly_share"``). ``"per_hour"`` requires ``"duration_hours"`` on the
+event.
+
+``"monthly_share"`` models programs, such as PG&E's CBP, that pay a monthly
+Base Capacity Payment (``capacity_price`` in $/kW-month times
+``bid_capacity_kW``) and allocate it to each called hour in proportion to
+that hour's called capacity. Each event's capacity payment is
+
+.. code-block:: text
+
+   payment_ratio * capacity_price * bid_capacity_kW
+       * bid_capacity_kW * duration_hours / monthly_called_capacity_kWh
+
+so the same-month events together earn exactly one Base Capacity Payment
+at full delivery. ``bid_capacity_kW`` is taken as the called capacity in
+every hour of the event; split an event whose hours have different called
+capacities into separate events. ``events_to_dataframe`` (and so every
+entry point that takes an events list) fills in a missing
+``"monthly_called_capacity_kWh"`` by summing ``bid_capacity_kW *
+duration_hours`` over the events in the same calendar month. A value given
+on any event (via ``add_event``) applies to its whole month, and events in
+the same month that give different values raise ``ValueError``. Give it
+explicitly when the events passed in don't cover the whole month -- for
+example, an optimization horizon that ends mid-month, or a total taken from
+a utility settlement statement. Pair it with ``settlement="interval"`` and an
+hourly ``resolution`` to apply the performance adjustment hour by hour, as
+CBP does.
 
 **Region lookup.** ``find_region`` takes either a ``delivered_ratio``
 (returns the region containing it) or a ``region_x1`` (returns the region
@@ -431,9 +464,12 @@ programs are represented by pairing whichever combination matches their
 rules. A few examples:
 
 - **A day-ahead capacity bidding program** (e.g. PG&E's CBP) pairs the
-  default ``BaselineMethod`` (10 similar weekdays, 3-hour day-of adjustment)
-  with a ``PaymentStructure`` whose regions ramp payment up with delivered
-  ratio, settled ``"average"``.
+  default ``BaselineMethod`` (10 similar weekdays, 3-hour day-of adjustment,
+  ``resolution="1h"``) with
+  ``PaymentStructure(regions, settlement="interval",
+  payment_basis="monthly_share")``, whose regions ramp payment up with
+  delivered ratio. The monthly Base Capacity Payment is split across the
+  month's called hours and each hour is adjusted for its own performance.
 - **A firm service level program**, where the customer commits to staying at
   or below a contracted demand level, pairs ``FixedLevelBaseline`` with a
   ``PaymentStructure`` using ``payment_basis="per_hour"`` so the payment (or
