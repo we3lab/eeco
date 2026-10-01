@@ -614,6 +614,73 @@ def _decompose_binary_pyo(expression, model, varstr, big_m=1e6):
     return positive_var, negative_var, model
 
 
+def _decompose_linear_cvx(expression):
+    """Decompose CVXPY expression into non-negative import/export variables.
+
+    Creates a linear program (no binaries, no abs()). The split is exact only
+    when exporting is never more valuable than importing is costly, i.e.
+    export rate <= energy rate and demand rates are non-negative.
+
+    Parameters
+    ----------
+    expression : cvxpy.Expression
+        CVXPY expression representing net consumption
+
+    Returns
+    -------
+    tuple
+        (positive_var, negative_var, constraints) where constraints is a list
+        of CVXPY constraints that must be added to the problem
+    """
+    n = expression.shape[0] if hasattr(expression, "shape") else 1
+
+    positive_var = cp.Variable(n, nonneg=True)
+    negative_var = cp.Variable(n, nonneg=True)
+
+    constraints = [expression == positive_var - negative_var]
+
+    return positive_var, negative_var, constraints
+
+
+def _decompose_linear_pyo(expression, model, varstr):
+    """Create non-negative Pyomo import/export variables (LP decomposition).
+
+    The shared decomposition constraint (expression = imports - exports) is
+    added by `decompose_consumption`, so no constraints are added here.
+    Exact only when export rate <= energy rate and demand rates are
+    non-negative.
+
+    Parameters
+    ----------
+    expression : pyomo.environ.Var or pyomo.environ.Param
+        Pyomo variable representing net consumption
+    model : pyomo.environ.Model
+        The Pyomo model object
+    varstr : str
+        Name prefix for created variables
+
+    Returns
+    -------
+    tuple
+        (positive_var, negative_var, model)
+    """
+    pos_name, neg_name = get_decomposed_var_names(varstr)
+
+    model.add_component(
+        pos_name,
+        pyo.Var(model._var_index, bounds=(0, None), initialize=0),
+    )
+    positive_var = model.find_component(pos_name)
+
+    model.add_component(
+        neg_name,
+        pyo.Var(model._var_index, bounds=(0, None), initialize=0),
+    )
+    negative_var = model.find_component(neg_name)
+
+    return positive_var, negative_var, model
+
+
 def decompose_consumption(
     expression, model=None, varstr=None, decomposition_type="absolute_value", big_m=1e6
 ):
@@ -649,6 +716,11 @@ def decompose_consumption(
         - "binary_big_M": Uses binary indicator with Big-M constraints.
           Creates a MILP (mixed-integer linear program).
           Supported for both Pyomo and CVXPY (requires MIP solver).
+        - "linear": Plain LP split with non-negative import/export variables
+          and no magnitude constraint. Supported for both Pyomo and CVXPY and
+          needs no MIP/NLP solver. Exact only when export rate <= energy rate
+          and demand rates are non-negative; otherwise the solver may import
+          and export simultaneously. See `check_simultaneous_import_export`.
 
         Note: For numpy.ndarray inputs, decomposition_type is ignored
 
@@ -660,9 +732,9 @@ def decompose_consumption(
     Raises
     ------
     NotImplementedError
-        When `decomposition_type` is anything other than "absolute_value"
-        or "binary_big_M" for Pyomo, or anything other than "binary_big_M" for
-        CVXPY. Never raised for `numpy.Array`.
+        When `decomposition_type` is anything other than "absolute_value",
+        "binary_big_M" or "linear" for Pyomo, or anything other than
+        "binary_big_M" or "linear" for CVXPY. Never raised for `numpy.Array`.
 
     TypeError
         When `expression` is not of type `numpy.Array`, `cvxpy.Expression`,
@@ -691,11 +763,14 @@ def decompose_consumption(
                 expression, big_m
             )
             return positive_var, negative_var, constraints
+        elif decomposition_type == "linear":
+            positive_var, negative_var, constraints = _decompose_linear_cvx(expression)
+            return positive_var, negative_var, constraints
         else:
             raise NotImplementedError(
                 f"Decomposition type '{decomposition_type}' not supported for CVXPY. "
-                "Only 'binary_big_M' is available (requires a MIP solver). "
-                "Use Pyomo for 'absolute_value' decomposition."
+                "Available types: 'binary_big_M' (requires a MIP solver) and "
+                "'linear'. Use Pyomo for 'absolute_value' decomposition."
             )
 
     elif check_indexed_pyomo_type(expression):
@@ -708,10 +783,14 @@ def decompose_consumption(
             positive_var, negative_var, model = _decompose_binary_pyo(
                 expression, model, varstr, big_m
             )
+        elif decomposition_type == "linear":
+            positive_var, negative_var, model = _decompose_linear_pyo(
+                expression, model, varstr
+            )
         else:
             raise NotImplementedError(
                 f"Decomposition type '{decomposition_type}' not supported for Pyomo. "
-                "Available types: 'absolute_value' and 'binary_big_M'."
+                "Available types: 'absolute_value', 'binary_big_M' and 'linear'."
             )
 
         # Add common decomposition constraint: expression = imports - exports
@@ -729,6 +808,57 @@ def decompose_consumption(
         raise TypeError(
             "Only CVXPY or Pyomo variables and NumPy arrays are currently supported."
         )
+
+
+def check_simultaneous_import_export(positive, negative, tol=1e-6, varstr=None):
+    """Warn if any timestep has both import and export components above `tol`.
+
+    Call after solving to verify that a `decomposition_type="linear"` split is
+    exact. Simultaneous import and export means the rates allowed arbitrage
+    (e.g., export rate > energy rate).
+
+    Parameters
+    ----------
+    positive : [numpy.Array, cvxpy.Expression, pyomo.environ.Var]
+        Solved import component. CVXPY objects are read via `.value` and
+        indexed Pyomo objects via `pyomo.environ.value`.
+
+    negative : [numpy.Array, cvxpy.Expression, pyomo.environ.Var]
+        Solved export component (stored as positive magnitudes)
+
+    tol : float, optional
+        Components at or below this value are treated as zero. Default 1e-6.
+
+    varstr : str, optional
+        Name used to identify the utility in the warning message.
+
+    Returns
+    -------
+    numpy.ndarray
+        Indices of timesteps where both components exceed `tol`
+        (empty if none)
+    """
+
+    def _to_array(x):
+        if check_cvx_type(x):
+            return np.asarray(x.value, dtype=float)
+        if check_indexed_pyomo_type(x):
+            return np.array([pyo.value(x[t]) for t in x.index_set()], dtype=float)
+        return np.asarray(x, dtype=float)
+
+    pos = _to_array(positive)
+    neg = _to_array(negative)
+    idx = np.where((pos > tol) & (neg > tol))[0]
+    if idx.size:
+        label = f" for '{varstr}'" if varstr else ""
+        warnings.warn(
+            f"Simultaneous import and export{label} in {idx.size} timestep(s) "
+            f"(first indices: {idx[:5].tolist()}). The rates likely allow "
+            "arbitrage (e.g., export rate > energy rate), so the linear "
+            "decomposition is not exact.",
+            UserWarning,
+        )
+    return idx
 
 
 def parse_freq(freq):

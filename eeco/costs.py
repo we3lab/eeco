@@ -1208,6 +1208,54 @@ def get_conversion_factors(electric_consumption_units, gas_consumption_units):
     return conversion_factors
 
 
+def _check_linear_decomposition_rates(charge_dict):
+    """Warn if rates break the conditions under which a linear split is exact.
+
+    With `decomposition_type="linear"`, importing and exporting in the same
+    timestep is only suboptimal when export rate <= energy rate and energy and
+    demand rates are non-negative. Only numpy charge arrays are checked.
+
+    Parameters
+    ----------
+    charge_dict : dict
+        Charge dictionary as passed to `calculate_cost`
+    """
+    energy_sums = {}
+    export_sums = {}
+    for key, charge_array in charge_dict.items():
+        if not ut.check_indexed_np_array(charge_array):
+            continue
+        utility, full_charge_type, _, _, _, limit_str = key.split("_")
+        charge_type = full_charge_type.replace(DAILY, "").replace(MONTHLY, "")
+        charge_type = charge_type.replace("-", "")
+
+        if charge_type in (ENERGY, DEMAND) and np.any(charge_array < 0):
+            warnings.warn(
+                f"Negative {utility} {charge_type} rate in '{key}' with "
+                "decomposition_type='linear'. The LP split may import and "
+                "export simultaneously.",
+                UserWarning,
+            )
+        if charge_type == ENERGY and int(limit_str) == 0:
+            energy_sums[utility] = energy_sums.get(utility, 0) + charge_array
+        elif charge_type == EXPORT:
+            export_sums[utility] = export_sums.get(utility, 0) + charge_array
+
+    for utility, export_rate in export_sums.items():
+        energy_rate = energy_sums.get(utility)
+        if (
+            energy_rate is not None
+            and np.shape(energy_rate) == np.shape(export_rate)
+            and np.any(export_rate > energy_rate)
+        ):
+            warnings.warn(
+                f"{utility} export rate exceeds energy rate in at least one "
+                "timestep with decomposition_type='linear'. The LP split may "
+                "import and export simultaneously (arbitrage).",
+                UserWarning,
+            )
+
+
 def get_converted_consumption_data(
     consumption_data_dict, conversion_factors, decomposition_type, model=None, big_m=1e6
 ):
@@ -1221,7 +1269,8 @@ def get_converted_consumption_data(
     conversion_factors : dict
         Dictionary with conversion factors for each utility type
     decomposition_type : str or None
-        Type of decomposition to apply (e.g., "absolute_value")
+        Type of decomposition to apply ("absolute_value", "binary_big_M",
+        or "linear")
     model : pyomo.Model, optional
         Pyomo model object for optimization variables
 
@@ -1270,7 +1319,7 @@ def get_converted_consumption_data(
                     varstr=converted_varstr,
                 )
 
-            if decomposition_type in ("absolute_value", "binary_big_M"):
+            if decomposition_type in ("absolute_value", "binary_big_M", "linear"):
                 # Decompose consumption data into positive and negative components
                 # with constraint that total = positive - negative
                 # (where negative is stored as positive magnitude)
@@ -1479,6 +1528,9 @@ def calculate_cost(
           for Pyomo due to abs() constraint.
         - "binary_big_M": Uses binary indicator with Big-M constraints.
           Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.
+        - "linear": Plain LP split into non-negative imports and exports for
+          Pyomo or CVXPY. Exact only when export rate <= energy rate and
+          energy/demand rates are non-negative (warns otherwise).
         - None (default): No decomposition, treats all consumption as imports
 
     varstr_alias_func : function
@@ -1525,6 +1577,9 @@ def calculate_cost(
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )
+
+    if decomposition_type == "linear":
+        _check_linear_decomposition_rates(charge_dict)
 
     consumption_data_dict, model_objects = get_converted_consumption_data(
         consumption_data_dict,
@@ -1756,6 +1811,9 @@ def build_pyomo_costing(
           for Pyomo due to abs() constraint.
         - "binary_big_M": Uses binary indicator with Big-M constraints.
           Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.
+        - "linear": Plain LP split into non-negative imports and exports for
+          Pyomo or CVXPY. Exact only when export rate <= energy rate and
+          energy/demand rates are non-negative (warns otherwise).
         - None (default): No decomposition, treats all consumption as imports
 
     varstr_alias_func: function
@@ -1899,6 +1957,9 @@ def calculate_itemized_cost(
         - "absolute_value": Linear problem using absolute value
         - "binary_big_M": Uses binary indicator with Big-M constraints.
           Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.
+        - "linear": Plain LP split into non-negative imports and exports for
+          Pyomo or CVXPY. Exact only when export rate <= energy rate and
+          energy/demand rates are non-negative (warns otherwise).
         - None (default): No decomposition, treats all consumption as imports
 
     by_charge_key : bool
@@ -1951,6 +2012,9 @@ def calculate_itemized_cost(
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )
+
+    if decomposition_type == "linear":
+        _check_linear_decomposition_rates(charge_dict)
 
     consumption_data_dict, model_objects = get_converted_consumption_data(
         consumption_data_dict,
