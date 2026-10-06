@@ -189,6 +189,7 @@ def max(expression, model=None, varstr=None, index_set=None):
             return var >= expression[t]
 
         if index_set is None:
+            create_pyomo_model_index_from_dict(model, expression)
             index_set = model._var_index
         constraint = pyo.Constraint(index_set, rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
@@ -399,6 +400,9 @@ def multiply(
             if (not check_nonindexed_python_type(expression2)) and (
                 len(expression2) > 1
             ):
+                create_pyomo_model_index_from_dict(
+                    model, {1: expression1, 2: expression2}
+                )
                 model.add_component(varstr, pyo.Var(model._var_index))
                 var = model.find_component(varstr)
 
@@ -417,6 +421,9 @@ def multiply(
                 model.add_component(varstr + "_constraint", constraint)
                 return (var, model)
             else:
+                create_pyomo_model_index_from_dict(
+                    model, {1: expression1, 2: expression2}
+                )
                 model.add_component(varstr, pyo.Var(model._var_index))
                 var = model.find_component(varstr)
 
@@ -427,6 +434,7 @@ def multiply(
                 model.add_component(varstr + "_constraint", constraint)
                 return (var, model)
         elif (not check_nonindexed_pyomo_type(expression2)) and (len(expression2) > 1):
+            create_pyomo_model_index_from_dict(model, {1: expression1, 2: expression2})
             model.add_component(varstr, pyo.Var(model._var_index))
             var = model.find_component(varstr)
 
@@ -699,6 +707,7 @@ def decompose_consumption(
             )
 
     elif check_indexed_pyomo_type(expression):
+        create_pyomo_model_index_from_dict(model, expression)
         # Call mode-specific function to create vars and add mode-specific constraints
         if decomposition_type == "absolute_value":
             positive_var, negative_var, model = _decompose_absolute_value_pyo(
@@ -844,6 +853,8 @@ def create_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
     values and plain integer positions (e.g. when aligning with a NumPy
     array or another positional data structure).
 
+    Does nothing if `model` already has an index and `overwrite` is False.
+
     Parameters
     ----------
     model : pyomo.environ.Model
@@ -856,12 +867,13 @@ def create_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
     overwrite : bool
         Ignored if index does not exist yet.
         If index exists, must be set to True for updates to take effect.
-        If False, no changes are made to the index and a warning is raised.
+        If False, the existing index is left untouched.
 
     Raises
     ------
     TypeError
-        When pyomo var is not found in supplied dict, will raise an error
+        When the model has no index yet and no pyomo var is found in the
+        supplied dict
 
     Returns
     -------
@@ -872,6 +884,8 @@ def create_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
         - `_var_index` (list): the index values of `var.index_set()`
             in enumeration order.
     """
+    if hasattr(model, "_var_index") and not overwrite:
+        return
 
     def find_pyo_var(posible_dict):
         if isinstance(posible_dict, dict):

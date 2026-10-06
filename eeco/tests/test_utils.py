@@ -1,5 +1,6 @@
 import os
 import pytest
+import warnings
 import numpy as np
 import pyomo.environ as pyo
 import cvxpy as cp
@@ -204,10 +205,22 @@ def test_max_pyo(consumption_data, varstr, index_set, expected):
     assert model is not None
 
 
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "dict_type", ["pyovar", "normal", "nested", "multi_input", "empty"]
+    "dict_type, existing_index, overwrite, expected, expect_error",
+    [
+        ("pyovar", None, False, list(range(10)), False),
+        ("normal", None, False, list(range(10)), False),
+        ("nested", None, False, list(range(10)), False),
+        ("multi_input", None, False, list(range(10)), False),
+        ("empty", None, False, None, True),
+        ("normal", range(2), False, [0, 1], False),  # non-range index
+        ("normal", range(2), True, list(range(10)), False),  # overwrite
+    ],
 )
-def test_create_pyomo_model_index_ref_from_dict(dict_type):
+def test_create_pyomo_model_index_ref_from_dict(
+    dict_type, existing_index, overwrite, expected, expect_error
+):
     model = pyo.ConcreteModel()
     model.e = pyo.Var(range(10), initialize=1)
     if dict_type == "normal":
@@ -224,28 +237,62 @@ def test_create_pyomo_model_index_ref_from_dict(dict_type):
     elif dict_type == "empty":
         input_dict = {"nest_test": {"electric": np.arange(10)}}
 
-    if dict_type == "empty":
+    if existing_index is not None:  # an index is already in place before the call
+        model.preexisting = pyo.Var(existing_index, initialize=1)
+        ut.create_pyomo_model_index_ref(model, model.preexisting)
+
+    if expect_error:
         with pytest.raises(TypeError):
             ut.create_pyomo_model_index_from_dict(model, input_dict)
         assert not hasattr(model, "_var_index_ref")
         assert not hasattr(model, "_var_index")
     else:
-        ut.create_pyomo_model_index_from_dict(model, input_dict)
+        with warnings.catch_warnings():  # the index is never rebuilt with a warning
+            warnings.simplefilter("error", UserWarning)
+            ut.create_pyomo_model_index_from_dict(
+                model, input_dict, overwrite=overwrite
+            )
         assert hasattr(model, "_var_index_ref")
         assert hasattr(model, "_var_index")
-        assert model._var_index_ref == {
-            0: 0,
-            1: 1,
-            2: 2,
-            3: 3,
-            4: 4,
-            5: 5,
-            6: 6,
-            7: 7,
-            8: 8,
-            9: 9,
-        }
-        assert model._var_index == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        assert model._var_index_ref == {idx: i for i, idx in enumerate(expected)}
+        assert model._var_index == expected
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "func",
+    [
+        "max",
+        "max_index_set",
+        "multiply_array",
+        "multiply_scalar",
+        "multiply_scalar_first",
+        "decompose_consumption",
+    ],
+)
+def test_pyomo_index_built_on_demand(func):
+    """The utility functions attach `_var_index` themselves when it is missing."""
+    model = pyo.ConcreteModel()
+    model.t = pyo.RangeSet(0, 3)
+    model.x = pyo.Var(model.t, initialize=1)
+
+    if func == "max":
+        ut.max(model.x, model=model, varstr="test")
+    elif func == "max_index_set":
+        # an explicit `index_set` makes the model-wide index unnecessary
+        ut.max(model.x, model=model, varstr="test", index_set=[0, 1])
+        assert not hasattr(model, "_var_index")
+        return
+    elif func == "multiply_array":
+        ut.multiply(model.x, np.arange(4.0), model=model, varstr="test")
+    elif func == "multiply_scalar":
+        ut.multiply(model.x, 2.0, model=model, varstr="test")
+    elif func == "multiply_scalar_first":
+        ut.multiply(2.0, model.x, model=model, varstr="test")
+    else:
+        ut.decompose_consumption(model.x, model=model, varstr="test")
+
+    assert model._var_index == [0, 1, 2, 3]
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
