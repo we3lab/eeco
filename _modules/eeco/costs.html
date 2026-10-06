@@ -830,6 +830,32 @@
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">utility</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">charge_limit</span><span class="si">}</span><span class="s2">"</span></div>
 
 
+<div class="viewcode-block" id="parse_charge_key"><a class="viewcode-back" href="../../eeco.html#eeco.costs.parse_charge_key">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parse_charge_key</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Splits a charge key into its fields, inverting `default_varstr_alias_func`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    key : str</span>
+<span class="sd">        Charge key of the form</span>
+<span class="sd">        `utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit`</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        When `key` has fewer than six underscore-separated fields</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple of str</span>
+<span class="sd">        `utility`, `charge_type`, `name`, `start_date`, `end_date`, `charge_limit`</span>
+<span class="sd">    """</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Invalid charge key format: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="c1"># read from both ends, since `name` may itself contain underscores</span>
+    <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="n">parts</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span> <span class="s2">"_"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="o">-</span><span class="mi">3</span><span class="p">]),</span> <span class="o">*</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:])</span></div>
+
+
 <div class="viewcode-block" id="get_next_limit"><a class="viewcode-back" href="../../eeco.html#eeco.costs.get_next_limit">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_next_limit</span><span class="p">(</span><span class="n">key_substr</span><span class="p">,</span> <span class="n">current_limit</span><span class="p">,</span> <span class="n">keys</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Finds the next charge limit for the charge represented by `key`</span>
 
@@ -852,7 +878,7 @@
 <span class="sd">    """</span>
     <span class="n">matching_keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">key_substr</span> <span class="ow">in</span> <span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">]</span>
     <span class="n">limits</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
-        <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">compress</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">matching_keys</span><span class="p">)]</span>
+        <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">parse_charge_key</span><span class="p">(</span><span class="n">key</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">compress</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">matching_keys</span><span class="p">)]</span>
     <span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">matching_idx</span> <span class="o">=</span> <span class="n">limits</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">current_limit</span><span class="p">)</span>
@@ -1451,12 +1477,7 @@
 <span class="sd">    ValueError</span>
 <span class="sd">        If the key format is invalid or dates cannot be parsed</span>
 <span class="sd">    """</span>
-    <span class="n">parts</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Invalid charge key format: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-
-    <span class="n">start_date_str</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
-    <span class="n">end_date_str</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">start_date_str</span><span class="p">,</span> <span class="n">end_date_str</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">parse_charge_key</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
     <span class="c1"># Allow 2 date formats</span>
     <span class="n">date_formats</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2">"</span><span class="p">]</span>
@@ -1641,7 +1662,9 @@
     <span class="p">)</span>
 
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">charge_array</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">utility</span><span class="p">,</span> <span class="n">full_charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">,</span> <span class="n">limit_str</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
+        <span class="n">utility</span><span class="p">,</span> <span class="n">full_charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">,</span> <span class="n">limit_str</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">parse_charge_key</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="p">)</span>
         <span class="n">varstr</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">sanitize_varstr</span><span class="p">(</span>
             <span class="n">varstr_alias_func</span><span class="p">(</span>
                 <span class="n">utility</span><span class="p">,</span> <span class="n">full_charge_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">eff_start</span><span class="p">,</span> <span class="n">eff_end</span><span class="p">,</span> <span class="n">limit_str</span>

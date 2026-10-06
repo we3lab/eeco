@@ -100,6 +100,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.get_timesteps"><code class="docutils literal notranslate"><span class="pre">get_timesteps()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.parametrize_charge_dict"><code class="docutils literal notranslate"><span class="pre">parametrize_charge_dict()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.parametrize_rate_data"><code class="docutils literal notranslate"><span class="pre">parametrize_rate_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.costs.parse_charge_key"><code class="docutils literal notranslate"><span class="pre">parse_charge_key()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
@@ -1110,6 +1111,27 @@ parametrized charges and windows</p>
     scaling for the same charge type</p></li>
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – If percent_change_dict contains exact charge keys that are not found in the data</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.costs.parse_charge_key">
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">parse_charge_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#parse_charge_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.parse_charge_key" title="Permalink to this definition"></a></dt>
+<dd><p>Splits a charge key into its fields, inverting <cite>default_varstr_alias_func</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>key</strong> (<em>str</em>) – Charge key of the form
+<cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When <cite>key</cite> has fewer than six underscore-separated fields</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>utility</cite>, <cite>charge_type</cite>, <cite>name</cite>, <cite>start_date</cite>, <cite>end_date</cite>, <cite>charge_limit</cite></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a> of <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
 </dd>
 </dl>
 </dd></dl>
