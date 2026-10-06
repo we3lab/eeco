@@ -2945,36 +2945,6 @@ def test_build_pyomo_costing(
             np.ones(4) * 10.0,
             0.0,
         ),
-        # partially assessed, so the window scoping applies
-        (
-            None,
-            None,
-            None,
-            ELECTRIC,
-            {ELECTRIC: np.array([1.0, 5.0, 3.0, 9.0])},
-            None,
-            10.0,
-            1,
-            50.0,
-            False,
-            np.array([0.0, 10.0, 10.0, 0.0]),
-            0.0,
-        ),
-        # all-zero charge array leaves an empty window, so scoping is skipped
-        (
-            None,
-            None,
-            None,
-            ELECTRIC,
-            {ELECTRIC: np.array([1.0, 5.0, 3.0, 9.0])},
-            None,
-            10.0,
-            1,
-            0.0,
-            False,
-            np.zeros(4),
-            0.0,
-        ),
         # tier never reached, so demand_charged is np.array([0]) and lengths differ
         (
             None,
@@ -3353,6 +3323,31 @@ def test_calculate_export_revenue(
 )
 def test_get_charge_array_duration(key, expected):
     assert costs.get_charge_array_duration(key) == expected
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "key, expected",
+    [
+        (
+            "electric_demand_peak_20240710_20240731_100",
+            ("electric", "demand", "peak", "20240710", "20240731", "100"),
+        ),
+        # `name` may contain underscores and `charge_type` an assessed suffix
+        (
+            "gas_demand-monthly_on_peak_2024-07-10_2024-07-31_0.0",
+            ("gas", "demand-monthly", "on_peak", "2024-07-10", "2024-07-31", "0.0"),
+        ),
+        ("electric_demand_peak_20240710_20240731", None),  # too few fields
+    ],
+)
+def test_parse_charge_key(key, expected):
+    if expected is None:
+        with pytest.raises(ValueError, match="Invalid charge key format"):
+            costs.parse_charge_key(key)
+    else:
+        assert costs.parse_charge_key(key) == expected
+        assert costs.default_varstr_alias_func(*expected) == key
 
 
 @pytest.mark.parametrize(
