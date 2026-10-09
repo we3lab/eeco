@@ -3,6 +3,7 @@
 See :doc:`/demandresponse` for a description of the module.
 """
 
+import copy
 import warnings
 import holidays
 import numpy as np
@@ -128,6 +129,10 @@ def _component_name(varstr, suffix):
 class BaselineMethod:
     """Average-of-similar-days baseline with an optional day-of adjustment.
 
+    Instances are immutable once constructed, so one instance can be shared
+    across calls without risk of accidental modification. Use `replace` to
+    derive a variant.
+
     Parameters
     ----------
     n_baseline_days : int
@@ -210,9 +215,51 @@ class BaselineMethod:
         self.exclude_holidays = exclude_holidays
         self.holiday_country = holiday_country
         self.holiday_subdiv = holiday_subdiv
-        self.holiday_dates = list(holiday_dates) if holiday_dates else []
+        self.holiday_dates = tuple(holiday_dates) if holiday_dates else ()
         self.adjustment_in_model = adjustment_in_model
         self.resolution = resolution
+        self._freeze()
+
+    def _freeze(self):
+        """Make the instance immutable. Call at the end of each `__init__`."""
+        object.__setattr__(self, "_frozen", True)
+
+    def __setattr__(self, name, value):
+        if self.__dict__.get("_frozen"):
+            raise AttributeError(
+                f"{type(self).__name__} is immutable; use .replace(...) to "
+                f"derive a modified copy"
+            )
+        object.__setattr__(self, name, value)
+
+    def __delattr__(self, name):
+        if self.__dict__.get("_frozen"):
+            raise AttributeError(f"{type(self).__name__} is immutable")
+        object.__delattr__(self, name)
+
+    def replace(self, **changes):
+        """Return a new instance with some settings changed.
+
+        Parameters
+        ----------
+        **changes
+            Constructor arguments to override. Unspecified settings keep this
+            instance's values.
+
+        Returns
+        -------
+        BaselineMethod
+            New instance of the same class; `self` is unchanged.
+
+        Raises
+        ------
+        TypeError
+            If a key is not a constructor argument.
+        ValueError
+            If the resulting settings fail constructor validation.
+        """
+        params = {k: v for k, v in vars(self).items() if k != "_frozen"}
+        return type(self)(**{**params, **changes})
 
     def _is_holiday(self, day):
         """Check whether a day is a holiday under this method's configuration.
@@ -580,6 +627,7 @@ class FixedLevelBaseline(BaselineMethod):
             raise ValueError("firm_level_kW must be non-negative")
         self.firm_level_kW = firm_level_kW
         self.resolution = resolution
+        self._freeze()
 
     def compute(
         self,
@@ -652,6 +700,7 @@ class UnilateralInterruptionBaseline(BaselineMethod):
     def __init__(self, interruption_level_kW=0.0, resolution=None):
         self.interruption_level_kW = interruption_level_kW
         self.resolution = resolution
+        self._freeze()
 
     def compute(
         self,
@@ -794,11 +843,11 @@ def _coerce_baseline_method(baseline_params):
     Returns
     -------
     BaselineMethod
-        `baseline_params` if it is already a `BaselineMethod`, otherwise a
-        new `BaselineMethod` with the dict's settings.
+        A deep copy of `baseline_params` if it is already a `BaselineMethod`,
+        otherwise a new `BaselineMethod` with the dict's settings.
     """
     if isinstance(baseline_params, BaselineMethod):
-        return baseline_params
+        return copy.deepcopy(baseline_params)
     return BaselineMethod(
         n_baseline_days=baseline_params[N_BASELINE_DAYS],
         adjustment_offset_hours=baseline_params[ADJUSTMENT_OFFSET_HOURS],
