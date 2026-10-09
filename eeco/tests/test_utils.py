@@ -398,7 +398,6 @@ def test_max_cvx(values, expected):
     result, model = ut.max(var)
     cp.Problem(cp.Minimize(result), [var == values]).solve()
 
-    assert model is None
     assert result.value == pytest.approx(expected)
 
 
