@@ -783,12 +783,15 @@ def decompose_consumption(
         )
 
 
-def check_simultaneous_import_export(positive, negative, tol=1e-6, varstr=None):
-    """Warn if any timestep has both import and export components above `tol`.
+def check_simultaneous_import_export(
+    positive, negative, tol=1e-6, varstr=None, raise_error=False
+):
+    """Warn (or raise) if any timestep has both import and export above `tol`.
 
     Call after solving to verify that a `decomposition_type="linear"` split is
     exact. Simultaneous import and export means the charges allowed arbitrage
-    (e.g., export charge > energy charge).
+    (e.g., export charge > energy charge). Can also validate user-provided
+    numeric imports and exports before solving with `raise_error=True`.
 
     Parameters
     ----------
@@ -803,13 +806,21 @@ def check_simultaneous_import_export(positive, negative, tol=1e-6, varstr=None):
         Components at or below this value are treated as zero. Default 1e-6.
 
     varstr : str, optional
-        Name used to identify the utility in the warning message.
+        Name used to identify the utility in the warning or error message.
+
+    raise_error : bool, optional
+        If True, raise a ValueError instead of warning. Default False.
 
     Returns
     -------
     numpy.ndarray
         Indices of timesteps where both components exceed `tol`
         (empty if none)
+
+    Raises
+    ------
+    ValueError
+        If `raise_error` is True and any timestep has both components above `tol`
     """
 
     def _to_array(x):
@@ -824,6 +835,12 @@ def check_simultaneous_import_export(positive, negative, tol=1e-6, varstr=None):
     idx = np.where((pos > tol) & (neg > tol))[0]
     if idx.size:
         label = f" for '{varstr}'" if varstr else ""
+        if raise_error:
+            raise ValueError(
+                f"Simultaneous import and export{label} in {idx.size} "
+                f"timestep(s) (first indices: {idx[:5].tolist()}). Imports and "
+                "exports cannot both be positive."
+            )
         warnings.warn(
             f"Simultaneous import and export{label} in {idx.size} timestep(s) "
             f"(first indices: {idx[:5].tolist()}). The charges likely allow "

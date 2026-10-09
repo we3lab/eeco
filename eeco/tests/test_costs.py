@@ -11,6 +11,7 @@ from eeco import costs
 from eeco import utils as ut
 from eeco.units import u
 from eeco.costs import (
+    calculate_cost,
     CHARGE,
     TYPE,
     MONTH_START,
@@ -1542,8 +1543,8 @@ def test_get_charge_dict(
             },
             {
                 ELECTRIC: {
-                    "imports": np.ones(96) * 10,
-                    "exports": np.ones(96) * 5,
+                    "imports": np.r_[np.ones(48) * 20, np.zeros(48)],
+                    "exports": np.r_[np.zeros(48), np.ones(48) * 10],
                 },
                 GAS: {
                     "imports": np.ones(96) * 2,
@@ -2431,8 +2432,8 @@ test_list = [
         },
         {
             ELECTRIC: {
-                "imports": np.ones(96) * 10,
-                "exports": np.ones(96) * 5,
+                "imports": np.r_[np.ones(48) * 20, np.zeros(48)],
+                "exports": np.r_[np.zeros(48), np.ones(48) * 10],
             },
             GAS: {
                 "imports": np.ones(96) * 2,
@@ -5130,3 +5131,13 @@ def test_linear_decomposition_lp_avoids_arbitrage():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         ut.check_simultaneous_import_export(*positive)
+
+
+def test_calculate_cost_simultaneous_import_export_raises():
+    charge_dict = {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05}
+    consumption_data_dict = {
+        ELECTRIC: {"imports": np.ones(96) * 10, "exports": np.ones(96) * 5},
+        GAS: {"imports": np.ones(96), "exports": np.zeros(96)},
+    }
+    with pytest.raises(ValueError, match="Simultaneous import and export"):
+        calculate_cost(charge_dict, consumption_data_dict, resolution="15m")

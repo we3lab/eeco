@@ -1241,6 +1241,7 @@ def _check_linear_decomposition_charges(charge_dict):
         elif charge_type == EXPORT:
             export_sums[utility] = export_sums.get(utility, 0) + charge_array
 
+    # only utilities with both an energy and an export charge can have arbitrage
     for utility, export_charge in export_sums.items():
         energy_charge = energy_sums.get(utility)
         if (
@@ -1254,6 +1255,42 @@ def _check_linear_decomposition_charges(charge_dict):
                 "import and export simultaneously (arbitrage).",
                 UserWarning,
             )
+
+
+def _check_simultaneous_import_export(consumption_data_dict):
+    """Raise if user-provided imports and exports are both nonzero in a timestep.
+
+    Only utilities already given as ``{"imports": ..., "exports": ...}`` with
+    numeric array values are checked; symbolic (cvxpy/pyomo) values are skipped.
+
+    Parameters
+    ----------
+    consumption_data_dict : dict
+        Consumption data as passed to `calculate_cost`
+
+    Raises
+    ------
+    ValueError
+        If any timestep has both imports and exports greater than zero
+    """
+    for utility, data in consumption_data_dict.items():
+        if not (isinstance(data, dict) and "imports" in data and "exports" in data):
+            continue
+        imports, exports = data["imports"], data["exports"]
+        # with no decomposition, imports and exports alias the same net series
+        if imports is exports:
+            continue
+        if not (
+            isinstance(imports, (np.ndarray, list, tuple))
+            and isinstance(exports, (np.ndarray, list, tuple))
+        ):
+            continue
+        imports, exports = np.asarray(imports), np.asarray(exports)
+        if imports.shape != exports.shape:
+            continue
+        ut.check_simultaneous_import_export(
+            imports, exports, varstr=utility, raise_error=True
+        )
 
 
 def get_converted_consumption_data(
@@ -1565,6 +1602,19 @@ def calculate_cost(
           charge costs in USD for the given `charge_array` and `consumption_data`
         - Second entry: pyomo ConcreteModel (pyomo path), list of cvxpy constraints
           from decomposition (cvxpy + decomposition_type path), or None otherwise
+
+    Raises
+    ------
+    ValueError
+        If numeric `imports` and `exports` in `consumption_data_dict` are both
+        positive in the same timestep
+
+    Warns
+    -----
+    UserWarning
+        When `decomposition_type="linear"` and an export charge exceeds the
+        energy charge, since the LP split may then import and export
+        simultaneously
     """
     cost = 0
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
@@ -1577,6 +1627,8 @@ def calculate_cost(
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )
+
+    _check_simultaneous_import_export(consumption_data_dict)
 
     if decomposition_type == "linear":
         _check_linear_decomposition_charges(charge_dict)
@@ -1845,6 +1897,13 @@ def build_pyomo_costing(
     -------
     pyomo.Model
         The model object associated with the problem with costing components added.
+
+    Warns
+    -----
+    UserWarning
+        When `decomposition_type="linear"` and an export charge exceeds the
+        energy charge, since the LP split may then import and export
+        simultaneously
     """
     model.electricity_cost, model = calculate_cost(
         charge_dict=charge_dict,
@@ -2005,6 +2064,12 @@ def calculate_itemized_cost(
     model_objects : pyomo ConcreteModel, list of cvxpy constraints, or None
         Same as the second return value of `calculate_cost`.
 
+    Warns
+    -----
+    UserWarning
+        When `decomposition_type="linear"` and an export charge exceeds the
+        energy charge, since the LP split may then import and export
+        simultaneously
     """
     if model is not None and not hasattr(model, "_var_index"):
         # Assumes vars for diff utilities share same index set
