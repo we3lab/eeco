@@ -3083,7 +3083,7 @@ def test_calculate_demand_costs(
         (np.ones(4), None, [0, 1, 2, 3]),
         (np.array([0.0, 20.0, 20.0, 0.0]), None, [1, 2]),
         (np.zeros(4), None, []),
-        # assessed with negative rates
+        # assessed with negative charges
         (np.array([0.0, -20.0, 0.0, 0.0]), None, [1]),
         (np.array([0.0, 20.0, 20.0, 0.0]), [0, 60, 120, 180], [60, 120]),
         (np.array([0.0, 20.0, 0.0, 0.0]), [2.0, 4.0, 5.0, 8.0], [4.0]),
@@ -5072,22 +5072,24 @@ def test_get_prev_demand_dict(start_dt, billing_period_starts, prev_dict, expect
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "energy_rate, export_rate, expected_warning",
+    "energy_charge, export_charge, expected_warning",
     [
-        (0.05, 0.10, "export rate exceeds energy rate"),
-        (-0.05, None, "Negative electric energy rate"),
+        (0.05, 0.10, "export charge exceeds energy charge"),
+        (-0.05, None, "Negative electric energy charge"),
         (0.05, 0.025, None),
-        (0.05, 0.05, None),  # equal rates are still exact
+        (0.05, 0.05, None),  # equal charges are still exact
     ],
 )
-def test_linear_decomposition_rate_warning(energy_rate, export_rate, expected_warning):
+def test_linear_decomposition_charge_warning(
+    energy_charge, export_charge, expected_warning
+):
     """decomposition_type="linear" warns when the LP split may be inexact."""
     charge_dict = {
-        "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * energy_rate,
+        "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * energy_charge,
     }
-    if export_rate is not None:
+    if export_charge is not None:
         charge_dict["electric_export_0_2024-07-10_2024-07-10_0"] = (
-            np.ones(96) * export_rate
+            np.ones(96) * export_charge
         )
     cvx_vars, _ = setup_cvx_vars_constraints(
         {ELECTRIC: np.zeros(96), GAS: np.zeros(96)}
@@ -5105,7 +5107,7 @@ def test_linear_decomposition_rate_warning(energy_rate, export_rate, expected_wa
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 def test_linear_decomposition_lp_avoids_arbitrage():
-    """With export <= energy rate the LP split never imports and exports at once."""
+    """With export <= energy charge the LP split never imports and exports at once."""
     charge_dict = {
         "electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05,
         "electric_export_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.025,

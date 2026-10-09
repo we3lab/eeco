@@ -500,39 +500,32 @@ def _decompose_binary_cvx(expression, big_m=1e6):
     return positive_var, negative_var, constraints
 
 
-def _decompose_absolute_value_pyo(expression, model, varstr):
-    """Create Pyomo vars and add absolute value specific constraints.
+def _add_absolute_value_pyo(model, varstr, expression, positive_var, negative_var):
+    """Add the absolute value magnitude constraint to an LP decomposition.
 
-    Uses max_pos constraints and magnitude constraint with abs().
-    Creates a nonlinear problem.
+    Together with `expression == positive_var - negative_var`, the constraint
+    `positive_var + negative_var == abs(expression)` forces both variables to be
+    the max(., 0) of the expression and its negation. Creates a nonlinear problem.
 
     Parameters
     ----------
-    expression : pyomo.environ.Var or pyomo.environ.Param
-        Pyomo variable representing net consumption
     model : pyomo.environ.Model
         The Pyomo model object
     varstr : str
-        Name prefix for created variables
+        Name prefix for created constraints
+    expression : pyomo.environ.Var or pyomo.environ.Param
+        Pyomo variable representing net consumption
+    positive_var : pyomo.environ.Var
+        Non-negative import variable
+    negative_var : pyomo.environ.Var
+        Non-negative export variable (magnitude)
 
     Returns
     -------
-    tuple
-        (positive_var, negative_var, model)
+    pyomo.environ.Model
+        The model with the magnitude constraint added
     """
-    pos_name, neg_name = get_decomposed_var_names(varstr)
-    positive_var, model = max_pos(expression, model, pos_name)
 
-    # Create negative expression since pyomo won't take -expression directly
-    def negative_rule(model, t):
-        return -expression[t]
-
-    negative_expr = pyo.Expression(model._var_index, rule=negative_rule)
-    model.add_component(f"{varstr}_negative_expr", negative_expr)
-    negative_var, model = max_pos(negative_expr, model, neg_name)
-
-    # Add constraint to ensure positive_var + negative_var = |expression|
-    # This prevents both variables becoming larger due to artificial arbitrage
     def magnitude_rule(model, t):
         return positive_var[t] + negative_var[t] == abs(expression[t])
 
@@ -540,34 +533,32 @@ def _decompose_absolute_value_pyo(expression, model, varstr):
         f"{varstr}_magnitude_constraint",
         pyo.Constraint(model._var_index, rule=magnitude_rule),
     )
+    return model
 
-    return positive_var, negative_var, model
 
-
-def _decompose_binary_pyo(expression, model, varstr, big_m=1e6):
-    """Create Pyomo vars and add binary/Big-M specific constraints.
+def _add_binary_big_M_pyo(model, varstr, positive_var, negative_var, big_m=1e6):
+    """Add a binary import/export indicator and Big-M constraints.
 
     Creates a MILP where a binary variable indicates import (1) or export (0).
 
     Parameters
     ----------
-    expression : pyomo.environ.Var or pyomo.environ.Param
-        Pyomo variable representing net consumption
     model : pyomo.environ.Model
         The Pyomo model object
     varstr : str
-        Name prefix for created variables
+        Name prefix for created variables and constraints
+    positive_var : pyomo.environ.Var
+        Non-negative import variable
+    negative_var : pyomo.environ.Var
+        Non-negative export variable (magnitude)
     big_m : float, optional
         Big-M value for constraints. Default is 1e6.
 
     Returns
     -------
-    tuple
-        (positive_var, negative_var, model)
+    pyomo.environ.Model
+        The model with the binary variable and Big-M constraints added
     """
-    pos_name, neg_name = get_decomposed_var_names(varstr)
-
-    # Binary variable: 1 = importing, 0 = exporting
     binary_name = f"{varstr}_is_importing"
     model.add_component(
         binary_name,
@@ -575,25 +566,7 @@ def _decompose_binary_pyo(expression, model, varstr, big_m=1e6):
     )
     binary_var = model.find_component(binary_name)
 
-    # Import variable (positive consumption)
-    model.add_component(
-        pos_name,
-        pyo.Var(model._var_index, bounds=(0, None), initialize=0),
-    )
-    positive_var = model.find_component(pos_name)
-
-    # Export variable (magnitude of negative consumption, stored as positive)
-    model.add_component(
-        neg_name,
-        pyo.Var(model._var_index, bounds=(0, None), initialize=0),
-    )
-    negative_var = model.find_component(neg_name)
-
-    # Big-M constraints to enforce mutual exclusivity:
-    # If binary=1: imports can be positive, exports must be 0
-    # If binary=0: imports must be 0, exports can be positive
-
-    # Constraint: imports <= big_m * binary (imports=0 when binary=0)
+    # imports <= big_m * binary (imports = 0 when binary = 0)
     def import_bigm_rule(model, t):
         return positive_var[t] <= big_m * binary_var[t]
 
@@ -602,7 +575,7 @@ def _decompose_binary_pyo(expression, model, varstr, big_m=1e6):
         pyo.Constraint(model._var_index, rule=import_bigm_rule),
     )
 
-    # Constraint: exports <= big_m * (1 - binary) (exports=0 when binary=1)
+    # exports <= big_m * (1 - binary) (exports = 0 when binary = 1)
     def export_bigm_rule(model, t):
         return negative_var[t] <= big_m * (1 - binary_var[t])
 
@@ -610,8 +583,8 @@ def _decompose_binary_pyo(expression, model, varstr, big_m=1e6):
         f"{varstr}_export_bigm_constraint",
         pyo.Constraint(model._var_index, rule=export_bigm_rule),
     )
+    return model
 
-    return positive_var, negative_var, model
 
 
 def _decompose_linear_cvx(expression):
@@ -619,7 +592,7 @@ def _decompose_linear_cvx(expression):
 
     Creates a linear program (no binaries, no abs()). The split is exact only
     when exporting is never more valuable than importing is costly, i.e.
-    export rate <= energy rate and demand rates are non-negative.
+    export charge <= energy charge and demand charges are non-negative.
 
     Parameters
     ----------
@@ -647,7 +620,7 @@ def _decompose_linear_pyo(expression, model, varstr):
 
     The shared decomposition constraint (expression = imports - exports) is
     added by `decompose_consumption`, so no constraints are added here.
-    Exact only when export rate <= energy rate and demand rates are
+    Exact only when export charge <= energy charge and demand charges are
     non-negative.
 
     Parameters
@@ -718,8 +691,8 @@ def decompose_consumption(
           Supported for both Pyomo and CVXPY (requires MIP solver).
         - "linear": Plain LP split with non-negative import/export variables
           and no magnitude constraint. Supported for both Pyomo and CVXPY and
-          needs no MIP/NLP solver. Exact only when export rate <= energy rate
-          and demand rates are non-negative; otherwise the solver may import
+          needs no MIP/NLP solver. Exact only when export charge <= energy charge
+          and demand charges are non-negative; otherwise the solver may import
           and export simultaneously. See `check_simultaneous_import_export`.
 
         Note: For numpy.ndarray inputs, decomposition_type is ignored
@@ -774,23 +747,23 @@ def decompose_consumption(
             )
 
     elif check_indexed_pyomo_type(expression):
-        # Call mode-specific function to create vars and add mode-specific constraints
-        if decomposition_type == "absolute_value":
-            positive_var, negative_var, model = _decompose_absolute_value_pyo(
-                expression, model, varstr
-            )
-        elif decomposition_type == "binary_big_M":
-            positive_var, negative_var, model = _decompose_binary_pyo(
-                expression, model, varstr, big_m
-            )
-        elif decomposition_type == "linear":
-            positive_var, negative_var, model = _decompose_linear_pyo(
-                expression, model, varstr
-            )
-        else:
+        if decomposition_type not in ("absolute_value", "binary_big_M", "linear"):
             raise NotImplementedError(
                 f"Decomposition type '{decomposition_type}' not supported for Pyomo. "
                 "Available types: 'absolute_value', 'binary_big_M' and 'linear'."
+            )
+
+        # All Pyomo types share the LP split; others add constraints on top
+        positive_var, negative_var, model = _decompose_linear_pyo(
+            expression, model, varstr
+        )
+        if decomposition_type == "absolute_value":
+            model = _add_absolute_value_pyo(
+                model, varstr, expression, positive_var, negative_var
+            )
+        elif decomposition_type == "binary_big_M":
+            model = _add_binary_big_M_pyo(
+                model, varstr, positive_var, negative_var, big_m
             )
 
         # Add common decomposition constraint: expression = imports - exports
@@ -814,8 +787,8 @@ def check_simultaneous_import_export(positive, negative, tol=1e-6, varstr=None):
     """Warn if any timestep has both import and export components above `tol`.
 
     Call after solving to verify that a `decomposition_type="linear"` split is
-    exact. Simultaneous import and export means the rates allowed arbitrage
-    (e.g., export rate > energy rate).
+    exact. Simultaneous import and export means the charges allowed arbitrage
+    (e.g., export charge > energy charge).
 
     Parameters
     ----------
@@ -853,8 +826,8 @@ def check_simultaneous_import_export(positive, negative, tol=1e-6, varstr=None):
         label = f" for '{varstr}'" if varstr else ""
         warnings.warn(
             f"Simultaneous import and export{label} in {idx.size} timestep(s) "
-            f"(first indices: {idx[:5].tolist()}). The rates likely allow "
-            "arbitrage (e.g., export rate > energy rate), so the linear "
+            f"(first indices: {idx[:5].tolist()}). The charges likely allow "
+            "arbitrage (e.g., export charge > energy charge), so the linear "
             "decomposition is not exact.",
             UserWarning,
         )
