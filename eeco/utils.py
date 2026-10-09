@@ -189,6 +189,7 @@ def max(expression, model=None, varstr=None, index_set=None):
             return var >= expression[t]
 
         if index_set is None:
+            create_pyomo_model_index_from_dict(model, expression)
             index_set = model._var_index
         constraint = pyo.Constraint(index_set, rule=const_rule)
         model.add_component(varstr + "_constraint", constraint)
@@ -395,10 +396,12 @@ def multiply(
         or check_indexed_pyomo_type(expression1)
         or check_indexed_pyomo_type(expression2)
     ):
+        expressions = {"expression1": expression1, "expression2": expression2}
         if (not check_nonindexed_python_type(expression1)) and (len(expression1) > 1):
             if (not check_nonindexed_python_type(expression2)) and (
                 len(expression2) > 1
             ):
+                create_pyomo_model_index_from_dict(model, expressions)
                 model.add_component(varstr, pyo.Var(model._var_index))
                 var = model.find_component(varstr)
 
@@ -417,6 +420,7 @@ def multiply(
                 model.add_component(varstr + "_constraint", constraint)
                 return (var, model)
             else:
+                create_pyomo_model_index_from_dict(model, expressions)
                 model.add_component(varstr, pyo.Var(model._var_index))
                 var = model.find_component(varstr)
 
@@ -427,6 +431,7 @@ def multiply(
                 model.add_component(varstr + "_constraint", constraint)
                 return (var, model)
         elif (not check_nonindexed_pyomo_type(expression2)) and (len(expression2) > 1):
+            create_pyomo_model_index_from_dict(model, expressions)
             model.add_component(varstr, pyo.Var(model._var_index))
             var = model.find_component(varstr)
 
@@ -699,6 +704,7 @@ def decompose_consumption(
             )
 
     elif check_indexed_pyomo_type(expression):
+        create_pyomo_model_index_from_dict(model, expression)
         # Call mode-specific function to create vars and add mode-specific constraints
         if decomposition_type == "absolute_value":
             positive_var, negative_var, model = _decompose_absolute_value_pyo(
@@ -844,24 +850,27 @@ def create_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
     values and plain integer positions (e.g. when aligning with a NumPy
     array or another positional data structure).
 
+    Does nothing if `model` already has an index and `overwrite` is False.
+
     Parameters
     ----------
     model : pyomo.environ.Model
         The Pyomo model (or Block) to attach the index bookkeeping to.
 
-    dict : dict that contains {key: pyomo.environ.Param or pyomo.environ.Var} or
+    input_dict : dict that contains {key: pyomo.environ.Param or pyomo.environ.Var} or
         dict of dicts like {key: {key: pyomo.environ.Param or pyomo.environ.Var}},
-        Can also be an indexed pyomo var, experssion or param
+        Can also be an indexed pyomo var, expression or param
 
     overwrite : bool
         Ignored if index does not exist yet.
         If index exists, must be set to True for updates to take effect.
-        If False, no changes are made to the index and a warning is raised.
+        If False, the existing index is left untouched.
 
     Raises
     ------
     TypeError
-        When pyomo var is not found in supplied dict, will raise an error
+        When the model has no index yet and no pyomo var is found in the
+        supplied dict
 
     Returns
     -------
@@ -872,14 +881,16 @@ def create_pyomo_model_index_from_dict(model, input_dict, overwrite=False):
         - `_var_index` (list): the index values of `var.index_set()`
             in enumeration order.
     """
+    if hasattr(model, "_var_index") and not overwrite:
+        return
 
-    def find_pyo_var(posible_dict):
-        if isinstance(posible_dict, dict):
-            for sub_dict in posible_dict.values():
+    def find_pyo_var(possible_dict):
+        if isinstance(possible_dict, dict):
+            for sub_dict in possible_dict.values():
                 if find_pyo_var(sub_dict):
                     return True
-        elif check_indexed_pyomo_type(posible_dict):
-            create_pyomo_model_index_ref(model, posible_dict, overwrite=overwrite)
+        elif check_indexed_pyomo_type(possible_dict):
+            create_pyomo_model_index_ref(model, possible_dict, overwrite=overwrite)
             return True
         return False
 
@@ -934,7 +945,7 @@ def create_pyomo_model_index_ref(model, var, overwrite=False):
         model._var_index = list(var.index_set())
     else:
         warnings.warn(
-            "`_var_index` already exists, so `create_pyomo_model_index_ref`"
+            "`_var_index` already exists, so `create_pyomo_model_index_ref` "
             "was ignored. Please set `overwrite=True` to enforce updating the index.",
             UserWarning,
         )
@@ -958,7 +969,7 @@ def check_indexed_pyomo_type(input_var):
 
 
 def check_nonindexed_pyomo_type(input_var):
-    """Checks if input is a non-idnexed Pyomo variable, expression, or parameter.
+    """Checks if input is a non-indexed Pyomo variable, expression, or parameter.
     Returns `False` if an indexed variable, parameter,
     or expression (or non-Pyomo type).
 
