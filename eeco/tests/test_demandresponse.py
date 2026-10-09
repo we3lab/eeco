@@ -501,7 +501,7 @@ def test_calculate_event_baseline_dynamic_day_partial_overlap(flat_power_series)
         model_datetime_index=model_datetime_index,
         varstr="test_baseline_3",
     )
-    # The test makes sure the code does not use the optimizer's power values. 
+    # The test makes sure the code does not use the optimizer's power values.
     np.testing.assert_allclose(baseline_kW, [50, 70])
     assert model.find_component("test_baseline_3") is None
 
