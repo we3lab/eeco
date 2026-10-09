@@ -10,7 +10,7 @@ This module computes incentive-based demand response (DR) revenue from
 electricity consumption data, modeled along two composable axes --
 :class:`BaselineMethod` for how the counterfactual is measured and
 :class:`PaymentStructure` for how it is paid -- with three entry points:
-``calculate_dr_revenue``, ``build_dr_revenue`` (pyomo only, nets into
+``calculate_dr_revenue``, ``build_dr_revenue`` (pyomo only, is added to
 ``model.objective``), and ``calculate_itemized_dr_revenue`` (post-optimization,
 per-event breakdown).
 
@@ -31,7 +31,8 @@ Events
 
 An event is a ``dict`` built by ``add_event``. A collection of events is a
 ``list`` of these dicts, or a ``pandas.DataFrame`` with one row per event
-(``events_to_dataframe``). The keys are available as module constants.
+(``events_to_dataframe``). The keys are available as Python string variables
+denoted in all caps since they are global constants.
 
 .. list-table::
    :header-rows: 1
@@ -104,7 +105,8 @@ Baseline methods
 
 A :class:`BaselineMethod` computes the counterfactual power the site
 *would have* drawn absent the event, which is subtracted from actual power
-to get the reduction a program pays for. The module bundles four of them.
+to get the reduction a program pays for. The module has built-in classes 
+for four baseline methods.
 
 ``BaselineMethod``
 -------------------
@@ -187,7 +189,7 @@ zero baseline makes every kW of actual consumption look like a negative
 reduction, pair it with either a payout-only payment structure or a payment
 schedule whose lowest region extends to ``-Infinity``; the bundled CBP-style
 schedule does not cover a negative delivered ratio, and ``find_region`` will
-raise.
+raise a ValueError. 
 
 ``TopUsageDaysBaseline``
 -------------------------
@@ -231,7 +233,8 @@ Payment structures
 ====================
 
 A :class:`PaymentStructure` turns a reduction (baseline minus actual power)
-into a dollar amount. The module bundles three of them.
+into a dollar amount. The module has built-in classes for three Payment 
+methods.
 
 ``PaymentStructure``
 ----------------------
@@ -246,6 +249,15 @@ flat participation payment (for example, paired with
 ``UnilateralInterruptionBaseline``). ``payout`` is in **$/kW of
 ``bid_capacity_kW``**, not a flat dollar amount, since one structure is
 shared across events with different bid sizes.
+
+.. note::
+
+   Unlike the default ``BaselineMethod``, the other defaults here do not
+   reproduce PG&E's CBP. CBP settles each hour separately and pays a monthly
+   capacity payment, whereas this class defaults to ``settlement="average"``
+   and ``payment_basis="per_event"``. To model CBP, set
+   ``settlement="interval"`` and ``payment_basis="monthly_share"`` (see
+   below).
 
 **Settlement.** When the reduction carries more than one settlement
 interval, ``settlement`` controls how the capacity payment is aggregated:
