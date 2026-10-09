@@ -104,11 +104,27 @@ def test_sum_pyo(consumption_data, varstr, expected):
             [2.0, 4.0, 5.0, 8.0],
             np.array([10.0, 40.0, 90.0, 160.0]),
         ),
+        # Pyo variable * scalar
+        (
+            {"electric": np.array([100.0, 200.0, 300.0, 400.0])},
+            "electric",
+            2.0,
+            None,
+            np.array([200.0, 400.0, 600.0, 800.0]),
+        ),
+        # scalar * Pyo variable
+        (
+            {"electric": np.array([100.0, 200.0, 300.0, 400.0])},
+            2.0,
+            "electric",
+            None,
+            np.array([200.0, 400.0, 600.0, 800.0]),
+        ),
     ],
 )
 def test_multiply_pyo(consumption_data, varstr1, varstr2, time_set, expected):
     model = pyo.ConcreteModel()
-    model.T = len(consumption_data[varstr1])
+    model.T = len(next(iter(consumption_data.values())))
     model.t = range(model.T) if time_set is None else time_set
     pos = {t: i for i, t in enumerate(model.t)}
     for key, val in consumption_data.items():
@@ -117,10 +133,10 @@ def test_multiply_pyo(consumption_data, varstr1, varstr2, time_set, expected):
         for t in model.t:
             var[t].fix(float(val[pos[t]]))
 
-    var1 = getattr(model, varstr1)
+    var1 = getattr(model, varstr1) if isinstance(varstr1, str) else varstr1
     var2 = getattr(model, varstr2) if isinstance(varstr2, str) else varstr2
-    ut.create_pyomo_model_index_ref(model, var1)
     result, model = ut.multiply(var1, var2, model=model, varstr="test")
+    assert model._var_index == list(model.t)  # built by multiply itself
     model.objective = pyo.Objective(expr=0)
     solver = pyo.SolverFactory("ipopt")
     solver.solve(model)
@@ -190,13 +206,16 @@ def test_max_pyo(consumption_data, varstr, index_set, expected):
 
     var = getattr(model, varstr)
 
-    ut.create_pyomo_model_index_ref(model, var)
     result, model = ut.max(
         var,
         model=model,
         varstr="test",
         index_set=index_set,
     )
+    if index_set is None:
+        assert model._var_index == list(model.t)  # built by max itself
+    else:  # no model-wide index
+        assert not hasattr(model, "_var_index")
 
     model.objective = pyo.Objective(expr=0)
     solver = pyo.SolverFactory("scip")
@@ -214,7 +233,7 @@ def test_max_pyo(consumption_data, varstr, index_set, expected):
         ("nested", None, False, list(range(10)), False),
         ("multi_input", None, False, list(range(10)), False),
         ("empty", None, False, None, True),
-        ("normal", range(2), False, [0, 1], False),  # non-range index
+        ("normal", range(2), False, [0, 1], False),  # keeps existing index
         ("normal", range(2), True, list(range(10)), False),  # overwrite
     ],
 )
@@ -256,43 +275,6 @@ def test_create_pyomo_model_index_ref_from_dict(
         assert hasattr(model, "_var_index")
         assert model._var_index_ref == {idx: i for i, idx in enumerate(expected)}
         assert model._var_index == expected
-
-
-@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-@pytest.mark.parametrize(
-    "func",
-    [
-        "max",
-        "max_index_set",
-        "multiply_array",
-        "multiply_scalar",
-        "multiply_scalar_first",
-        "decompose_consumption",
-    ],
-)
-def test_pyomo_index_built_on_demand(func):
-    """The utility functions attach `_var_index` themselves when it is missing."""
-    model = pyo.ConcreteModel()
-    model.t = pyo.RangeSet(0, 3)
-    model.x = pyo.Var(model.t, initialize=1)
-
-    if func == "max":
-        ut.max(model.x, model=model, varstr="test")
-    elif func == "max_index_set":
-        # an explicit `index_set` makes the model-wide index unnecessary
-        ut.max(model.x, model=model, varstr="test", index_set=[0, 1])
-        assert not hasattr(model, "_var_index")
-        return
-    elif func == "multiply_array":
-        ut.multiply(model.x, np.arange(4.0), model=model, varstr="test")
-    elif func == "multiply_scalar":
-        ut.multiply(model.x, 2.0, model=model, varstr="test")
-    elif func == "multiply_scalar_first":
-        ut.multiply(2.0, model.x, model=model, varstr="test")
-    else:
-        ut.decompose_consumption(model.x, model=model, varstr="test")
-
-    assert model._var_index == [0, 1, 2, 3]
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -556,7 +538,6 @@ def test_decompose_consumption_pyo(
         "gas": np.zeros_like(consumption_data),
     }
     model, pyo_vars = setup_pyo_vars_constraints(consumption_data_dict)
-    ut.create_pyomo_model_index_from_dict(model, pyo_vars)
     if expect_error:
         with pytest.raises(NotImplementedError):
             ut.decompose_consumption(
@@ -573,6 +554,7 @@ def test_decompose_consumption_pyo(
             decomposition_type=decomposition_type,
         )
         # Check that variables exist and have the correct length
+        assert model._var_index == list(model.dummy_t)  # built by decompose itself
         assert hasattr(model, "electric_positive")
         assert hasattr(model, "electric_negative")
         assert hasattr(model, "electric_decomposition_constraint")
