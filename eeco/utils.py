@@ -586,7 +586,6 @@ def _add_binary_big_M_pyo(model, varstr, positive_var, negative_var, big_m=1e6):
     return model
 
 
-
 def _decompose_linear_cvx(expression):
     """Decompose CVXPY expression into non-negative import/export variables.
 
