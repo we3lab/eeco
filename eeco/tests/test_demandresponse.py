@@ -1856,3 +1856,47 @@ def test_build_dr_revenue_monthly_share_pyomo():
     _assert_region_components_satisfied(model, "dr_event_1")
 
     assert pyo.value(total_revenue) == pytest.approx(600)
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        dr.BaselineMethod(holiday_dates=["2024-07-08"]),
+        dr.TopUsageDaysBaseline(),
+        dr.FixedLevelBaseline(firm_level_kW=5),
+        dr.UnilateralInterruptionBaseline(interruption_level_kW=1),
+    ],
+)
+def test_baseline_methods_are_immutable(method):
+    with pytest.raises(AttributeError):
+        method.resolution = "1h"
+    with pytest.raises(AttributeError):
+        del method.resolution
+
+
+def test_baseline_method_holiday_dates_is_tuple():
+    assert dr.BaselineMethod(holiday_dates=["2024-07-08"]).holiday_dates == (
+        "2024-07-08",
+    )
+
+
+def test_baseline_method_replace():
+    original = dr.BaselineMethod(n_baseline_days=3)
+    changed = original.replace(n_baseline_days=5)
+    assert changed is not original
+    assert (original.n_baseline_days, changed.n_baseline_days) == (3, 5)
+    assert changed.adjustment_clip == original.adjustment_clip
+    assert dr.FixedLevelBaseline(5).replace(firm_level_kW=7).firm_level_kW == 7
+    with pytest.raises(TypeError):
+        original.replace(not_a_setting=1)
+    with pytest.raises(ValueError):
+        original.replace(n_baseline_days=-1)
+
+
+def test_coerce_baseline_method_returns_frozen_copy():
+    original = dr.BaselineMethod(holiday_dates=["2024-07-08"])
+    coerced = dr._coerce_baseline_method(original)
+    assert coerced is not original
+    assert vars(coerced) == vars(original)
+    with pytest.raises(AttributeError):
+        coerced.n_baseline_days = 1
