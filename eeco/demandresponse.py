@@ -3,7 +3,6 @@
 See :doc:`/demandresponse` for a description of the module.
 """
 
-import copy
 import warnings
 import holidays
 import numpy as np
@@ -23,19 +22,6 @@ BID_CAPACITY_KW = "bid_capacity_kW"
 CAPACITY_PRICE = "capacity_price"
 ADJUSTMENT_FACTOR = "adjustment_factor"
 MONTHLY_CALLED_CAPACITY_KWH = "monthly_called_capacity_kWh"
-
-# Baseline parameter dict keys
-BASELINE_METHOD = "baseline_method"
-N_BASELINE_DAYS = "n_baseline_days"
-ADJUSTMENT_OFFSET_HOURS = "adjustment_offset_hours"
-ADJUSTMENT_DURATION_HOURS = "adjustment_duration_hours"
-ADJUSTMENT_CLIP = "adjustment_clip"
-EXCLUDE_WEEKENDS = "exclude_weekends"
-EXCLUDE_HOLIDAYS = "exclude_holidays"
-HOLIDAY_COUNTRY = "holiday_country"
-HOLIDAY_SUBDIV = "holiday_subdiv"
-HOLIDAY_DATES = "holiday_dates"
-RESOLUTION = "resolution"
 
 # Output/result column keys
 BASELINE_KW = "baseline_kW"
@@ -457,10 +443,10 @@ class BaselineMethod:
 
         Returns
         -------
-        numpy.ndarray or tuple
-            Per-interval baseline in kW when `model` is `None`, otherwise
-            `(baseline_kW, model)` where `baseline_kW` is a `numpy.ndarray` or
-            an indexed `pyomo.environ.Var`.
+        tuple
+            `(baseline_kW, model)`, where `baseline_kW` is the per-interval
+            baseline in kW as a `numpy.ndarray` or an indexed
+            `pyomo.environ.Var`, and `model` is `None` ex-post.
         """
         if model is not None and any(
             a is None for a in (model_power_kW, model_datetime_index, varstr)
@@ -479,10 +465,7 @@ class BaselineMethod:
 
         if self.n_baseline_days == 0:
             # No baselining: there are no days to select or adjust against
-            baseline_kW = np.zeros(n_intervals)
-            if model is None:
-                return baseline_kW
-            return baseline_kW, model
+            return np.zeros(n_intervals), model
 
         candidate_days = [pd.Timestamp(d) for d in event[BASELINE_DAYS]]
         valid_days = self.select_days(candidate_days, historical_power_kW, event)
@@ -543,11 +526,9 @@ class BaselineMethod:
             else:
                 baseline_kW = baseline_kW * factor
 
-        if model is None:
-            return baseline_kW
         # A factor-scaled baseline is a symbolic expression, so it needs a Var
         # to stand for it even when every baseline day was historical.
-        if not any_dynamic:
+        if model is None or not any_dynamic:
             return baseline_kW, model
 
         interval_idx = range(n_intervals)
@@ -652,7 +633,7 @@ class FixedLevelBaseline(BaselineMethod):
             Single event dict. See `add_event` for the keys.
 
         model : pyomo.environ.Model or pyomo.environ.Block or None
-            Determines the return type only. No components are added.
+            Returned unchanged. No components are added.
 
         model_power_kW : pyomo.environ.Var or None
             Unused.
@@ -668,9 +649,9 @@ class FixedLevelBaseline(BaselineMethod):
 
         Returns
         -------
-        numpy.ndarray or tuple
-            `firm_level_kW` repeated once per interval when `model` is `None`,
-            otherwise `(baseline_kW, model)`.
+        tuple
+            `(baseline_kW, model)`, where `baseline_kW` is `firm_level_kW`
+            repeated once per interval.
         """
         step = _resolve_step(
             self.resolution,
@@ -679,8 +660,6 @@ class FixedLevelBaseline(BaselineMethod):
         )
         n_intervals = _window_interval_count(event[EVENT_DURATION], step)
         baseline_kW = np.full(n_intervals, self.firm_level_kW, dtype=float)
-        if model is None:
-            return baseline_kW
         return baseline_kW, model
 
 
@@ -829,37 +808,6 @@ def _resolve_adjustment_factor(event, adjustment_factor):
     if adjustment_factor <= 0:
         raise ValueError("adjustment_factor must be positive")
     return float(adjustment_factor)
-
-
-def _coerce_baseline_method(baseline_params):
-    """Convert a baseline parameter dict into a `BaselineMethod`.
-
-    Parameters
-    ----------
-    baseline_params : dict or BaselineMethod
-        Baseline parameter dict from `make_baseline_parameters`, or a
-        `BaselineMethod` instance.
-
-    Returns
-    -------
-    BaselineMethod
-        A deep copy of `baseline_params` if it is already a `BaselineMethod`,
-        otherwise a new `BaselineMethod` with the dict's settings.
-    """
-    if isinstance(baseline_params, BaselineMethod):
-        return copy.deepcopy(baseline_params)
-    return BaselineMethod(
-        n_baseline_days=baseline_params[N_BASELINE_DAYS],
-        adjustment_offset_hours=baseline_params[ADJUSTMENT_OFFSET_HOURS],
-        adjustment_duration_hours=baseline_params[ADJUSTMENT_DURATION_HOURS],
-        adjustment_clip=baseline_params[ADJUSTMENT_CLIP],
-        exclude_weekends=baseline_params[EXCLUDE_WEEKENDS],
-        exclude_holidays=baseline_params[EXCLUDE_HOLIDAYS],
-        holiday_country=baseline_params.get(HOLIDAY_COUNTRY),
-        holiday_subdiv=baseline_params.get(HOLIDAY_SUBDIV),
-        holiday_dates=baseline_params[HOLIDAY_DATES],
-        resolution=baseline_params.get(RESOLUTION),
-    )
 
 
 def _event_window_mask(index, event_date, start_hour, duration_hours):
@@ -2353,114 +2301,6 @@ def _fill_monthly_called_capacity(events_df):
     return events_df
 
 
-def make_baseline_parameters(
-    baseline_method="average_similar_days",
-    n_baseline_days=10,
-    adjustment_offset_hours=3,
-    adjustment_duration_hours=3,
-    adjustment_clip=(0.8, 1.2),
-    exclude_weekends=True,
-    exclude_holidays=True,
-    holiday_country=None,
-    holiday_subdiv=None,
-    holiday_dates=None,
-    resolution=None,
-):
-    """Build a dictionary of baseline calculation parameters.
-
-    Parameters
-    ----------
-    baseline_method : str
-        Baseline method. Only `"average_similar_days"` is supported.
-
-    n_baseline_days : int
-        Number of eligible baseline days to average. `0` disables baselining.
-
-    adjustment_offset_hours : int or None
-        Hours before the event start at which the day-of adjustment window
-        begins. `None` disables the day-of adjustment.
-
-    adjustment_duration_hours : int
-        Length of the day-of adjustment window in hours.
-
-    adjustment_clip : tuple of float
-        `(low, high)` bounds on the day-of adjustment factor.
-
-    exclude_weekends : bool
-        If `True`, drop Saturdays and Sundays from the candidate baseline days.
-
-    exclude_holidays : bool
-        If `True`, drop holidays from the candidate baseline days.
-
-    holiday_country : str or None
-        ISO 3166-1 country code passed to `holidays.country_holidays`.
-
-    holiday_subdiv : str or None
-        Subdivision code (e.g., `"CA"`) passed to `holidays.country_holidays`.
-
-    holiday_dates : list or None
-        Additional dates to treat as holidays.
-
-    resolution : str or None
-        Settlement interval width (e.g., `"15m"`, `"1h"`).
-
-    Raises
-    ------
-    ValueError
-        If `baseline_method` is not `"average_similar_days"`, if
-        `n_baseline_days` is negative, or if `adjustment_offset_hours` is not
-        `None` and `adjustment_duration_hours` is not positive or exceeds
-        `adjustment_offset_hours`.
-
-    Returns
-    -------
-    dict
-        Baseline parameters with the keys
-
-        - `"baseline_method"` : str
-        - `"n_baseline_days"` : int
-        - `"adjustment_offset_hours"` : int or None
-        - `"adjustment_duration_hours"` : int
-        - `"adjustment_clip"` : tuple of float
-        - `"exclude_weekends"` : bool
-        - `"exclude_holidays"` : bool
-        - `"holiday_country"` : str or None
-        - `"holiday_subdiv"` : str or None
-        - `"holiday_dates"` : list
-        - `"resolution"` : str or None
-    """
-    if baseline_method != "average_similar_days":
-        raise ValueError(
-            "baseline_method must be 'average_similar_days'; "
-            "other methods are not yet supported"
-        )
-    if n_baseline_days < 0:
-        raise ValueError("n_baseline_days must be non-negative")
-    if adjustment_offset_hours is not None:
-        if adjustment_duration_hours <= 0:
-            raise ValueError("adjustment_duration_hours must be positive")
-        if adjustment_duration_hours > adjustment_offset_hours:
-            raise ValueError(
-                "adjustment_duration_hours must not exceed "
-                "adjustment_offset_hours, so the adjustment window ends at or "
-                "before the event start"
-            )
-
-    return {
-        BASELINE_METHOD: baseline_method,
-        N_BASELINE_DAYS: n_baseline_days,
-        ADJUSTMENT_OFFSET_HOURS: adjustment_offset_hours,
-        ADJUSTMENT_DURATION_HOURS: adjustment_duration_hours,
-        ADJUSTMENT_CLIP: adjustment_clip,
-        EXCLUDE_WEEKENDS: exclude_weekends,
-        EXCLUDE_HOLIDAYS: exclude_holidays,
-        HOLIDAY_COUNTRY: holiday_country,
-        HOLIDAY_SUBDIV: holiday_subdiv,
-        HOLIDAY_DATES: list(holiday_dates) if holiday_dates else [],
-        RESOLUTION: resolution,
-    }
-
-
 def _baseline_day_in_horizon(day, start_hour, duration_hours, datetime_index, step):
     """Check whether a baseline day's event window lies within the model horizon.
 
@@ -2578,81 +2418,6 @@ def _baseline_day_interval_values(
             raise ValueError(f"Baseline day {day}, interval {k} has missing (NaN) data")
         values.append(float(np.mean(day_values)))
     return values, False
-
-
-def calculate_event_baseline(
-    historical_power_kW,
-    event,
-    baseline_params,
-    *,
-    model=None,
-    model_power_kW=None,
-    model_datetime_index=None,
-    varstr=None,
-):
-    """Calculate the per-interval baseline power for a single event.
-
-    Parameters
-    ----------
-    historical_power_kW : pandas.Series
-        Historical power consumption in kW, indexed by timestamp.
-
-    event : dict
-        Single event dict with the keys `"event_date"` (pandas.Timestamp),
-        `"start_hour"` (float), `"duration_hours"` (float),
-        `"notification_hours"` (float), `"baseline_days"` (list),
-        `"bid_capacity_kW"` (float), `"capacity_price"` (float),
-        `"adjustment_factor"` (float or None), and
-        `"monthly_called_capacity_kWh"` (float or None), as returned by
-        `add_event`.
-
-    baseline_params : dict or BaselineMethod
-        Baseline parameter dict from `make_baseline_parameters`, or a
-        `BaselineMethod` instance.
-
-    model : pyomo.environ.Model or pyomo.environ.Block or None
-        Model to add baseline components to. `None` for ex-post use.
-
-    model_power_kW : pyomo.environ.Var or None
-        Power decision variable over the optimization horizon. Required when
-        `model` is given.
-
-    model_datetime_index : pandas.DatetimeIndex or None
-        Timestamp of each entry of `model_power_kW`. Required when `model` is
-        given.
-
-    varstr : str or None
-        Name of the baseline `Var` created on `model`. Required when `model`
-        is given.
-
-    Raises
-    ------
-    ValueError
-        If no eligible baseline days remain, if a selected baseline day has
-        missing data, or if `model` is given without `model_power_kW`,
-        `model_datetime_index`, and `varstr`.
-
-    Warns
-    -----
-    UserWarning
-        If fewer eligible baseline days remain than `n_baseline_days`.
-
-    Returns
-    -------
-    numpy.ndarray or tuple
-        Per-interval baseline in kW when `model` is `None`, otherwise
-        `(baseline_kW, model)` where `baseline_kW` is a `numpy.ndarray` or an
-        indexed `pyomo.environ.Var`.
-    """
-    baseline_method = _coerce_baseline_method(baseline_params)
-    return baseline_method.compute(
-        historical_power_kW,
-        event,
-        model=model,
-        model_power_kW=model_power_kW,
-        model_datetime_index=model_datetime_index,
-        varstr=varstr,
-    )
 
 
 def _baseline_terms(baseline_kW, n):
@@ -2798,7 +2563,7 @@ def build_event_revenue(
 
 
 def calculate_event_revenue(
-    historical_power_kW, event, baseline_params, payment_function
+    historical_power_kW, event, baseline_method, payment_function
 ):
     """Calculate realized demand response revenue for a single event.
 
@@ -2817,9 +2582,8 @@ def calculate_event_revenue(
         `"monthly_called_capacity_kWh"` (float or None), as returned by
         `add_event`.
 
-    baseline_params : dict or BaselineMethod
-        Baseline parameter dict from `make_baseline_parameters`, or a
-        `BaselineMethod` instance.
+    baseline_method : BaselineMethod
+        Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
 
     payment_function : list of dict or PaymentStructure
         Payment regions, each a dict with float values under the keys `"x1"`,
@@ -2857,9 +2621,7 @@ def calculate_event_revenue(
         raise ValueError("No data available for event window")
     interval_datetime = historical_power_kW.index[mask]
 
-    baseline_profile = calculate_event_baseline(
-        historical_power_kW, event, baseline_params
-    )
+    baseline_profile, _ = baseline_method.compute(historical_power_kW, event)
     baseline_profile = np.asarray(
         _baseline_terms(baseline_profile, actual_profile.size), dtype=float
     )
@@ -2925,7 +2687,7 @@ def _as_power_series(power_kW, datetime_index):
 
 
 def calculate_itemized_dr_revenue(
-    power_kW, events, baseline_params, payment_function, datetime_index=None
+    power_kW, events, baseline_method, payment_function, datetime_index=None
 ):
     """Calculate realized demand response revenue for each event.
 
@@ -2937,9 +2699,8 @@ def calculate_itemized_dr_revenue(
     events : list of dict or pandas.DataFrame
         Events from `add_event`.
 
-    baseline_params : dict or BaselineMethod
-        Baseline parameter dict from `make_baseline_parameters`, or a
-        `BaselineMethod` instance.
+    baseline_method : BaselineMethod
+        Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
 
     payment_function : list of dict or PaymentStructure
         Payment regions, each a dict with float values under the keys `"x1"`,
@@ -2966,7 +2727,7 @@ def calculate_itemized_dr_revenue(
     events_df = events_to_dataframe(events)
     results = [
         calculate_event_revenue(
-            historical_power_kW, row.to_dict(), baseline_params, payment_function
+            historical_power_kW, row.to_dict(), baseline_method, payment_function
         )
         for _, row in events_df.iterrows()
     ]
@@ -2978,7 +2739,7 @@ def calculate_itemized_dr_revenue(
 def calculate_dr_revenue(
     power_kW,
     events,
-    baseline_params,
+    baseline_method,
     payment_function,
     historical_power_kW=None,
     datetime_index=None,
@@ -2996,9 +2757,8 @@ def calculate_dr_revenue(
     events : list of dict or pandas.DataFrame
         Events from `add_event`.
 
-    baseline_params : dict or BaselineMethod
-        Baseline parameter dict from `make_baseline_parameters`, or a
-        `BaselineMethod` instance.
+    baseline_method : BaselineMethod
+        Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
 
     payment_function : list of dict or PaymentStructure
         Payment regions, each a dict with float values under the keys `"x1"`,
@@ -3056,7 +2816,7 @@ def calculate_dr_revenue(
             datetime_index,
             events,
             historical_power_kW,
-            baseline_params,
+            baseline_method,
             model,
             payment_function,
             region_x1s,
@@ -3064,7 +2824,7 @@ def calculate_dr_revenue(
         )
     elif ut.check_indexed_np_array(power_kW) or ut.check_pandas_type(power_kW):
         _, total_revenue = calculate_itemized_dr_revenue(
-            power_kW, events, baseline_params, payment_function, datetime_index
+            power_kW, events, baseline_method, payment_function, datetime_index
         )
         return total_revenue, model
     else:
@@ -3079,7 +2839,7 @@ def _build_dr_revenue_components(
     datetime_index,
     events,
     historical_power_kW,
-    baseline_params,
+    baseline_method,
     model,
     payment_function,
     region_x1s,
@@ -3101,9 +2861,8 @@ def _build_dr_revenue_components(
     historical_power_kW : pandas.Series
         Historical power consumption in kW, indexed by timestamp.
 
-    baseline_params : dict or BaselineMethod
-        Baseline parameter dict from `make_baseline_parameters`, or a
-        `BaselineMethod` instance.
+    baseline_method : BaselineMethod
+        Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
 
     model : pyomo.environ.Model or pyomo.environ.Block
         Model to add components to.
@@ -3145,10 +2904,9 @@ def _build_dr_revenue_components(
     for i, row in events_df.iterrows():
         event = row.to_dict()
         event_varstr = f"{varstr_prefix}_{i}"
-        baseline_kW, model = calculate_event_baseline(
+        baseline_kW, model = baseline_method.compute(
             historical_power_kW,
             event,
-            baseline_params,
             model=model,
             model_power_kW=power_kW,
             model_datetime_index=datetime_index,
@@ -3187,7 +2945,7 @@ def build_dr_revenue(
     datetime_index,
     events,
     historical_power_kW,
-    baseline_params,
+    baseline_method,
     model,
     payment_function,
     region_x1s=None,
@@ -3210,9 +2968,8 @@ def build_dr_revenue(
     historical_power_kW : pandas.Series
         Historical power consumption in kW, indexed by timestamp.
 
-    baseline_params : dict or BaselineMethod
-        Baseline parameter dict from `make_baseline_parameters`, or a
-        `BaselineMethod` instance.
+    baseline_method : BaselineMethod
+        Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
 
     model : pyomo.environ.Model or pyomo.environ.Block
         Model to add components to.
@@ -3242,7 +2999,7 @@ def build_dr_revenue(
     total_revenue, model = calculate_dr_revenue(
         power_kW,
         events,
-        baseline_params,
+        baseline_method,
         payment_function,
         historical_power_kW=historical_power_kW,
         datetime_index=datetime_index,

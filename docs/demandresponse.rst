@@ -74,18 +74,6 @@ denoted in all caps since they are global constants.
 ``baseline_days`` should already exclude any date that is itself another
 event's date; ``add_event`` does not check this.
 
-Baseline parameters
--------------------
-
-``make_baseline_parameters`` returns a ``dict`` with the keys
-``"baseline_method"``, ``"n_baseline_days"``, ``"adjustment_offset_hours"``,
-``"adjustment_duration_hours"``, ``"adjustment_clip"``,
-``"exclude_weekends"``, ``"exclude_holidays"``, ``"holiday_country"``,
-``"holiday_subdiv"``, ``"holiday_dates"``, and ``"resolution"``, which map
-one-to-one onto the :class:`BaselineMethod` constructor arguments. Every
-entry point that takes ``baseline_params`` also accepts a
-:class:`BaselineMethod` instance directly.
-
 Payment function
 ----------------
 
@@ -169,11 +157,11 @@ symbolically. Retune it with ``model.<varstr>_adjustment_factor.fix(1.15)``
 and re-solve without rebuilding the model. Do not ``.unfix()`` it: the solver
 would then pick the revenue-maximizing factor, and ``baseline * factor``
 would become bilinear. With the default ``False``, the factor is folded in as
-a constant, and ``compute`` returns a plain ``numpy.ndarray`` whenever every
-baseline day is historical.
+a constant, and the baseline ``compute`` returns is a plain ``numpy.ndarray``
+whenever every baseline day is historical.
 
-**Baseline days inside the optimization horizon.** When ``compute`` (or
-``calculate_event_baseline``) is given a ``model``, ``model_power_kW``, and
+**Baseline days inside the optimization horizon.** When ``compute`` is
+given a ``model``, ``model_power_kW``, and
 ``model_datetime_index``, any baseline day whose event window lies fully
 inside the model horizon is computed from the decision variable rather than
 from history. A window that only partially overlaps the horizon falls back to
@@ -505,9 +493,9 @@ Extending BaselineMethod and PaymentStructure
 
 Both axes are designed to be subclassed, and every public entry point
 (``calculate_dr_revenue``, ``build_dr_revenue``,
-``calculate_itemized_dr_revenue``, and friends) accepts an already-constructed
-instance in place of the dict/list configuration it otherwise builds one
-from, so a custom subclass drops in without further plumbing.
+``calculate_itemized_dr_revenue``, and friends) takes a ``BaselineMethod``
+instance and accepts a ``PaymentStructure`` instance in place of a list of
+regions, so a custom subclass drops in without further plumbing.
 
 To add a new baseline method, subclass ``BaselineMethod`` and override one
 of:
@@ -523,9 +511,9 @@ of:
   model_datetime_index=None, varstr=None, adjustment_factor=None)`` to
   replace the baseline calculation entirely, for a baseline that isn't a historical day-average
   at all (see ``FixedLevelBaseline`` and ``UnilateralInterruptionBaseline``).
-  An override must honor ``compute``'s calling contract: return a plain
-  array (or raise) when ``model`` is ``None``, and a ``(value, model)`` pair
-  when a model is given, adding any pyomo components under ``varstr``.
+  An override must honor ``compute``'s calling contract: return a
+  ``(value, model)`` pair, with ``model`` left ``None`` ex-post (or raise),
+  adding any pyomo components under ``varstr`` when a model is given.
 
 To add a new payment structure, subclass ``PaymentStructure`` and override
 ``evaluate`` and ``build_expression`` as a pair -- ``evaluate`` is used for
