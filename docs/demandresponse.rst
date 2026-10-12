@@ -308,9 +308,7 @@ available (the capacity term) and for the energy actually reduced during
 the event (the energy term). The energy term is
 ``energy_price * mean(reduction_kW) * duration_hours``, which equals the sum
 of each interval's own energy since intervals are equal-width. It is
-independent of ``settlement``. Because it needs ``"duration_hours"``, use it
-through ``build_event_revenue``, ``calculate_dr_revenue``, or
-``build_dr_revenue`` rather than ``evaluate_payment_function``.
+independent of ``settlement``.
 
 ``MarketIndexedPayment``
 ---------------------------
@@ -451,10 +449,6 @@ Entry points
 - ``build_event_revenue`` handles a single event and expects ``power_kW``
   already sliced to that event's window, matching the convention in
   ``costs.py`` of passing in already-relevant consumption slices.
-- ``evaluate_payment_function`` and ``build_payment_expression`` take
-  ``bid_capacity_kW``, ``capacity_price``, and optionally ``duration_hours``
-  instead of a full event dict. Payment structures that need other event
-  fields must be used through the event-based entry points.
 
 Combining baselines and payment structures
 =============================================

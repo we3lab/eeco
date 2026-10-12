@@ -1169,9 +1169,7 @@ class PaymentStructure:
         if EVENT_DURATION not in event:
             raise ValueError(
                 f"{label}='{basis}' requires event[EVENT_DURATION] (duration_hours) "
-                "-- pass duration_hours to evaluate_payment_function/"
-                "build_payment_expression, or use the full event dict via "
-                "build_event_revenue/calculate_dr_revenue"
+                "-- create the event with add_event"
             )
         if basis == BASIS_PER_HOUR:
             return event[EVENT_DURATION]
@@ -1181,8 +1179,7 @@ class PaymentStructure:
             raise ValueError(
                 f"{label}='monthly_share' requires "
                 "event[MONTHLY_CALLED_CAPACITY_KWH] (monthly_called_capacity_kWh) "
-                "-- pass it to add_event/evaluate_payment_function/"
-                "build_payment_expression, or use calculate_dr_revenue/"
+                "-- pass it to add_event, or use calculate_dr_revenue/"
                 "build_dr_revenue to fill it from the events list"
             )
         if monthly_kWh <= 0:
@@ -1993,137 +1990,6 @@ def _coerce_payment_structure(payment_function):
     if isinstance(payment_function, PaymentStructure):
         return payment_function
     return PaymentStructure(payment_function)
-
-
-def evaluate_payment_function(
-    payment_function,
-    reduction_kW,
-    bid_capacity_kW,
-    capacity_price,
-    duration_hours=None,
-    monthly_called_capacity_kWh=None,
-):
-    """Calculate realized revenue for a known reduction without an event dict.
-
-    Parameters
-    ----------
-    payment_function : list of dict or PaymentStructure
-        Payment regions, each a dict with float values under the keys `"x1"`,
-        `"x2"`, `"y1"`, and `"y2"`, or a `PaymentStructure` instance.
-
-    reduction_kW : float or numpy.ndarray
-        Load reduction in kW, as a window mean or per interval.
-
-    bid_capacity_kW : float
-        Bid capacity in kW.
-
-    capacity_price : float
-        Capacity price in $/kW.
-
-    duration_hours : float or None
-        Event duration in hours. Required for a `"per_hour"` or
-        `"monthly_share"` basis.
-
-    monthly_called_capacity_kWh : float or None
-        Sum of called capacity in kWh over the event's month. Required for a
-        `"monthly_share"` basis.
-
-    Raises
-    ------
-    ValueError
-        If `bid_capacity_kW` is not positive, if no region contains a
-        resulting delivered ratio, or if a `"per_hour"` or `"monthly_share"`
-        basis is used without the arguments it requires.
-
-    Returns
-    -------
-    float
-        Revenue (positive) or penalty (negative) in USD.
-    """
-    event = {
-        BID_CAPACITY_KW: bid_capacity_kW,
-        CAPACITY_PRICE: capacity_price,
-        MONTHLY_CALLED_CAPACITY_KWH: monthly_called_capacity_kWh,
-    }
-    if duration_hours is not None:
-        event[EVENT_DURATION] = duration_hours
-    return _coerce_payment_structure(payment_function).evaluate(event, reduction_kW)
-
-
-def build_payment_expression(
-    payment_function,
-    reduction_kW,
-    bid_capacity_kW,
-    capacity_price,
-    region_x1=None,
-    model=None,
-    varstr="",
-    duration_hours=None,
-    monthly_called_capacity_kWh=None,
-):
-    """Build the revenue expression for a reduction without an event dict.
-
-    Parameters
-    ----------
-    payment_function : list of dict or PaymentStructure
-        Payment regions, each a dict with float values under the keys `"x1"`,
-        `"x2"`, `"y1"`, and `"y2"`, or a `PaymentStructure` instance.
-
-    reduction_kW : float, numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var
-        Load reduction in kW, as a realized value or a decision-variable
-        expression, per interval or as a window mean. A list or tuple of
-        pyomo expressions is also accepted.
-
-    bid_capacity_kW : float
-        Bid capacity in kW.
-
-    capacity_price : float
-        Capacity price in $/kW.
-
-    region_x1 : float, list of float, or None
-        `x1` bound of the region to fix. Required for cvxpy.
-
-    model : pyomo.environ.Model or pyomo.environ.Block or None
-        Model to add components to. Required for pyomo.
-
-    varstr : str
-        Name prefix for pyomo components created on `model`.
-
-    duration_hours : float or None
-        Event duration in hours. Required for a `"per_hour"` or
-        `"monthly_share"` basis.
-
-    monthly_called_capacity_kWh : float or None
-        Sum of called capacity in kWh over the event's month. Required for a
-        `"monthly_share"` basis.
-
-    Raises
-    ------
-    ValueError
-        If a `"per_hour"` or `"monthly_share"` basis is used without the
-        arguments it requires, or in the cases listed for
-        `PaymentStructure.build_expression`.
-
-    TypeError
-        If `reduction_kW` is not a supported type.
-
-    Returns
-    -------
-    tuple
-        `(revenue, model)` for numpy or scalar `reduction_kW`,
-        `(revenue_var, model)` for pyomo, or `(revenue_expr, constraints)` for
-        cvxpy.
-    """
-    event = {
-        BID_CAPACITY_KW: bid_capacity_kW,
-        CAPACITY_PRICE: capacity_price,
-        MONTHLY_CALLED_CAPACITY_KWH: monthly_called_capacity_kWh,
-    }
-    if duration_hours is not None:
-        event[EVENT_DURATION] = duration_hours
-    return _coerce_payment_structure(payment_function).build_expression(
-        event, reduction_kW, region_x1=region_x1, model=model, varstr=varstr
-    )
 
 
 def add_event(

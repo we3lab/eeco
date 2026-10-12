@@ -704,13 +704,10 @@ def test_compute_baseline_datetime_index_too_short(flat_power_series):
         (0.5, 10 * (50 - 0.6 * 100)),  # region 3 (penalty): 10 * (1*50 - 0.6*100)
     ],
 )
-def test_evaluate_payment_function(delivered_ratio, expected_revenue):
-    bid_capacity_kW = 100
-    capacity_price = 10
-    reduction_kW = delivered_ratio * bid_capacity_kW
-    revenue = dr.evaluate_payment_function(
-        CBP_PAYMENT_FUNCTION, reduction_kW, bid_capacity_kW, capacity_price
-    )
+def test_payment_structure_evaluate(delivered_ratio, expected_revenue):
+    payment = dr.PaymentStructure(CBP_PAYMENT_FUNCTION)
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    revenue = payment.evaluate(event, delivered_ratio * event[dr.BID_CAPACITY_KW])
     assert revenue == pytest.approx(expected_revenue)
 
 
@@ -1435,18 +1432,15 @@ def test_settlement_average_vs_interval_disagree_across_discontinuity():
     """Reduction profile straddling the CBP schedule's 0.60 discontinuity:
     averaging first vs. settling each interval give different revenue."""
     reduction_kW = np.array([50, 70])
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     avg_structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_AVERAGE
     )
     interval_structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_INTERVAL
     )
-    avg_revenue = dr.evaluate_payment_function(
-        avg_structure, reduction_kW, bid_capacity_kW=100, capacity_price=10
-    )
-    interval_revenue = dr.evaluate_payment_function(
-        interval_structure, reduction_kW, bid_capacity_kW=100, capacity_price=10
-    )
+    avg_revenue = avg_structure.evaluate(event, reduction_kW)
+    interval_revenue = interval_structure.evaluate(event, reduction_kW)
     assert avg_revenue == pytest.approx(300.0)
     assert interval_revenue == pytest.approx(125.0)
 
@@ -1456,18 +1450,15 @@ def test_settlement_average_vs_interval_agree_within_one_region():
     """Reduction profile that stays inside a single linear region: the two
     settlement modes agree exactly."""
     reduction_kW = np.array([80, 100])
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     avg_structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_AVERAGE
     )
     interval_structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_INTERVAL
     )
-    avg_revenue = dr.evaluate_payment_function(
-        avg_structure, reduction_kW, bid_capacity_kW=100, capacity_price=10
-    )
-    interval_revenue = dr.evaluate_payment_function(
-        interval_structure, reduction_kW, bid_capacity_kW=100, capacity_price=10
-    )
+    avg_revenue = avg_structure.evaluate(event, reduction_kW)
+    interval_revenue = interval_structure.evaluate(event, reduction_kW)
     assert avg_revenue == pytest.approx(900.0)
     assert interval_revenue == pytest.approx(900.0)
 
@@ -1567,14 +1558,14 @@ def test_unilateral_interruption_baseline_with_payout_only_earns_payout():
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_evaluate_payment_function_raises_without_duration_for_per_hour_basis():
+def test_per_hour_basis_requires_duration():
     per_hour_structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, payment_basis=dr.BASIS_PER_HOUR
     )
-    with pytest.raises(ValueError):
-        dr.evaluate_payment_function(
-            per_hour_structure, reduction_kW=60, bid_capacity_kW=100, capacity_price=10
-        )
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    del event[dr.EVENT_DURATION]
+    with pytest.raises(ValueError, match="requires"):
+        per_hour_structure.evaluate(event, 60)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1796,13 +1787,6 @@ def test_payment_basis_monthly_share_evaluate():
         structure.evaluate({**event, dr.MONTHLY_CALLED_CAPACITY_KWH: None}, 100)
     with pytest.raises(ValueError, match="less than this event's own"):
         structure.evaluate({**event, dr.MONTHLY_CALLED_CAPACITY_KWH: 150}, 100)
-    with pytest.raises(ValueError, match="requires"):
-        dr.evaluate_payment_function(
-            structure, 60, 100, 10, duration_hours=2
-        )  # no monthly_called_capacity_kWh
-    assert dr.evaluate_payment_function(
-        structure, 60, 100, 10, duration_hours=2, monthly_called_capacity_kWh=800
-    ) == pytest.approx(75.0)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1837,25 +1821,21 @@ def test_payment_basis_monthly_share_cvxpy_matches_evaluate():
     structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, payment_basis=dr.BASIS_MONTHLY_SHARE
     )
+    event = dr.add_event(
+        None,
+        "2024-01-08",
+        13,
+        2,
+        17,
+        ["2024-01-01"],
+        100,
+        10,
+        monthly_called_capacity_kWh=800,
+    )[0]
     reduction = cp.Variable(2)
     reduction.value = np.array([70.0, 70.0])
-    revenue_expr, _ = dr.build_payment_expression(
-        structure,
-        reduction,
-        100,
-        10,
-        region_x1=0.60,
-        duration_hours=2,
-        monthly_called_capacity_kWh=800,
-    )
-    expected = dr.evaluate_payment_function(
-        structure,
-        np.array([70.0, 70.0]),
-        100,
-        10,
-        duration_hours=2,
-        monthly_called_capacity_kWh=800,
-    )
+    revenue_expr, _ = structure.build_expression(event, reduction, region_x1=0.60)
+    expected = structure.evaluate(event, np.array([70.0, 70.0]))
     assert revenue_expr.value == pytest.approx(expected)
 
 
