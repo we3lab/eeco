@@ -1440,7 +1440,7 @@ class PaymentStructure:
         region = self.find_region(region_x1=region_x1)
         x1, x2 = region[REGION_X1], region[REGION_X2]
         slopes, intercepts = self._region_coefficients(event)
-        idx = next(i for i, r in enumerate(self.regions) if r is region)
+        idx = self.regions.index(region)
         slope, intercept = slopes[idx], intercepts[idx]
 
         mean_reduction = cp.sum(reduction_kW) / reduction_kW.size
@@ -1612,12 +1612,9 @@ class PaymentStructure:
             else:
                 region_x1_per_t = [region_x1] * n_intervals
             for t in interval_idx:
-                matched_region = self.find_region(region_x1=region_x1_per_t[t])
-                fixed_idx = next(
-                    i for i, r in enumerate(self.regions) if r is matched_region
-                )
+                region = self.find_region(region_x1=region_x1_per_t[t])
                 for r in region_idx:
-                    z[t, r].fix(1 if r == fixed_idx else 0)
+                    z[t, r].fix(1 if self.regions[r] is region else 0)
 
         return revenue_var, model
 
