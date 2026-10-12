@@ -63,7 +63,6 @@ REGION_REDUCTION_LOWER_CONSTRAINT_SUFFIX = "region_reduction_lower_constraint"
 REGION_REDUCTION_UPPER_CONSTRAINT_SUFFIX = "region_reduction_upper_constraint"
 REGION_REDUCTION_SUM_CONSTRAINT_SUFFIX = "region_reduction_sum_constraint"
 INTERVAL_REVENUE_SUFFIX = "interval_revenue"
-INTERVAL_REVENUE_CONSTRAINT_SUFFIX = "interval_revenue_constraint"
 REVENUE_SUFFIX = "revenue"
 REVENUE_CONSTRAINT_SUFFIX = "revenue_constraint"
 ENERGY_REVENUE_SUFFIX = "energy_revenue"
@@ -83,7 +82,6 @@ PAYMENT_COMPONENT_SUFFIXES = (
     REGION_REDUCTION_UPPER_CONSTRAINT_SUFFIX,
     REGION_REDUCTION_SUM_CONSTRAINT_SUFFIX,
     INTERVAL_REVENUE_SUFFIX,
-    INTERVAL_REVENUE_CONSTRAINT_SUFFIX,
     REVENUE_SUFFIX,
     REVENUE_CONSTRAINT_SUFFIX,
     ENERGY_REVENUE_SUFFIX,
@@ -1399,13 +1397,10 @@ class PaymentStructure:
             terms = _as_pyomo_terms(reduction_kW)
             if not self.regions:
                 return self._build_payout_only_pyomo(event, model, varstr)
-            if self.settlement == SETTLEMENT_INTERVAL:
-                return self._build_pyomo_regions_indexed(
-                    event, terms, region_x1, model, varstr
-                )
-            return self._build_pyomo_regions_scalar(
-                event, terms, region_x1, model, varstr
-            )
+            if self.settlement != SETTLEMENT_INTERVAL:
+                # "average" settlement is a single interval holding the mean
+                terms = [sum(terms) / len(terms)]
+            return self._build_pyomo_regions(event, terms, region_x1, model, varstr)
         else:
             raise TypeError(
                 "reduction_kW must be numpy.ndarray, a Python number, "
@@ -1493,8 +1488,8 @@ class PaymentStructure:
         )
         return revenue_var, model
 
-    def _build_pyomo_regions_scalar(self, event, terms, region_x1, model, varstr):
-        """Build the pyomo revenue expression for `"average"` settlement.
+    def _build_pyomo_regions(self, event, terms, region_x1, model, varstr):
+        """Build the pyomo revenue expression over settlement intervals.
 
         Parameters
         ----------
@@ -1502,112 +1497,8 @@ class PaymentStructure:
             Single event dict. See `add_event` for the keys.
 
         terms : list
-            Per-interval reduction expressions.
-
-        region_x1 : float or None
-            `x1` bound of the region to fix, or `None` to let the solver choose.
-
-        model : pyomo.environ.Model or pyomo.environ.Block
-            Model to add components to.
-
-        varstr : str
-            Name prefix for pyomo components created on `model`.
-
-        Raises
-        ------
-        ValueError
-            If `region_x1` matches no region.
-
-        Returns
-        -------
-        tuple
-            `(revenue_var, model)`.
-        """
-        bid_capacity_kW = event[BID_CAPACITY_KW]
-        mean_reduction = pyo.quicksum(terms) / len(terms)
-        region_idx = range(len(self.regions))
-        slopes, intercepts = self._region_coefficients(event)
-
-        z_name = _component_name(varstr, REGION_ACTIVE_SUFFIX)
-        model.add_component(z_name, pyo.Var(region_idx, within=pyo.Binary))
-        z = model.find_component(z_name)
-        model.add_component(
-            _component_name(varstr, REGION_SELECT_CONSTRAINT_SUFFIX),
-            pyo.Constraint(expr=pyo.quicksum(z[r] for r in region_idx) == 1),
-        )
-
-        region_reduction_name = _component_name(varstr, REGION_REDUCTION_SUFFIX)
-        model.add_component(region_reduction_name, pyo.Var(region_idx))
-        region_reduction = model.find_component(region_reduction_name)
-
-        def lower_rule(m, r):
-            x1 = self.regions[r][REGION_X1]
-            # implicitly bounds the DR bid to be > 0.1% of max power production
-            if np.isinf(x1):
-                x1 = -1000.0
-            return region_reduction[r] >= x1 * bid_capacity_kW * z[r]
-
-        model.add_component(
-            _component_name(varstr, REGION_REDUCTION_LOWER_CONSTRAINT_SUFFIX),
-            pyo.Constraint(region_idx, rule=lower_rule),
-        )
-
-        def upper_rule(m, r):
-            x2 = self.regions[r][REGION_X2]
-            # implicitly bounds the DR bid to be > 0.1% of max power consumption
-            if np.isinf(x2):
-                x2 = 1000.0
-            return region_reduction[r] <= x2 * bid_capacity_kW * z[r]
-
-        model.add_component(
-            _component_name(varstr, REGION_REDUCTION_UPPER_CONSTRAINT_SUFFIX),
-            pyo.Constraint(region_idx, rule=upper_rule),
-        )
-
-        model.add_component(
-            _component_name(varstr, REGION_REDUCTION_SUM_CONSTRAINT_SUFFIX),
-            pyo.Constraint(
-                expr=mean_reduction
-                == pyo.quicksum(region_reduction[r] for r in region_idx)
-            ),
-        )
-
-        revenue_name = _component_name(varstr, REVENUE_SUFFIX)
-        model.add_component(revenue_name, pyo.Var())
-        revenue_var = model.find_component(revenue_name)
-        payout_amt = self._payout_amount(event)
-        model.add_component(
-            _component_name(varstr, REVENUE_CONSTRAINT_SUFFIX),
-            pyo.Constraint(
-                expr=revenue_var
-                == pyo.quicksum(
-                    slopes[r] * region_reduction[r] + intercepts[r] * z[r]
-                    for r in region_idx
-                )
-                + payout_amt
-            ),
-        )
-
-        if region_x1 is not None:
-            matched_region = self.find_region(region_x1=region_x1)
-            fixed_idx = next(
-                i for i, r in enumerate(self.regions) if r is matched_region
-            )
-            for r in region_idx:
-                z[r].fix(1 if r == fixed_idx else 0)
-
-        return revenue_var, model
-
-    def _build_pyomo_regions_indexed(self, event, terms, region_x1, model, varstr):
-        """Build the pyomo revenue expression for `"interval"` settlement.
-
-        Parameters
-        ----------
-        event : dict
-            Single event dict. See `add_event` for the keys.
-
-        terms : list
-            Per-interval reduction expressions.
+            Reduction expression for each settlement interval. `"average"`
+            settlement passes a single term, the window-mean reduction.
 
         region_x1 : float, list of float, or None
             `x1` bound of the region to fix for every interval (float), for
@@ -1685,19 +1576,17 @@ class PaymentStructure:
         )
 
         interval_revenue_name = _component_name(varstr, INTERVAL_REVENUE_SUFFIX)
-        model.add_component(interval_revenue_name, pyo.Var(interval_idx))
-        interval_revenue = model.find_component(interval_revenue_name)
         model.add_component(
-            _component_name(varstr, INTERVAL_REVENUE_CONSTRAINT_SUFFIX),
-            pyo.Constraint(
+            interval_revenue_name,
+            pyo.Expression(
                 interval_idx,
-                rule=lambda m, t: interval_revenue[t]
-                == pyo.quicksum(
+                rule=lambda m, t: pyo.quicksum(
                     slopes[r] * region_reduction[t, r] + intercepts[r] * z[t, r]
                     for r in region_idx
                 ),
             ),
         )
+        interval_revenue = model.find_component(interval_revenue_name)
 
         revenue_name = _component_name(varstr, REVENUE_SUFFIX)
         model.add_component(revenue_name, pyo.Var())

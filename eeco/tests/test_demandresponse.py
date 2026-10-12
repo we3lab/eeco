@@ -28,9 +28,9 @@ def fix_region_choice():
         inactive (and its share forced to 0)."""
         z = model.find_component(varstr + "_region_active")
         region_reduction = model.find_component(varstr + "_region_reduction")
-        for r in z:
-            z[r].fix(1 if r == active_idx else 0)
-            region_reduction[r].fix(reduction_value if r == active_idx else 0)
+        for t, r in z:
+            z[t, r].fix(1 if r == active_idx else 0)
+            region_reduction[t, r].fix(reduction_value if r == active_idx else 0)
 
     return _fix_region_choice
 
@@ -40,9 +40,8 @@ def assert_region_components_satisfied():
     def _assert_region_components_satisfied(model, varstr):
         """Asserts every disaggregated-region component `build_expression` adds
         under `varstr` is internally consistent at the model's current (fully
-        fixed) values. Works for both `"average"` settlement (region-indexed
-        components) and `"interval"` settlement (interval-and-region-indexed
-        components, plus the extra `_interval_revenue_constraint`)."""
+        fixed) values. Works for both `"average"` and `"interval"` settlement,
+        whose components are indexed by interval and region."""
         names = [
             "_region_select_constraint",
             "_region_reduction_lower_constraint",
@@ -50,8 +49,6 @@ def assert_region_components_satisfied():
             "_region_reduction_sum_constraint",
             "_revenue_constraint",
         ]
-        if model.find_component(varstr + "_interval_revenue_constraint") is not None:
-            names.append("_interval_revenue_constraint")
         for name in names:
             assert_constraint_satisfied(model.find_component(varstr + name))
 
@@ -772,8 +769,8 @@ def test_build_event_revenue_pyomo(
     expected_revenue = 10 * 0.5 * 60
 
     z = model.find_component("event_2024_01_08_region_active")
-    assert pyo.value(z[1]) == 1
-    assert all(pyo.value(z[r]) == 0 for r in z if r != 1)
+    assert pyo.value(z[0, 1]) == 1
+    assert all(pyo.value(z[t, r]) == 0 for t, r in z if r != 1)
 
     # No LP solver is assumed to be installed in this environment. Every
     # other variable is already fixed (power) or fixed by build_event_revenue
@@ -946,7 +943,7 @@ def test_build_dr_revenue_errors(dr_revenue_setup):
         {"2024-01-08": 0.60},  # "2024-01-15" intentionally omitted
     )
     z_fixed = model.find_component("dr_event_0_region_active")
-    assert pyo.value(z_fixed[1]) == 1  # "2024-01-08" fixed to region index 1
+    assert pyo.value(z_fixed[0, 1]) == 1  # "2024-01-08" fixed to region index 1
     z_free = model.find_component("dr_event_1_region_active")
     assert all(not z_free[r].fixed for r in z_free)  # "2024-01-15" left free
 
@@ -1260,10 +1257,10 @@ def test_build_dr_revenue_dynamic_baseline(
     # reduction = 120 - 30 = 90 -> delivered ratio 0.9
     # -> region [0.75, 1.05) (index 2) -> revenue 900
     z = model.find_component("dyn_event_0_region_active")
-    assert pyo.value(z[2]) == 1
+    assert pyo.value(z[0, 2]) == 1
     region_reduction = model.find_component("dyn_event_0_region_reduction")
-    for r in region_reduction:
-        region_reduction[r].fix(90 if r == 2 else 0)
+    for t, r in region_reduction:
+        region_reduction[t, r].fix(90 if r == 2 else 0)
     revenue_var = model.find_component("dyn_event_0_revenue")
     revenue_var.fix(900)
     assert_region_components_satisfied(model, "dyn_event_0")
@@ -1487,8 +1484,10 @@ def test_settlement_interval_pyomo_components_consistent(
 
     fix_interval_region_choice(model, "int_event", [0, 1], [50, 70])
     interval_revenue = model.find_component("int_event_interval_revenue")
-    interval_revenue[0].fix(-100.0)  # region [0, 0.6): y = -0.6 + 0.6*(0.5/0.6)
-    interval_revenue[1].fix(350.0)  # region [0.6, 0.75): y = 0.3 + 0.075*(0.1/0.15)
+    # region [0, 0.6): y = -0.6 + 0.6*(0.5/0.6)
+    assert pyo.value(interval_revenue[0]) == pytest.approx(-100.0)
+    # region [0.6, 0.75): y = 0.3 + 0.075*(0.1/0.15)
+    assert pyo.value(interval_revenue[1]) == pytest.approx(350.0)
     revenue_var.fix(125.0)  # mean of the two interval revenues
     assert_region_components_satisfied(model, "int_event")
 
@@ -1625,7 +1624,7 @@ def test_payment_component_names_use_suffixes():
     )
     for suffix in dr.PAYMENT_COMPONENT_SUFFIXES:
         component = model.find_component(dr._component_name("e0", suffix))
-        if suffix.startswith(("interval_", "energy_", "total_")):
+        if suffix.startswith(("energy_", "total_")):
             assert component is None
         else:
             assert component is not None

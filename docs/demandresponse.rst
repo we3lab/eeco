@@ -348,14 +348,16 @@ solver chooses the region when ``region_x1=None``. Passing ``region_x1``
 fixes the region binaries instead. Infinite region bounds are replaced by
 ``±1000`` times the bid capacity.
 
-For ``"interval"`` settlement, every region component gains a leading
-interval index ``t``, giving one region-selection block per interval, and a
-per-interval revenue variable is added so a solved model can be audited per
-interval. A scalar ``region_x1`` fixes the same region for every interval; a
-list of length ``n_intervals`` fixes them individually. Fixing one region
-for every interval is a tighter feasible set than ``"average"`` settlement
-(which only constrains the mean) and can make a previously feasible plan
-infeasible, so prefer ``region_x1=None`` with ``"interval"`` settlement.
+Every region component is indexed by settlement interval ``t`` and region.
+``"average"`` settlement builds a single interval (``t = 0``) holding the
+window-mean reduction; ``"interval"`` settlement builds one region-selection
+block per interval. A per-interval revenue ``Expression`` lets a solved model
+be audited per interval. A scalar ``region_x1`` fixes the same region for
+every interval; a list of length ``n_intervals`` fixes them individually.
+Fixing one region for every interval is a tighter feasible set than
+``"average"`` settlement (which only constrains the mean) and can make a
+previously feasible plan infeasible, so prefer ``region_x1=None`` with
+``"interval"`` settlement.
 
 If the structure has no regions (payout-only), no region components are
 created and the revenue is the constant payout.
@@ -405,11 +407,8 @@ order) and its baseline ``f"{varstr_prefix}_{i}_baseline_kW"``.
      - Reduction equals the sum of shares
      - ``PaymentStructure``
    * - ``INTERVAL_REVENUE_SUFFIX``
-     - Per-interval revenue ``Var``
-     - ``PaymentStructure`` (``"interval"`` only)
-   * - ``INTERVAL_REVENUE_CONSTRAINT_SUFFIX``
-     - Defines per-interval revenue
-     - ``PaymentStructure`` (``"interval"`` only)
+     - Per-interval revenue ``Expression``
+     - ``PaymentStructure``
    * - ``REVENUE_SUFFIX``
      - Revenue ``Var``, including payout
      - ``PaymentStructure``
