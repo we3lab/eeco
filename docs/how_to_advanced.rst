@@ -250,11 +250,11 @@ For numpy arrays, `decomposition_type` is ignored since decomposition is a direc
     prob = cp.Problem(objective, constraints)
     prob.solve(solver=cp.SCIP)  # requires MIP solver (not needed for "linear")
 
-With `"linear"`, you can confirm the split was exact after solving. This warns and returns the offending timesteps if any period has both imports and exports above `tol`:
+With `"linear"`, you can confirm the split was exact after solving. This warns or raises an error depending on `raise_error`, and returns the offending timesteps if any period has both imports and exports above `tol`:
 
 .. code-block:: python
 
-    utils.check_simultaneous_import_export(imports, exports, tol=1e-6)
+    utils.check_simultaneous_import_export(imports, exports, tol=1e-6, raise_error=False)
 
 When `decomposition_type` is not `None`, the function creates separate variables for positive consumption (imports) and negative consumption (exports), applying export charges only to the export component.
 A constraint `total_consumption = imports - exports` is added to balance the decomposition.
