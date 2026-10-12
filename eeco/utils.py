@@ -114,6 +114,8 @@ TIMEZONE_DICT = {
     },
 }
 
+DECOMPOSITION_TYPES = ("absolute_value", "binary_big_M", "linear")
+
 
 def idxparam_value(idx_param):
     """Returns the parameter value at the given index.
@@ -681,7 +683,7 @@ def decompose_consumption(
     varstr : str
         Name prefix for the variables to be created if using a Pyomo `model`
 
-    decomposition_type : str
+    decomposition_type : {"absolute_value", "binary_big_M", "linear"}
         Type of decomposition to use.
         - "absolute_value": Uses max(x, 0) constraints. Creates nonlinear problem
           for Pyomo due to abs() constraint. Not supported for CVXPY.
@@ -746,7 +748,7 @@ def decompose_consumption(
             )
 
     elif check_indexed_pyomo_type(expression):
-        if decomposition_type not in ("absolute_value", "binary_big_M", "linear"):
+        if decomposition_type not in DECOMPOSITION_TYPES:
             raise NotImplementedError(
                 f"Decomposition type '{decomposition_type}' not supported for Pyomo. "
                 "Available types: 'absolute_value', 'binary_big_M' and 'linear'."

@@ -1208,7 +1208,7 @@ def get_conversion_factors(electric_consumption_units, gas_consumption_units):
     return conversion_factors
 
 
-def _check_linear_decomposition_charges(charge_dict):
+def check_linear_decomposition_dict(charge_dict):
     """Warn if charges break the conditions under which a linear split is exact.
 
     With `decomposition_type="linear"`, importing and exporting in the same
@@ -1257,7 +1257,7 @@ def _check_linear_decomposition_charges(charge_dict):
             )
 
 
-def _check_simultaneous_import_export(consumption_data_dict):
+def check_import_export_dict(consumption_data_dict):
     """Raise if user-provided imports and exports are both nonzero in a timestep.
 
     Only utilities already given as ``{"imports": ..., "exports": ...}`` with
@@ -1305,9 +1305,8 @@ def get_converted_consumption_data(
         Dictionary with utility keys and consumption data values
     conversion_factors : dict
         Dictionary with conversion factors for each utility type
-    decomposition_type : str or None
-        Type of decomposition to apply ("absolute_value", "binary_big_M",
-        or "linear")
+    decomposition_type : {"absolute_value", "binary_big_M", "linear", None}
+        Type of decomposition to apply
     model : pyomo.Model, optional
         Pyomo model object for optimization variables
 
@@ -1356,7 +1355,7 @@ def get_converted_consumption_data(
                     varstr=converted_varstr,
                 )
 
-            if decomposition_type in ("absolute_value", "binary_big_M", "linear"):
+            if decomposition_type in ut.DECOMPOSITION_TYPES:
                 # Decompose consumption data into positive and negative components
                 # with constraint that total = positive - negative
                 # (where negative is stored as positive magnitude)
@@ -1387,7 +1386,9 @@ def get_converted_consumption_data(
                     "exports": converted_consumption,
                 }
             else:
-                raise NotImplementedError
+                raise NotImplementedError(
+                    f"Decomposition type '{decomposition_type}' not supported"
+                )
 
     if model is not None:
         return consumption_data_dict, model
@@ -1559,7 +1560,7 @@ def calculate_cost(
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
 
-    decomposition_type : str or None
+    decomposition_type : {"absolute_value", "binary_big_M", "linear", None}
         Type of decomposition to use for consumption data.
         - "absolute_value": Uses max(x, 0) constraints. Creates nonlinear problem
           for Pyomo due to abs() constraint.
@@ -1628,10 +1629,10 @@ def calculate_cost(
         electric_consumption_units, gas_consumption_units
     )
 
-    _check_simultaneous_import_export(consumption_data_dict)
+    check_import_export_dict(consumption_data_dict)
 
     if decomposition_type == "linear":
-        _check_linear_decomposition_charges(charge_dict)
+        check_linear_decomposition_dict(charge_dict)
 
     consumption_data_dict, model_objects = get_converted_consumption_data(
         consumption_data_dict,
@@ -1857,7 +1858,7 @@ def build_pyomo_costing(
         Can be a single pyomo Expression or a list of pyomo Expressions.
         Only used in the case of Pyomo, so `None` by default.
 
-    decomposition_type : str or None
+    decomposition_type : {"absolute_value", "binary_big_M", "linear", None}
         Type of decomposition to use for consumption data.
         - "absolute_value": Uses max(x, 0) constraints. Creates nonlinear problem
           for Pyomo due to abs() constraint.
@@ -2011,7 +2012,7 @@ def calculate_itemized_cost(
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
 
-    decomposition_type : str or None
+    decomposition_type : {"absolute_value", "binary_big_M", "linear", None}
         Type of decomposition to use for consumption data.
         - "absolute_value": Linear problem using absolute value
         - "binary_big_M": Uses binary indicator with Big-M constraints.
@@ -2079,7 +2080,7 @@ def calculate_itemized_cost(
     )
 
     if decomposition_type == "linear":
-        _check_linear_decomposition_charges(charge_dict)
+        check_linear_decomposition_dict(charge_dict)
 
     consumption_data_dict, model_objects = get_converted_consumption_data(
         consumption_data_dict,
