@@ -220,6 +220,8 @@
     <span class="p">},</span>
 <span class="p">}</span>
 
+<span class="n">DECOMPOSITION_TYPES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"absolute_value"</span><span class="p">,</span> <span class="s2">"binary_big_M"</span><span class="p">,</span> <span class="s2">"linear"</span><span class="p">)</span>
+
 
 <div class="viewcode-block" id="idxparam_value"><a class="viewcode-back" href="../../utils.html#eeco.utils.idxparam_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">idxparam_value</span><span class="p">(</span><span class="n">idx_param</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Returns the parameter value at the given index.</span>
@@ -606,39 +608,32 @@
     <span class="k">return</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">constraints</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_decompose_absolute_value_pyo</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Create Pyomo vars and add absolute value specific constraints.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_add_absolute_value_pyo</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">expression</span><span class="p">,</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Add the absolute value magnitude constraint to an LP decomposition.</span>
 
-<span class="sd">    Uses max_pos constraints and magnitude constraint with abs().</span>
-<span class="sd">    Creates a nonlinear problem.</span>
+<span class="sd">    Together with `expression == positive_var - negative_var`, the constraint</span>
+<span class="sd">    `positive_var + negative_var == abs(expression)` forces both variables to be</span>
+<span class="sd">    the max(., 0) of the expression and its negation. Creates a nonlinear problem.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    expression : pyomo.environ.Var or pyomo.environ.Param</span>
-<span class="sd">        Pyomo variable representing net consumption</span>
 <span class="sd">    model : pyomo.environ.Model</span>
 <span class="sd">        The Pyomo model object</span>
 <span class="sd">    varstr : str</span>
-<span class="sd">        Name prefix for created variables</span>
+<span class="sd">        Name prefix for created constraints</span>
+<span class="sd">    expression : pyomo.environ.Var or pyomo.environ.Param</span>
+<span class="sd">        Pyomo variable representing net consumption</span>
+<span class="sd">    positive_var : pyomo.environ.Var</span>
+<span class="sd">        Non-negative import variable</span>
+<span class="sd">    negative_var : pyomo.environ.Var</span>
+<span class="sd">        Non-negative export variable (magnitude)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    tuple</span>
-<span class="sd">        (positive_var, negative_var, model)</span>
+<span class="sd">    pyomo.environ.Model</span>
+<span class="sd">        The model with the magnitude constraint added</span>
 <span class="sd">    """</span>
-    <span class="n">pos_name</span><span class="p">,</span> <span class="n">neg_name</span> <span class="o">=</span> <span class="n">get_decomposed_var_names</span><span class="p">(</span><span class="n">varstr</span><span class="p">)</span>
-    <span class="n">positive_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">max_pos</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">pos_name</span><span class="p">)</span>
 
-    <span class="c1"># Create negative expression since pyomo won't take -expression directly</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">negative_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
-        <span class="k">return</span> <span class="o">-</span><span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
-
-    <span class="n">negative_expr</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Expression</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">negative_rule</span><span class="p">)</span>
-    <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_negative_expr"</span><span class="p">,</span> <span class="n">negative_expr</span><span class="p">)</span>
-    <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">max_pos</span><span class="p">(</span><span class="n">negative_expr</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">neg_name</span><span class="p">)</span>
-
-    <span class="c1"># Add constraint to ensure positive_var + negative_var = |expression|</span>
-    <span class="c1"># This prevents both variables becoming larger due to artificial arbitrage</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">magnitude_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">positive_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="n">negative_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="nb">abs</span><span class="p">(</span><span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">])</span>
 
@@ -646,34 +641,32 @@
         <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_magnitude_constraint"</span><span class="p">,</span>
         <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">magnitude_rule</span><span class="p">),</span>
     <span class="p">)</span>
+    <span class="k">return</span> <span class="n">model</span>
 
-    <span class="k">return</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span>
 
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_decompose_binary_pyo</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">big_m</span><span class="o">=</span><span class="mf">1e6</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Create Pyomo vars and add binary/Big-M specific constraints.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_add_binary_big_M_pyo</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">big_m</span><span class="o">=</span><span class="mf">1e6</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Add a binary import/export indicator and Big-M constraints.</span>
 
 <span class="sd">    Creates a MILP where a binary variable indicates import (1) or export (0).</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    expression : pyomo.environ.Var or pyomo.environ.Param</span>
-<span class="sd">        Pyomo variable representing net consumption</span>
 <span class="sd">    model : pyomo.environ.Model</span>
 <span class="sd">        The Pyomo model object</span>
 <span class="sd">    varstr : str</span>
-<span class="sd">        Name prefix for created variables</span>
+<span class="sd">        Name prefix for created variables and constraints</span>
+<span class="sd">    positive_var : pyomo.environ.Var</span>
+<span class="sd">        Non-negative import variable</span>
+<span class="sd">    negative_var : pyomo.environ.Var</span>
+<span class="sd">        Non-negative export variable (magnitude)</span>
 <span class="sd">    big_m : float, optional</span>
 <span class="sd">        Big-M value for constraints. Default is 1e6.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    tuple</span>
-<span class="sd">        (positive_var, negative_var, model)</span>
+<span class="sd">    pyomo.environ.Model</span>
+<span class="sd">        The model with the binary variable and Big-M constraints added</span>
 <span class="sd">    """</span>
-    <span class="n">pos_name</span><span class="p">,</span> <span class="n">neg_name</span> <span class="o">=</span> <span class="n">get_decomposed_var_names</span><span class="p">(</span><span class="n">varstr</span><span class="p">)</span>
-
-    <span class="c1"># Binary variable: 1 = importing, 0 = exporting</span>
     <span class="n">binary_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_is_importing"</span>
     <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span>
         <span class="n">binary_name</span><span class="p">,</span>
@@ -681,25 +674,7 @@
     <span class="p">)</span>
     <span class="n">binary_var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">binary_name</span><span class="p">)</span>
 
-    <span class="c1"># Import variable (positive consumption)</span>
-    <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span>
-        <span class="n">pos_name</span><span class="p">,</span>
-        <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="n">initialize</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
-    <span class="p">)</span>
-    <span class="n">positive_var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">pos_name</span><span class="p">)</span>
-
-    <span class="c1"># Export variable (magnitude of negative consumption, stored as positive)</span>
-    <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span>
-        <span class="n">neg_name</span><span class="p">,</span>
-        <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="n">initialize</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
-    <span class="p">)</span>
-    <span class="n">negative_var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">neg_name</span><span class="p">)</span>
-
-    <span class="c1"># Big-M constraints to enforce mutual exclusivity:</span>
-    <span class="c1"># If binary=1: imports can be positive, exports must be 0</span>
-    <span class="c1"># If binary=0: imports must be 0, exports can be positive</span>
-
-    <span class="c1"># Constraint: imports &lt;= big_m * binary (imports=0 when binary=0)</span>
+    <span class="c1"># imports &lt;= big_m * binary (imports = 0 when binary = 0)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">import_bigm_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">positive_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">big_m</span> <span class="o">*</span> <span class="n">binary_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
 
@@ -708,7 +683,7 @@
         <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">import_bigm_rule</span><span class="p">),</span>
     <span class="p">)</span>
 
-    <span class="c1"># Constraint: exports &lt;= big_m * (1 - binary) (exports=0 when binary=1)</span>
+    <span class="c1"># exports &lt;= big_m * (1 - binary) (exports = 0 when binary = 1)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">export_bigm_rule</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">negative_var</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">big_m</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">binary_var</span><span class="p">[</span><span class="n">t</span><span class="p">])</span>
 
@@ -716,6 +691,72 @@
         <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">_export_bigm_constraint"</span><span class="p">,</span>
         <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">export_bigm_rule</span><span class="p">),</span>
     <span class="p">)</span>
+    <span class="k">return</span> <span class="n">model</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_decompose_linear_cvx</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Decompose CVXPY expression into non-negative import/export variables.</span>
+
+<span class="sd">    Creates a linear program (no binaries, no abs()). The split is exact only</span>
+<span class="sd">    when exporting is never more valuable than importing is costly, i.e.</span>
+<span class="sd">    export charge &lt;= energy charge and demand charges are non-negative.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    expression : cvxpy.Expression</span>
+<span class="sd">        CVXPY expression representing net consumption</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        (positive_var, negative_var, constraints) where constraints is a list</span>
+<span class="sd">        of CVXPY constraints that must be added to the problem</span>
+<span class="sd">    """</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="s2">"shape"</span><span class="p">)</span> <span class="k">else</span> <span class="mi">1</span>
+
+    <span class="n">positive_var</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">nonneg</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">negative_var</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">nonneg</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span><span class="n">expression</span> <span class="o">==</span> <span class="n">positive_var</span> <span class="o">-</span> <span class="n">negative_var</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">constraints</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_decompose_linear_pyo</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Create non-negative Pyomo import/export variables (LP decomposition).</span>
+
+<span class="sd">    The shared decomposition constraint (expression = imports - exports) is</span>
+<span class="sd">    added by `decompose_consumption`, so no constraints are added here.</span>
+<span class="sd">    Exact only when export charge &lt;= energy charge and demand charges are</span>
+<span class="sd">    non-negative.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    expression : pyomo.environ.Var or pyomo.environ.Param</span>
+<span class="sd">        Pyomo variable representing net consumption</span>
+<span class="sd">    model : pyomo.environ.Model</span>
+<span class="sd">        The Pyomo model object</span>
+<span class="sd">    varstr : str</span>
+<span class="sd">        Name prefix for created variables</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        (positive_var, negative_var, model)</span>
+<span class="sd">    """</span>
+    <span class="n">pos_name</span><span class="p">,</span> <span class="n">neg_name</span> <span class="o">=</span> <span class="n">get_decomposed_var_names</span><span class="p">(</span><span class="n">varstr</span><span class="p">)</span>
+
+    <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span>
+        <span class="n">pos_name</span><span class="p">,</span>
+        <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="n">initialize</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">positive_var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">pos_name</span><span class="p">)</span>
+
+    <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span>
+        <span class="n">neg_name</span><span class="p">,</span>
+        <span class="n">pyo</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_var_index</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="n">initialize</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">negative_var</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_component</span><span class="p">(</span><span class="n">neg_name</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span>
 
@@ -748,13 +789,18 @@
 <span class="sd">    varstr : str</span>
 <span class="sd">        Name prefix for the variables to be created if using a Pyomo `model`</span>
 
-<span class="sd">    decomposition_type : str</span>
+<span class="sd">    decomposition_type : {"absolute_value", "binary_big_M", "linear"}</span>
 <span class="sd">        Type of decomposition to use.</span>
 <span class="sd">        - "absolute_value": Uses max(x, 0) constraints. Creates nonlinear problem</span>
 <span class="sd">          for Pyomo due to abs() constraint. Not supported for CVXPY.</span>
 <span class="sd">        - "binary_big_M": Uses binary indicator with Big-M constraints.</span>
 <span class="sd">          Creates a MILP (mixed-integer linear program).</span>
 <span class="sd">          Supported for both Pyomo and CVXPY (requires MIP solver).</span>
+<span class="sd">        - "linear": Plain LP split with non-negative import/export variables</span>
+<span class="sd">          and no magnitude constraint. Supported for both Pyomo and CVXPY and</span>
+<span class="sd">          needs no MIP/NLP solver. Exact only when export charge &lt;= energy charge</span>
+<span class="sd">          and demand charges are non-negative; otherwise the solver may import</span>
+<span class="sd">          and export simultaneously. See `check_simultaneous_import_export`.</span>
 
 <span class="sd">        Note: For numpy.ndarray inputs, decomposition_type is ignored</span>
 
@@ -766,9 +812,9 @@
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    NotImplementedError</span>
-<span class="sd">        When `decomposition_type` is anything other than "absolute_value"</span>
-<span class="sd">        or "binary_big_M" for Pyomo, or anything other than "binary_big_M" for</span>
-<span class="sd">        CVXPY. Never raised for `numpy.Array`.</span>
+<span class="sd">        When `decomposition_type` is anything other than "absolute_value",</span>
+<span class="sd">        "binary_big_M" or "linear" for Pyomo, or anything other than</span>
+<span class="sd">        "binary_big_M" or "linear" for CVXPY. Never raised for `numpy.Array`.</span>
 
 <span class="sd">    TypeError</span>
 <span class="sd">        When `expression` is not of type `numpy.Array`, `cvxpy.Expression`,</span>
@@ -797,27 +843,34 @@
                 <span class="n">expression</span><span class="p">,</span> <span class="n">big_m</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">constraints</span>
+        <span class="k">elif</span> <span class="n">decomposition_type</span> <span class="o">==</span> <span class="s2">"linear"</span><span class="p">:</span>
+            <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">constraints</span> <span class="o">=</span> <span class="n">_decompose_linear_cvx</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">constraints</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"Decomposition type '</span><span class="si">{</span><span class="n">decomposition_type</span><span class="si">}</span><span class="s2">' not supported for CVXPY. "</span>
-                <span class="s2">"Only 'binary_big_M' is available (requires a MIP solver). "</span>
-                <span class="s2">"Use Pyomo for 'absolute_value' decomposition."</span>
+                <span class="s2">"Available types: 'binary_big_M' (requires a MIP solver) and "</span>
+                <span class="s2">"'linear'. Use Pyomo for 'absolute_value' decomposition."</span>
             <span class="p">)</span>
 
     <span class="k">elif</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
-        <span class="c1"># Call mode-specific function to create vars and add mode-specific constraints</span>
-        <span class="k">if</span> <span class="n">decomposition_type</span> <span class="o">==</span> <span class="s2">"absolute_value"</span><span class="p">:</span>
-            <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">_decompose_absolute_value_pyo</span><span class="p">(</span>
-                <span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">varstr</span>
-            <span class="p">)</span>
-        <span class="k">elif</span> <span class="n">decomposition_type</span> <span class="o">==</span> <span class="s2">"binary_big_M"</span><span class="p">:</span>
-            <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">_decompose_binary_pyo</span><span class="p">(</span>
-                <span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">big_m</span>
-            <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">decomposition_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DECOMPOSITION_TYPES</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"Decomposition type '</span><span class="si">{</span><span class="n">decomposition_type</span><span class="si">}</span><span class="s2">' not supported for Pyomo. "</span>
-                <span class="s2">"Available types: 'absolute_value' and 'binary_big_M'."</span>
+                <span class="s2">"Available types: 'absolute_value', 'binary_big_M' and 'linear'."</span>
+            <span class="p">)</span>
+
+        <span class="c1"># All Pyomo types share the LP split; others add constraints on top</span>
+        <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">_decompose_linear_pyo</span><span class="p">(</span>
+            <span class="n">expression</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">varstr</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">decomposition_type</span> <span class="o">==</span> <span class="s2">"absolute_value"</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">_add_absolute_value_pyo</span><span class="p">(</span>
+                <span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">expression</span><span class="p">,</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">decomposition_type</span> <span class="o">==</span> <span class="s2">"binary_big_M"</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">_add_binary_big_M_pyo</span><span class="p">(</span>
+                <span class="n">model</span><span class="p">,</span> <span class="n">varstr</span><span class="p">,</span> <span class="n">positive_var</span><span class="p">,</span> <span class="n">negative_var</span><span class="p">,</span> <span class="n">big_m</span>
             <span class="p">)</span>
 
         <span class="c1"># Add common decomposition constraint: expression = imports - exports</span>
@@ -835,6 +888,74 @@
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
             <span class="s2">"Only CVXPY or Pyomo variables and NumPy arrays are currently supported."</span>
         <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="check_simultaneous_import_export"><a class="viewcode-back" href="../../utils.html#eeco.utils.check_simultaneous_import_export">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_simultaneous_import_export</span><span class="p">(</span>
+    <span class="n">positive</span><span class="p">,</span> <span class="n">negative</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">varstr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">raise_error</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Warn (or raise) if any timestep has both import and export above `tol`.</span>
+
+<span class="sd">    Call after solving to verify that a `decomposition_type="linear"` split is</span>
+<span class="sd">    exact. Simultaneous import and export means the charges allowed arbitrage</span>
+<span class="sd">    (e.g., export charge &gt; energy charge). Can also validate user-provided</span>
+<span class="sd">    numeric imports and exports before solving with `raise_error=True`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    positive : [numpy.Array, cvxpy.Expression, pyomo.environ.Var]</span>
+<span class="sd">        Solved import component. CVXPY objects are read via `.value` and</span>
+<span class="sd">        indexed Pyomo objects via `pyomo.environ.value`.</span>
+
+<span class="sd">    negative : [numpy.Array, cvxpy.Expression, pyomo.environ.Var]</span>
+<span class="sd">        Solved export component (stored as positive magnitudes)</span>
+
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Components at or below this value are treated as zero. Default 1e-6.</span>
+
+<span class="sd">    varstr : str, optional</span>
+<span class="sd">        Name used to identify the utility in the warning or error message.</span>
+
+<span class="sd">    raise_error : bool, optional</span>
+<span class="sd">        If True, raise a ValueError instead of warning. Default False.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        Indices of timesteps where both components exceed `tol`</span>
+<span class="sd">        (empty if none)</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If `raise_error` is True and any timestep has both components above `tol`</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_to_array</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">check_cvx_type</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">pyo</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">t</span><span class="p">])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">index_set</span><span class="p">()],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="n">pos</span> <span class="o">=</span> <span class="n">_to_array</span><span class="p">(</span><span class="n">positive</span><span class="p">)</span>
+    <span class="n">neg</span> <span class="o">=</span> <span class="n">_to_array</span><span class="p">(</span><span class="n">negative</span><span class="p">)</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">pos</span> <span class="o">&gt;</span> <span class="n">tol</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">neg</span> <span class="o">&gt;</span> <span class="n">tol</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">idx</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" for '</span><span class="si">{</span><span class="n">varstr</span><span class="si">}</span><span class="s2">'"</span> <span class="k">if</span> <span class="n">varstr</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="k">if</span> <span class="n">raise_error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Simultaneous import and export</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">idx</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"timestep(s) (first indices: </span><span class="si">{</span><span class="n">idx</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">). Imports and "</span>
+                <span class="s2">"exports cannot both be positive."</span>
+            <span class="p">)</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Simultaneous import and export</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">idx</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> timestep(s) "</span>
+            <span class="sa">f</span><span class="s2">"(first indices: </span><span class="si">{</span><span class="n">idx</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">). The charges likely allow "</span>
+            <span class="s2">"arbitrage (e.g., export charge &gt; energy charge), so the linear "</span>
+            <span class="s2">"decomposition is not exact."</span><span class="p">,</span>
+            <span class="ne">UserWarning</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">idx</span></div>
 
 
 <div class="viewcode-block" id="parse_freq"><a class="viewcode-back" href="../../utils.html#eeco.utils.parse_freq">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">parse_freq</span><span class="p">(</span><span class="n">freq</span><span class="p">):</span>

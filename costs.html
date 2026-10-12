@@ -82,6 +82,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.calculate_energy_cost"><code class="docutils literal notranslate"><span class="pre">calculate_energy_cost()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.calculate_export_revenue"><code class="docutils literal notranslate"><span class="pre">calculate_export_revenue()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.calculate_itemized_cost"><code class="docutils literal notranslate"><span class="pre">calculate_itemized_cost()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.costs.check_import_export_dict"><code class="docutils literal notranslate"><span class="pre">check_import_export_dict()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eeco.costs.check_linear_decomposition_dict"><code class="docutils literal notranslate"><span class="pre">check_linear_decomposition_dict()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.create_charge_array"><code class="docutils literal notranslate"><span class="pre">create_charge_array()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.default_varstr_alias_func"><code class="docutils literal notranslate"><span class="pre">default_varstr_alias_func()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#eeco.costs.detect_charge_periods"><code class="docutils literal notranslate"><span class="pre">detect_charge_periods()</span></code></a></li>
@@ -218,7 +220,7 @@ Default is 1</p></li>
 <li><p><strong>additional_objective_terms</strong> (<em>pyomo.Expression, list</em>) – Additional terms to be added to the objective function.
 Can be a single pyomo Expression or a list of pyomo Expressions.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
-<li><p><strong>decomposition_type</strong> (<em>str or None</em>) – Type of decomposition to use for consumption data.
+<li><p><strong>decomposition_type</strong> (<em>{“absolute_value”, “binary_big_M”, “linear”, None}</em>) – Type of decomposition to use for consumption data.
 - “absolute_value”: Uses max(x, 0) constraints. Creates nonlinear problem</p>
 <blockquote>
 <div><p>for Pyomo due to abs() constraint.</p>
@@ -226,6 +228,9 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <ul class="simple">
 <li><p>“binary_big_M”: Uses binary indicator with Big-M constraints.
 Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.</p></li>
+<li><p>“linear”: Plain LP split into non-negative imports and exports for
+Pyomo or CVXPY. Exact only when export charge &lt;= energy charge and
+energy/demand charges are non-negative (warns otherwise).</p></li>
 <li><p>None (default): No decomposition, treats all consumption as imports</p></li>
 </ul>
 </li>
@@ -252,7 +257,7 @@ f”{utility}_{charge_type}_{name}_{charge_limit}”</p>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
     is provided in <cite>charge_arrays</cite></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -260,6 +265,11 @@ f”{utility}_{charge_type}_{name}_{charge_limit}”</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>pyomo.Model</p>
+</dd>
+<dt class="field-odd">Warns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>UserWarning</strong> – When <cite>decomposition_type=”linear”</cite> and an export charge exceeds the
+energy charge, since the LP split may then import and export
+simultaneously</p>
 </dd>
 </dl>
 </dd></dl>
@@ -327,7 +337,7 @@ cycle. Applied to the whole customer charge, which is otherwise billed
 in full regardless of horizon length. Default is 1</p></li>
 <li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
-<li><p><strong>decomposition_type</strong> (<em>str or None</em>) – Type of decomposition to use for consumption data.
+<li><p><strong>decomposition_type</strong> (<em>{“absolute_value”, “binary_big_M”, “linear”, None}</em>) – Type of decomposition to use for consumption data.
 - “absolute_value”: Uses max(x, 0) constraints. Creates nonlinear problem</p>
 <blockquote>
 <div><p>for Pyomo due to abs() constraint.</p>
@@ -335,6 +345,9 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 <ul class="simple">
 <li><p>“binary_big_M”: Uses binary indicator with Big-M constraints.
 Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.</p></li>
+<li><p>“linear”: Plain LP split into non-negative imports and exports for
+Pyomo or CVXPY. Exact only when export charge &lt;= energy charge and
+energy/demand charges are non-negative (warns otherwise).</p></li>
 <li><p>None (default): No decomposition, treats all consumption as imports</p></li>
 </ul>
 </li>
@@ -361,8 +374,12 @@ f”{utility}_{charge_type}_{name}_{charge_limit}”</p>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
-    is provided in <cite>charge_arrays</cite></p>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+    is provided in <cite>charge_arrays</cite></p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If numeric <cite>imports</cite> and <cite>exports</cite> in <cite>consumption_data_dict</cite> are both
+    positive in the same timestep</p></li>
+</ul>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p><ul class="simple">
@@ -374,7 +391,12 @@ from decomposition (cvxpy + decomposition_type path), or None otherwise</p></li>
 </p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+<dt class="field-odd">Warns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>UserWarning</strong> – When <cite>decomposition_type=”linear”</cite> and an export charge exceeds the
+energy charge, since the LP split may then import and export
+simultaneously</p>
 </dd>
 </dl>
 </dd></dl>
@@ -419,7 +441,7 @@ in USD for the given <cite>charge_array</cite> and <cite>consumption_data</cite>
 and the second entry being the pyomo model object (or None)</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)">float</a>), pyomo.Model</p>
+<dd class="field-odd"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a>), pyomo.Model</p>
 </dd>
 </dl>
 </dd></dl>
@@ -454,7 +476,7 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
     is provided in <cite>charge_arrays</cite></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -464,7 +486,7 @@ in USD for the given <cite>charge_array</cite> and <cite>consumption_data</cite>
 and the second entry being the pyomo model object (or None)</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)">float</a>), pyomo.Model</p>
+<dd class="field-even"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a>), pyomo.Model</p>
 </dd>
 </dl>
 </dd></dl>
@@ -491,7 +513,7 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – When invalid <cite>utility</cite>, <cite>charge_type</cite>, or <cite>assessed</cite>
     is provided in <cite>charge_arrays</cite></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -501,7 +523,7 @@ in USD for the given <cite>charge_array</cite> and <cite>export_data</cite>
 and the second entry being the pyomo model object (or None)</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)">float</a>), pyomo.Model</p>
+<dd class="field-even"><p>(cvxpy.Expression, pyomo.environ.Var, or <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a>), pyomo.Model</p>
 </dd>
 </dl>
 </dd></dl>
@@ -551,13 +573,16 @@ cycle. Applied to the whole customer charge, which is otherwise billed
 in full regardless of horizon length. Default is 1</p></li>
 <li><p><strong>model</strong> (<em>pyomo.Model</em>) – The model object associated with the problem.
 Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
-<li><p><strong>decomposition_type</strong> (<em>str or None</em>) – Type of decomposition to use for consumption data.
+<li><p><strong>decomposition_type</strong> (<em>{“absolute_value”, “binary_big_M”, “linear”, None}</em>) – Type of decomposition to use for consumption data.
 - “absolute_value”: Linear problem using absolute value
 - “binary_big_M”: Uses binary indicator with Big-M constraints.</p>
 <blockquote>
 <div><p>Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.</p>
 </div></blockquote>
 <ul class="simple">
+<li><p>“linear”: Plain LP split into non-negative imports and exports for
+Pyomo or CVXPY. Exact only when export charge &lt;= energy charge and
+energy/demand charges are non-negative (warns otherwise).</p></li>
 <li><p>None (default): No decomposition, treats all consumption as imports</p></li>
 </ul>
 </li>
@@ -595,6 +620,41 @@ Only used in the case of Pyomo, so <cite>None</cite> by default.</p></li>
 </ul>
 </p>
 </dd>
+<dt class="field-odd">Warns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>UserWarning</strong> – When <cite>decomposition_type=”linear”</cite> and an export charge exceeds the
+energy charge, since the LP split may then import and export
+simultaneously</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.costs.check_import_export_dict">
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">check_import_export_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">consumption_data_dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#check_import_export_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.check_import_export_dict" title="Permalink to this definition"></a></dt>
+<dd><p>Raise if user-provided imports and exports are both nonzero in a timestep.</p>
+<p>Only utilities already given as <code class="docutils literal notranslate"><span class="pre">{&quot;imports&quot;:</span> <span class="pre">...,</span> <span class="pre">&quot;exports&quot;:</span> <span class="pre">...}</span></code> with
+numeric array values are checked; symbolic (cvxpy/pyomo) values are skipped.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>consumption_data_dict</strong> (<em>dict</em>) – Consumption data as passed to <cite>calculate_cost</cite></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If any timestep has both imports and exports greater than zero</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.costs.check_linear_decomposition_dict">
+<span class="sig-prename descclassname"><span class="pre">eeco.costs.</span></span><span class="sig-name descname"><span class="pre">check_linear_decomposition_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">charge_dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/costs.html#check_linear_decomposition_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.costs.check_linear_decomposition_dict" title="Permalink to this definition"></a></dt>
+<dd><p>Warn if charges break the conditions under which a linear split is exact.</p>
+<p>With <cite>decomposition_type=”linear”</cite>, importing and exporting in the same
+timestep is only suboptimal when export charge &lt;= energy charge and energy and
+demand charges are non-negative. Only numpy charge arrays are checked.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>charge_dict</strong> (<em>dict</em>) – Charge dictionary as passed to <cite>calculate_cost</cite></p>
+</dd>
 </dl>
 </dd></dl>
 
@@ -614,7 +674,7 @@ If a DataFrame it must have a column “DateTime” and row for each timestep</p
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – When <cite>datetime</cite> is not pandas.DataFrame, pandas.Series, or numpy.ndarray</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – When <cite>datetime</cite> is not pandas.DataFrame, pandas.Series, or numpy.ndarray</p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>timeseries of the cost of the charge with irrelevant timesteps zeroed out</p>
@@ -647,7 +707,7 @@ to customize variable names.</p>
 <cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite></p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -704,7 +764,7 @@ not include <cite>end_dt</cite></p></li>
 <dd class="field-even"><p>the horizon’s length as a fraction of a monthly billing period</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)">float</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -722,10 +782,10 @@ where start_date and end_date are in YYYYMMDD or YYYY-MM-DD format</p>
 <dd class="field-even"><p>Duration of the charge period in days</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)">int</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If the key format is invalid or dates cannot be parsed</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the key format is invalid or dates cannot be parsed</p>
 </dd>
 </dl>
 </dd></dl>
@@ -742,7 +802,7 @@ where start_date and end_date are in YYYYMMDD or YYYY-MM-DD format</p>
 <dd class="field-even"><p>number of timesteps in <cite>charge_array</cite></p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)">int</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -802,7 +862,7 @@ not include <cite>end_dt</cite></p></li>
 <dd class="field-even"><p>dictionary of charge arrays</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -822,7 +882,7 @@ not include <cite>end_dt</cite></p></li>
 <dd class="field-even"><p>A unique name with underscores converted to dashes</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -839,7 +899,7 @@ not include <cite>end_dt</cite></p></li>
 <dd class="field-odd"><p><strong>model</strong> (<em>pyomo.environ.Model</em>) – A model that <cite>calculate_cost</cite> has already built costs on</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When no charges have been recorded on <cite>model</cite></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – When no charges have been recorded on <cite>model</cite></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Keyed by <cite>charge_dict</cite> key. Each entry holds the <cite>varstr</cite> and
@@ -848,7 +908,7 @@ components named in <cite>CHARGE_COMPONENT_SUFFIXES</cite>, which are None for
 charges that built none</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -870,7 +930,7 @@ case positions into <cite>charge_array</cite> are returned rather than index val
 corresponding <cite>model._var_index</cite> values when a Pyomo <cite>model</cite> is given</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)">list</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -890,7 +950,7 @@ corresponding <cite>model._var_index</cite> values when a Pyomo <cite>model</cit
 <dd class="field-even"><p>Dictionary with conversion factors for each utility type</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -905,7 +965,7 @@ with proper unit conversion.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>consumption_data_dict</strong> (<em>dict</em>) – Dictionary with utility keys and consumption data values</p></li>
 <li><p><strong>conversion_factors</strong> (<em>dict</em>) – Dictionary with conversion factors for each utility type</p></li>
-<li><p><strong>decomposition_type</strong> (<em>str or None</em>) – Type of decomposition to apply (e.g., “absolute_value”)</p></li>
+<li><p><strong>decomposition_type</strong> (<em>{“absolute_value”, “binary_big_M”, “linear”, None}</em>) – Type of decomposition to apply</p></li>
 <li><p><strong>model</strong> (<em>pyomo.Model, optional</em>) – Pyomo model object for optimization variables</p></li>
 </ul>
 </dd>
@@ -917,7 +977,7 @@ with proper unit conversion.</p>
 </p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -939,7 +999,7 @@ with proper unit conversion.</p>
 <dd class="field-even"><p>limit in the tier after <cite>key</cite>, which is <cite>inf</cite> if there is no higher tier</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)">float</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -965,7 +1025,7 @@ start of the relevant timeframe. Then accumulates the running maximum.</p>
 “cost”: running max of usage * charge}</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -989,7 +1049,7 @@ Accepts <cite>datetime.datetime</cite>, <cite>numpy.datetime64</cite>, and ISO-8
 <dd class="field-even"><p>the number of timesteps and a single-column DataFrame of their datetimes</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a> of (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a>, <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.6)">pandas.DataFrame</a>)</p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a> of (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)">int</a>, <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.6)">pandas.DataFrame</a>)</p>
 </dd>
 <dt class="field-even">Warns<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>UserWarning</strong> – when the horizon is not a whole multiple of <cite>resolution</cite>, since the
@@ -1023,10 +1083,10 @@ not include <cite>end_dt</cite></p></li>
 <dd class="field-even"><p>dictionary of charge_dicts with different variations</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – If global scaling overrides individual ratios in any variant
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.15)"><strong>UserWarning</strong></a> – If global scaling overrides individual ratios in any variant
     (inherited from parametrize_rate_data)</p>
 </dd>
 </dl>
@@ -1107,9 +1167,9 @@ parametrized charges and windows</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If percent_change_dict contains both period-based scaling and individual charge
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If percent_change_dict contains both period-based scaling and individual charge
     scaling for the same charge type</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.14)"><strong>UserWarning</strong></a> – If percent_change_dict contains exact charge keys that are not found in the data</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.15)"><strong>UserWarning</strong></a> – If percent_change_dict contains exact charge keys that are not found in the data</p></li>
 </ul>
 </dd>
 </dl>
@@ -1125,13 +1185,13 @@ parametrized charges and windows</p>
 <cite>utility`_`charge_type`_`name`_`start_date`_`end_date`_`charge_limit</cite></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When <cite>key</cite> has fewer than six underscore-separated fields</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – When <cite>key</cite> has fewer than six underscore-separated fields</p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p><cite>utility</cite>, <cite>charge_type</cite>, <cite>name</cite>, <cite>start_date</cite>, <cite>end_date</cite>, <cite>charge_limit</cite></p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a> of <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a> of <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
 </dd>
 </dl>
 </dd></dl>
