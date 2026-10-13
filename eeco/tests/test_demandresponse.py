@@ -28,9 +28,9 @@ def fix_region_choice():
         inactive (and its share forced to 0)."""
         z = model.find_component(varstr + "_region_active")
         region_reduction = model.find_component(varstr + "_region_reduction")
-        for r in z:
-            z[r].fix(1 if r == active_idx else 0)
-            region_reduction[r].fix(reduction_value if r == active_idx else 0)
+        for t, r in z:
+            z[t, r].fix(1 if r == active_idx else 0)
+            region_reduction[t, r].fix(reduction_value if r == active_idx else 0)
 
     return _fix_region_choice
 
@@ -40,9 +40,8 @@ def assert_region_components_satisfied():
     def _assert_region_components_satisfied(model, varstr):
         """Asserts every disaggregated-region component `build_expression` adds
         under `varstr` is internally consistent at the model's current (fully
-        fixed) values. Works for both `"average"` settlement (region-indexed
-        components) and `"interval"` settlement (interval-and-region-indexed
-        components, plus the extra `_interval_revenue_constraint`)."""
+        fixed) values. Works for both `"average"` and `"interval"` settlement,
+        whose components are indexed by interval and region."""
         names = [
             "_region_select_constraint",
             "_region_reduction_lower_constraint",
@@ -50,8 +49,6 @@ def assert_region_components_satisfied():
             "_region_reduction_sum_constraint",
             "_revenue_constraint",
         ]
-        if model.find_component(varstr + "_interval_revenue_constraint") is not None:
-            names.append("_interval_revenue_constraint")
         for name in names:
             assert_constraint_satisfied(model.find_component(varstr + name))
 
@@ -130,9 +127,7 @@ def dr_revenue_setup(flat_power_series):
         ]
     )
     historical_power_kW = flat_power_series(value_by_hour=90)
-    baseline_params = dr.make_baseline_parameters(
-        n_baseline_days=1, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
 
     events = dr.add_event(None, "2024-01-15", 13, 2, 17, ["2024-01-01"], 100, 10)
     events = dr.add_event(events, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)
@@ -151,7 +146,7 @@ def dr_revenue_setup(flat_power_series):
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         region_x1s,
     )
 
@@ -313,40 +308,32 @@ def test_events_to_dataframe_given_monthly_capacity_applies_to_month():
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_make_baseline_parameters():
-    params = dr.make_baseline_parameters()
-    assert params[dr.N_BASELINE_DAYS] == 10
-    assert params[dr.ADJUSTMENT_OFFSET_HOURS] == 3
-    assert params[dr.ADJUSTMENT_DURATION_HOURS] == 3
+def test_baseline_method_validation():
+    baseline_method = dr.BaselineMethod()
+    assert baseline_method.n_baseline_days == 10
+    assert baseline_method.adjustment_offset_hours == 3
+    assert baseline_method.adjustment_duration_hours == 3
 
     with pytest.raises(ValueError):
-        dr.make_baseline_parameters(baseline_method="high_x_of_y")
+        dr.BaselineMethod(n_baseline_days=-1)
     with pytest.raises(ValueError):
-        dr.make_baseline_parameters(n_baseline_days=-1)
+        dr.BaselineMethod(adjustment_offset_hours=3, adjustment_duration_hours=0)
     with pytest.raises(ValueError):
-        dr.make_baseline_parameters(
-            adjustment_offset_hours=3, adjustment_duration_hours=0
-        )
-    with pytest.raises(ValueError):
-        dr.make_baseline_parameters(
-            adjustment_offset_hours=2, adjustment_duration_hours=4
-        )
+        dr.BaselineMethod(adjustment_offset_hours=2, adjustment_duration_hours=4)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_simple_average(flat_power_series):
+def test_compute_baseline_simple_average(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100)
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]  # 5 weekdays
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    params = dr.make_baseline_parameters(
-        n_baseline_days=5, adjustment_offset_hours=None
-    )
-    baseline_kW = dr.calculate_event_baseline(power_kW, event, params)
+    baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
+    baseline_kW, _ = baseline_method.compute(power_kW, event)
     assert baseline_kW == pytest.approx(100)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_day_of_adjustment(flat_power_series):
+def test_compute_baseline_day_of_adjustment(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100, adj_value_by_hour=100)
     # bump the event day's own adjustment-window consumption to create a 1.1x factor
     event_adj_start = pd.Timestamp("2024-01-08 10:00")
@@ -355,44 +342,42 @@ def test_calculate_event_baseline_day_of_adjustment(flat_power_series):
 
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    params = dr.make_baseline_parameters(
+    baseline_method = dr.BaselineMethod(
         n_baseline_days=5,
         adjustment_offset_hours=3,
         adjustment_duration_hours=3,
         adjustment_clip=(0.8, 1.2),
     )
-    baseline_kW = dr.calculate_event_baseline(power_kW, event, params)
+    baseline_kW, _ = baseline_method.compute(power_kW, event)
     assert baseline_kW == pytest.approx(110, rel=1e-3)
 
     # push the factor beyond the clip bounds
     power_kW.loc[event_adj_start:event_adj_end] = 1000
-    baseline_kW_clipped = dr.calculate_event_baseline(power_kW, event, params)
+    baseline_kW_clipped, _ = baseline_method.compute(power_kW, event)
     assert baseline_kW_clipped == pytest.approx(100 * 1.2, rel=1e-3)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_zero_denominator_warns(flat_power_series):
+def test_compute_baseline_zero_denominator_warns(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100, adj_value_by_hour=0)
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    params = dr.make_baseline_parameters(
+    baseline_method = dr.BaselineMethod(
         n_baseline_days=5, adjustment_offset_hours=3, adjustment_duration_hours=3
     )
     with pytest.warns(UserWarning):
-        baseline_kW = dr.calculate_event_baseline(power_kW, event, params)
+        baseline_kW, _ = baseline_method.compute(power_kW, event)
     assert baseline_kW == pytest.approx(100)  # factor skipped (left at 1.0)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_insufficient_days(flat_power_series):
+def test_compute_baseline_insufficient_days(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100)
     baseline_days = ["2024-01-01", "2024-01-02"]  # only 2, fewer than requested 5
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    params = dr.make_baseline_parameters(
-        n_baseline_days=5, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
     with pytest.warns(UserWarning):
-        dr.calculate_event_baseline(power_kW, event, params)
+        baseline_method.compute(power_kW, event)
 
     weekend_only_days = [
         "2024-01-06",
@@ -400,18 +385,16 @@ def test_calculate_event_baseline_insufficient_days(flat_power_series):
     ]  # both weekend, excluded by default
     event2 = dr.add_event(None, "2024-01-08", 13, 2, 17, weekend_only_days, 100, 10)[0]
     with pytest.raises(ValueError):
-        dr.calculate_event_baseline(power_kW, event2, params)
+        baseline_method.compute(power_kW, event2)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_dynamic_day_fully_in_horizon(flat_power_series):
+def test_compute_baseline_dynamic_day_fully_in_horizon(flat_power_series):
     historical_power_kW = flat_power_series(
         value_by_hour=100
     )  # unused: day is in-horizon
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    params = dr.make_baseline_parameters(
-        n_baseline_days=1, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
 
     model = pyo.ConcreteModel()
     model_datetime_index = pd.date_range(
@@ -424,10 +407,9 @@ def test_calculate_event_baseline_dynamic_day_fully_in_horizon(flat_power_series
     model.power[1].fix(100)  # 13:00
     model.power[2].fix(140)  # 14:00 -> baseline day's [13, 15) window mean = 120
 
-    baseline_var, model = dr.calculate_event_baseline(
+    baseline_var, model = baseline_method.compute(
         historical_power_kW,
         event,
-        params,
         model=model,
         model_power_kW=model.power,
         model_datetime_index=model_datetime_index,
@@ -440,12 +422,10 @@ def test_calculate_event_baseline_dynamic_day_fully_in_horizon(flat_power_series
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_dynamic_day_fully_out_of_horizon(flat_power_series):
+def test_compute_baseline_dynamic_day_fully_out_of_horizon(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    params = dr.make_baseline_parameters(
-        n_baseline_days=1, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
 
     model = pyo.ConcreteModel()
     model_datetime_index = pd.date_range(
@@ -456,31 +436,28 @@ def test_calculate_event_baseline_dynamic_day_fully_out_of_horizon(flat_power_se
     for t in model.t:
         model.power[t].fix(9999)  # obviously wrong if mistakenly consulted
 
-    baseline_kW, model = dr.calculate_event_baseline(
+    baseline_kW, model = baseline_method.compute(
         historical_power_kW,
         event,
-        params,
         model=model,
         model_power_kW=model.power,
         model_datetime_index=model_datetime_index,
         varstr="test_baseline_2",
     )
-    expected = dr.calculate_event_baseline(historical_power_kW, event, params)
+    expected, _ = baseline_method.compute(historical_power_kW, event)
     assert baseline_kW == pytest.approx(expected)
     assert model.find_component("test_baseline_2") is None  # no new component created
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_dynamic_day_partial_overlap(flat_power_series):
+def test_compute_baseline_dynamic_day_partial_overlap(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     historical_power_kW.loc["2024-01-01 13:00"] = 50
     historical_power_kW.loc["2024-01-01 14:00"] = 70
     # true historical per-interval profile for the [13, 15) window: [50, 70]
 
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    params = dr.make_baseline_parameters(
-        n_baseline_days=1, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
 
     model = pyo.ConcreteModel()
     # horizon starts at 14:00 -- the window [13, 15) only partially overlaps it
@@ -492,10 +469,9 @@ def test_calculate_event_baseline_dynamic_day_partial_overlap(flat_power_series)
     for t in model.t:
         model.power[t].fix(9999)  # obviously wrong if the 14:00 slot were used
 
-    baseline_kW, model = dr.calculate_event_baseline(
+    baseline_kW, model = baseline_method.compute(
         historical_power_kW,
         event,
-        params,
         model=model,
         model_power_kW=model.power,
         model_datetime_index=model_datetime_index,
@@ -507,16 +483,14 @@ def test_calculate_event_baseline_dynamic_day_partial_overlap(flat_power_series)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_dynamic_mixed_days(flat_power_series):
+def test_compute_baseline_dynamic_mixed_days(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     # day A (2024-01-01) in horizon -> dynamic;
     # day B (2024-01-02) out -> historical (mean 100)
     event = dr.add_event(
         None, "2024-01-08", 13, 2, 17, ["2024-01-01", "2024-01-02"], 100, 10
     )[0]
-    params = dr.make_baseline_parameters(
-        n_baseline_days=2, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=2, adjustment_offset_hours=None)
 
     model = pyo.ConcreteModel()
     model_datetime_index = pd.date_range(
@@ -529,10 +503,9 @@ def test_calculate_event_baseline_dynamic_mixed_days(flat_power_series):
     model.power[1].fix(80)  # 13:00
     model.power[2].fix(160)  # 14:00 -> day A mean = 120
 
-    baseline_var, model = dr.calculate_event_baseline(
+    baseline_var, model = baseline_method.compute(
         historical_power_kW,
         event,
-        params,
         model=model,
         model_power_kW=model.power,
         model_datetime_index=model_datetime_index,
@@ -545,7 +518,7 @@ def test_calculate_event_baseline_dynamic_mixed_days(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_adjustment_stays_historical_even_in_horizon(
+def test_compute_baseline_adjustment_stays_historical_even_in_horizon(
     flat_power_series,
 ):
     historical_power_kW = flat_power_series(value_by_hour=100, adj_value_by_hour=100)
@@ -555,13 +528,13 @@ def test_calculate_event_baseline_adjustment_stays_historical_even_in_horizon(
 
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    params = dr.make_baseline_parameters(
+    baseline_method = dr.BaselineMethod(
         n_baseline_days=5,
         adjustment_offset_hours=3,
         adjustment_duration_hours=3,
         adjustment_clip=(0.8, 1.2),
     )
-    expected = dr.calculate_event_baseline(historical_power_kW, event, params)
+    expected, _ = baseline_method.compute(historical_power_kW, event)
 
     model = pyo.ConcreteModel()
     # horizon covers only the event day's adjustment window (10:00-13:00 on Jan 8),
@@ -575,10 +548,9 @@ def test_calculate_event_baseline_adjustment_stays_historical_even_in_horizon(
     for t in model.t:
         model.power[t].fix(99999)  # obviously wrong if mistakenly consulted
 
-    baseline_kW, model = dr.calculate_event_baseline(
+    baseline_kW, model = baseline_method.compute(
         historical_power_kW,
         event,
-        params,
         model=model,
         model_power_kW=model.power,
         model_datetime_index=model_datetime_index,
@@ -650,7 +622,7 @@ def test_adjustment_in_model_is_inert_without_a_model(adjustment_factor_setup):
         adjustment_duration_hours=3,
         adjustment_in_model=True,
     )
-    baseline_kW = baseline_method.compute(historical_power_kW, event)
+    baseline_kW, _ = baseline_method.compute(historical_power_kW, event)
     assert baseline_kW == pytest.approx(110, rel=1e-3)
 
 
@@ -684,25 +656,21 @@ def test_adjustment_in_model_defaults_off(adjustment_factor_setup):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_model_args_incomplete_raises(flat_power_series):
+def test_compute_baseline_model_args_incomplete_raises(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    params = dr.make_baseline_parameters(
-        n_baseline_days=1, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
 
     model = pyo.ConcreteModel()
     with pytest.raises(ValueError):
-        dr.calculate_event_baseline(historical_power_kW, event, params, model=model)
+        baseline_method.compute(historical_power_kW, event, model=model)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_datetime_index_too_short(flat_power_series):
+def test_compute_baseline_datetime_index_too_short(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    params = dr.make_baseline_parameters(
-        n_baseline_days=1, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
 
     model = pyo.ConcreteModel()
     model.t = pyo.RangeSet(0, 0)
@@ -711,10 +679,9 @@ def test_calculate_event_baseline_datetime_index_too_short(flat_power_series):
     model_datetime_index = pd.DatetimeIndex(["2024-01-01 13:00"])  # only 1 entry
 
     with pytest.raises(ValueError):
-        dr.calculate_event_baseline(
+        baseline_method.compute(
             historical_power_kW,
             event,
-            params,
             model=model,
             model_power_kW=model.power,
             model_datetime_index=model_datetime_index,
@@ -734,13 +701,10 @@ def test_calculate_event_baseline_datetime_index_too_short(flat_power_series):
         (0.5, 10 * (50 - 0.6 * 100)),  # region 3 (penalty): 10 * (1*50 - 0.6*100)
     ],
 )
-def test_evaluate_payment_function(delivered_ratio, expected_revenue):
-    bid_capacity_kW = 100
-    capacity_price = 10
-    reduction_kW = delivered_ratio * bid_capacity_kW
-    revenue = dr.evaluate_payment_function(
-        CBP_PAYMENT_FUNCTION, reduction_kW, bid_capacity_kW, capacity_price
-    )
+def test_payment_structure_evaluate(delivered_ratio, expected_revenue):
+    payment = dr.PaymentStructure(CBP_PAYMENT_FUNCTION)
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    revenue = payment.evaluate(event, delivered_ratio * event[dr.BID_CAPACITY_KW])
     assert revenue == pytest.approx(expected_revenue)
 
 
@@ -759,12 +723,10 @@ def test_calculate_dr_revenue_multi_event(flat_power_series):
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)
     events = dr.add_event(events, "2024-01-15", 13, 2, 17, baseline_days, 100, 10)
-    params = dr.make_baseline_parameters(
-        n_baseline_days=5, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
 
     per_event_df, total_revenue = dr.calculate_itemized_dr_revenue(
-        power_kW, events, params, payment_function=CBP_PAYMENT_FUNCTION
+        power_kW, events, baseline_method, payment_function=CBP_PAYMENT_FUNCTION
     )
     assert len(per_event_df) == 2
 
@@ -807,8 +769,8 @@ def test_build_event_revenue_pyomo(
     expected_revenue = 10 * 0.5 * 60
 
     z = model.find_component("event_2024_01_08_region_active")
-    assert pyo.value(z[1]) == 1
-    assert all(pyo.value(z[r]) == 0 for r in z if r != 1)
+    assert pyo.value(z[0, 1]) == 1
+    assert all(pyo.value(z[t, r]) == 0 for t, r in z if r != 1)
 
     # No LP solver is assumed to be installed in this environment. Every
     # other variable is already fixed (power) or fixed by build_event_revenue
@@ -891,7 +853,7 @@ def test_build_dr_revenue_pyomo_existing_objective(
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         region_x1s,
     ) = dr_revenue_setup
 
@@ -904,7 +866,7 @@ def test_build_dr_revenue_pyomo_existing_objective(
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         model,
         CBP_PAYMENT_FUNCTION,
         region_x1s,
@@ -934,7 +896,7 @@ def test_build_dr_revenue_pyomo_new_objective(dr_revenue_setup):
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         region_x1s,
     ) = dr_revenue_setup
 
@@ -945,7 +907,7 @@ def test_build_dr_revenue_pyomo_new_objective(dr_revenue_setup):
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         model,
         CBP_PAYMENT_FUNCTION,
         region_x1s,
@@ -964,7 +926,7 @@ def test_build_dr_revenue_errors(dr_revenue_setup):
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         region_x1s,
     ) = dr_revenue_setup
 
@@ -975,13 +937,13 @@ def test_build_dr_revenue_errors(dr_revenue_setup):
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         model,
         CBP_PAYMENT_FUNCTION,
         {"2024-01-08": 0.60},  # "2024-01-15" intentionally omitted
     )
     z_fixed = model.find_component("dr_event_0_region_active")
-    assert pyo.value(z_fixed[1]) == 1  # "2024-01-08" fixed to region index 1
+    assert pyo.value(z_fixed[0, 1]) == 1  # "2024-01-08" fixed to region index 1
     z_free = model.find_component("dr_event_1_region_active")
     assert all(not z_free[r].fixed for r in z_free)  # "2024-01-15" left free
 
@@ -994,7 +956,7 @@ def test_build_dr_revenue_errors(dr_revenue_setup):
             datetime_index,  # covers only January 8 and 15, not February 1
             events_out_of_range,
             historical_power_kW,
-            baseline_params,
+            baseline_method,
             model,
             CBP_PAYMENT_FUNCTION,
             {"2024-02-01": 0.60},
@@ -1018,14 +980,16 @@ def test_top_usage_days_baseline_selects_highest_usage_days(per_day_event_series
     top_usage_method = dr.TopUsageDaysBaseline(
         n_baseline_days=2, adjustment_offset_hours=None
     )
-    assert top_usage_method.compute(power_kW, event) == pytest.approx(
+    assert top_usage_method.compute(power_kW, event)[0] == pytest.approx(
         np.mean([200, 150])
     )
 
     # The foundation class instead picks the two *most recent* days -- proving
     # the subclass changed only the ranking rule, not the rest of the behavior.
     default_method = dr.BaselineMethod(n_baseline_days=2, adjustment_offset_hours=None)
-    assert default_method.compute(power_kW, event) == pytest.approx(np.mean([70, 150]))
+    assert default_method.compute(power_kW, event)[0] == pytest.approx(
+        np.mean([70, 150])
+    )
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1034,7 +998,7 @@ def test_fixed_level_baseline_ignores_history(flat_power_series):
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     baseline_method = dr.FixedLevelBaseline(firm_level_kW=500)
 
-    np.testing.assert_allclose(baseline_method.compute(power_kW, event), [500, 500])
+    np.testing.assert_allclose(baseline_method.compute(power_kW, event)[0], [500, 500])
 
     model = pyo.ConcreteModel()
     baseline_kW, returned_model = baseline_method.compute(power_kW, event, model=model)
@@ -1194,7 +1158,7 @@ def test_build_dr_revenue_with_capacity_energy_payment(dr_revenue_setup):
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         region_x1s,
     ) = dr_revenue_setup
 
@@ -1207,7 +1171,7 @@ def test_build_dr_revenue_with_capacity_energy_payment(dr_revenue_setup):
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         model,
         payment_structure,
         region_x1s,
@@ -1258,9 +1222,7 @@ def test_build_dr_revenue_dynamic_baseline(
     historical_power_kW = flat_power_series(
         value_by_hour=100
     )  # unused: baseline day is in-horizon
-    baseline_params = dr.make_baseline_parameters(
-        n_baseline_days=1, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
 
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-03"], 100, 10)
     region_x1s = {"2024-01-08": 0.75}
@@ -1278,7 +1240,7 @@ def test_build_dr_revenue_dynamic_baseline(
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         model,
         CBP_PAYMENT_FUNCTION,
         region_x1s,
@@ -1295,10 +1257,10 @@ def test_build_dr_revenue_dynamic_baseline(
     # reduction = 120 - 30 = 90 -> delivered ratio 0.9
     # -> region [0.75, 1.05) (index 2) -> revenue 900
     z = model.find_component("dyn_event_0_region_active")
-    assert pyo.value(z[2]) == 1
+    assert pyo.value(z[0, 2]) == 1
     region_reduction = model.find_component("dyn_event_0_region_reduction")
-    for r in region_reduction:
-        region_reduction[r].fix(90 if r == 2 else 0)
+    for t, r in region_reduction:
+        region_reduction[t, r].fix(90 if r == 2 else 0)
     revenue_var = model.find_component("dyn_event_0_revenue")
     revenue_var.fix(900)
     assert_region_components_satisfied(model, "dyn_event_0")
@@ -1317,12 +1279,10 @@ def test_calculate_dr_revenue_numpy_and_pandas_agree(flat_power_series):
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)
     events = dr.add_event(events, "2024-01-15", 13, 2, 17, baseline_days, 100, 10)
-    params = dr.make_baseline_parameters(
-        n_baseline_days=5, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
 
     pandas_revenue, model = dr.calculate_dr_revenue(
-        power_kW, events, params, payment_function=CBP_PAYMENT_FUNCTION
+        power_kW, events, baseline_method, payment_function=CBP_PAYMENT_FUNCTION
     )
     assert model is None
 
@@ -1331,7 +1291,7 @@ def test_calculate_dr_revenue_numpy_and_pandas_agree(flat_power_series):
     numpy_revenue, model = dr.calculate_dr_revenue(
         numpy_power_kW,
         events,
-        params,
+        baseline_method,
         payment_function=CBP_PAYMENT_FUNCTION,
         datetime_index=datetime_index,
     )
@@ -1341,7 +1301,10 @@ def test_calculate_dr_revenue_numpy_and_pandas_agree(flat_power_series):
     with pytest.raises(ValueError):
         # numpy.ndarray without datetime_index cannot be located in time
         dr.calculate_dr_revenue(
-            numpy_power_kW, events, params, payment_function=CBP_PAYMENT_FUNCTION
+            numpy_power_kW,
+            events,
+            baseline_method,
+            payment_function=CBP_PAYMENT_FUNCTION,
         )
 
     with pytest.raises(ValueError):
@@ -1349,7 +1312,7 @@ def test_calculate_dr_revenue_numpy_and_pandas_agree(flat_power_series):
         dr.calculate_dr_revenue(
             numpy_power_kW,
             events,
-            params,
+            baseline_method,
             payment_function=CBP_PAYMENT_FUNCTION,
             datetime_index=datetime_index[:-1],
         )
@@ -1359,28 +1322,24 @@ def test_calculate_dr_revenue_numpy_and_pandas_agree(flat_power_series):
 def test_calculate_dr_revenue_cvxpy_not_implemented():
     power_kW = cp.Variable(3)
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)
-    params = dr.make_baseline_parameters(
-        n_baseline_days=1, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
 
     with pytest.raises(NotImplementedError):
         dr.calculate_dr_revenue(
-            power_kW, events, params, payment_function=CBP_PAYMENT_FUNCTION
+            power_kW, events, baseline_method, payment_function=CBP_PAYMENT_FUNCTION
         )
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 def test_calculate_dr_revenue_bad_type():
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)
-    params = dr.make_baseline_parameters(
-        n_baseline_days=1, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
 
     with pytest.raises(TypeError):
         dr.calculate_dr_revenue(
             "not a valid power_kW type",
             events,
-            params,
+            baseline_method,
             payment_function=CBP_PAYMENT_FUNCTION,
         )
 
@@ -1394,14 +1353,14 @@ def test_calculate_dr_revenue_pyomo_no_objective_vs_build_dr_revenue(dr_revenue_
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         region_x1s,
     ) = dr_revenue_setup
 
     total_revenue, model = dr.calculate_dr_revenue(
         model.power,
         events,
-        baseline_params,
+        baseline_method,
         CBP_PAYMENT_FUNCTION,
         historical_power_kW=historical_power_kW,
         datetime_index=datetime_index,
@@ -1415,7 +1374,7 @@ def test_calculate_dr_revenue_pyomo_no_objective_vs_build_dr_revenue(dr_revenue_
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         model,
         CBP_PAYMENT_FUNCTION,
         region_x1s,
@@ -1425,7 +1384,7 @@ def test_calculate_dr_revenue_pyomo_no_objective_vs_build_dr_revenue(dr_revenue_
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_shaped_profile():
+def test_compute_baseline_shaped_profile():
     """A baseline day that ramps within the event window should produce a
     shaped baseline profile, not a flat mean -- the bug the old scalar
     collapse would have hidden."""
@@ -1435,38 +1394,32 @@ def test_calculate_event_baseline_shaped_profile():
     power_kW.loc["2024-01-01 14:00"] = 120  # baseline day, 14:00
 
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    params = dr.make_baseline_parameters(
-        n_baseline_days=1, adjustment_offset_hours=None
-    )
-    baseline_kW = dr.calculate_event_baseline(power_kW, event, params)
+    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_kW, _ = baseline_method.compute(power_kW, event)
     np.testing.assert_allclose(baseline_kW, [80, 120])
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_day_missing_sample_raises(flat_power_series):
+def test_compute_baseline_day_missing_sample_raises(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100)
     power_kW.loc["2024-01-01 14:00"] = np.nan
 
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    params = dr.make_baseline_parameters(
-        n_baseline_days=1, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
     with pytest.raises(ValueError, match="2024-01-01"):
-        dr.calculate_event_baseline(power_kW, event, params)
+        baseline_method.compute(power_kW, event)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_zero_days_yields_zeros(recwarn, flat_power_series):
+def test_compute_baseline_zero_days_yields_zeros(recwarn, flat_power_series):
     """`n_baseline_days=0` means no baselining: zeros, and day selection
     (and its "insufficient days" warning) is skipped entirely."""
     power_kW = flat_power_series(value_by_hour=100)
     baseline_days = ["2024-01-01", "2024-01-02"]  # would otherwise warn: only 2 < 5
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    params = dr.make_baseline_parameters(
-        n_baseline_days=0, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=0, adjustment_offset_hours=None)
 
-    baseline_kW = dr.calculate_event_baseline(power_kW, event, params)
+    baseline_kW, _ = baseline_method.compute(power_kW, event)
     np.testing.assert_allclose(baseline_kW, [0.0, 0.0])
     assert len(recwarn) == 0
 
@@ -1476,18 +1429,15 @@ def test_settlement_average_vs_interval_disagree_across_discontinuity():
     """Reduction profile straddling the CBP schedule's 0.60 discontinuity:
     averaging first vs. settling each interval give different revenue."""
     reduction_kW = np.array([50, 70])
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     avg_structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_AVERAGE
     )
     interval_structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_INTERVAL
     )
-    avg_revenue = dr.evaluate_payment_function(
-        avg_structure, reduction_kW, bid_capacity_kW=100, capacity_price=10
-    )
-    interval_revenue = dr.evaluate_payment_function(
-        interval_structure, reduction_kW, bid_capacity_kW=100, capacity_price=10
-    )
+    avg_revenue = avg_structure.evaluate(event, reduction_kW)
+    interval_revenue = interval_structure.evaluate(event, reduction_kW)
     assert avg_revenue == pytest.approx(300.0)
     assert interval_revenue == pytest.approx(125.0)
 
@@ -1497,18 +1447,15 @@ def test_settlement_average_vs_interval_agree_within_one_region():
     """Reduction profile that stays inside a single linear region: the two
     settlement modes agree exactly."""
     reduction_kW = np.array([80, 100])
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     avg_structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_AVERAGE
     )
     interval_structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_INTERVAL
     )
-    avg_revenue = dr.evaluate_payment_function(
-        avg_structure, reduction_kW, bid_capacity_kW=100, capacity_price=10
-    )
-    interval_revenue = dr.evaluate_payment_function(
-        interval_structure, reduction_kW, bid_capacity_kW=100, capacity_price=10
-    )
+    avg_revenue = avg_structure.evaluate(event, reduction_kW)
+    interval_revenue = interval_structure.evaluate(event, reduction_kW)
     assert avg_revenue == pytest.approx(900.0)
     assert interval_revenue == pytest.approx(900.0)
 
@@ -1537,8 +1484,10 @@ def test_settlement_interval_pyomo_components_consistent(
 
     fix_interval_region_choice(model, "int_event", [0, 1], [50, 70])
     interval_revenue = model.find_component("int_event_interval_revenue")
-    interval_revenue[0].fix(-100.0)  # region [0, 0.6): y = -0.6 + 0.6*(0.5/0.6)
-    interval_revenue[1].fix(350.0)  # region [0.6, 0.75): y = 0.3 + 0.075*(0.1/0.15)
+    # region [0, 0.6): y = -0.6 + 0.6*(0.5/0.6)
+    assert pyo.value(interval_revenue[0]) == pytest.approx(-100.0)
+    # region [0.6, 0.75): y = 0.3 + 0.075*(0.1/0.15)
+    assert pyo.value(interval_revenue[1]) == pytest.approx(350.0)
     revenue_var.fix(125.0)  # mean of the two interval revenues
     assert_region_components_satisfied(model, "int_event")
 
@@ -1608,14 +1557,14 @@ def test_unilateral_interruption_baseline_with_payout_only_earns_payout():
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_evaluate_payment_function_raises_without_duration_for_per_hour_basis():
+def test_per_hour_basis_requires_duration():
     per_hour_structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, payment_basis=dr.BASIS_PER_HOUR
     )
-    with pytest.raises(ValueError):
-        dr.evaluate_payment_function(
-            per_hour_structure, reduction_kW=60, bid_capacity_kW=100, capacity_price=10
-        )
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    del event[dr.EVENT_DURATION]
+    with pytest.raises(ValueError, match="requires"):
+        per_hour_structure.evaluate(event, 60)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1665,14 +1614,6 @@ def test_rank_days_holiday_subdivision():
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_make_baseline_parameters_holiday_country_round_trip():
-    params = dr.make_baseline_parameters(holiday_country="US", holiday_subdiv="CA")
-    method = dr._coerce_baseline_method(params)
-    assert method.holiday_country == "US"
-    assert method.holiday_subdiv == "CA"
-
-
-@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 def test_payment_component_names_use_suffixes():
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     model = pyo.ConcreteModel()
@@ -1683,7 +1624,7 @@ def test_payment_component_names_use_suffixes():
     )
     for suffix in dr.PAYMENT_COMPONENT_SUFFIXES:
         component = model.find_component(dr._component_name("e0", suffix))
-        if suffix.startswith(("interval_", "energy_", "total_")):
+        if suffix.startswith(("energy_", "total_")):
             assert component is None
         else:
             assert component is not None
@@ -1698,23 +1639,23 @@ def test_compute_uses_supplied_adjustment_factor():
     unadjusted = dr.BaselineMethod(n_baseline_days=3, adjustment_offset_hours=None)
     adjusted = dr.BaselineMethod(n_baseline_days=3)
 
-    expected = unadjusted.compute(historical_power_kW, event) * 1.5
+    expected = unadjusted.compute(historical_power_kW, event)[0] * 1.5
     # Supplied factors are applied as-is, not clipped to adjustment_clip
-    result = adjusted.compute(historical_power_kW, event, adjustment_factor=1.5)
+    result, _ = adjusted.compute(historical_power_kW, event, adjustment_factor=1.5)
     np.testing.assert_allclose(result, expected)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_event_adjustment_factor_used_by_calculate_event_baseline(adjustment_setup):
+def test_event_adjustment_factor_used_by_compute(adjustment_setup):
     historical_power_kW, baseline_days, unadjusted = adjustment_setup
     plain = dr.add_event(None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5)[0]
     event = dr.add_event(
         None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5, adjustment_factor=1.5
     )[0]
-    params = dr.make_baseline_parameters(n_baseline_days=3)
+    baseline_method = dr.BaselineMethod(n_baseline_days=3)
 
-    result = dr.calculate_event_baseline(historical_power_kW, event, params)
-    expected = unadjusted.compute(historical_power_kW, plain) * 1.5
+    result, _ = baseline_method.compute(historical_power_kW, event)
+    expected = unadjusted.compute(historical_power_kW, plain)[0] * 1.5
     np.testing.assert_allclose(result, expected)
 
 
@@ -1726,14 +1667,17 @@ def test_event_adjustment_factor_survives_dataframe_round_trip(adjustment_setup)
     events = dr.add_event(
         events, "2024-03-08", 14, 2, 24, baseline_days, 10, 5, adjustment_factor=1.5
     )
-    params = dr.make_baseline_parameters(n_baseline_days=3)
+    baseline_method = dr.BaselineMethod(n_baseline_days=3)
 
     per_event_df, _ = dr.calculate_itemized_dr_revenue(
-        historical_power_kW, events, params, dr.PaymentStructure(None, payout=1.0)
+        historical_power_kW,
+        events,
+        baseline_method,
+        dr.PaymentStructure(None, payout=1.0),
     )
-    calculated = dr.calculate_event_baseline(historical_power_kW, events[0], params)
+    calculated, _ = baseline_method.compute(historical_power_kW, events[0])
     plain = {**events[1], dr.ADJUSTMENT_FACTOR: None}
-    supplied = unadjusted.compute(historical_power_kW, plain) * 1.5
+    supplied = unadjusted.compute(historical_power_kW, plain)[0] * 1.5
     np.testing.assert_allclose(per_event_df[dr.BASELINE_PROFILE_KW][0], calculated)
     np.testing.assert_allclose(per_event_df[dr.BASELINE_PROFILE_KW][1], supplied)
 
@@ -1746,8 +1690,8 @@ def test_adjustment_factor_event_and_argument(adjustment_setup):
     )[0]
     method = dr.BaselineMethod(n_baseline_days=3)
 
-    matching = method.compute(historical_power_kW, event, adjustment_factor=1.5)
-    np.testing.assert_allclose(matching, method.compute(historical_power_kW, event))
+    matching, _ = method.compute(historical_power_kW, event, adjustment_factor=1.5)
+    np.testing.assert_allclose(matching, method.compute(historical_power_kW, event)[0])
     with pytest.raises(ValueError, match="conflicts"):
         method.compute(historical_power_kW, event, adjustment_factor=1.2)
     with pytest.raises(ValueError, match="must be positive"):
@@ -1842,13 +1786,6 @@ def test_payment_basis_monthly_share_evaluate():
         structure.evaluate({**event, dr.MONTHLY_CALLED_CAPACITY_KWH: None}, 100)
     with pytest.raises(ValueError, match="less than this event's own"):
         structure.evaluate({**event, dr.MONTHLY_CALLED_CAPACITY_KWH: 150}, 100)
-    with pytest.raises(ValueError, match="requires"):
-        dr.evaluate_payment_function(
-            structure, 60, 100, 10, duration_hours=2
-        )  # no monthly_called_capacity_kWh
-    assert dr.evaluate_payment_function(
-        structure, 60, 100, 10, duration_hours=2, monthly_called_capacity_kWh=800
-    ) == pytest.approx(75.0)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1864,9 +1801,7 @@ def test_payment_basis_monthly_share_allocates_base_payment(flat_power_series):
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)
     events = dr.add_event(events, "2024-01-15", 13, 1, 17, baseline_days, 100, 10)
-    params = dr.make_baseline_parameters(
-        n_baseline_days=5, adjustment_offset_hours=None
-    )
+    baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
     structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION,
         settlement=dr.SETTLEMENT_INTERVAL,
@@ -1874,7 +1809,7 @@ def test_payment_basis_monthly_share_allocates_base_payment(flat_power_series):
     )
 
     per_event_df, total_revenue = dr.calculate_itemized_dr_revenue(
-        power_kW, events, params, structure
+        power_kW, events, baseline_method, structure
     )
     assert list(per_event_df[dr.REVENUE]) == pytest.approx([1000 * 2 / 3, 1000 * 1 / 3])
     assert total_revenue == pytest.approx(1000)
@@ -1885,25 +1820,21 @@ def test_payment_basis_monthly_share_cvxpy_matches_evaluate():
     structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION, payment_basis=dr.BASIS_MONTHLY_SHARE
     )
+    event = dr.add_event(
+        None,
+        "2024-01-08",
+        13,
+        2,
+        17,
+        ["2024-01-01"],
+        100,
+        10,
+        monthly_called_capacity_kWh=800,
+    )[0]
     reduction = cp.Variable(2)
     reduction.value = np.array([70.0, 70.0])
-    revenue_expr, _ = dr.build_payment_expression(
-        structure,
-        reduction,
-        100,
-        10,
-        region_x1=0.60,
-        duration_hours=2,
-        monthly_called_capacity_kWh=800,
-    )
-    expected = dr.evaluate_payment_function(
-        structure,
-        np.array([70.0, 70.0]),
-        100,
-        10,
-        duration_hours=2,
-        monthly_called_capacity_kWh=800,
-    )
+    revenue_expr, _ = structure.build_expression(event, reduction, region_x1=0.60)
+    expected = structure.evaluate(event, np.array([70.0, 70.0]))
     assert revenue_expr.value == pytest.approx(expected)
 
 
@@ -1918,7 +1849,7 @@ def test_build_dr_revenue_monthly_share_pyomo(
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         region_x1s,
     ) = dr_revenue_setup
     structure = dr.PaymentStructure(
@@ -1930,7 +1861,7 @@ def test_build_dr_revenue_monthly_share_pyomo(
         datetime_index,
         events,
         historical_power_kW,
-        baseline_params,
+        baseline_method,
         model,
         structure,
         region_x1s,
@@ -1980,12 +1911,3 @@ def test_baseline_method_replace():
         original.replace(not_a_setting=1)
     with pytest.raises(ValueError):
         original.replace(n_baseline_days=-1)
-
-
-def test_coerce_baseline_method_returns_frozen_copy():
-    original = dr.BaselineMethod(holiday_dates=["2024-07-08"])
-    coerced = dr._coerce_baseline_method(original)
-    assert coerced is not original
-    assert vars(coerced) == vars(original)
-    with pytest.raises(AttributeError):
-        coerced.n_baseline_days = 1

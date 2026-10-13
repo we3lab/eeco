@@ -74,18 +74,6 @@ denoted in all caps since they are global constants.
 ``baseline_days`` should already exclude any date that is itself another
 event's date; ``add_event`` does not check this.
 
-Baseline parameters
--------------------
-
-``make_baseline_parameters`` returns a ``dict`` with the keys
-``"baseline_method"``, ``"n_baseline_days"``, ``"adjustment_offset_hours"``,
-``"adjustment_duration_hours"``, ``"adjustment_clip"``,
-``"exclude_weekends"``, ``"exclude_holidays"``, ``"holiday_country"``,
-``"holiday_subdiv"``, ``"holiday_dates"``, and ``"resolution"``, which map
-one-to-one onto the :class:`BaselineMethod` constructor arguments. Every
-entry point that takes ``baseline_params`` also accepts a
-:class:`BaselineMethod` instance directly.
-
 Payment function
 ----------------
 
@@ -169,11 +157,11 @@ symbolically. Retune it with ``model.<varstr>_adjustment_factor.fix(1.15)``
 and re-solve without rebuilding the model. Do not ``.unfix()`` it: the solver
 would then pick the revenue-maximizing factor, and ``baseline * factor``
 would become bilinear. With the default ``False``, the factor is folded in as
-a constant, and ``compute`` returns a plain ``numpy.ndarray`` whenever every
-baseline day is historical.
+a constant, and the baseline ``compute`` returns is a plain ``numpy.ndarray``
+whenever every baseline day is historical.
 
-**Baseline days inside the optimization horizon.** When ``compute`` (or
-``calculate_event_baseline``) is given a ``model``, ``model_power_kW``, and
+**Baseline days inside the optimization horizon.** When ``compute`` is
+given a ``model``, ``model_power_kW``, and
 ``model_datetime_index``, any baseline day whose event window lies fully
 inside the model horizon is computed from the decision variable rather than
 from history. A window that only partially overlaps the horizon falls back to
@@ -320,9 +308,7 @@ available (the capacity term) and for the energy actually reduced during
 the event (the energy term). The energy term is
 ``energy_price * mean(reduction_kW) * duration_hours``, which equals the sum
 of each interval's own energy since intervals are equal-width. It is
-independent of ``settlement``. Because it needs ``"duration_hours"``, use it
-through ``build_event_revenue``, ``calculate_dr_revenue``, or
-``build_dr_revenue`` rather than ``evaluate_payment_function``.
+independent of ``settlement``.
 
 ``MarketIndexedPayment``
 ---------------------------
@@ -362,14 +348,16 @@ solver chooses the region when ``region_x1=None``. Passing ``region_x1``
 fixes the region binaries instead. Infinite region bounds are replaced by
 ``±1000`` times the bid capacity.
 
-For ``"interval"`` settlement, every region component gains a leading
-interval index ``t``, giving one region-selection block per interval, and a
-per-interval revenue variable is added so a solved model can be audited per
-interval. A scalar ``region_x1`` fixes the same region for every interval; a
-list of length ``n_intervals`` fixes them individually. Fixing one region
-for every interval is a tighter feasible set than ``"average"`` settlement
-(which only constrains the mean) and can make a previously feasible plan
-infeasible, so prefer ``region_x1=None`` with ``"interval"`` settlement.
+Every region component is indexed by settlement interval ``t`` and region.
+``"average"`` settlement builds a single interval (``t = 0``) holding the
+window-mean reduction; ``"interval"`` settlement builds one region-selection
+block per interval. A per-interval revenue ``Expression`` lets a solved model
+be audited per interval. A scalar ``region_x1`` fixes the same region for
+every interval; a list of length ``n_intervals`` fixes them individually.
+Fixing one region for every interval is a tighter feasible set than
+``"average"`` settlement (which only constrains the mean) and can make a
+previously feasible plan infeasible, so prefer ``region_x1=None`` with
+``"interval"`` settlement.
 
 If the structure has no regions (payout-only), no region components are
 created and the revenue is the constant payout.
@@ -419,11 +407,8 @@ order) and its baseline ``f"{varstr_prefix}_{i}_baseline_kW"``.
      - Reduction equals the sum of shares
      - ``PaymentStructure``
    * - ``INTERVAL_REVENUE_SUFFIX``
-     - Per-interval revenue ``Var``
-     - ``PaymentStructure`` (``"interval"`` only)
-   * - ``INTERVAL_REVENUE_CONSTRAINT_SUFFIX``
-     - Defines per-interval revenue
-     - ``PaymentStructure`` (``"interval"`` only)
+     - Per-interval revenue ``Expression``
+     - ``PaymentStructure``
    * - ``REVENUE_SUFFIX``
      - Revenue ``Var``, including payout
      - ``PaymentStructure``
@@ -463,10 +448,6 @@ Entry points
 - ``build_event_revenue`` handles a single event and expects ``power_kW``
   already sliced to that event's window, matching the convention in
   ``costs.py`` of passing in already-relevant consumption slices.
-- ``evaluate_payment_function`` and ``build_payment_expression`` take
-  ``bid_capacity_kW``, ``capacity_price``, and optionally ``duration_hours``
-  instead of a full event dict. Payment structures that need other event
-  fields must be used through the event-based entry points.
 
 Combining baselines and payment structures
 =============================================
@@ -505,9 +486,9 @@ Extending BaselineMethod and PaymentStructure
 
 Both axes are designed to be subclassed, and every public entry point
 (``calculate_dr_revenue``, ``build_dr_revenue``,
-``calculate_itemized_dr_revenue``, and friends) accepts an already-constructed
-instance in place of the dict/list configuration it otherwise builds one
-from, so a custom subclass drops in without further plumbing.
+``calculate_itemized_dr_revenue``, and friends) takes a ``BaselineMethod``
+instance and accepts a ``PaymentStructure`` instance in place of a list of
+regions, so a custom subclass drops in without further plumbing.
 
 To add a new baseline method, subclass ``BaselineMethod`` and override one
 of:
@@ -523,9 +504,9 @@ of:
   model_datetime_index=None, varstr=None, adjustment_factor=None)`` to
   replace the baseline calculation entirely, for a baseline that isn't a historical day-average
   at all (see ``FixedLevelBaseline`` and ``UnilateralInterruptionBaseline``).
-  An override must honor ``compute``'s calling contract: return a plain
-  array (or raise) when ``model`` is ``None``, and a ``(value, model)`` pair
-  when a model is given, adding any pyomo components under ``varstr``.
+  An override must honor ``compute``'s calling contract: return a
+  ``(value, model)`` pair, with ``model`` left ``None`` ex-post (or raise),
+  adding any pyomo components under ``varstr`` when a model is given.
 
 To add a new payment structure, subclass ``PaymentStructure`` and override
 ``evaluate`` and ``build_expression`` as a pair -- ``evaluate`` is used for
