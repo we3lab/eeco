@@ -1448,9 +1448,7 @@ def test_mixed_payment_structures_in_one_model_warns():
             event, model.reduction, model=model, varstr="c"
         )
 
-    energy_structure = dr.CapacityEnergyPayment(
-        CBP_PAYMENT_FUNCTION, energy_price=0.09
-    )
+    energy_structure = dr.CapacityEnergyPayment(CBP_PAYMENT_FUNCTION, energy_price=0.09)
     with pytest.warns(UserWarning, match="different payment structure"):
         energy_structure.build_expression(
             event, model.reduction, model=model, varstr="d"
