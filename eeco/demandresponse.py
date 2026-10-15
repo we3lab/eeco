@@ -169,7 +169,7 @@ class BaselineMethod:
     def __init__(
         self,
         n_baseline_days=10,
-        adjustment_offset_hours=3,
+        adjustment_offset_hours=4,
         adjustment_duration_hours=3,
         adjustment_clip=(0.8, 1.2),
         exclude_weekends=True,
