@@ -84,9 +84,10 @@ span of delivered ratio (reduction divided by bid capacity) and maps it
 linearly onto payment ratios ``y1`` to ``y2``. A region whose ``x2`` is
 infinite pays a flat ``y1``. Bounds may be given as the strings
 ``"Infinity"``/``"-Infinity"`` (as produced by ``json.load`` on a quoted JSON
-value); these are coerced to ``inf``/``-inf``. Every entry point that takes
-``payment_function`` also accepts a :class:`PaymentStructure` instance
-directly.
+value); these are coerced to ``inf``/``-inf``. Entry points that take
+``payment_function`` expect a :class:`PaymentStructure` (or subclass)
+instance, built from the regions list, e.g.
+``PaymentStructure(regions)``, not the raw list.
 
 Baseline methods
 =================
@@ -372,6 +373,11 @@ call on a given model, since reusing it raises a pyomo "component already
 exists" error. ``calculate_dr_revenue`` and ``build_dr_revenue`` name each
 event ``f"{varstr_prefix}_{i}"`` (``i`` is the event's position in date
 order) and its baseline ``f"{varstr_prefix}_{i}_baseline_kW"``.
+
+A model is meant to price all its events under one payment structure. The
+first structure built into a model is recorded on it, and building revenue
+into the same model with a structure of a different class or different
+settings raises a ``UserWarning``.
 
 .. list-table::
    :header-rows: 1
