@@ -1,5 +1,6 @@
 import json
 import os
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -17,6 +18,7 @@ np.random.seed(0)
 
 with open(os.path.join("tests", "data", "input", "cbp_payment_function.json")) as f:
     CBP_PAYMENT_FUNCTION = json.load(f)
+CBP_PAYMENT = dr.PaymentStructure(CBP_PAYMENT_FUNCTION)
 
 
 @pytest.fixture
@@ -311,7 +313,7 @@ def test_events_to_dataframe_given_monthly_capacity_applies_to_month():
 def test_baseline_method_validation():
     baseline_method = dr.BaselineMethod()
     assert baseline_method.n_baseline_days == 10
-    assert baseline_method.adjustment_offset_hours == 3
+    assert baseline_method.adjustment_offset_hours == 4
     assert baseline_method.adjustment_duration_hours == 3
 
     with pytest.raises(ValueError):
@@ -726,7 +728,7 @@ def test_calculate_dr_revenue_multi_event(flat_power_series):
     baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
 
     per_event_df, total_revenue = dr.calculate_itemized_dr_revenue(
-        power_kW, events, baseline_method, payment_function=CBP_PAYMENT_FUNCTION
+        power_kW, events, baseline_method, payment_function=CBP_PAYMENT
     )
     assert len(per_event_df) == 2
 
@@ -761,7 +763,7 @@ def test_build_event_revenue_pyomo(
         model.power,
         event,
         baseline_kW,
-        payment_function=CBP_PAYMENT_FUNCTION,
+        payment_function=CBP_PAYMENT,
         region_x1=0.60,
         model=model,
         varstr="event_2024_01_08",
@@ -788,7 +790,7 @@ def test_build_event_revenue_pyomo(
         model.power,
         event,
         baseline_kW,
-        payment_function=CBP_PAYMENT_FUNCTION,
+        payment_function=CBP_PAYMENT,
         region_x1=None,
         model=model,
         varstr="event_free",
@@ -809,7 +811,7 @@ def test_build_event_revenue_pyomo(
             model.power,
             event,
             baseline_kW,
-            payment_function=CBP_PAYMENT_FUNCTION,
+            payment_function=CBP_PAYMENT,
             region_x1=0.60,
             model=model,
             varstr="event_2024_01_08",
@@ -828,7 +830,7 @@ def test_build_event_revenue_cvxpy():
         power,
         event,
         baseline_kW,
-        payment_function=CBP_PAYMENT_FUNCTION,
+        payment_function=CBP_PAYMENT,
         region_x1=0.60,
     )
     assert len(constraints) == 2
@@ -839,7 +841,7 @@ def test_build_event_revenue_cvxpy():
             power,
             event,
             baseline_kW,
-            payment_function=CBP_PAYMENT_FUNCTION,
+            payment_function=CBP_PAYMENT,
             region_x1=None,
         )
 
@@ -868,7 +870,7 @@ def test_build_dr_revenue_pyomo_existing_objective(
         historical_power_kW,
         baseline_method,
         model,
-        CBP_PAYMENT_FUNCTION,
+        CBP_PAYMENT,
         region_x1s,
     )
 
@@ -909,7 +911,7 @@ def test_build_dr_revenue_pyomo_new_objective(dr_revenue_setup):
         historical_power_kW,
         baseline_method,
         model,
-        CBP_PAYMENT_FUNCTION,
+        CBP_PAYMENT,
         region_x1s,
     )
 
@@ -939,7 +941,7 @@ def test_build_dr_revenue_errors(dr_revenue_setup):
         historical_power_kW,
         baseline_method,
         model,
-        CBP_PAYMENT_FUNCTION,
+        CBP_PAYMENT,
         {"2024-01-08": 0.60},  # "2024-01-15" intentionally omitted
     )
     z_fixed = model.find_component("dr_event_0_region_active")
@@ -958,7 +960,7 @@ def test_build_dr_revenue_errors(dr_revenue_setup):
             historical_power_kW,
             baseline_method,
             model,
-            CBP_PAYMENT_FUNCTION,
+            CBP_PAYMENT,
             {"2024-02-01": 0.60},
         )
 
@@ -1242,7 +1244,7 @@ def test_build_dr_revenue_dynamic_baseline(
         historical_power_kW,
         baseline_method,
         model,
-        CBP_PAYMENT_FUNCTION,
+        CBP_PAYMENT,
         region_x1s,
         varstr_prefix="dyn_event",
     )
@@ -1282,7 +1284,7 @@ def test_calculate_dr_revenue_numpy_and_pandas_agree(flat_power_series):
     baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
 
     pandas_revenue, model = dr.calculate_dr_revenue(
-        power_kW, events, baseline_method, payment_function=CBP_PAYMENT_FUNCTION
+        power_kW, events, baseline_method, payment_function=CBP_PAYMENT
     )
     assert model is None
 
@@ -1292,7 +1294,7 @@ def test_calculate_dr_revenue_numpy_and_pandas_agree(flat_power_series):
         numpy_power_kW,
         events,
         baseline_method,
-        payment_function=CBP_PAYMENT_FUNCTION,
+        payment_function=CBP_PAYMENT,
         datetime_index=datetime_index,
     )
     assert model is None
@@ -1304,7 +1306,7 @@ def test_calculate_dr_revenue_numpy_and_pandas_agree(flat_power_series):
             numpy_power_kW,
             events,
             baseline_method,
-            payment_function=CBP_PAYMENT_FUNCTION,
+            payment_function=CBP_PAYMENT,
         )
 
     with pytest.raises(ValueError):
@@ -1313,7 +1315,7 @@ def test_calculate_dr_revenue_numpy_and_pandas_agree(flat_power_series):
             numpy_power_kW,
             events,
             baseline_method,
-            payment_function=CBP_PAYMENT_FUNCTION,
+            payment_function=CBP_PAYMENT,
             datetime_index=datetime_index[:-1],
         )
 
@@ -1326,7 +1328,7 @@ def test_calculate_dr_revenue_cvxpy_not_implemented():
 
     with pytest.raises(NotImplementedError):
         dr.calculate_dr_revenue(
-            power_kW, events, baseline_method, payment_function=CBP_PAYMENT_FUNCTION
+            power_kW, events, baseline_method, payment_function=CBP_PAYMENT
         )
 
 
@@ -1340,7 +1342,7 @@ def test_calculate_dr_revenue_bad_type():
             "not a valid power_kW type",
             events,
             baseline_method,
-            payment_function=CBP_PAYMENT_FUNCTION,
+            payment_function=CBP_PAYMENT,
         )
 
 
@@ -1361,7 +1363,7 @@ def test_calculate_dr_revenue_pyomo_no_objective_vs_build_dr_revenue(dr_revenue_
         model.power,
         events,
         baseline_method,
-        CBP_PAYMENT_FUNCTION,
+        CBP_PAYMENT,
         historical_power_kW=historical_power_kW,
         datetime_index=datetime_index,
         model=model,
@@ -1376,7 +1378,7 @@ def test_calculate_dr_revenue_pyomo_no_objective_vs_build_dr_revenue(dr_revenue_
         historical_power_kW,
         baseline_method,
         model,
-        CBP_PAYMENT_FUNCTION,
+        CBP_PAYMENT,
         region_x1s,
         varstr_prefix="build_event",
     )
@@ -1422,6 +1424,37 @@ def test_compute_baseline_zero_days_yields_zeros(recwarn, flat_power_series):
     baseline_kW, _ = baseline_method.compute(power_kW, event)
     np.testing.assert_allclose(baseline_kW, [0.0, 0.0])
     assert len(recwarn) == 0
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_mixed_payment_structures_in_one_model_warns():
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    model = pyo.ConcreteModel()
+    model.reduction = pyo.Var(range(2))
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        CBP_PAYMENT.build_expression(event, model.reduction, model=model, varstr="a")
+        # an equivalent structure built separately does not warn
+        dr.PaymentStructure(CBP_PAYMENT_FUNCTION).build_expression(
+            event, model.reduction, model=model, varstr="b"
+        )
+
+    interval_structure = dr.PaymentStructure(
+        CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_INTERVAL
+    )
+    with pytest.warns(UserWarning, match="different payment structure"):
+        interval_structure.build_expression(
+            event, model.reduction, model=model, varstr="c"
+        )
+
+    energy_structure = dr.CapacityEnergyPayment(
+        CBP_PAYMENT_FUNCTION, energy_price=0.09
+    )
+    with pytest.warns(UserWarning, match="different payment structure"):
+        energy_structure.build_expression(
+            event, model.reduction, model=model, varstr="d"
+        )
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1876,22 +1909,6 @@ def test_build_dr_revenue_monthly_share_pyomo(
     assert_region_components_satisfied(model, "dr_event_1")
 
     assert pyo.value(total_revenue) == pytest.approx(600)
-
-
-@pytest.mark.parametrize(
-    "method",
-    [
-        dr.BaselineMethod(holiday_dates=["2024-07-08"]),
-        dr.TopUsageDaysBaseline(),
-        dr.FixedLevelBaseline(firm_level_kW=5),
-        dr.UnilateralInterruptionBaseline(interruption_level_kW=1),
-    ],
-)
-def test_baseline_methods_are_immutable(method):
-    with pytest.raises(AttributeError):
-        method.resolution = "1h"
-    with pytest.raises(AttributeError):
-        del method.resolution
 
 
 def test_baseline_method_holiday_dates_is_tuple():

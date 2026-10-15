@@ -113,9 +113,7 @@ def _component_name(varstr, suffix):
 class BaselineMethod:
     """Average-of-similar-days baseline with an optional day-of adjustment.
 
-    Instances are immutable once constructed, so one instance can be shared
-    across calls without risk of accidental modification. Use `replace` to
-    derive a variant.
+    Use `replace` to derive a variant with some settings changed.
 
     Parameters
     ----------
@@ -202,24 +200,6 @@ class BaselineMethod:
         self.holiday_dates = tuple(holiday_dates) if holiday_dates else ()
         self.adjustment_in_model = adjustment_in_model
         self.resolution = resolution
-        self._freeze()
-
-    def _freeze(self):
-        """Make the instance immutable. Call at the end of each `__init__`."""
-        object.__setattr__(self, "_frozen", True)
-
-    def __setattr__(self, name, value):
-        if self.__dict__.get("_frozen"):
-            raise AttributeError(
-                f"{type(self).__name__} is immutable; use .replace(...) to "
-                f"derive a modified copy"
-            )
-        object.__setattr__(self, name, value)
-
-    def __delattr__(self, name):
-        if self.__dict__.get("_frozen"):
-            raise AttributeError(f"{type(self).__name__} is immutable")
-        object.__delattr__(self, name)
 
     def replace(self, **changes):
         """Return a new instance with some settings changed.
@@ -242,8 +222,7 @@ class BaselineMethod:
         ValueError
             If the resulting settings fail constructor validation.
         """
-        params = {k: v for k, v in vars(self).items() if k != "_frozen"}
-        return type(self)(**{**params, **changes})
+        return type(self)(**{**vars(self), **changes})
 
     def _is_holiday(self, day):
         """Check whether a day is a holiday under this method's configuration.
@@ -606,7 +585,6 @@ class FixedLevelBaseline(BaselineMethod):
             raise ValueError("firm_level_kW must be non-negative")
         self.firm_level_kW = firm_level_kW
         self.resolution = resolution
-        self._freeze()
 
     def compute(
         self,
@@ -677,7 +655,6 @@ class UnilateralInterruptionBaseline(BaselineMethod):
     def __init__(self, interruption_level_kW=0.0, resolution=None):
         self.interruption_level_kW = interruption_level_kW
         self.resolution = resolution
-        self._freeze()
 
     def compute(
         self,
@@ -1373,6 +1350,12 @@ class PaymentStructure:
         TypeError
             If `reduction_kW` is not a supported type.
 
+        Warns
+        -----
+        UserWarning
+            If `model` already holds revenue built from a different payment
+            structure.
+
         Returns
         -------
         tuple
@@ -1394,6 +1377,7 @@ class PaymentStructure:
         ):
             if model is None:
                 raise ValueError("model is required for pyomo expressions")
+            self._register_on_model(model)
             terms = _as_pyomo_terms(reduction_kW)
             if not self.regions:
                 return self._build_payout_only_pyomo(event, model, varstr)
@@ -1406,6 +1390,31 @@ class PaymentStructure:
                 "reduction_kW must be numpy.ndarray, a Python number, "
                 "cvxpy.Expression/Variable, pyomo.environ.Var, or a list/tuple of "
                 "pyomo expressions"
+            )
+
+    def _register_on_model(self, model):
+        """Record this payment structure on `model`, warning on a mismatch.
+
+        The first payment structure built into `model` is kept. A later build
+        with a structure of a different class or with different settings
+        warns, since one model's revenue would then mix payment rules.
+
+        Parameters
+        ----------
+        model : pyomo.environ.Model or pyomo.environ.Block
+            Model the revenue components are added to.
+        """
+        existing = getattr(model, "_dr_payment_structure", None)
+        if existing is None:
+            model._dr_payment_structure = self
+        elif existing is not self and (
+            type(existing) is not type(self) or vars(existing) != vars(self)
+        ):
+            warnings.warn(
+                f"model already holds revenue from a different payment structure "
+                f"({type(existing).__name__}); adding {type(self).__name__} "
+                f"mixes payment rules in one model",
+                UserWarning,
             )
 
     def _build_cvxpy_expression(self, event, reduction_kW, region_x1):
@@ -1859,25 +1868,6 @@ class MarketIndexedPayment(PaymentStructure):
         )
 
 
-def _coerce_payment_structure(payment_function):
-    """Convert a list of payment regions into a `PaymentStructure`.
-
-    Parameters
-    ----------
-    payment_function : list of dict or PaymentStructure
-        Payment regions, or a `PaymentStructure` instance.
-
-    Returns
-    -------
-    PaymentStructure
-        `payment_function` if it is already a `PaymentStructure`, otherwise a
-        new `PaymentStructure` over those regions.
-    """
-    if isinstance(payment_function, PaymentStructure):
-        return payment_function
-    return PaymentStructure(payment_function)
-
-
 def add_event(
     events,
     event_date,
@@ -2249,9 +2239,8 @@ def build_event_revenue(
     baseline_kW : float, numpy.ndarray, or pyomo.environ.Var
         Baseline power in kW, as a single value or one value per interval.
 
-    payment_function : list of dict or PaymentStructure
-        Payment regions, each a dict with float values under the keys `"x1"`,
-        `"x2"`, `"y1"`, and `"y2"`, or a `PaymentStructure` instance.
+    payment_function : PaymentStructure
+        Payment structure used to price the delivered reduction.
 
     region_x1 : float, list of float, or None
         `x1` bound of the region to fix. Required for cvxpy. Optional for
@@ -2278,20 +2267,18 @@ def build_event_revenue(
         `(revenue, model)` for numpy `power_kW`, `(revenue_var, model)` for
         pyomo, or `(revenue_expr, constraints)` for cvxpy.
     """
-    payment_structure = _coerce_payment_structure(payment_function)
-
     if ut.check_indexed_np_array(power_kW) or ut.check_nonindexed_python_type(power_kW):
         power = np.atleast_1d(np.asarray(power_kW, dtype=float))
         baseline_arr = np.asarray(_baseline_terms(baseline_kW, power.size), dtype=float)
         reduction_kW = baseline_arr - power
-        return payment_structure.evaluate(event, reduction_kW), model
+        return payment_function.evaluate(event, reduction_kW), model
     elif ut.check_cvx_type(power_kW):
         if region_x1 is None:
             raise ValueError("region_x1 must be specified for cvxpy power_kW")
         n = power_kW.size if hasattr(power_kW, "size") else 1
         baseline_arr = np.asarray(_baseline_terms(baseline_kW, n), dtype=float)
         reduction_kW = baseline_arr - power_kW
-        return payment_structure.build_expression(
+        return payment_function.build_expression(
             event, reduction_kW, region_x1=region_x1, model=model, varstr=varstr
         )
     elif ut.check_indexed_pyomo_type(power_kW) or ut.check_nonindexed_pyomo_type(
@@ -2304,7 +2291,7 @@ def build_event_revenue(
             power_terms = [power_kW]
         baseline_values = _baseline_terms(baseline_kW, len(power_terms))
         reduction_terms = [b - p for b, p in zip(baseline_values, power_terms)]
-        return payment_structure.build_expression(
+        return payment_function.build_expression(
             event, reduction_terms, region_x1=region_x1, model=model, varstr=varstr
         )
     else:
@@ -2337,9 +2324,8 @@ def calculate_event_revenue(
     baseline_method : BaselineMethod
         Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
 
-    payment_function : list of dict or PaymentStructure
-        Payment regions, each a dict with float values under the keys `"x1"`,
-        `"x2"`, `"y1"`, and `"y2"`, or a `PaymentStructure` instance.
+    payment_function : PaymentStructure
+        Payment structure used to price the delivered reduction.
 
     Raises
     ------
@@ -2454,9 +2440,8 @@ def calculate_itemized_dr_revenue(
     baseline_method : BaselineMethod
         Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
 
-    payment_function : list of dict or PaymentStructure
-        Payment regions, each a dict with float values under the keys `"x1"`,
-        `"x2"`, `"y1"`, and `"y2"`, or a `PaymentStructure` instance.
+    payment_function : PaymentStructure
+        Payment structure used to price the delivered reduction.
 
     datetime_index : pandas.DatetimeIndex or None
         Timestamp of each entry of `power_kW`. Required when `power_kW` is a
@@ -2512,9 +2497,8 @@ def calculate_dr_revenue(
     baseline_method : BaselineMethod
         Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
 
-    payment_function : list of dict or PaymentStructure
-        Payment regions, each a dict with float values under the keys `"x1"`,
-        `"x2"`, `"y1"`, and `"y2"`, or a `PaymentStructure` instance.
+    payment_function : PaymentStructure
+        Payment structure used to price the delivered reduction.
 
     historical_power_kW : pandas.Series or None
         Historical power consumption in kW, indexed by timestamp. Required
@@ -2619,8 +2603,8 @@ def _build_dr_revenue_components(
     model : pyomo.environ.Model or pyomo.environ.Block
         Model to add components to.
 
-    payment_function : list of dict or PaymentStructure
-        Payment regions, or a `PaymentStructure` instance.
+    payment_function : PaymentStructure
+        Payment structure used to price the delivered reduction.
 
     region_x1s : dict or None
         `x1` bound of the region to fix for each event, keyed by event date.
@@ -2650,8 +2634,6 @@ def _build_dr_revenue_components(
     region_x1_by_date = (
         {pd.Timestamp(k): v for k, v in region_x1s.items()} if region_x1s else {}
     )
-    payment_structure = _coerce_payment_structure(payment_function)
-
     total_revenue = 0
     for i, row in events_df.iterrows():
         event = row.to_dict()
@@ -2680,7 +2662,7 @@ def _build_dr_revenue_components(
         baseline_values = _baseline_terms(baseline_kW, len(power_terms))
         reduction_terms = [b - p for b, p in zip(baseline_values, power_terms)]
 
-        revenue_var, model = payment_structure.build_expression(
+        revenue_var, model = payment_function.build_expression(
             event,
             reduction_terms,
             region_x1=region_x1_by_date.get(event[EVENT_DATE]),
@@ -2726,9 +2708,8 @@ def build_dr_revenue(
     model : pyomo.environ.Model or pyomo.environ.Block
         Model to add components to.
 
-    payment_function : list of dict or PaymentStructure
-        Payment regions, each a dict with float values under the keys `"x1"`,
-        `"x2"`, `"y1"`, and `"y2"`, or a `PaymentStructure` instance.
+    payment_function : PaymentStructure
+        Payment structure used to price the delivered reduction.
 
     region_x1s : dict or None
         `x1` bound of the region to fix for each event, keyed by event date
