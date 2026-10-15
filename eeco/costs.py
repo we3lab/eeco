@@ -1251,7 +1251,7 @@ def check_linear_decomposition_dict(charge_dict):
     for key, charge_array in charge_dict.items():
         if not ut.check_indexed_np_array(charge_array):
             continue
-        utility, full_charge_type, _, _, _, limit_str = key.split("_")
+        utility, full_charge_type, _, _, _, limit_str = parse_charge_key(key)
         charge_type = full_charge_type.replace(DAILY, "").replace(MONTHLY, "")
         charge_type = charge_type.replace("-", "")
 
