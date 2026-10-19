@@ -5128,7 +5128,7 @@ def test_linear_decomposition_lp_avoids_arbitrage():
         ut.check_simultaneous_import_export(*positive)
 
 
-def test_calculate_cost_simultaneous_import_export_raises():
+def test_calculate_cost_simultaneous_import_export_error():
     charge_dict = {"electric_energy_0_2024-07-10_2024-07-10_0": np.ones(96) * 0.05}
     consumption_data_dict = {
         ELECTRIC: {"imports": np.ones(96) * 10, "exports": np.ones(96) * 5},

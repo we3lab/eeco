@@ -36,7 +36,7 @@ def test_get_freq_binsize_minutes(freq, expected):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_get_freq_binsize_minutes_invalid_type_raises():
+def test_get_freq_binsize_minutes_invalid_type_error():
     with pytest.raises(ValueError):
         ut.get_freq_binsize_minutes("1y")
 

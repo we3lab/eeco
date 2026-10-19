@@ -671,7 +671,7 @@ def test_adjustment_in_model_defaults_off(adjustment_factor_setup):
         (["2024-01-03 11:00"], "missing data"),  # missing one hour on a baseline day
     ],
 )
-def test_calculate_event_baseline_adjustment_window_missing_data_raises(
+def test_calculate_event_baseline_adjustment_window_missing_data_warning(
     flat_power_series, missing, match
 ):
     power_kW = flat_power_series(value_by_hour=100, adj_value_by_hour=100)
@@ -688,7 +688,7 @@ def test_calculate_event_baseline_adjustment_window_missing_data_raises(
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_model_args_incomplete_raises(flat_power_series):
+def test_calculate_event_baseline_model_args_incomplete_error(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
@@ -701,7 +701,7 @@ def test_calculate_event_baseline_model_args_incomplete_raises(flat_power_series
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_datetime_index_too_short(flat_power_series):
+def test_calculate_event_baseline_datetime_index_too_short_error(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
