@@ -624,7 +624,9 @@ def test_adjustment_in_model_is_inert_without_a_model(adjustment_factor_setup):
         adjustment_duration_hours=3,
         adjustment_in_model=True,
     )
-    baseline_kW, _ = baseline_method.calculate_event_baseline(historical_power_kW, event)
+    baseline_kW, _ = baseline_method.calculate_event_baseline(
+        historical_power_kW, event
+    )
     assert baseline_kW == pytest.approx(110, rel=1e-3)
 
 
@@ -665,7 +667,9 @@ def test_compute_baseline_model_args_incomplete_raises(flat_power_series):
 
     model = pyo.ConcreteModel()
     with pytest.raises(ValueError):
-        baseline_method.calculate_event_baseline(historical_power_kW, event, model=model)
+        baseline_method.calculate_event_baseline(
+            historical_power_kW, event, model=model
+        )
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -982,9 +986,9 @@ def test_top_usage_days_baseline_selects_highest_usage_days(per_day_event_series
     top_usage_method = dr.TopUsageDaysBaseline(
         n_baseline_days=2, adjustment_offset_hours=None
     )
-    assert top_usage_method.calculate_event_baseline(power_kW, event)[0] == pytest.approx(
-        np.mean([200, 150])
-    )
+    assert top_usage_method.calculate_event_baseline(power_kW, event)[
+        0
+    ] == pytest.approx(np.mean([200, 150]))
 
     # The foundation class instead picks the two *most recent* days -- proving
     # the subclass changed only the ranking rule, not the rest of the behavior.
@@ -1000,10 +1004,14 @@ def test_fixed_level_baseline_ignores_history(flat_power_series):
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     baseline_method = dr.FixedLevelBaseline(firm_level_kW=500)
 
-    np.testing.assert_allclose(baseline_method.calculate_event_baseline(power_kW, event)[0], [500, 500])
+    np.testing.assert_allclose(
+        baseline_method.calculate_event_baseline(power_kW, event)[0], [500, 500]
+    )
 
     model = pyo.ConcreteModel()
-    baseline_kW, returned_model = baseline_method.calculate_event_baseline(power_kW, event, model=model)
+    baseline_kW, returned_model = baseline_method.calculate_event_baseline(
+        power_kW, event, model=model
+    )
     np.testing.assert_allclose(baseline_kW, [500, 500])
     assert returned_model is model
 
@@ -1672,7 +1680,9 @@ def test_compute_uses_supplied_adjustment_factor():
 
     expected = unadjusted.calculate_event_baseline(historical_power_kW, event)[0] * 1.5
     # Supplied factors are applied as-is, not clipped to adjustment_clip
-    result, _ = adjusted.calculate_event_baseline(historical_power_kW, event, adjustment_factor=1.5)
+    result, _ = adjusted.calculate_event_baseline(
+        historical_power_kW, event, adjustment_factor=1.5
+    )
     np.testing.assert_allclose(result, expected)
 
 
@@ -1706,7 +1716,9 @@ def test_event_adjustment_factor_survives_dataframe_round_trip(adjustment_setup)
         baseline_method,
         dr.PaymentStructure(None, payout=1.0),
     )
-    calculated, _ = baseline_method.calculate_event_baseline(historical_power_kW, events[0])
+    calculated, _ = baseline_method.calculate_event_baseline(
+        historical_power_kW, events[0]
+    )
     plain = {**events[1], dr.ADJUSTMENT_FACTOR: None}
     supplied = unadjusted.calculate_event_baseline(historical_power_kW, plain)[0] * 1.5
     np.testing.assert_allclose(per_event_df[dr.BASELINE_PROFILE_KW][0], calculated)
@@ -1721,10 +1733,16 @@ def test_adjustment_factor_event_and_argument(adjustment_setup):
     )[0]
     method = dr.BaselineMethod(n_baseline_days=3)
 
-    matching, _ = method.calculate_event_baseline(historical_power_kW, event, adjustment_factor=1.5)
-    np.testing.assert_allclose(matching, method.calculate_event_baseline(historical_power_kW, event)[0])
+    matching, _ = method.calculate_event_baseline(
+        historical_power_kW, event, adjustment_factor=1.5
+    )
+    np.testing.assert_allclose(
+        matching, method.calculate_event_baseline(historical_power_kW, event)[0]
+    )
     with pytest.raises(ValueError, match="conflicts"):
-        method.calculate_event_baseline(historical_power_kW, event, adjustment_factor=1.2)
+        method.calculate_event_baseline(
+            historical_power_kW, event, adjustment_factor=1.2
+        )
     with pytest.raises(ValueError, match="must be positive"):
         dr.add_event(
             None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5, adjustment_factor=0

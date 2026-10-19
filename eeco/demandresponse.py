@@ -2359,7 +2359,9 @@ def calculate_event_revenue(
         raise ValueError("No data available for event window")
     interval_datetime = historical_power_kW.index[mask]
 
-    baseline_profile, _ = baseline_method.calculate_event_baseline(historical_power_kW, event)
+    baseline_profile, _ = baseline_method.calculate_event_baseline(
+        historical_power_kW, event
+    )
     baseline_profile = np.asarray(
         _baseline_terms(baseline_profile, actual_profile.size), dtype=float
     )
