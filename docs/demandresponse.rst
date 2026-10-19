@@ -10,7 +10,7 @@ This module computes incentive-based demand response (DR) revenue from
 electricity consumption data, modeled along two composable axes --
 :class:`BaselineMethod` for how the counterfactual is measured and
 :class:`PaymentStructure` for how it is paid -- with three entry points:
-``calculate_dr_revenue``, ``build_dr_revenue`` (pyomo only, is added to
+``calculate_dr_revenue``, ``build_pyomo_dr_revenue`` (pyomo only, is added to
 ``model.objective``), and ``calculate_itemized_dr_revenue`` (post-optimization,
 per-event breakdown).
 
@@ -370,7 +370,7 @@ Every pyomo component is named ``varstr + "_" + suffix``, with the suffixes
 available as module constants. ``BASELINE_COMPONENT_SUFFIXES`` and
 ``PAYMENT_COMPONENT_SUFFIXES`` collect them. ``varstr`` must be unique per
 call on a given model, since reusing it raises a pyomo "component already
-exists" error. ``calculate_dr_revenue`` and ``build_dr_revenue`` name each
+exists" error. ``calculate_dr_revenue`` and ``build_pyomo_dr_revenue`` name each
 event ``f"{varstr_prefix}_{i}"`` (``i`` is the event's position in date
 order) and its baseline ``f"{varstr_prefix}_{i}_baseline_kW"``.
 
@@ -444,7 +444,7 @@ Entry points
   total revenue expression. ``region_x1s`` optionally fixes each event's
   region, keyed by event date (e.g. ``{"2024-01-08": 0.6}``); events missing
   from it leave the region choice to the solver.
-- ``build_dr_revenue`` calls ``calculate_dr_revenue`` and subtracts the total
+- ``build_pyomo_dr_revenue`` calls ``calculate_dr_revenue`` and subtracts the total
   revenue from ``model.objective``, creating a minimization objective if the
   model has none.
 - ``calculate_itemized_dr_revenue`` returns a ``pandas.DataFrame`` with one
@@ -491,7 +491,7 @@ Extending BaselineMethod and PaymentStructure
 =================================================
 
 Both axes are designed to be subclassed, and every public entry point
-(``calculate_dr_revenue``, ``build_dr_revenue``,
+(``calculate_dr_revenue``, ``build_pyomo_dr_revenue``,
 ``calculate_itemized_dr_revenue``, and friends) takes a ``BaselineMethod``
 instance and accepts a ``PaymentStructure`` instance in place of a list of
 regions, so a custom subclass drops in without further plumbing.
@@ -506,7 +506,7 @@ of:
   replaces the ranking). Prefer this over overriding ``select_days``.
 - ``_adjustment_factor(valid_days, historical_power_kW, event)`` to change
   how the day-of scaling factor is computed.
-- ``compute(historical_power_kW, event, *, model=None, model_power_kW=None,
+- ``calculate_event_baseline(historical_power_kW, event, *, model=None, model_power_kW=None,
   model_datetime_index=None, varstr=None, adjustment_factor=None)`` to
   replace the baseline calculation entirely, for a baseline that isn't a historical day-average
   at all (see ``FixedLevelBaseline`` and ``UnilateralInterruptionBaseline``).

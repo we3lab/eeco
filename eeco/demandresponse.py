@@ -369,7 +369,7 @@ class BaselineMethod:
             factor = np.clip(factor, *self.adjustment_clip)
         return float(factor)
 
-    def compute(
+    def calculate_event_baseline(
         self,
         historical_power_kW,
         event,
@@ -586,7 +586,7 @@ class FixedLevelBaseline(BaselineMethod):
         self.firm_level_kW = firm_level_kW
         self.resolution = resolution
 
-    def compute(
+    def calculate_event_baseline(
         self,
         historical_power_kW,
         event,
@@ -656,7 +656,7 @@ class UnilateralInterruptionBaseline(BaselineMethod):
         self.interruption_level_kW = interruption_level_kW
         self.resolution = resolution
 
-    def compute(
+    def calculate_event_baseline(
         self,
         historical_power_kW,
         event,
@@ -1155,7 +1155,7 @@ class PaymentStructure:
                 f"{label}='monthly_share' requires "
                 "event[MONTHLY_CALLED_CAPACITY_KWH] (monthly_called_capacity_kWh) "
                 "-- pass it to add_event, or use calculate_dr_revenue/"
-                "build_dr_revenue to fill it from the events list"
+                "build_pyomo_dr_revenue to fill it from the events list"
             )
         if monthly_kWh <= 0:
             raise ValueError("monthly_called_capacity_kWh must be positive")
@@ -2359,7 +2359,7 @@ def calculate_event_revenue(
         raise ValueError("No data available for event window")
     interval_datetime = historical_power_kW.index[mask]
 
-    baseline_profile, _ = baseline_method.compute(historical_power_kW, event)
+    baseline_profile, _ = baseline_method.calculate_event_baseline(historical_power_kW, event)
     baseline_profile = np.asarray(
         _baseline_terms(baseline_profile, actual_profile.size), dtype=float
     )
@@ -2638,7 +2638,7 @@ def _build_dr_revenue_components(
     for i, row in events_df.iterrows():
         event = row.to_dict()
         event_varstr = f"{varstr_prefix}_{i}"
-        baseline_kW, model = baseline_method.compute(
+        baseline_kW, model = baseline_method.calculate_event_baseline(
             historical_power_kW,
             event,
             model=model,
@@ -2674,7 +2674,7 @@ def _build_dr_revenue_components(
     return total_revenue, model
 
 
-def build_dr_revenue(
+def build_pyomo_dr_revenue(
     power_kW,
     datetime_index,
     events,
