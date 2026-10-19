@@ -661,15 +661,18 @@ def test_adjustment_in_model_defaults_off(adjustment_factor_setup):
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "missing",
+    "missing, match",
     [
-        ["2024-01-08 10:00", "2024-01-08 11:00", "2024-01-08 12:00"],  # event day, all
-        ["2024-01-08 10:00", "2024-01-08 12:00"],  # event day, 2 of 3 hours
-        ["2024-01-03 11:00"],  # one hour on one baseline day
+        (
+            ["2024-01-08 10:00", "2024-01-08 11:00", "2024-01-08 12:00"],
+            "no data",  # missing entirety of event day
+        ),
+        (["2024-01-08 10:00", "2024-01-08 12:00"]),  # missing 2 hours on event day
+        (["2024-01-03 11:00"], "missing data"),  # missing one hour on a baseline day
     ],
 )
 def test_calculate_event_baseline_adjustment_window_missing_data_raises(
-    flat_power_series, missing
+    flat_power_series, missing, match
 ):
     power_kW = flat_power_series(value_by_hour=100, adj_value_by_hour=100)
     power_kW.loc[pd.to_datetime(missing)] = np.nan
@@ -680,7 +683,7 @@ def test_calculate_event_baseline_adjustment_window_missing_data_raises(
         n_baseline_days=5, adjustment_offset_hours=3, adjustment_duration_hours=3
     )
     with pytest.warns(UserWarning, match=match):
-        baseline_method.calculate_event_baseline(power_kW, event)
+        baseline_kW, _ = baseline_method.calculate_event_baseline(power_kW, event)
     assert baseline_kW == pytest.approx(100)  # never NaN
 
 

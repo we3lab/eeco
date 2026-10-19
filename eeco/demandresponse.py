@@ -330,7 +330,10 @@ class BaselineMethod:
         -----
         UserWarning
             If the baseline days' mean power in the adjustment window is near
-            zero, in which case a factor of `1.0` is returned.
+            zero or all data is missing on event day, in which case a factor
+            of `1.0` is returned. If only a portion of baseline/event day data
+            is missing, then the factor is computed with the available data while
+            still raising a warning.
 
         Returns
         -------
@@ -348,7 +351,8 @@ class BaselineMethod:
             window_start_hour,
             self.adjustment_duration_hours,
         )
-        event_adj_mean = historical_power_kW.loc[event_adj_mask].mean()
+        event_adj = historical_power_kW.loc[event_adj_mask]
+        event_adj_mean = event_adj.mean()
 
         # Pool every baseline day's adjustment window into one mean
         baseline_adj_mask = np.zeros(len(index), dtype=bool)
@@ -356,15 +360,28 @@ class BaselineMethod:
             baseline_adj_mask |= _event_window_mask(
                 index, day, window_start_hour, self.adjustment_duration_hours
             )
-        baseline_adj_mean = historical_power_kW.loc[baseline_adj_mask].mean()
+        baseline_adj = historical_power_kW.loc[baseline_adj_mask]
+        baseline_adj_mean = baseline_adj.mean()
 
-        if np.isclose(baseline_adj_mean, 0, atol=1e-9):
+        if not np.isfinite([event_adj_mean, baseline_adj_mean]).all():
+            warnings.warn(
+                "Day-of adjustment window has no data; skipping adjustment",
+                UserWarning,
+            )
+            return 1.0
+        elif np.isclose(baseline_adj_mean, 0, atol=1e-9):
             warnings.warn(
                 "Day-of adjustment denominator is near zero; skipping adjustment",
                 UserWarning,
             )
             factor = 1.0
         else:
+            if baseline_adj.isna().any() or baseline_adj.isna().any():
+                warnings.warn(
+                    "Day-of adjustment window has missing data; "
+                    "using the available intervals",
+                    UserWarning,
+                )
             factor = event_adj_mean / baseline_adj_mean
             factor = np.clip(factor, *self.adjustment_clip)
         return float(factor)
