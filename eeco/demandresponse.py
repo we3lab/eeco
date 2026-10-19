@@ -376,7 +376,7 @@ class BaselineMethod:
             )
             factor = 1.0
         else:
-            if baseline_adj.isna().any() or baseline_adj.isna().any():
+            if event_adj.isna().any() or baseline_adj.isna().any():
                 warnings.warn(
                     "Day-of adjustment window has missing data; "
                     "using the available intervals",
