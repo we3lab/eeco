@@ -147,9 +147,9 @@ anomalous morning can't swing the baseline too far, and is skipped (factor
 computed from ``historical_power_kW``, never from the model.
 ``adjustment_offset_hours=None`` disables the adjustment. To use a factor
 calculated elsewhere (e.g. one published by the utility), pass
-``adjustment_factor`` to ``add_event`` or directly to ``compute``. It is
+``adjustment_factor`` to ``add_event`` or directly to ``calculate_event_baseline``. It is
 applied as-is, without clipping, in place of the calculated factor. If
-both are given they must match, or ``compute`` raises ``ValueError``.
+both are given they must match, or ``calculate_event_baseline`` raises ``ValueError``.
 
 **Adjustment factor in the model.** With ``adjustment_in_model=True`` and a
 ``model``, the factor is added as a **fixed** ``pyomo.environ.Var`` named
@@ -158,10 +158,10 @@ symbolically. Retune it with ``model.<varstr>_adjustment_factor.fix(1.15)``
 and re-solve without rebuilding the model. Do not ``.unfix()`` it: the solver
 would then pick the revenue-maximizing factor, and ``baseline * factor``
 would become bilinear. With the default ``False``, the factor is folded in as
-a constant, and the baseline ``compute`` returns is a plain ``numpy.ndarray``
+a constant, and the baseline ``calculate_event_baseline`` returns is a plain ``numpy.ndarray``
 whenever every baseline day is historical.
 
-**Baseline days inside the optimization horizon.** When ``compute`` is
+**Baseline days inside the optimization horizon.** When ``calculate_event_baseline`` is
 given a ``model``, ``model_power_kW``, and
 ``model_datetime_index``, any baseline day whose event window lies fully
 inside the model horizon is computed from the decision variable rather than
@@ -212,7 +212,7 @@ much load is interrupted, holding consumption at or below a fixed level
 is enforced as a hard constraint, ``varstr + "_interruption_constraint"``,
 on the entries of ``model_power_kW`` inside the event window, rather than
 treated as a revenue opportunity the operator chooses to pursue. It
-therefore has no ex-post/numpy evaluation path: ``compute`` raises
+therefore has no ex-post/numpy evaluation path: ``calculate_event_baseline`` raises
 ``NotImplementedError`` without a ``model``. The interruption level is
 returned in the baseline's position to keep a consistent interface, but the
 reduction it implies is not the basis for payment, so pair it with a
@@ -382,56 +382,73 @@ settings raises a ``UserWarning``.
 .. list-table::
    :header-rows: 1
 
-   * - Constant
-     - Component
+   * - Constant name
+     - Description
+     - Value
      - Created by
    * - ``CONSTRAINT_SUFFIX``
      - Baseline defining constraint
-     - ``BaselineMethod.compute``
+     - ``"constraint"``
+     - ``BaselineMethod.calculate_event_baseline``
    * - ``ADJUSTMENT_FACTOR_SUFFIX``
      - Fixed day-of adjustment factor ``Var``
-     - ``BaselineMethod.compute``
+     - ``"adjustment_factor"``
+     - ``BaselineMethod.calculate_event_baseline``
    * - ``INTERRUPTION_CONSTRAINT_SUFFIX``
      - Interruption upper bound
+     - ``"interruption_constraint"``
      - ``UnilateralInterruptionBaseline``
    * - ``REGION_ACTIVE_SUFFIX``
      - Binary, 1 iff the region is active
+     - ``"region_active"``
      - ``PaymentStructure``
    * - ``REGION_SELECT_CONSTRAINT_SUFFIX``
      - Exactly one region is active
+     - ``"region_select_constraint"``
      - ``PaymentStructure``
    * - ``REGION_REDUCTION_SUFFIX``
      - Region's share of the reduction
+     - ``"region_reduction"``
      - ``PaymentStructure``
    * - ``REGION_REDUCTION_LOWER_CONSTRAINT_SUFFIX``
      - Share ``>= x1 * bid_capacity_kW * active``
+     - ``"region_reduction_lower_constraint"``
      - ``PaymentStructure``
    * - ``REGION_REDUCTION_UPPER_CONSTRAINT_SUFFIX``
      - Share ``<= x2 * bid_capacity_kW * active``
+     - ``"region_reduction_upper_constraint"``
      - ``PaymentStructure``
    * - ``REGION_REDUCTION_SUM_CONSTRAINT_SUFFIX``
      - Reduction equals the sum of shares
+     - ``"region_reduction_sum_constraint"``
      - ``PaymentStructure``
    * - ``INTERVAL_REVENUE_SUFFIX``
      - Per-interval revenue ``Expression``
+     - ``"interval_revenue"``
      - ``PaymentStructure``
    * - ``REVENUE_SUFFIX``
      - Revenue ``Var``, including payout
+     - ``"adjustment_factor"``
      - ``PaymentStructure``
    * - ``REVENUE_CONSTRAINT_SUFFIX``
      - Defines revenue
+     - ``"revenue"``
      - ``PaymentStructure``
    * - ``ENERGY_REVENUE_SUFFIX``
      - Energy revenue ``Var``
+     - ``"energy_revenue"``
      - ``CapacityEnergyPayment``
    * - ``ENERGY_REVENUE_CONSTRAINT_SUFFIX``
      - Defines energy revenue
+     - ``"energy_revenue_constraint"``
      - ``CapacityEnergyPayment``
    * - ``TOTAL_REVENUE_SUFFIX``
      - Capacity plus energy revenue ``Var``
+     - ``"total_revenue"``
      - ``CapacityEnergyPayment``
    * - ``TOTAL_REVENUE_CONSTRAINT_SUFFIX``
      - Defines total revenue
+     - ``"total_revenue_constraint"``
      - ``CapacityEnergyPayment``
 
 Entry points
@@ -510,7 +527,7 @@ of:
   model_datetime_index=None, varstr=None, adjustment_factor=None)`` to
   replace the baseline calculation entirely, for a baseline that isn't a historical day-average
   at all (see ``FixedLevelBaseline`` and ``UnilateralInterruptionBaseline``).
-  An override must honor ``compute``'s calling contract: return a
+  An override must honor ``calculate_event_baseline``'s calling contract: return a
   ``(value, model)`` pair, with ``model`` left ``None`` ex-post (or raise),
   adding any pyomo components under ``varstr`` when a model is given.
 

@@ -149,7 +149,7 @@ class BaselineMethod:
         Additional dates to treat as holidays.
 
     adjustment_in_model : bool
-        If `True` and a `model` is given to `compute`, add the day-of
+        If `True` and a `model` is given to `calculate_event_baseline`, add the day-of
         adjustment factor to the model as a fixed `pyomo.environ.Var`.
 
     resolution : str or None
@@ -755,7 +755,7 @@ def _resolve_adjustment_factor(event, adjustment_factor):
         Single event dict. See `add_event` for the keys.
 
     adjustment_factor : float or None
-        Adjustment factor passed directly to `compute`.
+        Adjustment factor passed directly to `calculate_event_baseline`.
 
     Raises
     ------

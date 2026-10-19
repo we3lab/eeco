@@ -325,7 +325,7 @@ def test_baseline_method_validation():
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_simple_average(flat_power_series):
+def test_calculate_event_baseline_simple_average(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100)
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]  # 5 weekdays
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
@@ -335,7 +335,7 @@ def test_compute_baseline_simple_average(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_day_of_adjustment(flat_power_series):
+def test_calculate_event_baseline_day_of_adjustment(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100, adj_value_by_hour=100)
     # bump the event day's own adjustment-window consumption to create a 1.1x factor
     event_adj_start = pd.Timestamp("2024-01-08 10:00")
@@ -360,7 +360,7 @@ def test_compute_baseline_day_of_adjustment(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_zero_denominator_warns(flat_power_series):
+def test_calculate_event_baseline_zero_denominator_warns(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100, adj_value_by_hour=0)
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
@@ -373,7 +373,7 @@ def test_compute_baseline_zero_denominator_warns(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_insufficient_days(flat_power_series):
+def test_calculate_event_baseline_insufficient_days(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100)
     baseline_days = ["2024-01-01", "2024-01-02"]  # only 2, fewer than requested 5
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
@@ -391,7 +391,7 @@ def test_compute_baseline_insufficient_days(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_dynamic_day_fully_in_horizon(flat_power_series):
+def test_calculate_event_baseline_dynamic_day_fully_in_horizon(flat_power_series):
     historical_power_kW = flat_power_series(
         value_by_hour=100
     )  # unused: day is in-horizon
@@ -424,7 +424,7 @@ def test_compute_baseline_dynamic_day_fully_in_horizon(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_dynamic_day_fully_out_of_horizon(flat_power_series):
+def test_calculate_event_baseline_dynamic_day_fully_out_of_horizon(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
@@ -452,7 +452,7 @@ def test_compute_baseline_dynamic_day_fully_out_of_horizon(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_dynamic_day_partial_overlap(flat_power_series):
+def test_calculate_event_baseline_dynamic_day_partial_overlap(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     historical_power_kW.loc["2024-01-01 13:00"] = 50
     historical_power_kW.loc["2024-01-01 14:00"] = 70
@@ -485,7 +485,7 @@ def test_compute_baseline_dynamic_day_partial_overlap(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_dynamic_mixed_days(flat_power_series):
+def test_calculate_event_baseline_dynamic_mixed_days(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     # day A (2024-01-01) in horizon -> dynamic;
     # day B (2024-01-02) out -> historical (mean 100)
@@ -520,7 +520,7 @@ def test_compute_baseline_dynamic_mixed_days(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_adjustment_stays_historical_even_in_horizon(
+def test_calculate_event_baseline_adjustment_stays_historical_even_in_horizon(
     flat_power_series,
 ):
     historical_power_kW = flat_power_series(value_by_hour=100, adj_value_by_hour=100)
@@ -660,7 +660,32 @@ def test_adjustment_in_model_defaults_off(adjustment_factor_setup):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_model_args_incomplete_raises(flat_power_series):
+@pytest.mark.parametrize(
+    "missing",
+    [
+        ["2024-01-08 10:00", "2024-01-08 11:00", "2024-01-08 12:00"],  # event day, all
+        ["2024-01-08 10:00", "2024-01-08 12:00"],  # event day, 2 of 3 hours
+        ["2024-01-03 11:00"],  # one hour on one baseline day
+    ],
+)
+def test_calculate_event_baseline_adjustment_window_missing_data_raises(
+    flat_power_series, missing
+):
+    power_kW = flat_power_series(value_by_hour=100, adj_value_by_hour=100)
+    power_kW.loc[pd.to_datetime(missing)] = np.nan
+
+    baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
+    baseline_method = dr.BaselineMethod(
+        n_baseline_days=5, adjustment_offset_hours=3, adjustment_duration_hours=3
+    )
+    with pytest.warns(UserWarning, match=match):
+        baseline_method.calculate_event_baseline(power_kW, event)
+    assert baseline_kW == pytest.approx(100)  # never NaN
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_calculate_event_baseline_model_args_incomplete_raises(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
@@ -673,7 +698,7 @@ def test_compute_baseline_model_args_incomplete_raises(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_datetime_index_too_short(flat_power_series):
+def test_calculate_event_baseline_datetime_index_too_short(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
@@ -1394,7 +1419,7 @@ def test_calculate_dr_revenue_no_objective_vs_build_pyomo_dr_revenue(dr_revenue_
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_shaped_profile():
+def test_calculate_event_baseline_shaped_profile():
     """A baseline day that ramps within the event window should produce a
     shaped baseline profile, not a flat mean -- the bug the old scalar
     collapse would have hidden."""
@@ -1410,7 +1435,7 @@ def test_compute_baseline_shaped_profile():
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_day_missing_sample_raises(flat_power_series):
+def test_calculate_event_baseline_day_missing_sample_raises(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100)
     power_kW.loc["2024-01-01 14:00"] = np.nan
 
@@ -1421,7 +1446,7 @@ def test_compute_baseline_day_missing_sample_raises(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_baseline_zero_days_yields_zeros(recwarn, flat_power_series):
+def test_calculate_event_baseline_zero_days_yields_zeros(recwarn, flat_power_series):
     """`n_baseline_days=0` means no baselining: zeros, and day selection
     (and its "insufficient days" warning) is skipped entirely."""
     power_kW = flat_power_series(value_by_hour=100)
@@ -1670,7 +1695,7 @@ def test_payment_component_names_use_suffixes():
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_compute_uses_supplied_adjustment_factor():
+def test_calculate_event_uses_supplied_adjustment_factor():
     idx = pd.date_range("2024-03-04", "2024-03-09", freq="1h", inclusive="left")
     historical_power_kW = pd.Series(np.random.uniform(50, 150, len(idx)), index=idx)
     baseline_days = pd.to_datetime(["2024-03-04", "2024-03-05", "2024-03-06"])
