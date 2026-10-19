@@ -360,7 +360,7 @@ def test_calculate_event_baseline_day_of_adjustment(flat_power_series):
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_calculate_event_baseline_zero_denominator_warns(flat_power_series):
+def test_calculate_event_baseline_zero_denominator_warning(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100, adj_value_by_hour=0)
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
@@ -1463,7 +1463,7 @@ def test_calculate_event_baseline_zero_days_yields_zeros(recwarn, flat_power_ser
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-def test_mixed_payment_structures_in_one_model_warns():
+def test_mixed_payment_structures_in_one_model_warning():
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
     model = pyo.ConcreteModel()
     model.reduction = pyo.Var(range(2))
