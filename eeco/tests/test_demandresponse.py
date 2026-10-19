@@ -667,7 +667,10 @@ def test_adjustment_in_model_defaults_off(adjustment_factor_setup):
             ["2024-01-08 10:00", "2024-01-08 11:00", "2024-01-08 12:00"],
             "no data",  # missing entirety of event day
         ),
-        (["2024-01-08 10:00", "2024-01-08 12:00"]),  # missing 2 hours on event day
+        (
+            ["2024-01-08 10:00", "2024-01-08 12:00"],
+            "missing data",  # missing 2 hours on event day
+        ),
         (["2024-01-03 11:00"], "missing data"),  # missing one hour on a baseline day
     ],
 )
