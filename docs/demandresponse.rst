@@ -10,8 +10,8 @@ This module computes incentive-based demand response (DR) revenue from
 electricity consumption data, modeled along two composable axes --
 :class:`BaselineMethod` for how the counterfactual is measured and
 :class:`PaymentStructure` for how it is paid -- with three entry points:
-``calculate_dr_revenue``, ``build_pyomo_dr_revenue`` (pyomo only, is added to
-``model.objective``), and ``calculate_itemized_dr_revenue`` (post-optimization,
+``calculate_dr_revenue``, ``build_pyomo_dr_revenue`` (pyomo only, is netted
+into the model's active objective), and ``calculate_itemized_dr_revenue`` (post-optimization,
 per-event breakdown).
 
 Baselines are computed per settlement interval (see ``resolution`` on
@@ -74,6 +74,24 @@ denoted in all caps since they are global constants.
 ``baseline_days`` should already exclude any date that is itself another
 event's date; ``add_event`` does not check this.
 
+Time zones
+----------
+
+Power data may be indexed by a tz-naive or a tz-aware ``DatetimeIndex``.
+Event dates, start hours, and baseline days are always read as **local
+wall-clock** times, as utility programs define them: an event at
+``start_hour=16`` covers 4 pm local time on every day, on either side of a
+daylight-saving change. A tz-aware ``event_date``, baseline day, or
+``region_x1s`` key keeps its local wall-clock date and drops the time zone.
+``"interval_datetime"`` in the per-event results is returned in the data's
+time zone.
+
+On a daylight-saving day, a window that covers the skipped spring-forward
+hour has no data in that hour and raises ``ValueError``. In a window that
+covers the repeated fall-back hour, both occurrences fall in the same
+wall-clock interval and are averaged. Windows away from the change (such as
+afternoon or evening events) are unaffected.
+
 Payment function
 ----------------
 
@@ -94,11 +112,13 @@ Baseline methods
 
 A :class:`BaselineMethod` computes the counterfactual power the site
 *would have* drawn absent the event, which is subtracted from actual power
-to get the reduction a program pays for. The module has built-in classes 
-for four baseline methods.
+to get the reduction a program pays for. ``BaselineMethod`` is an abstract
+base class: it holds the shared ``resolution`` setting and ``replace``, and
+each subclass implements ``calculate_event_baseline``. The module has
+built-in subclasses for four baseline methods.
 
-``BaselineMethod``
--------------------
+``SimilarDaysBaseline``
+------------------------
 
 The default baseline: the average power across a configurable number of the
 most recent eligible "similar days" (candidate days are supplied per-event
@@ -116,8 +136,8 @@ remains and warns when fewer remain than ``n_baseline_days``.
 holiday in the `holidays <https://pypi.org/project/holidays/>`_ package's
 calendar for ``holiday_country`` (an ISO 3166-1 code such as ``"US"``) and
 optional ``holiday_subdiv`` (such as ``"CA"``), or if it appears in
-``holiday_dates``. ``holiday_country`` defaults to ``None``, which uses
-``holiday_dates`` alone; set it to apply a country's public holidays.
+``holiday_dates``. ``holiday_country`` defaults to ``"US"``, as in CBP; set it
+to ``None`` to use ``holiday_dates`` alone.
 
 **Per-interval averaging.** The event window is split into equal-width
 settlement intervals of width ``resolution`` (a string of the form
@@ -127,7 +147,9 @@ each interval is computed; the baseline for interval ``k`` is then the mean of
 interval ``k`` across all selected days. The result is one value per
 interval, not one value per day. When ``resolution`` is ``None``, the width is
 inferred from the spacing of ``model_datetime_index`` (when a model is given)
-or ``historical_power_kW.index``. Pass it explicitly when that spacing differs
+or ``historical_power_kW.index``, as the smallest gap between timestamps.
+Gaps in the data are allowed, but an index whose gaps are not all whole
+multiples of the smallest one raises ``ValueError``. Pass it explicitly when that spacing differs
 from the settlement interval you want (e.g. hourly meter data settled at
 15-minute resolution). The event duration must be an integer multiple of the
 interval width. Index ``t`` of the returned array (or ``Var``) is a position
@@ -176,19 +198,21 @@ baseline is a flat zero -- for programs (such as some interruption-based
 ones) whose settlement has no historical counterfactual at all. Because a
 zero baseline makes every kW of actual consumption look like a negative
 reduction, pair it with either a payout-only payment structure or a payment
-schedule whose lowest region extends to ``-Infinity``; the bundled CBP-style
-schedule does not cover a negative delivered ratio, and ``find_region`` will
-raise a ValueError. 
+schedule whose lowest region extends to ``-Infinity`` (as the bundled
+CBP-style schedule does). A schedule whose lowest ``x1`` is finite does not
+cover a negative delivered ratio: ``find_region`` raises a ValueError, and the
+Pyomo/cvxpy formulations enforce ``reduction >= x1 * bid_capacity_kW``, so the
+optimizer can never consume above baseline during an event.
 
 ``TopUsageDaysBaseline``
 -------------------------
 
-A subclass of ``BaselineMethod`` that keeps the same averaging mechanism but
+A subclass of ``SimilarDaysBaseline`` that keeps the same averaging mechanism but
 ranks candidate days by highest mean power draw over the event window
 instead of by recency, so the baseline reflects the days the site used the
 most power rather than the most recent ones. This is the "high-X-of-Y"
 style baseline used by some utility programs, and is otherwise configured
-identically to ``BaselineMethod`` (same day-of adjustment, weekend/holiday
+identically to ``SimilarDaysBaseline`` (same day-of adjustment, weekend/holiday
 exclusion, etc.). A day with no data in the event window is ranked last; if
 it is still selected, the baseline calculation raises on it.
 
@@ -198,8 +222,9 @@ it is still selected, the baseline calculation raises on it.
 The baseline is a constant, contracted "firm service level" agreed with the
 utility ahead of time, rather than anything derived from historical
 consumption. Every event uses the same ``firm_level_kW`` value, and there is
-no day selection, ranking, or day-of adjustment to configure (it does not
-call ``BaselineMethod.__init__``). ``historical_power_kW`` and
+no day selection, ranking, or day-of adjustment to configure (it subclasses
+``BaselineMethod`` directly, not ``SimilarDaysBaseline``).
+``historical_power_kW`` and
 ``model_datetime_index`` are consulted only to infer the interval width when
 ``resolution`` is ``None``, and no components are added to a ``model``.
 
@@ -216,7 +241,8 @@ therefore has no ex-post/numpy evaluation path: ``calculate_event_baseline`` rai
 ``NotImplementedError`` without a ``model``. The interruption level is
 returned in the baseline's position to keep a consistent interface, but the
 reduction it implies is not the basis for payment, so pair it with a
-payout-only payment structure.
+payout-only payment structure. ``interruption_level_kW`` must be
+non-negative.
 
 Payment structures
 ====================
@@ -241,25 +267,25 @@ shared across events with different bid sizes.
 
 .. note::
 
-   Unlike the default ``BaselineMethod``, the other defaults here do not
-   reproduce PG&E's CBP. CBP settles each hour separately and pays a monthly
-   capacity payment, whereas this class defaults to ``settlement="average"``
-   and ``payment_basis="per_event"``. To model CBP, set
-   ``settlement="interval"`` and ``payment_basis="monthly_share"`` (see
-   below).
+   The default ``settlement="interval"`` matches PG&E's CBP, which settles
+   each hour separately, but the default ``payment_basis="per_event"`` does
+   not: CBP pays a monthly capacity payment. To model CBP, also set
+   ``payment_basis="monthly_share"`` (see below).
 
 **Settlement.** When the reduction carries more than one settlement
 interval, ``settlement`` controls how the capacity payment is aggregated:
 
-- ``"average"`` (default): average the per-interval reduction into one
-  delivered ratio, then evaluate the payment function once. This keeps the
-  pyomo formulation to one region-selection block per event.
-- ``"interval"``: evaluate the payment function at each interval's own
-  delivered ratio, then average the resulting payments. This is the more
+- ``"interval"`` (default): evaluate the payment function at each interval's
+  own delivered ratio, then average the resulting payments. This matches
+  PG&E's CBP, which settles each event hour separately, and is the more
   rigorous reading when the payment function is nonlinear over the realized
-  range. The two modes agree exactly when the function is linear there, and
-  always agree for a single scalar reduction. In pyomo, it multiplies the
-  number of region-selection binaries by the number of intervals.
+  range. In pyomo, it multiplies the number of region-selection binaries by
+  the number of intervals.
+- ``"average"``: average the per-interval reduction into one delivered
+  ratio, then evaluate the payment function once. This keeps the pyomo
+  formulation to one region-selection block per event. The two modes agree
+  exactly when the function is linear over the realized range, and always
+  agree for a single scalar reduction.
 
 **Payment basis.** ``payment_basis`` and ``payout_basis`` choose whether the
 capacity price and payout are settled once per event (``"per_event"``,
@@ -370,7 +396,9 @@ Every pyomo component is named ``varstr + "_" + suffix``, with the suffixes
 available as module constants. ``BASELINE_COMPONENT_SUFFIXES`` and
 ``PAYMENT_COMPONENT_SUFFIXES`` collect them. ``varstr`` must be unique per
 call on a given model, since reusing it raises a pyomo "component already
-exists" error. ``calculate_dr_revenue`` and ``build_pyomo_dr_revenue`` name each
+exists" error. ``calculate_dr_revenue`` and ``build_pyomo_dr_revenue`` check
+for such clashes before adding anything and raise ``ValueError``, so calling
+them twice on one model needs a different ``varstr_prefix``. They name each
 event ``f"{varstr_prefix}_{i}"`` (``i`` is the event's position in date
 order) and its baseline ``f"{varstr_prefix}_{i}_baseline_kW"``.
 
@@ -389,11 +417,11 @@ settings raises a ``UserWarning``.
    * - ``CONSTRAINT_SUFFIX``
      - Baseline defining constraint
      - ``"constraint"``
-     - ``BaselineMethod.calculate_event_baseline``
+     - ``SimilarDaysBaseline.calculate_event_baseline``
    * - ``ADJUSTMENT_FACTOR_SUFFIX``
      - Fixed day-of adjustment factor ``Var``
      - ``"adjustment_factor"``
-     - ``BaselineMethod.calculate_event_baseline``
+     - ``SimilarDaysBaseline.calculate_event_baseline``
    * - ``INTERRUPTION_CONSTRAINT_SUFFIX``
      - Interruption upper bound
      - ``"interruption_constraint"``
@@ -461,9 +489,12 @@ Entry points
   total revenue expression. ``region_x1s`` optionally fixes each event's
   region, keyed by event date (e.g. ``{"2024-01-08": 0.6}``); events missing
   from it leave the region choice to the solver.
-- ``build_pyomo_dr_revenue`` calls ``calculate_dr_revenue`` and subtracts the total
-  revenue from ``model.objective``, creating a minimization objective if the
-  model has none.
+- ``build_pyomo_dr_revenue`` calls ``calculate_dr_revenue`` and nets the total
+  revenue into the model's single active objective, whatever its name:
+  subtracted from a minimization objective, added to a maximization one. If
+  the model has no active objective, it adds a minimization objective named
+  ``objective`` (or a unique variant if that name is taken). More than one
+  active objective raises ``ValueError`` before anything is added.
 - ``calculate_itemized_dr_revenue`` returns a ``pandas.DataFrame`` with one
   row per event (see ``calculate_event_revenue`` for the columns). Each event
   is sliced and re-baselined independently, so results never mix time windows
@@ -480,10 +511,9 @@ programs are represented by pairing whichever combination matches their
 rules. A few examples:
 
 - **A day-ahead capacity bidding program** (e.g. PG&E's CBP) pairs the
-  default ``BaselineMethod`` (10 similar weekdays, 3-hour day-of adjustment,
-  ``resolution="1h"``) with
-  ``PaymentStructure(regions, settlement="interval",
-  payment_basis="monthly_share")``, whose regions ramp payment up with
+  default ``SimilarDaysBaseline`` (10 similar weekdays, 3-hour day-of
+  adjustment, US holidays excluded, ``resolution="1h"``) with
+  ``PaymentStructure(regions, payment_basis="monthly_share")``, whose regions ramp payment up with
   delivered ratio. The monthly Base Capacity Payment is split across the
   month's called hours and each hour is adjusted for its own performance.
 - **A firm service level program**, where the customer commits to staying at
@@ -500,7 +530,7 @@ rules. A few examples:
   ``MarketIndexedPayment``, so the price paid tracks a day-ahead market
   index instead of a flat rate.
 - **A combined capacity-and-energy incentive program** pairs the default
-  ``BaselineMethod`` with ``CapacityEnergyPayment``, paying both a
+  ``SimilarDaysBaseline`` with ``CapacityEnergyPayment``, paying both a
   capacity-based incentive and a ``$/kWh`` rate for the energy actually
   curtailed.
 
@@ -513,8 +543,8 @@ Both axes are designed to be subclassed, and every public entry point
 instance and accepts a ``PaymentStructure`` instance in place of a list of
 regions, so a custom subclass drops in without further plumbing.
 
-To add a new baseline method, subclass ``BaselineMethod`` and override one
-of:
+To add a new similar-days variant, subclass ``SimilarDaysBaseline`` and
+override one of:
 
 - ``_rank_days(candidate_days, historical_power_kW, event)`` to change which
   candidate days are eligible and how they're ranked, while keeping the
@@ -523,13 +553,16 @@ of:
   replaces the ranking). Prefer this over overriding ``select_days``.
 - ``_adjustment_factor(valid_days, historical_power_kW, event)`` to change
   how the day-of scaling factor is computed.
-- ``calculate_event_baseline(historical_power_kW, event, *, model=None, model_power_kW=None,
-  model_datetime_index=None, varstr=None, adjustment_factor=None)`` to
-  replace the baseline calculation entirely, for a baseline that isn't a historical day-average
-  at all (see ``FixedLevelBaseline`` and ``UnilateralInterruptionBaseline``).
-  An override must honor ``calculate_event_baseline``'s calling contract: return a
-  ``(value, model)`` pair, with ``model`` left ``None`` ex-post (or raise),
-  adding any pyomo components under ``varstr`` when a model is given.
+
+For a baseline that isn't a historical day-average at all, subclass
+``BaselineMethod`` directly, call ``super().__init__(resolution)``, and
+implement ``calculate_event_baseline(historical_power_kW, event, *,
+model=None, model_power_kW=None, model_datetime_index=None, varstr=None,
+adjustment_factor=None)`` (see ``FixedLevelBaseline`` and
+``UnilateralInterruptionBaseline``). The implementation must honor
+``calculate_event_baseline``'s calling contract: return a ``(value, model)``
+pair, with ``model`` left ``None`` ex-post (or raise), adding any pyomo
+components under ``varstr`` when a model is given.
 
 To add a new payment structure, subclass ``PaymentStructure`` and override
 ``evaluate`` and ``build_expression`` as a pair -- ``evaluate`` is used for
