@@ -736,6 +736,7 @@ def test_calculate_event_baseline_datetime_index_too_short_error(flat_power_seri
         (0.7, 10 * 0.5 * 70),  # region 2: 10 * (0.5*70 + 0)
         (0.6, 10 * 0.5 * 60),  # exact boundary lands in region 2, not region 3
         (0.5, 10 * (50 - 0.6 * 100)),  # region 3 (penalty): 10 * (1*50 - 0.6*100)
+        (-0.2, 10 * -0.6 * 100),  # -Infinity region: flat at the 0% penalty
     ],
 )
 def test_payment_structure_evaluate(delivered_ratio, expected_revenue):
@@ -851,6 +852,35 @@ def test_build_event_revenue_pyomo(
             model=model,
             varstr="event_2024_01_08",
         )
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_build_event_revenue_pyomo_negative_reduction(
+    fix_region_choice, assert_region_components_satisfied
+):
+    model = pyo.ConcreteModel()
+    model.t = pyo.RangeSet(0, 2)
+    model.power = pyo.Var(model.t)
+    for t in model.t:
+        model.power[t].fix(110)  # 20 kW above baseline -> delivered ratio -0.2
+
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    revenue_var, model = dr.build_event_revenue(
+        model.power,
+        event,
+        90,
+        payment_function=CBP_PAYMENT,
+        region_x1=-np.inf,
+        model=model,
+        varstr="event_negative",
+    )
+    expected_revenue = CBP_PAYMENT.evaluate(event, -20)
+    assert expected_revenue == pytest.approx(10 * -0.6 * 100)
+
+    # The -Infinity region is last in the CBP schedule (index 4)
+    fix_region_choice(model, "event_negative", active_idx=4, reduction_value=-20)
+    revenue_var.fix(expected_revenue)
+    assert_region_components_satisfied(model, "event_negative")
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -1561,11 +1591,11 @@ def test_mixed_payment_structures_in_one_model_warning():
             event, model.reduction, model=model, varstr="b"
         )
 
-    interval_structure = dr.PaymentStructure(
-        CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_INTERVAL
+    avg_structure = dr.PaymentStructure(
+        CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_AVERAGE
     )
     with pytest.warns(UserWarning, match="different payment structure"):
-        interval_structure.build_expression(
+        avg_structure.build_expression(
             event, model.reduction, model=model, varstr="c"
         )
 

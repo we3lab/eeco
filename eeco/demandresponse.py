@@ -1063,11 +1063,14 @@ class PaymentStructure:
     regions : list of dict or None
         Payment schedule. Each dict has float values under the keys `"x1"`,
         `"x2"` (delivered ratio bounds) and `"y1"`, `"y2"` (payment ratios at
-        those bounds). Bounds may be `"Infinity"`/`"-Infinity"` strings.
+        those bounds). Bounds may be `"Infinity"`/`"-Infinity"` strings; a
+        region with an infinite bound pays a flat ratio from its finite end.
+        Regions whose lowest `x1` is finite cannot cover a negative delivered
+        ratio, and in optimization they force `reduction >= x1 * bid`.
         `None` or `[]` means no capacity payment.
 
     settlement : str
-        `"average"` (default) or `"interval"`.
+        `"interval"` (default) or `"average"`.
 
     payment_basis : str
         `"per_event"` (default), `"per_hour"`, or `"monthly_share"`. With
@@ -1091,7 +1094,7 @@ class PaymentStructure:
     def __init__(
         self,
         regions,
-        settlement=SETTLEMENT_AVERAGE,
+        settlement=SETTLEMENT_INTERVAL,
         payment_basis=BASIS_PER_EVENT,
         payout=0.0,
         payout_basis=BASIS_PER_EVENT,
@@ -1273,6 +1276,8 @@ class PaymentStructure:
         )
         if np.isinf(x2):
             return y1
+        if np.isinf(x1):
+            return y2
         return y1 + (y2 - y1) * (delivered_ratio - x1) / (x2 - x1)
 
     def _region_coefficients(self, event):
@@ -1303,10 +1308,17 @@ class PaymentStructure:
             x1, x2, y1, y2 = (
                 region[k] for k in (REGION_X1, REGION_X2, REGION_Y1, REGION_Y2)
             )
-            slope_ratio = 0.0 if np.isinf(x2) else (y2 - y1) / (x2 - x1)
+            # Regions with an infinite bound are flat at their finite end
+            if np.isinf(x2):
+                slope_ratio, intercept_ratio = 0.0, y1
+            elif np.isinf(x1):
+                slope_ratio, intercept_ratio = 0.0, y2
+            else:
+                slope_ratio = (y2 - y1) / (x2 - x1)
+                intercept_ratio = y1 - slope_ratio * x1
             slopes.append(capacity_price * slope_ratio * basis_mult)
             intercepts.append(
-                capacity_price * bid_capacity_kW * (y1 - slope_ratio * x1) * basis_mult
+                capacity_price * bid_capacity_kW * intercept_ratio * basis_mult
             )
         return slopes, intercepts
 
@@ -1518,11 +1530,15 @@ class PaymentStructure:
         # interval (not just the mean) to fall in the fixed region.
         revenue_expr = slope * mean_reduction + intercept + payout_amt
         if self.settlement == SETTLEMENT_INTERVAL:
-            constraints = [reduction_kW >= x1 * bid_capacity_kW]
+            constraints = []
+            if not np.isinf(x1):
+                constraints.append(reduction_kW >= x1 * bid_capacity_kW)
             if not np.isinf(x2):
                 constraints.append(reduction_kW <= x2 * bid_capacity_kW)
         else:
-            constraints = [mean_reduction >= x1 * bid_capacity_kW]
+            constraints = []
+            if not np.isinf(x1):
+                constraints.append(mean_reduction >= x1 * bid_capacity_kW)
             if not np.isinf(x2):
                 constraints.append(mean_reduction <= x2 * bid_capacity_kW)
         return revenue_expr, constraints
