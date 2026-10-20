@@ -3,12 +3,14 @@
 See :doc:`/demandresponse` for a description of the module.
 """
 
+import abc
 import warnings
 import holidays
 import numpy as np
 import pandas as pd
 import cvxpy as cp
 import pyomo.environ as pyo
+from pyomo.common.modeling import unique_component_name
 
 from . import utils as ut
 
@@ -110,10 +112,113 @@ def _component_name(varstr, suffix):
     return varstr + "_" + suffix
 
 
-class BaselineMethod:
-    """Average-of-similar-days baseline with an optional day-of adjustment.
+class BaselineMethod(abc.ABC):
+    """Abstract base for demand response baseline methods.
 
-    Use `replace` to derive a variant with some settings changed.
+    Subclasses implement `calculate_event_baseline`. Use `replace` to derive
+    a variant with some settings changed.
+
+    Parameters
+    ----------
+    resolution : str or None
+        Settlement interval width (e.g., `"15m"`, `"1h"`). `None` infers it
+        from the data or model index.
+    """
+
+    def __init__(self, resolution=None):
+        self.resolution = resolution
+
+    def replace(self, **changes):
+        """Return a new instance with some settings changed.
+
+        Parameters
+        ----------
+        **changes
+            Constructor arguments to override. Unspecified settings keep this
+            instance's values.
+
+        Returns
+        -------
+        BaselineMethod
+            New instance of the same class; `self` is unchanged.
+
+        Raises
+        ------
+        TypeError
+            If a key is not a constructor argument.
+        ValueError
+            If the resulting settings fail constructor validation.
+        """
+        return type(self)(**{**vars(self), **changes})
+
+    def _step(self, *indices):
+        """Determine the settlement interval width for this method.
+
+        Parameters
+        ----------
+        *indices : pandas.DatetimeIndex or None
+            Indices to infer the width from when `resolution` is `None`, in
+            order of preference.
+
+        Raises
+        ------
+        ValueError
+            In the cases listed for `_resolve_step`.
+
+        Returns
+        -------
+        pandas.Timedelta
+            Settlement interval width.
+        """
+        return _resolve_step(self.resolution, *indices)
+
+    @abc.abstractmethod
+    def calculate_event_baseline(
+        self,
+        historical_power_kW,
+        event,
+        *,
+        model=None,
+        model_power_kW=None,
+        model_datetime_index=None,
+        varstr=None,
+        adjustment_factor=None,
+    ):
+        """Calculate the per-interval baseline power for a single event.
+
+        Parameters
+        ----------
+        historical_power_kW : pandas.Series
+            Historical power consumption in kW, indexed by timestamp.
+
+        event : dict
+            Single event dict. See `add_event` for the keys.
+
+        model : pyomo.environ.Model or pyomo.environ.Block or None
+            Model to add baseline components to. `None` for ex-post use.
+
+        model_power_kW : pyomo.environ.Var or None
+            Power decision variable over the optimization horizon.
+
+        model_datetime_index : pandas.DatetimeIndex or None
+            Timestamp of each entry of `model_power_kW`.
+
+        varstr : str or None
+            Name prefix for components created on `model`.
+
+        adjustment_factor : float or None
+            Day-of adjustment factor to apply as-is, for methods that use one.
+
+        Returns
+        -------
+        tuple
+            `(baseline_kW, model)`.
+        """
+        raise NotImplementedError
+
+
+class SimilarDaysBaseline(BaselineMethod):
+    """Average-of-similar-days baseline with an optional day-of adjustment.
 
     Parameters
     ----------
@@ -140,7 +245,8 @@ class BaselineMethod:
 
     holiday_country : str or None
         ISO 3166-1 country code passed to `holidays.country_holidays`.
-        `None` uses only `holiday_dates`.
+        Defaults to `"US"`, as in PG&E's CBP. `None` uses only
+        `holiday_dates`.
 
     holiday_subdiv : str or None
         Subdivision code (e.g., `"CA"`) passed to `holidays.country_holidays`.
@@ -172,12 +278,13 @@ class BaselineMethod:
         adjustment_clip=(0.8, 1.2),
         exclude_weekends=True,
         exclude_holidays=True,
-        holiday_country=None,
+        holiday_country="US",
         holiday_subdiv=None,
         holiday_dates=None,
         adjustment_in_model=False,
         resolution=None,
     ):
+        super().__init__(resolution)
         if n_baseline_days < 0:
             raise ValueError("n_baseline_days must be non-negative")
         if adjustment_offset_hours is not None:
@@ -199,30 +306,6 @@ class BaselineMethod:
         self.holiday_subdiv = holiday_subdiv
         self.holiday_dates = tuple(holiday_dates) if holiday_dates else ()
         self.adjustment_in_model = adjustment_in_model
-        self.resolution = resolution
-
-    def replace(self, **changes):
-        """Return a new instance with some settings changed.
-
-        Parameters
-        ----------
-        **changes
-            Constructor arguments to override. Unspecified settings keep this
-            instance's values.
-
-        Returns
-        -------
-        BaselineMethod
-            New instance of the same class; `self` is unchanged.
-
-        Raises
-        ------
-        TypeError
-            If a key is not a constructor argument.
-        ValueError
-            If the resulting settings fail constructor validation.
-        """
-        return type(self)(**{**vars(self), **changes})
 
     def _is_holiday(self, day):
         """Check whether a day is a holiday under this method's configuration.
@@ -238,7 +321,7 @@ class BaselineMethod:
             `True` if `day` is a `holiday_country`/`holiday_subdiv` holiday or
             is in `holiday_dates`.
         """
-        if day in {pd.Timestamp(d) for d in self.holiday_dates}:
+        if day in {_wall_clock_timestamp(d) for d in self.holiday_dates}:
             return True
         if self.holiday_country is None:
             return False
@@ -450,10 +533,8 @@ class BaselineMethod:
                 "when model is given"
             )
 
-        step = _resolve_step(
-            self.resolution,
-            model_datetime_index,
-            getattr(historical_power_kW, "index", None),
+        step = self._step(
+            model_datetime_index, getattr(historical_power_kW, "index", None)
         )
         n_intervals = _window_interval_count(event[EVENT_DURATION], step)
 
@@ -461,7 +542,7 @@ class BaselineMethod:
             # No baselining: there are no days to select or adjust against
             return np.zeros(n_intervals), model
 
-        candidate_days = [pd.Timestamp(d) for d in event[BASELINE_DAYS]]
+        candidate_days = [_wall_clock_timestamp(d) for d in event[BASELINE_DAYS]]
         valid_days = self.select_days(candidate_days, historical_power_kW, event)
 
         model_var_index = (
@@ -539,10 +620,10 @@ class BaselineMethod:
         return baseline_var, model
 
 
-class TopUsageDaysBaseline(BaselineMethod):
+class TopUsageDaysBaseline(SimilarDaysBaseline):
     """Baseline that averages the highest-usage eligible days.
 
-    Takes the same parameters as `BaselineMethod`.
+    Takes the same parameters as `SimilarDaysBaseline`.
     """
 
     def _rank_days(self, candidate_days, historical_power_kW, event):
@@ -598,10 +679,10 @@ class FixedLevelBaseline(BaselineMethod):
     """
 
     def __init__(self, firm_level_kW, resolution=None):
+        super().__init__(resolution)
         if firm_level_kW < 0:
             raise ValueError("firm_level_kW must be non-negative")
         self.firm_level_kW = firm_level_kW
-        self.resolution = resolution
 
     def calculate_event_baseline(
         self,
@@ -646,10 +727,8 @@ class FixedLevelBaseline(BaselineMethod):
             `(baseline_kW, model)`, where `baseline_kW` is `firm_level_kW`
             repeated once per interval.
         """
-        step = _resolve_step(
-            self.resolution,
-            model_datetime_index,
-            getattr(historical_power_kW, "index", None),
+        step = self._step(
+            model_datetime_index, getattr(historical_power_kW, "index", None)
         )
         n_intervals = _window_interval_count(event[EVENT_DURATION], step)
         baseline_kW = np.full(n_intervals, self.firm_level_kW, dtype=float)
@@ -667,11 +746,18 @@ class UnilateralInterruptionBaseline(BaselineMethod):
     resolution : str or None
         Settlement interval width (e.g., `"15m"`, `"1h"`). `None` infers it
         from the model index.
+
+    Raises
+    ------
+    ValueError
+        If `interruption_level_kW` is negative.
     """
 
     def __init__(self, interruption_level_kW=0.0, resolution=None):
+        super().__init__(resolution)
+        if interruption_level_kW < 0:
+            raise ValueError("interruption_level_kW must be non-negative")
         self.interruption_level_kW = interruption_level_kW
-        self.resolution = resolution
 
     def calculate_event_baseline(
         self,
@@ -749,7 +835,7 @@ class UnilateralInterruptionBaseline(BaselineMethod):
                 f"No data available for event window on {event[EVENT_DATE]}"
             )
 
-        step = _resolve_step(self.resolution, model_datetime_index)
+        step = self._step(model_datetime_index)
         n_intervals = _window_interval_count(event[EVENT_DURATION], step)
         baseline_kW = np.full(n_intervals, self.interruption_level_kW, dtype=float)
 
@@ -802,13 +888,72 @@ def _resolve_adjustment_factor(event, adjustment_factor):
     return float(adjustment_factor)
 
 
+def _wall_clock(index):
+    """Express a `pandas.DatetimeIndex` in local wall-clock time.
+
+    Parameters
+    ----------
+    index : pandas.DatetimeIndex
+        Timestamps, tz-naive or tz-aware.
+
+    Returns
+    -------
+    pandas.DatetimeIndex
+        `index` unchanged if tz-naive, otherwise its local wall-clock times
+        with the time zone dropped. Around a daylight-saving change this can
+        repeat (fall-back) or skip (spring-forward) an hour.
+    """
+    if getattr(index, "tz", None) is not None:
+        return index.tz_localize(None)
+    return index
+
+
+def _wall_clock_timestamp(value):
+    """Convert a date or timestamp to a tz-naive local wall-clock timestamp.
+
+    Parameters
+    ----------
+    value : datetime.date, datetime.datetime, str, or pandas.Timestamp
+        Date or timestamp, tz-naive or tz-aware.
+
+    Returns
+    -------
+    pandas.Timestamp
+        `value` as a tz-naive timestamp, keeping its local wall-clock time.
+    """
+    timestamp = pd.Timestamp(value)
+    if timestamp.tz is not None:
+        return timestamp.tz_localize(None)
+    return timestamp
+
+
+def _window_start(event_date, start_hour):
+    """Get the local wall-clock start of an event window.
+
+    Parameters
+    ----------
+    event_date : datetime.date, datetime.datetime, str, or pandas.Timestamp
+        Calendar date of the window.
+
+    start_hour : float
+        Hour of day (0-24) the window begins.
+
+    Returns
+    -------
+    pandas.Timestamp
+        Tz-naive local wall-clock start of the window.
+    """
+    return _wall_clock_timestamp(event_date) + pd.Timedelta(hours=start_hour)
+
+
 def _event_window_mask(index, event_date, start_hour, duration_hours):
     """Select the timestamps that fall within an event window on one day.
 
     Parameters
     ----------
     index : pandas.DatetimeIndex
-        Timestamps to select from.
+        Timestamps to select from. A tz-aware index is compared in its local
+        wall-clock time.
 
     event_date : datetime.date, datetime.datetime, or str
         Calendar date of the window.
@@ -825,35 +970,47 @@ def _event_window_mask(index, event_date, start_hour, duration_hours):
         Boolean mask, `True` for timestamps in
         `[event_date + start_hour, event_date + start_hour + duration_hours)`.
     """
-    window_start = pd.Timestamp(event_date) + pd.Timedelta(hours=start_hour)
+    window_start = _window_start(event_date, start_hour)
     window_end = window_start + pd.Timedelta(hours=duration_hours)
-    return (index >= window_start) & (index < window_end)
+    wall_clock = _wall_clock(index)
+    return (wall_clock >= window_start) & (wall_clock < window_end)
 
 
 def _index_step(index):
-    """Infer the spacing of a regularly spaced `pandas.DatetimeIndex`.
+    """Infer the spacing of a `pandas.DatetimeIndex`.
 
     Parameters
     ----------
     index : pandas.DatetimeIndex or None
-        Index to infer the spacing of.
+        Index to infer the spacing of. Gaps are allowed, as long as every gap
+        is a whole multiple of the spacing.
 
     Raises
     ------
     ValueError
-        If `index` has fewer than 2 entries.
+        If `index` has fewer than 2 distinct entries, or if its spacings are
+        not all whole multiples of the smallest one.
 
     Returns
     -------
     pandas.Timedelta or None
-        Gap between the first two entries of `index`, or `None` if `index` is
-        `None`.
+        Smallest gap between distinct entries of `index`, or `None` if
+        `index` is `None`.
     """
     if index is None:
         return None
-    if len(index) < 2:
+    # asi8 is UTC-based for tz-aware indices, so DST changes don't skew gaps
+    stamps = np.unique(pd.DatetimeIndex(index).asi8)
+    if len(stamps) < 2:
         raise ValueError("index must have at least 2 entries to infer its step size")
-    return index[1] - index[0]
+    gaps = np.diff(stamps)
+    step = gaps.min()
+    if np.any(gaps % step != 0):
+        raise ValueError(
+            f"index is irregularly spaced (smallest gap {pd.Timedelta(step)}, but "
+            "not every gap is a whole multiple of it); pass resolution explicitly"
+        )
+    return pd.Timedelta(step)
 
 
 def _resolve_step(resolution, *indices):
@@ -871,7 +1028,8 @@ def _resolve_step(resolution, *indices):
     Raises
     ------
     ValueError
-        If `resolution` is `None` and no index has at least 2 entries.
+        If `resolution` is `None` and the first non-`None` index has fewer
+        than 2 distinct entries or is irregularly spaced.
 
     Returns
     -------
@@ -941,9 +1099,9 @@ def _window_interval_starts(event_date, start_hour, duration_hours, step):
     Returns
     -------
     pandas.DatetimeIndex
-        Start timestamp of each interval.
+        Tz-naive local wall-clock start timestamp of each interval.
     """
-    window_start = pd.Timestamp(event_date) + pd.Timedelta(hours=start_hour)
+    window_start = _window_start(event_date, start_hour)
     n_intervals = _window_interval_count(duration_hours, step)
     return pd.DatetimeIndex([window_start + i * step for i in range(n_intervals)])
 
@@ -954,7 +1112,8 @@ def _window_interval_buckets(index, event_date, start_hour, duration_hours, step
     Parameters
     ----------
     index : pandas.DatetimeIndex
-        Timestamps to group.
+        Timestamps to group. A tz-aware index is grouped by its local
+        wall-clock time.
 
     event_date : datetime.date, datetime.datetime, or str
         Calendar date of the window.
@@ -979,13 +1138,14 @@ def _window_interval_buckets(index, event_date, start_hour, duration_hours, step
         Integer positions of `index` in each interval. Intervals with no
         matching positions are empty arrays.
     """
-    window_start = pd.Timestamp(event_date) + pd.Timedelta(hours=start_hour)
+    window_start = _window_start(event_date, start_hour)
     n_intervals = _window_interval_count(duration_hours, step)
     mask = _event_window_mask(index, event_date, start_hour, duration_hours)
     positions = np.flatnonzero(mask)
     if positions.size == 0:
         return [np.empty(0, dtype=int) for _ in range(n_intervals)]
-    offsets = (index[positions] - window_start) / step
+    # Wall-clock offsets, so a fall-back day's repeated hour shares an interval
+    offsets = (_wall_clock(index)[positions] - window_start) / step
     interval_idx = np.floor(offsets.values.astype(float) + 1e-9).astype(int)
     buckets = [np.empty(0, dtype=int) for _ in range(n_intervals)]
     for k in range(n_intervals):
@@ -1171,6 +1331,35 @@ class PaymentStructure:
             )
         return region
 
+    @staticmethod
+    def _event_duration(event, label):
+        """Get an event's duration, with a clear error when it is missing.
+
+        Parameters
+        ----------
+        event : dict
+            Single event dict. See `add_event` for the keys.
+
+        label : str
+            Setting that needs the duration, used in the error message.
+
+        Raises
+        ------
+        ValueError
+            If `event` has no `"duration_hours"`.
+
+        Returns
+        -------
+        float
+            `event["duration_hours"]`.
+        """
+        if EVENT_DURATION not in event:
+            raise ValueError(
+                f"{label} requires event[EVENT_DURATION] (duration_hours) "
+                "-- create the event with add_event"
+            )
+        return event[EVENT_DURATION]
+
     def _basis_multiplier(self, event, basis, label):
         """Get the multiplier for a payment or payout basis.
 
@@ -1202,13 +1391,9 @@ class PaymentStructure:
         """
         if basis == BASIS_PER_EVENT:
             return 1.0
-        if EVENT_DURATION not in event:
-            raise ValueError(
-                f"{label}='{basis}' requires event[EVENT_DURATION] (duration_hours) "
-                "-- create the event with add_event"
-            )
+        duration_hours = self._event_duration(event, f"{label}='{basis}'")
         if basis == BASIS_PER_HOUR:
-            return event[EVENT_DURATION]
+            return duration_hours
 
         monthly_kWh = event.get(MONTHLY_CALLED_CAPACITY_KWH)
         if monthly_kWh is None or pd.isna(monthly_kWh):
@@ -1220,7 +1405,7 @@ class PaymentStructure:
             )
         if monthly_kWh <= 0:
             raise ValueError("monthly_called_capacity_kWh must be positive")
-        event_kWh = event[BID_CAPACITY_KW] * event[EVENT_DURATION]
+        event_kWh = event[BID_CAPACITY_KW] * duration_hours
         if monthly_kWh < event_kWh and not np.isclose(monthly_kWh, event_kWh):
             raise ValueError(
                 f"monthly_called_capacity_kWh ({monthly_kWh}) is less than this "
@@ -1735,7 +1920,8 @@ class CapacityEnergyPayment(PaymentStructure):
         Raises
         ------
         ValueError
-            In the cases listed for `PaymentStructure.evaluate`.
+            In the cases listed for `PaymentStructure.evaluate`, or if
+            `event` has no `"duration_hours"`.
 
         Returns
         -------
@@ -1744,9 +1930,8 @@ class CapacityEnergyPayment(PaymentStructure):
         """
         capacity_payment = super().evaluate(event, reduction_kW)
         terms, _ = self._as_interval_terms(reduction_kW)
-        energy_payment = (
-            self.energy_price * float(np.mean(terms)) * event[EVENT_DURATION]
-        )
+        duration_hours = self._event_duration(event, "energy_price")
+        energy_payment = self.energy_price * float(np.mean(terms)) * duration_hours
         return capacity_payment + energy_payment
 
     def build_expression(
@@ -1776,7 +1961,8 @@ class CapacityEnergyPayment(PaymentStructure):
         Raises
         ------
         ValueError
-            In the cases listed for `PaymentStructure.build_expression`.
+            In the cases listed for `PaymentStructure.build_expression`, or if
+            `event` has no `"duration_hours"`.
 
         TypeError
             If `reduction_kW` is not a supported type.
@@ -1795,7 +1981,8 @@ class CapacityEnergyPayment(PaymentStructure):
 
         if ut.check_cvx_type(reduction_kW):
             mean_reduction = cp.sum(reduction_kW) / reduction_kW.size
-            energy_term = self.energy_price * mean_reduction * event[EVENT_DURATION]
+            duration_hours = self._event_duration(event, "energy_price")
+            energy_term = self.energy_price * mean_reduction * duration_hours
             capacity_expr, constraints = super().build_expression(
                 event, reduction_kW, region_x1=region_x1, model=model, varstr=varstr
             )
@@ -1803,7 +1990,8 @@ class CapacityEnergyPayment(PaymentStructure):
 
         terms = _as_pyomo_terms(reduction_kW)
         mean_reduction = pyo.quicksum(terms) / len(terms)
-        energy_term = self.energy_price * mean_reduction * event[EVENT_DURATION]
+        duration_hours = self._event_duration(event, "energy_price")
+        energy_term = self.energy_price * mean_reduction * duration_hours
 
         capacity_var, model = super().build_expression(
             event, reduction_kW, region_x1=region_x1, model=model, varstr=varstr
@@ -1962,10 +2150,11 @@ def add_event(
         Events list to append to. `None` starts a new list.
 
     event_date : datetime.date, datetime.datetime, or str
-        Calendar date of the event.
+        Calendar date of the event, in local time. A tz-aware value keeps its
+        local wall-clock date and drops the time zone.
 
     start_hour : float
-        Hour of day (0-24) the event begins.
+        Hour of day (0-24) the event begins, in local wall-clock time.
 
     duration_hours : float
         Length of the event in hours.
@@ -1974,7 +2163,7 @@ def add_event(
         Advance notice before the event in hours.
 
     baseline_days : list
-        Candidate baseline days for the event.
+        Candidate baseline days for the event, in local time.
 
     bid_capacity_kW : float
         Bid capacity in kW.
@@ -2008,7 +2197,7 @@ def add_event(
     list of dict
         New list with the event appended. Each event dict has the keys
 
-        - `"event_date"` : pandas.Timestamp
+        - `"event_date"` : pandas.Timestamp, tz-naive
         - `"start_hour"` : float
         - `"duration_hours"` : float
         - `"notification_hours"` : float
@@ -2034,7 +2223,7 @@ def add_event(
         warnings.warn("capacity_price is zero", UserWarning)
 
     new_event = {
-        EVENT_DATE: pd.Timestamp(event_date),
+        EVENT_DATE: _wall_clock_timestamp(event_date),
         EVENT_START_HOUR: start_hour,
         EVENT_DURATION: duration_hours,
         NOTIFICATION_HOURS: notification_hours,
@@ -2064,11 +2253,13 @@ def events_to_dataframe(events):
     Returns
     -------
     pandas.DataFrame
-        One row per event, sorted by `"event_date"`, with missing
+        One row per event, sorted by tz-naive local `"event_date"`, with missing
         `"monthly_called_capacity_kWh"` values filled in by
         `_fill_monthly_called_capacity`.
     """
     events_df = events if isinstance(events, pd.DataFrame) else pd.DataFrame(events)
+    events_df = events_df.copy()
+    events_df[EVENT_DATE] = events_df[EVENT_DATE].map(_wall_clock_timestamp)
     events_df = events_df.sort_values(EVENT_DATE).reset_index(drop=True)
     return _fill_monthly_called_capacity(events_df)
 
@@ -2132,7 +2323,7 @@ def _baseline_day_in_horizon(day, start_hour, duration_hours, datetime_index, st
         Length of the window in hours.
 
     datetime_index : pandas.DatetimeIndex
-        Timestamps of the model horizon.
+        Timestamps of the model horizon, compared in local wall-clock time.
 
     step : pandas.Timedelta
         Spacing of `datetime_index`.
@@ -2143,10 +2334,11 @@ def _baseline_day_in_horizon(day, start_hour, duration_hours, datetime_index, st
         `True` if the whole window lies within
         `[datetime_index.min(), datetime_index.max() + step)`.
     """
-    window_start = pd.Timestamp(day) + pd.Timedelta(hours=start_hour)
+    window_start = _window_start(day, start_hour)
     window_end = window_start + pd.Timedelta(hours=duration_hours)
-    horizon_start = datetime_index.min()
-    horizon_end = datetime_index.max() + step
+    wall_clock = _wall_clock(datetime_index)
+    horizon_start = wall_clock.min()
+    horizon_end = wall_clock.max() + step
     return (window_start >= horizon_start) and (window_end <= horizon_end)
 
 
@@ -2396,7 +2588,7 @@ def calculate_event_revenue(
         `add_event`.
 
     baseline_method : BaselineMethod
-        Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
+        Baseline method, e.g. `SimilarDaysBaseline()`.
 
     payment_function : PaymentStructure
         Payment structure used to price the delivered reduction.
@@ -2421,12 +2613,11 @@ def calculate_event_revenue(
         - `"baseline_profile_kW"` : numpy.ndarray, per interval
         - `"actual_profile_kW"` : numpy.ndarray, per interval
         - `"reduction_profile_kW"` : numpy.ndarray, per interval
-        - `"interval_datetime"` : pandas.DatetimeIndex
+        - `"interval_datetime"` : pandas.DatetimeIndex, in the time zone of
+          `historical_power_kW.index`
     """
     # Average actual power over the same settlement intervals as the baseline
-    step = _resolve_step(
-        getattr(baseline_method, "resolution", None), historical_power_kW.index
-    )
+    step = baseline_method._step(historical_power_kW.index)
     buckets = _event_interval_buckets(historical_power_kW.index, event, step)
     actual_profile = np.array(
         [np.mean(historical_power_kW.values[bucket]) for bucket in buckets]
@@ -2434,6 +2625,11 @@ def calculate_event_revenue(
     interval_datetime = _window_interval_starts(
         event[EVENT_DATE], event[EVENT_START_HOUR], event[EVENT_DURATION], step
     )
+    tz = historical_power_kW.index.tz
+    if tz is not None:
+        interval_datetime = interval_datetime.tz_localize(
+            tz, ambiguous=True, nonexistent="shift_forward"
+        )
 
     baseline_profile, _ = baseline_method.calculate_event_baseline(
         historical_power_kW, event
@@ -2516,7 +2712,7 @@ def calculate_itemized_dr_revenue(
         Events from `add_event`.
 
     baseline_method : BaselineMethod
-        Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
+        Baseline method, e.g. `SimilarDaysBaseline()`.
 
     payment_function : PaymentStructure
         Payment structure used to price the delivered reduction.
@@ -2573,7 +2769,7 @@ def calculate_dr_revenue(
         Events from `add_event`.
 
     baseline_method : BaselineMethod
-        Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
+        Baseline method, e.g. `SimilarDaysBaseline()`.
 
     payment_function : PaymentStructure
         Payment structure used to price the delivered reduction.
@@ -2648,6 +2844,43 @@ def calculate_dr_revenue(
         )
 
 
+def _check_component_names_free(model, varstr_prefix, n_events):
+    """Check that `model` has none of the components a revenue build would add.
+
+    Parameters
+    ----------
+    model : pyomo.environ.Model or pyomo.environ.Block
+        Model the components would be added to.
+
+    varstr_prefix : str
+        Sanitized name prefix for the components.
+
+    n_events : int
+        Number of events to be built.
+
+    Raises
+    ------
+    ValueError
+        If any component name the build would create already exists on
+        `model`.
+    """
+    for i in range(n_events):
+        event_varstr = f"{varstr_prefix}_{i}"
+        baseline_varstr = _component_name(event_varstr, BASELINE_KW)
+        names = [baseline_varstr]
+        names += [
+            _component_name(baseline_varstr, s) for s in BASELINE_COMPONENT_SUFFIXES
+        ]
+        names += [_component_name(event_varstr, s) for s in PAYMENT_COMPONENT_SUFFIXES]
+        for name in names:
+            if model.component(name) is not None:
+                raise ValueError(
+                    f"model already has a component named '{name}'; pass a "
+                    f"varstr_prefix other than '{varstr_prefix}' to add more "
+                    "demand response revenue to this model"
+                )
+
+
 def _build_dr_revenue_components(
     power_kW,
     datetime_index,
@@ -2676,7 +2909,7 @@ def _build_dr_revenue_components(
         Historical power consumption in kW, indexed by timestamp.
 
     baseline_method : BaselineMethod
-        Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
+        Baseline method, e.g. `SimilarDaysBaseline()`.
 
     model : pyomo.environ.Model or pyomo.environ.Block
         Model to add components to.
@@ -2693,8 +2926,10 @@ def _build_dr_revenue_components(
     Raises
     ------
     ValueError
-        If `datetime_index`, `historical_power_kW`, or `model` is `None`, or
-        if an event window matches no entries of `datetime_index`.
+        If `datetime_index`, `historical_power_kW`, or `model` is `None`, if
+        `model` already has a component this call would create (e.g., from an
+        earlier call with the same `varstr_prefix`), or if an event window
+        matches no entries of `datetime_index`.
 
     Returns
     -------
@@ -2708,10 +2943,13 @@ def _build_dr_revenue_components(
         )
     varstr_prefix = ut.sanitize_varstr(varstr_prefix)
     events_df = events_to_dataframe(events)
+    _check_component_names_free(model, varstr_prefix, len(events_df))
     var_index = list(power_kW.index_set())
-    step = _resolve_step(getattr(baseline_method, "resolution", None), datetime_index)
+    step = baseline_method._step(datetime_index)
     region_x1_by_date = (
-        {pd.Timestamp(k): v for k, v in region_x1s.items()} if region_x1s else {}
+        {_wall_clock_timestamp(k): v for k, v in region_x1s.items()}
+        if region_x1s
+        else {}
     )
     total_revenue = 0
     for i, row in events_df.iterrows():
@@ -2758,8 +2996,13 @@ def build_pyomo_dr_revenue(
     region_x1s=None,
     varstr_prefix="dr_event",
 ):
-    """Build demand response revenue on a pyomo model and subtract it from the
-    objective.
+    """Build demand response revenue on a pyomo model and net it into the
+    model's active objective.
+
+    Revenue is subtracted from a minimization objective and added to a
+    maximization objective, whatever the objective is named. If the model has
+    no active objective, a minimization objective of `-total_revenue` is added
+    as `model.objective` (or a unique variant of that name if taken).
 
     Parameters
     ----------
@@ -2776,7 +3019,7 @@ def build_pyomo_dr_revenue(
         Historical power consumption in kW, indexed by timestamp.
 
     baseline_method : BaselineMethod
-        Baseline method, e.g. `BaselineMethod()` or one of its subclasses.
+        Baseline method, e.g. `SimilarDaysBaseline()`.
 
     model : pyomo.environ.Model or pyomo.environ.Block
         Model to add components to.
@@ -2795,13 +3038,27 @@ def build_pyomo_dr_revenue(
     Raises
     ------
     ValueError
-        If an event window matches no entries of `datetime_index`.
+        If an event window matches no entries of `datetime_index`, if `model`
+        already has a component this call would create (e.g., from an earlier
+        call with the same `varstr_prefix`), or if `model` has more than one
+        active objective.
 
     Returns
     -------
     tuple
         `(total_revenue, model)`, where `total_revenue` is a pyomo expression.
     """
+    # Find the objective first, so a bad model fails before it is modified
+    objectives = (
+        list(model.model().component_data_objects(pyo.Objective, active=True))
+        if model is not None
+        else []
+    )
+    if len(objectives) > 1:
+        raise ValueError(
+            f"model has {len(objectives)} active objectives; deactivate all but "
+            "one before adding demand response revenue"
+        )
     total_revenue, model = calculate_dr_revenue(
         power_kW,
         events,
@@ -2813,8 +3070,15 @@ def build_pyomo_dr_revenue(
         region_x1s=region_x1s,
         varstr_prefix=varstr_prefix,
     )
-    if hasattr(model, "objective"):
-        model.objective.expr -= total_revenue
+    if objectives:
+        objective = objectives[0]
+        if objective.sense == pyo.minimize:
+            objective.expr -= total_revenue
+        else:
+            objective.expr += total_revenue
     else:
-        model.objective = pyo.Objective(expr=-total_revenue, sense=pyo.minimize)
+        model.add_component(
+            unique_component_name(model, "objective"),
+            pyo.Objective(expr=-total_revenue, sense=pyo.minimize),
+        )
     return total_revenue, model

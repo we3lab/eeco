@@ -129,7 +129,9 @@ def dr_revenue_setup(flat_power_series):
         ]
     )
     historical_power_kW = flat_power_series(value_by_hour=90)
-    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        holiday_country=None, n_baseline_days=1, adjustment_offset_hours=None
+    )
 
     events = dr.add_event(None, "2024-01-15", 13, 2, 17, ["2024-01-01"], 100, 10)
     events = dr.add_event(events, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)
@@ -176,7 +178,7 @@ def adjustment_setup():
     idx = pd.date_range("2024-03-04", "2024-03-09", freq="1h", inclusive="left")
     historical_power_kW = pd.Series(np.random.uniform(50, 150, len(idx)), index=idx)
     baseline_days = pd.to_datetime(["2024-03-04", "2024-03-05", "2024-03-06"])
-    unadjusted = dr.BaselineMethod(n_baseline_days=3, adjustment_offset_hours=None)
+    unadjusted = dr.SimilarDaysBaseline(n_baseline_days=3, adjustment_offset_hours=None)
     return historical_power_kW, baseline_days, unadjusted
 
 
@@ -311,17 +313,17 @@ def test_events_to_dataframe_given_monthly_capacity_applies_to_month():
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 def test_baseline_method_validation():
-    baseline_method = dr.BaselineMethod()
+    baseline_method = dr.SimilarDaysBaseline()
     assert baseline_method.n_baseline_days == 10
     assert baseline_method.adjustment_offset_hours == 4
     assert baseline_method.adjustment_duration_hours == 3
 
     with pytest.raises(ValueError):
-        dr.BaselineMethod(n_baseline_days=-1)
+        dr.SimilarDaysBaseline(n_baseline_days=-1)
     with pytest.raises(ValueError):
-        dr.BaselineMethod(adjustment_offset_hours=3, adjustment_duration_hours=0)
+        dr.SimilarDaysBaseline(adjustment_offset_hours=3, adjustment_duration_hours=0)
     with pytest.raises(ValueError):
-        dr.BaselineMethod(adjustment_offset_hours=2, adjustment_duration_hours=4)
+        dr.SimilarDaysBaseline(adjustment_offset_hours=2, adjustment_duration_hours=4)
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
@@ -329,7 +331,9 @@ def test_calculate_event_baseline_simple_average(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100)
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]  # 5 weekdays
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        n_baseline_days=5, adjustment_offset_hours=None
+    )
     baseline_kW, _ = baseline_method.calculate_event_baseline(power_kW, event)
     assert baseline_kW == pytest.approx(100)
 
@@ -344,7 +348,7 @@ def test_calculate_event_baseline_day_of_adjustment(flat_power_series):
 
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    baseline_method = dr.BaselineMethod(
+    baseline_method = dr.SimilarDaysBaseline(
         n_baseline_days=5,
         adjustment_offset_hours=3,
         adjustment_duration_hours=3,
@@ -364,7 +368,7 @@ def test_calculate_event_baseline_zero_denominator_warning(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100, adj_value_by_hour=0)
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    baseline_method = dr.BaselineMethod(
+    baseline_method = dr.SimilarDaysBaseline(
         n_baseline_days=5, adjustment_offset_hours=3, adjustment_duration_hours=3
     )
     with pytest.warns(UserWarning):
@@ -377,7 +381,9 @@ def test_calculate_event_baseline_insufficient_days(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100)
     baseline_days = ["2024-01-01", "2024-01-02"]  # only 2, fewer than requested 5
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        n_baseline_days=5, adjustment_offset_hours=None
+    )
     with pytest.warns(UserWarning):
         baseline_method.calculate_event_baseline(power_kW, event)
 
@@ -396,7 +402,9 @@ def test_calculate_event_baseline_dynamic_day_fully_in_horizon(flat_power_series
         value_by_hour=100
     )  # unused: day is in-horizon
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        holiday_country=None, n_baseline_days=1, adjustment_offset_hours=None
+    )
 
     model = pyo.ConcreteModel()
     model_datetime_index = pd.date_range(
@@ -427,7 +435,9 @@ def test_calculate_event_baseline_dynamic_day_fully_in_horizon(flat_power_series
 def test_calculate_event_baseline_dynamic_day_fully_out_of_horizon(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        holiday_country=None, n_baseline_days=1, adjustment_offset_hours=None
+    )
 
     model = pyo.ConcreteModel()
     model_datetime_index = pd.date_range(
@@ -459,7 +469,9 @@ def test_calculate_event_baseline_dynamic_day_partial_overlap(flat_power_series)
     # true historical per-interval profile for the [13, 15) window: [50, 70]
 
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        holiday_country=None, n_baseline_days=1, adjustment_offset_hours=None
+    )
 
     model = pyo.ConcreteModel()
     # horizon starts at 14:00 -- the window [13, 15) only partially overlaps it
@@ -492,7 +504,9 @@ def test_calculate_event_baseline_dynamic_mixed_days(flat_power_series):
     event = dr.add_event(
         None, "2024-01-08", 13, 2, 17, ["2024-01-01", "2024-01-02"], 100, 10
     )[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=2, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        holiday_country=None, n_baseline_days=2, adjustment_offset_hours=None
+    )
 
     model = pyo.ConcreteModel()
     model_datetime_index = pd.date_range(
@@ -530,7 +544,7 @@ def test_calculate_event_baseline_adjustment_stays_historical_even_in_horizon(
 
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    baseline_method = dr.BaselineMethod(
+    baseline_method = dr.SimilarDaysBaseline(
         n_baseline_days=5,
         adjustment_offset_hours=3,
         adjustment_duration_hours=3,
@@ -567,7 +581,7 @@ def test_adjustment_factor_exposed_as_fixed_model_var(adjustment_factor_setup):
     fixed pyomo Var, so the user can retune it and re-solve without
     rebuilding the model."""
     historical_power_kW, event = adjustment_factor_setup
-    baseline_method = dr.BaselineMethod(
+    baseline_method = dr.SimilarDaysBaseline(
         n_baseline_days=5,
         adjustment_offset_hours=3,
         adjustment_duration_hours=3,
@@ -618,7 +632,7 @@ def test_adjustment_in_model_is_inert_without_a_model(adjustment_factor_setup):
     """Ex-post there is no model to hold a Param, so the flag changes nothing
     and the factor is folded into a plain float as usual."""
     historical_power_kW, event = adjustment_factor_setup
-    baseline_method = dr.BaselineMethod(
+    baseline_method = dr.SimilarDaysBaseline(
         n_baseline_days=5,
         adjustment_offset_hours=3,
         adjustment_duration_hours=3,
@@ -635,7 +649,7 @@ def test_adjustment_in_model_defaults_off(adjustment_factor_setup):
     """Left at its default the flag adds nothing to the model, preserving the
     plain-float return for an all-historical baseline."""
     historical_power_kW, event = adjustment_factor_setup
-    baseline_method = dr.BaselineMethod(
+    baseline_method = dr.SimilarDaysBaseline(
         n_baseline_days=5, adjustment_offset_hours=3, adjustment_duration_hours=3
     )
 
@@ -682,7 +696,7 @@ def test_calculate_event_baseline_adjustment_window_missing_data_warning(
 
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    baseline_method = dr.BaselineMethod(
+    baseline_method = dr.SimilarDaysBaseline(
         n_baseline_days=5, adjustment_offset_hours=3, adjustment_duration_hours=3
     )
     with pytest.warns(UserWarning, match=match):
@@ -694,7 +708,9 @@ def test_calculate_event_baseline_adjustment_window_missing_data_warning(
 def test_calculate_event_baseline_model_args_incomplete_error(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        n_baseline_days=1, adjustment_offset_hours=None
+    )
 
     model = pyo.ConcreteModel()
     with pytest.raises(ValueError):
@@ -707,7 +723,9 @@ def test_calculate_event_baseline_model_args_incomplete_error(flat_power_series)
 def test_calculate_event_baseline_datetime_index_too_short_error(flat_power_series):
     historical_power_kW = flat_power_series(value_by_hour=100)
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        n_baseline_days=1, adjustment_offset_hours=None
+    )
 
     model = pyo.ConcreteModel()
     model.t = pyo.RangeSet(0, 0)
@@ -761,7 +779,9 @@ def test_calculate_dr_revenue_multi_event(flat_power_series):
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)
     events = dr.add_event(events, "2024-01-15", 13, 2, 17, baseline_days, 100, 10)
-    baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        n_baseline_days=5, adjustment_offset_hours=None
+    )
 
     per_event_df, total_revenue = dr.calculate_itemized_dr_revenue(
         power_kW, events, baseline_method, payment_function=CBP_PAYMENT
@@ -1053,7 +1073,9 @@ def test_top_usage_days_baseline_selects_highest_usage_days(per_day_event_series
 
     # The foundation class instead picks the two *most recent* days -- proving
     # the subclass changed only the ranking rule, not the rest of the behavior.
-    default_method = dr.BaselineMethod(n_baseline_days=2, adjustment_offset_hours=None)
+    default_method = dr.SimilarDaysBaseline(
+        n_baseline_days=2, adjustment_offset_hours=None
+    )
     assert default_method.calculate_event_baseline(power_kW, event)[0] == pytest.approx(
         np.mean([70, 150])
     )
@@ -1293,7 +1315,9 @@ def test_build_pyomo_dr_revenue_dynamic_baseline(
     historical_power_kW = flat_power_series(
         value_by_hour=100
     )  # unused: baseline day is in-horizon
-    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        n_baseline_days=1, adjustment_offset_hours=None
+    )
 
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-03"], 100, 10)
     region_x1s = {"2024-01-08": 0.75}
@@ -1350,7 +1374,9 @@ def test_calculate_dr_revenue_numpy_and_pandas_agree(flat_power_series):
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)
     events = dr.add_event(events, "2024-01-15", 13, 2, 17, baseline_days, 100, 10)
-    baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        n_baseline_days=5, adjustment_offset_hours=None
+    )
 
     pandas_revenue, model = dr.calculate_dr_revenue(
         power_kW, events, baseline_method, payment_function=CBP_PAYMENT
@@ -1393,7 +1419,9 @@ def test_calculate_dr_revenue_numpy_and_pandas_agree(flat_power_series):
 def test_calculate_dr_revenue_cvxpy_not_implemented():
     power_kW = cp.Variable(3)
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)
-    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        n_baseline_days=1, adjustment_offset_hours=None
+    )
 
     with pytest.raises(NotImplementedError):
         dr.calculate_dr_revenue(
@@ -1404,7 +1432,9 @@ def test_calculate_dr_revenue_cvxpy_not_implemented():
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 def test_calculate_dr_revenue_bad_type():
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)
-    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        n_baseline_days=1, adjustment_offset_hours=None
+    )
 
     with pytest.raises(TypeError):
         dr.calculate_dr_revenue(
@@ -1465,7 +1495,9 @@ def test_calculate_event_baseline_shaped_profile():
     power_kW.loc["2024-01-01 14:00"] = 120  # baseline day, 14:00
 
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        holiday_country=None, n_baseline_days=1, adjustment_offset_hours=None
+    )
     baseline_kW, _ = baseline_method.calculate_event_baseline(power_kW, event)
     np.testing.assert_allclose(baseline_kW, [80, 120])
 
@@ -1488,8 +1520,11 @@ def test_calculate_event_revenue_coarser_resolution(quarter_hour_power_series):
     """With `resolution` coarser than the data, actual power is averaged over
     the same hourly settlement intervals as the baseline."""
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    baseline_method = dr.BaselineMethod(
-        n_baseline_days=1, adjustment_offset_hours=None, resolution="1h"
+    baseline_method = dr.SimilarDaysBaseline(
+        holiday_country=None,
+        n_baseline_days=1,
+        adjustment_offset_hours=None,
+        resolution="1h",
     )
     result = dr.calculate_event_revenue(
         quarter_hour_power_series, event, baseline_method, CBP_PAYMENT
@@ -1510,7 +1545,7 @@ def test_calculate_event_revenue_missing_interval_raises(quarter_hour_power_seri
         pd.date_range("2024-01-08 14:00", periods=4, freq="15min")
     )
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    baseline_method = dr.BaselineMethod(
+    baseline_method = dr.SimilarDaysBaseline(
         n_baseline_days=1, adjustment_offset_hours=None, resolution="1h"
     )
     with pytest.raises(ValueError, match="interval 1"):
@@ -1531,8 +1566,11 @@ def test_calculate_dr_revenue_pyomo_coarser_resolution(
         model.power[t].fix(value)
 
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)
-    baseline_method = dr.BaselineMethod(
-        n_baseline_days=1, adjustment_offset_hours=None, resolution="1h"
+    baseline_method = dr.SimilarDaysBaseline(
+        holiday_country=None,
+        n_baseline_days=1,
+        adjustment_offset_hours=None,
+        resolution="1h",
     )
     total_revenue, model = dr.calculate_dr_revenue(
         model.power,
@@ -1558,7 +1596,9 @@ def test_calculate_event_baseline_day_missing_sample_raises(flat_power_series):
     power_kW.loc["2024-01-01 14:00"] = np.nan
 
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=1, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        holiday_country=None, n_baseline_days=1, adjustment_offset_hours=None
+    )
     with pytest.raises(ValueError, match="2024-01-01"):
         baseline_method.calculate_event_baseline(power_kW, event)
 
@@ -1570,7 +1610,9 @@ def test_calculate_event_baseline_zero_days_yields_zeros(recwarn, flat_power_ser
     power_kW = flat_power_series(value_by_hour=100)
     baseline_days = ["2024-01-01", "2024-01-02"]  # would otherwise warn: only 2 < 5
     event = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=0, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        n_baseline_days=0, adjustment_offset_hours=None
+    )
 
     baseline_kW, _ = baseline_method.calculate_event_baseline(power_kW, event)
     np.testing.assert_allclose(baseline_kW, [0.0, 0.0])
@@ -1595,9 +1637,7 @@ def test_mixed_payment_structures_in_one_model_warning():
         CBP_PAYMENT_FUNCTION, settlement=dr.SETTLEMENT_AVERAGE
     )
     with pytest.warns(UserWarning, match="different payment structure"):
-        avg_structure.build_expression(
-            event, model.reduction, model=model, varstr="c"
-        )
+        avg_structure.build_expression(event, model.reduction, model=model, varstr="c")
 
     energy_structure = dr.CapacityEnergyPayment(CBP_PAYMENT_FUNCTION, energy_price=0.09)
     with pytest.warns(UserWarning, match="different payment structure"):
@@ -1775,7 +1815,7 @@ def test_rank_days_excludes_country_and_custom_holidays():
     # 2024-07-04 is a US federal holiday; 2024-07-08 is a custom holiday
     candidate_days = list(pd.date_range("2024-07-01", "2024-07-09", freq="D"))
     event = dr.add_event(None, "2024-07-10", 13, 2, 17, candidate_days, 100, 10)[0]
-    method = dr.BaselineMethod(holiday_country="US", holiday_dates=["2024-07-08"])
+    method = dr.SimilarDaysBaseline(holiday_country="US", holiday_dates=["2024-07-08"])
 
     ranked = method._rank_days(candidate_days, None, event)
     assert pd.Timestamp("2024-07-04") not in ranked
@@ -1788,8 +1828,8 @@ def test_rank_days_holiday_subdivision():
     # The day after Thanksgiving is a California state holiday only
     day = pd.Timestamp("2024-11-29")
     event = dr.add_event(None, "2024-12-02", 13, 2, 17, [day], 100, 10)[0]
-    federal = dr.BaselineMethod(holiday_country="US")
-    california = dr.BaselineMethod(holiday_country="US", holiday_subdiv="CA")
+    federal = dr.SimilarDaysBaseline(holiday_country="US")
+    california = dr.SimilarDaysBaseline(holiday_country="US", holiday_subdiv="CA")
 
     assert federal._rank_days([day], None, event) == [day]
     assert california._rank_days([day], None, event) == []
@@ -1818,8 +1858,8 @@ def test_calculate_event_uses_supplied_adjustment_factor():
     historical_power_kW = pd.Series(np.random.uniform(50, 150, len(idx)), index=idx)
     baseline_days = pd.to_datetime(["2024-03-04", "2024-03-05", "2024-03-06"])
     event = dr.add_event(None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5)[0]
-    unadjusted = dr.BaselineMethod(n_baseline_days=3, adjustment_offset_hours=None)
-    adjusted = dr.BaselineMethod(n_baseline_days=3)
+    unadjusted = dr.SimilarDaysBaseline(n_baseline_days=3, adjustment_offset_hours=None)
+    adjusted = dr.SimilarDaysBaseline(n_baseline_days=3)
 
     expected = unadjusted.calculate_event_baseline(historical_power_kW, event)[0] * 1.5
     # Supplied factors are applied as-is, not clipped to adjustment_clip
@@ -1836,7 +1876,7 @@ def test_event_adjustment_factor_used_by_calculate_event_basline(adjustment_setu
     event = dr.add_event(
         None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5, adjustment_factor=1.5
     )[0]
-    baseline_method = dr.BaselineMethod(n_baseline_days=3)
+    baseline_method = dr.SimilarDaysBaseline(n_baseline_days=3)
 
     result, _ = baseline_method.calculate_event_baseline(historical_power_kW, event)
     expected = unadjusted.calculate_event_baseline(historical_power_kW, plain)[0] * 1.5
@@ -1851,7 +1891,7 @@ def test_event_adjustment_factor_survives_dataframe_round_trip(adjustment_setup)
     events = dr.add_event(
         events, "2024-03-08", 14, 2, 24, baseline_days, 10, 5, adjustment_factor=1.5
     )
-    baseline_method = dr.BaselineMethod(n_baseline_days=3)
+    baseline_method = dr.SimilarDaysBaseline(n_baseline_days=3)
 
     per_event_df, _ = dr.calculate_itemized_dr_revenue(
         historical_power_kW,
@@ -1874,7 +1914,7 @@ def test_adjustment_factor_event_and_argument(adjustment_setup):
     event = dr.add_event(
         None, "2024-03-08", 14, 2, 24, baseline_days, 10, 5, adjustment_factor=1.5
     )[0]
-    method = dr.BaselineMethod(n_baseline_days=3)
+    method = dr.SimilarDaysBaseline(n_baseline_days=3)
 
     matching, _ = method.calculate_event_baseline(
         historical_power_kW, event, adjustment_factor=1.5
@@ -1993,7 +2033,9 @@ def test_payment_basis_monthly_share_allocates_base_payment(flat_power_series):
     baseline_days = [f"2024-01-0{d}" for d in range(1, 6)]
     events = dr.add_event(None, "2024-01-08", 13, 2, 17, baseline_days, 100, 10)
     events = dr.add_event(events, "2024-01-15", 13, 1, 17, baseline_days, 100, 10)
-    baseline_method = dr.BaselineMethod(n_baseline_days=5, adjustment_offset_hours=None)
+    baseline_method = dr.SimilarDaysBaseline(
+        n_baseline_days=5, adjustment_offset_hours=None
+    )
     structure = dr.PaymentStructure(
         CBP_PAYMENT_FUNCTION,
         settlement=dr.SETTLEMENT_INTERVAL,
@@ -2071,13 +2113,13 @@ def test_build_pyomo_dr_revenue_monthly_share_pyomo(
 
 
 def test_baseline_method_holiday_dates_is_tuple():
-    assert dr.BaselineMethod(holiday_dates=["2024-07-08"]).holiday_dates == (
+    assert dr.SimilarDaysBaseline(holiday_dates=["2024-07-08"]).holiday_dates == (
         "2024-07-08",
     )
 
 
 def test_baseline_method_replace():
-    original = dr.BaselineMethod(n_baseline_days=3)
+    original = dr.SimilarDaysBaseline(n_baseline_days=3)
     changed = original.replace(n_baseline_days=5)
     assert changed is not original
     assert (original.n_baseline_days, changed.n_baseline_days) == (3, 5)
@@ -2087,3 +2129,328 @@ def test_baseline_method_replace():
         original.replace(not_a_setting=1)
     with pytest.raises(ValueError):
         original.replace(n_baseline_days=-1)
+
+
+TZ = "America/Los_Angeles"
+
+
+@pytest.fixture
+def local_power_series():
+    def _local_power_series(start, end):
+        """Builds an hourly tz-aware power series whose value is 100 kW during
+        local hours [13, 15) and 50 kW otherwise, so a baseline lined up by
+        local wall-clock hour is exactly 100 kW."""
+        index = pd.date_range(start, end, freq="1h", tz=TZ, inclusive="left")
+        values = np.full(len(index), 50.0)
+        values[(index.hour >= 13) & (index.hour < 15)] = 100.0
+        return pd.Series(values, index=index)
+
+    return _local_power_series
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_tz_aware_ex_post_matches_naive(flat_power_series):
+    naive = flat_power_series(value_by_hour=100)
+    naive.loc["2024-01-08 13:00":"2024-01-08 14:00"] = 30
+    aware = naive.tz_localize(TZ)
+    events = dr.add_event(
+        None, "2024-01-08", 13, 2, 17, ["2024-01-02", "2024-01-03"], 100, 10
+    )
+    method = dr.SimilarDaysBaseline(n_baseline_days=2, adjustment_offset_hours=None)
+
+    naive_df, naive_total = dr.calculate_itemized_dr_revenue(
+        naive, events, method, CBP_PAYMENT
+    )
+    aware_df, aware_total = dr.calculate_itemized_dr_revenue(
+        aware, events, method, CBP_PAYMENT
+    )
+    assert naive_total > 0
+    assert aware_total == pytest.approx(naive_total)
+    np.testing.assert_allclose(
+        aware_df[dr.REDUCTION_PROFILE_KW][0], naive_df[dr.REDUCTION_PROFILE_KW][0]
+    )
+    expected = pd.DatetimeIndex(["2024-01-08 13:00", "2024-01-08 14:00"])
+    assert aware_df[dr.INTERVAL_DATETIME][0].equals(expected.tz_localize(TZ))
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_tz_aware_event_date_and_region_keys(flat_power_series):
+    """A tz-aware event date and region_x1s key keep their local calendar date."""
+    event = dr.add_event(
+        None, pd.Timestamp("2024-01-08", tz=TZ), 13, 2, 17, ["2024-01-02"], 100, 10
+    )[0]
+    assert event[dr.EVENT_DATE] == pd.Timestamp("2024-01-08")
+    events_df = dr.events_to_dataframe(
+        [{**event, dr.EVENT_DATE: pd.Timestamp("2024-01-08 00:00", tz=TZ)}]
+    )
+    assert events_df[dr.EVENT_DATE][0] == pd.Timestamp("2024-01-08")
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_tz_aware_build_pyomo_dr_revenue(
+    fix_region_choice, assert_region_components_satisfied, dr_revenue_setup
+):
+    (
+        model,
+        datetime_index,
+        events,
+        historical_power_kW,
+        baseline_method,
+        region_x1s,
+    ) = dr_revenue_setup
+
+    total_revenue, model = dr.build_pyomo_dr_revenue(
+        model.power,
+        datetime_index.tz_localize(TZ),
+        events,
+        historical_power_kW.tz_localize(TZ),
+        baseline_method,
+        model,
+        CBP_PAYMENT,
+        {pd.Timestamp(k, tz=TZ): v for k, v in region_x1s.items()},
+    )
+
+    # Same reductions as the naive fixture: 60 kW and 90 kW
+    fix_region_choice(model, "dr_event_0", active_idx=1, reduction_value=60)
+    model.find_component("dr_event_0_revenue").fix(300)
+    assert_region_components_satisfied(model, "dr_event_0")
+    fix_region_choice(model, "dr_event_1", active_idx=2, reduction_value=90)
+    model.find_component("dr_event_1_revenue").fix(900)
+    assert_region_components_satisfied(model, "dr_event_1")
+    assert pyo.value(total_revenue) == pytest.approx(1200)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "start, end, event_date, baseline_days",
+    [
+        # Spring forward on Sun 2024-03-10; baseline days are before it
+        (
+            "2024-03-04",
+            "2024-03-13",
+            "2024-03-11",
+            ["2024-03-06", "2024-03-07", "2024-03-08"],
+        ),
+        # Fall back on Sun 2024-11-03; baseline days are before it
+        (
+            "2024-10-28",
+            "2024-11-06",
+            "2024-11-04",
+            ["2024-10-30", "2024-10-31", "2024-11-01"],
+        ),
+    ],
+)
+def test_dst_baseline_days_align_by_local_hour(
+    local_power_series, start, end, event_date, baseline_days
+):
+    historical_power_kW = local_power_series(start, end)
+    event = dr.add_event(None, event_date, 13, 2, 17, baseline_days, 100, 10)[0]
+    method = dr.SimilarDaysBaseline(n_baseline_days=3, adjustment_offset_hours=None)
+
+    baseline_kW, _ = method.calculate_event_baseline(historical_power_kW, event)
+    np.testing.assert_allclose(baseline_kW, [100, 100])
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_dst_spring_forward_missing_hour_raises(local_power_series):
+    historical_power_kW = local_power_series("2024-03-04", "2024-03-13")
+    # 02:00-03:00 does not exist locally on 2024-03-10
+    event = dr.add_event(None, "2024-03-10", 2, 1, 17, ["2024-03-08"], 100, 10)[0]
+    method = dr.SimilarDaysBaseline(n_baseline_days=1, adjustment_offset_hours=None)
+
+    with pytest.raises(ValueError, match="No data available"):
+        dr.calculate_event_revenue(historical_power_kW, event, method, CBP_PAYMENT)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_dst_fall_back_repeated_hour_is_averaged(local_power_series):
+    historical_power_kW = local_power_series("2024-10-28", "2024-11-06")
+    # 01:00-02:00 happens twice locally on 2024-11-03 (PDT, then PST)
+    repeated = historical_power_kW.index.tz_localize(None) == pd.Timestamp(
+        "2024-11-03 01:00"
+    )
+    assert repeated.sum() == 2
+    historical_power_kW[repeated] = [10.0, 30.0]
+    event = dr.add_event(None, "2024-11-03", 1, 1, 17, ["2024-11-01"], 100, 10)[0]
+    method = dr.SimilarDaysBaseline(n_baseline_days=1, adjustment_offset_hours=None)
+
+    result = dr.calculate_event_revenue(
+        historical_power_kW, event, method, dr.PaymentStructure([], payout=1.0)
+    )
+    np.testing.assert_allclose(result[dr.ACTUAL_PROFILE_KW], [20.0])
+    assert str(result[dr.INTERVAL_DATETIME].tz) == TZ
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "sense, expected", [(pyo.minimize, 500 - 1200), (pyo.maximize, 500 + 1200)]
+)
+def test_build_pyomo_dr_revenue_finds_objective_by_activity(
+    dr_revenue_setup, sense, expected
+):
+    model, datetime_index, events, historical_power_kW, baseline_method, region_x1s = (
+        dr_revenue_setup
+    )
+    model.cost_value = pyo.Var()
+    model.cost_value.fix(500)
+    model.cost = pyo.Objective(expr=model.cost_value, sense=sense)
+
+    _, model = dr.build_pyomo_dr_revenue(
+        model.power,
+        datetime_index,
+        events,
+        historical_power_kW,
+        baseline_method,
+        model,
+        CBP_PAYMENT,
+        region_x1s,
+    )
+
+    assert len(list(model.component_data_objects(pyo.Objective, active=True))) == 1
+    assert not hasattr(model, "objective")
+    model.find_component("dr_event_0_revenue").fix(300)
+    model.find_component("dr_event_1_revenue").fix(900)
+    assert pyo.value(model.cost.expr) == pytest.approx(expected)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_build_pyomo_dr_revenue_multiple_active_objectives_raises(dr_revenue_setup):
+    model, datetime_index, events, historical_power_kW, baseline_method, region_x1s = (
+        dr_revenue_setup
+    )
+    model.a = pyo.Objective(expr=model.power[0])
+    model.b = pyo.Objective(expr=model.power[1])
+    n_components = len(list(model.component_objects()))
+
+    with pytest.raises(ValueError, match="2 active objectives"):
+        dr.build_pyomo_dr_revenue(
+            model.power,
+            datetime_index,
+            events,
+            historical_power_kW,
+            baseline_method,
+            model,
+            CBP_PAYMENT,
+            region_x1s,
+        )
+    assert len(list(model.component_objects())) == n_components
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_build_pyomo_dr_revenue_inactive_objective_name_taken(dr_revenue_setup):
+    model, datetime_index, events, historical_power_kW, baseline_method, region_x1s = (
+        dr_revenue_setup
+    )
+    model.objective = pyo.Objective(expr=model.power[0])
+    model.objective.deactivate()
+
+    _, model = dr.build_pyomo_dr_revenue(
+        model.power,
+        datetime_index,
+        events,
+        historical_power_kW,
+        baseline_method,
+        model,
+        CBP_PAYMENT,
+        region_x1s,
+    )
+
+    active = list(model.component_data_objects(pyo.Objective, active=True))
+    assert len(active) == 1
+    assert active[0] is not model.objective
+    assert active[0].sense == pyo.minimize
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_build_pyomo_dr_revenue_repeated_varstr_prefix(dr_revenue_setup):
+    model, datetime_index, events, historical_power_kW, baseline_method, region_x1s = (
+        dr_revenue_setup
+    )
+    args = (
+        model.power,
+        datetime_index,
+        events,
+        historical_power_kW,
+        baseline_method,
+        model,
+        CBP_PAYMENT,
+        region_x1s,
+    )
+    dr.build_pyomo_dr_revenue(*args)
+    n_components = len(list(model.component_objects()))
+
+    with pytest.raises(ValueError, match="varstr_prefix"):
+        dr.build_pyomo_dr_revenue(*args)
+    assert len(list(model.component_objects())) == n_components
+
+    dr.build_pyomo_dr_revenue(*args, varstr_prefix="second")
+    assert model.find_component("second_0_revenue") is not None
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_index_step_tolerates_gaps():
+    index = pd.date_range("2024-01-01", periods=10, freq="1h").delete([1, 2, 5])
+    assert dr._index_step(index) == pd.Timedelta(hours=1)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_index_step_irregular_raises():
+    index = pd.DatetimeIndex(
+        ["2024-01-01 00:00", "2024-01-01 00:15", "2024-01-01 00:35"]
+    )
+    with pytest.raises(ValueError, match="irregularly spaced"):
+        dr._index_step(index)
+    # An explicit resolution bypasses inference
+    assert dr._resolve_step("15m", index) == pd.Timedelta(minutes=15)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_capacity_energy_payment_missing_duration_raises():
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-02"], 100, 10)[0]
+    del event[dr.EVENT_DURATION]
+    structure = dr.CapacityEnergyPayment(CBP_PAYMENT_FUNCTION, energy_price=0.5)
+
+    with pytest.raises(ValueError, match="duration_hours"):
+        structure.evaluate(event, 60.0)
+    with pytest.raises(ValueError, match="duration_hours"):
+        structure.build_expression(
+            event, cp.Variable(2), region_x1=0.6, model=None, varstr="x"
+        )
+    model = pyo.ConcreteModel()
+    model.r = pyo.Var(range(2))
+    with pytest.raises(ValueError, match="duration_hours"):
+        structure.build_expression(event, model.r, model=model, varstr="x")
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_baseline_method_is_abstract():
+    with pytest.raises(TypeError):
+        dr.BaselineMethod()
+    for method in (
+        dr.SimilarDaysBaseline(),
+        dr.TopUsageDaysBaseline(),
+        dr.FixedLevelBaseline(5),
+        dr.UnilateralInterruptionBaseline(),
+    ):
+        assert isinstance(method, dr.BaselineMethod)
+        assert method.resolution is None
+    assert not hasattr(dr.FixedLevelBaseline(5), "select_days")
+    assert not hasattr(dr.UnilateralInterruptionBaseline(), "select_days")
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_unilateral_interruption_baseline_negative_level_raises():
+    with pytest.raises(ValueError, match="non-negative"):
+        dr.UnilateralInterruptionBaseline(interruption_level_kW=-1)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_default_holiday_country_is_us():
+    candidate_days = list(pd.date_range("2024-07-01", "2024-07-05", freq="D"))
+    event = dr.add_event(None, "2024-07-08", 13, 2, 17, candidate_days, 100, 10)[0]
+    method = dr.SimilarDaysBaseline()
+
+    assert method.holiday_country == "US"
+    assert pd.Timestamp("2024-07-04") not in method._rank_days(
+        candidate_days, None, event
+    )
