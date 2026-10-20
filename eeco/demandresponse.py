@@ -999,8 +999,9 @@ def _index_step(index):
     """
     if index is None:
         return None
-    # asi8 is UTC-based for tz-aware indices, so DST changes don't skew gaps
-    stamps = np.unique(pd.DatetimeIndex(index).asi8)
+    # asi8 is UTC-based for tz-aware indices, so DST changes don't skew gaps.
+    # Fix the unit to ns, since pandas 3 can store indices in us or s.
+    stamps = np.unique(pd.DatetimeIndex(index).as_unit("ns").asi8)
     if len(stamps) < 2:
         raise ValueError("index must have at least 2 entries to infer its step size")
     gaps = np.diff(stamps)
