@@ -1440,6 +1440,88 @@ def test_calculate_event_baseline_shaped_profile():
     np.testing.assert_allclose(baseline_kW, [80, 120])
 
 
+@pytest.fixture
+def quarter_hour_power_series():
+    """15-minute power over Jan 2024: 90 kW on every day during [13, 15),
+    except the 2024-01-08 event day, whose samples alternate 0/60 kW so each
+    hour averages 30 kW but no single sample does."""
+    index = pd.date_range("2024-01-01", "2024-02-01", freq="15min", inclusive="left")
+    power_kW = pd.Series(50.0, index=index)
+    power_kW[(index.hour >= 13) & (index.hour < 15)] = 90.0
+    event_window = pd.date_range("2024-01-08 13:00", periods=8, freq="15min")
+    power_kW.loc[event_window] = [0, 60] * 4
+    return power_kW
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_calculate_event_revenue_coarser_resolution(quarter_hour_power_series):
+    """With `resolution` coarser than the data, actual power is averaged over
+    the same hourly settlement intervals as the baseline."""
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    baseline_method = dr.BaselineMethod(
+        n_baseline_days=1, adjustment_offset_hours=None, resolution="1h"
+    )
+    result = dr.calculate_event_revenue(
+        quarter_hour_power_series, event, baseline_method, CBP_PAYMENT
+    )
+    np.testing.assert_allclose(result[dr.BASELINE_PROFILE_KW], [90, 90])
+    np.testing.assert_allclose(result[dr.ACTUAL_PROFILE_KW], [30, 30])
+    pd.testing.assert_index_equal(
+        result[dr.INTERVAL_DATETIME],
+        pd.DatetimeIndex(["2024-01-08 13:00", "2024-01-08 14:00"]),
+    )
+    # reduction 60 -> delivered ratio 0.6 -> region [0.60, 0.75): 10 * 0.5 * 60
+    assert result[dr.REVENUE] == pytest.approx(300)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_calculate_event_revenue_missing_interval_raises(quarter_hour_power_series):
+    power_kW = quarter_hour_power_series.drop(
+        pd.date_range("2024-01-08 14:00", periods=4, freq="15min")
+    )
+    event = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)[0]
+    baseline_method = dr.BaselineMethod(
+        n_baseline_days=1, adjustment_offset_hours=None, resolution="1h"
+    )
+    with pytest.raises(ValueError, match="interval 1"):
+        dr.calculate_event_revenue(power_kW, event, baseline_method, CBP_PAYMENT)
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+def test_calculate_dr_revenue_pyomo_coarser_resolution(
+    quarter_hour_power_series, fix_region_choice, assert_region_components_satisfied
+):
+    """The pyomo path averages 15-minute model steps into hourly settlement
+    intervals, matching the hourly baseline."""
+    datetime_index = pd.date_range("2024-01-08 13:00", periods=8, freq="15min")
+    model = pyo.ConcreteModel()
+    model.t = pyo.RangeSet(0, 7)
+    model.power = pyo.Var(model.t)
+    for t, value in zip(model.t, [0, 60] * 4):
+        model.power[t].fix(value)
+
+    events = dr.add_event(None, "2024-01-08", 13, 2, 17, ["2024-01-01"], 100, 10)
+    baseline_method = dr.BaselineMethod(
+        n_baseline_days=1, adjustment_offset_hours=None, resolution="1h"
+    )
+    total_revenue, model = dr.calculate_dr_revenue(
+        model.power,
+        events,
+        baseline_method,
+        CBP_PAYMENT,
+        historical_power_kW=quarter_hour_power_series,
+        datetime_index=datetime_index,
+        model=model,
+        region_x1s={"2024-01-08": 0.60},
+    )
+
+    # reduction 60 -> delivered ratio 0.6 -> region [0.60, 0.75), index 1
+    fix_region_choice(model, "dr_event_0", active_idx=1, reduction_value=60)
+    model.find_component("dr_event_0_revenue").fix(300)
+    assert_region_components_satisfied(model, "dr_event_0")
+    assert pyo.value(total_revenue) == pytest.approx(300)
+
+
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 def test_calculate_event_baseline_day_missing_sample_raises(flat_power_series):
     power_kW = flat_power_series(value_by_hour=100)

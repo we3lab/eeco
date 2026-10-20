@@ -993,6 +993,47 @@ def _window_interval_buckets(index, event_date, start_hour, duration_hours, step
     return buckets
 
 
+def _event_interval_buckets(index, event, step):
+    """Group the positions of `index` within an event's window by interval.
+
+    Parameters
+    ----------
+    index : pandas.DatetimeIndex
+        Timestamps to group.
+
+    event : dict
+        Single event dict. See `add_event` for the keys.
+
+    step : pandas.Timedelta
+        Settlement interval width.
+
+    Raises
+    ------
+    ValueError
+        If any interval has no matching positions in `index`, or if the event
+        duration is not an integer multiple of `step`.
+
+    Returns
+    -------
+    list of numpy.ndarray
+        Integer positions of `index` in each interval, all non-empty.
+    """
+    buckets = _window_interval_buckets(
+        index,
+        event[EVENT_DATE],
+        event[EVENT_START_HOUR],
+        event[EVENT_DURATION],
+        step,
+    )
+    for k, bucket in enumerate(buckets):
+        if bucket.size == 0:
+            raise ValueError(
+                f"No data available for event window on {event[EVENT_DATE]}, "
+                f"interval {k}"
+            )
+    return buckets
+
+
 def _as_pyomo_terms(reduction_kW):
     """Convert a pyomo reduction into a list of per-interval terms.
 
@@ -2347,7 +2388,8 @@ def calculate_event_revenue(
     Raises
     ------
     ValueError
-        If `historical_power_kW` has no data in the event window.
+        If any settlement interval of the event window has no data in
+        `historical_power_kW`.
 
     Returns
     -------
@@ -2365,16 +2407,17 @@ def calculate_event_revenue(
         - `"reduction_profile_kW"` : numpy.ndarray, per interval
         - `"interval_datetime"` : pandas.DatetimeIndex
     """
-    mask = _event_window_mask(
-        historical_power_kW.index,
-        event[EVENT_DATE],
-        event[EVENT_START_HOUR],
-        event[EVENT_DURATION],
+    # Average actual power over the same settlement intervals as the baseline
+    step = _resolve_step(
+        getattr(baseline_method, "resolution", None), historical_power_kW.index
     )
-    actual_profile = historical_power_kW.loc[mask].values
-    if actual_profile.size == 0:
-        raise ValueError("No data available for event window")
-    interval_datetime = historical_power_kW.index[mask]
+    buckets = _event_interval_buckets(historical_power_kW.index, event, step)
+    actual_profile = np.array(
+        [np.mean(historical_power_kW.values[bucket]) for bucket in buckets]
+    )
+    interval_datetime = _window_interval_starts(
+        event[EVENT_DATE], event[EVENT_START_HOUR], event[EVENT_DURATION], step
+    )
 
     baseline_profile, _ = baseline_method.calculate_event_baseline(
         historical_power_kW, event
@@ -2650,6 +2693,7 @@ def _build_dr_revenue_components(
     varstr_prefix = ut.sanitize_varstr(varstr_prefix)
     events_df = events_to_dataframe(events)
     var_index = list(power_kW.index_set())
+    step = _resolve_step(getattr(baseline_method, "resolution", None), datetime_index)
     region_x1_by_date = (
         {pd.Timestamp(k): v for k, v in region_x1s.items()} if region_x1s else {}
     )
@@ -2666,18 +2710,12 @@ def _build_dr_revenue_components(
             varstr=_component_name(event_varstr, BASELINE_KW),
         )
 
-        mask = _event_window_mask(
-            datetime_index,
-            event[EVENT_DATE],
-            event[EVENT_START_HOUR],
-            event[EVENT_DURATION],
-        )
-        matched_indices = [idx for idx, keep in zip(var_index, mask) if keep]
-        if not matched_indices:
-            raise ValueError(
-                f"No data available for event window on {event[EVENT_DATE]}"
-            )
-        power_terms = [power_kW[idx] for idx in matched_indices]
+        # Average model steps over the same settlement intervals as the baseline
+        buckets = _event_interval_buckets(datetime_index, event, step)
+        power_terms = [
+            pyo.quicksum(power_kW[var_index[i]] for i in bucket) / len(bucket)
+            for bucket in buckets
+        ]
         baseline_values = _baseline_terms(baseline_kW, len(power_terms))
         reduction_terms = [b - p for b, p in zip(baseline_values, power_terms)]
 
