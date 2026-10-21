@@ -12,6 +12,14 @@ eeco.costs module
    :undoc-members:
    :show-inheritance:
 
+eeco.demandresponse module
+--------------------------
+
+.. automodule:: eeco.demandresponse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 eeco.emissions module
 ---------------------
 

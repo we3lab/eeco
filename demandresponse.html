@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>demandresponse &mdash; EECO 0.4.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="emissions" href="emissions.html" />
+    <link rel="prev" title="costs" href="costs.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            EECO
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Table of Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="purpose.html">What is the Purpose of this Package?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="complexities.html">What Makes Electricity Tariffs so Complex?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_metrics.html">Why Use Flexibility Metrics?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_neutral.html">Why Design a Pyomo/CVXPY Neutral Library?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_advanced.html">Why Do the Advanced Features Exist?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LICENSE.html">MIT License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="hello.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimize_cost.html">Optimize Electricity Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimize_emit.html">Optimize Scope 2 Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cooptimize.html">Co-optimize Costs and Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_metrics.html">Flexibility Metrics as Constraints</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_format.html">How to Format Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_cost.html">How to Calculate Costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_emit.html">How to Calculate Emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_metrics.html">How to Use Flexibility Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how_to_advanced.html">How to Use Advanced Features</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">demandresponse</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#input-formats">Input formats</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#events">Events</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#time-zones">Time zones</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#payment-function">Payment function</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#baseline-methods">Baseline methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#similardaysbaseline"><code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#topusagedaysbaseline"><code class="docutils literal notranslate"><span class="pre">TopUsageDaysBaseline</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fixedlevelbaseline"><code class="docutils literal notranslate"><span class="pre">FixedLevelBaseline</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#unilateralinterruptionbaseline"><code class="docutils literal notranslate"><span class="pre">UnilateralInterruptionBaseline</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#payment-structures">Payment structures</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paymentstructure"><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#capacityenergypayment"><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#marketindexedpayment"><code class="docutils literal notranslate"><span class="pre">MarketIndexedPayment</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#optimization-formulations">Optimization formulations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pyomo-component-names">Pyomo component names</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#entry-points">Entry points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#combining-baselines-and-payment-structures">Combining baselines and payment structures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#extending-baselinemethod-and-paymentstructure">Extending BaselineMethod and PaymentStructure</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.BaselineMethod"><code class="docutils literal notranslate"><span class="pre">BaselineMethod</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.BaselineMethod.calculate_event_baseline"><code class="docutils literal notranslate"><span class="pre">BaselineMethod.calculate_event_baseline()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.BaselineMethod.replace"><code class="docutils literal notranslate"><span class="pre">BaselineMethod.replace()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.CapacityEnergyPayment"><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.CapacityEnergyPayment.build_expression"><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment.build_expression()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.CapacityEnergyPayment.evaluate"><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment.evaluate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.FixedLevelBaseline"><code class="docutils literal notranslate"><span class="pre">FixedLevelBaseline</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.FixedLevelBaseline.calculate_event_baseline"><code class="docutils literal notranslate"><span class="pre">FixedLevelBaseline.calculate_event_baseline()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.MarketIndexedPayment"><code class="docutils literal notranslate"><span class="pre">MarketIndexedPayment</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.MarketIndexedPayment.build_expression"><code class="docutils literal notranslate"><span class="pre">MarketIndexedPayment.build_expression()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.MarketIndexedPayment.evaluate"><code class="docutils literal notranslate"><span class="pre">MarketIndexedPayment.evaluate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.PaymentStructure"><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.PaymentStructure.build_expression"><code class="docutils literal notranslate"><span class="pre">PaymentStructure.build_expression()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.PaymentStructure.evaluate"><code class="docutils literal notranslate"><span class="pre">PaymentStructure.evaluate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.PaymentStructure.find_region"><code class="docutils literal notranslate"><span class="pre">PaymentStructure.find_region()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.SimilarDaysBaseline"><code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.SimilarDaysBaseline.calculate_event_baseline"><code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline.calculate_event_baseline()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.SimilarDaysBaseline.select_days"><code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline.select_days()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.TopUsageDaysBaseline"><code class="docutils literal notranslate"><span class="pre">TopUsageDaysBaseline</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.UnilateralInterruptionBaseline"><code class="docutils literal notranslate"><span class="pre">UnilateralInterruptionBaseline</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#eeco.demandresponse.UnilateralInterruptionBaseline.calculate_event_baseline"><code class="docutils literal notranslate"><span class="pre">UnilateralInterruptionBaseline.calculate_event_baseline()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.add_event"><code class="docutils literal notranslate"><span class="pre">add_event()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.build_event_revenue"><code class="docutils literal notranslate"><span class="pre">build_event_revenue()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.build_pyomo_dr_revenue"><code class="docutils literal notranslate"><span class="pre">build_pyomo_dr_revenue()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.calculate_dr_revenue"><code class="docutils literal notranslate"><span class="pre">calculate_dr_revenue()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.calculate_event_revenue"><code class="docutils literal notranslate"><span class="pre">calculate_event_revenue()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.calculate_itemized_dr_revenue"><code class="docutils literal notranslate"><span class="pre">calculate_itemized_dr_revenue()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#eeco.demandresponse.events_to_dataframe"><code class="docutils literal notranslate"><span class="pre">events_to_dataframe()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">EECO</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">demandresponse</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/demandresponse.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <nav class="contents" id="contents" role="doc-toc">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#demandresponse" id="id2">demandresponse</a></p>
+<ul>
+<li><p><a class="reference internal" href="#input-formats" id="id3">Input formats</a></p>
+<ul>
+<li><p><a class="reference internal" href="#events" id="id4">Events</a></p></li>
+<li><p><a class="reference internal" href="#time-zones" id="id5">Time zones</a></p></li>
+<li><p><a class="reference internal" href="#payment-function" id="id6">Payment function</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#baseline-methods" id="id7">Baseline methods</a></p>
+<ul>
+<li><p><a class="reference internal" href="#similardaysbaseline" id="id8"><code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code></a></p></li>
+<li><p><a class="reference internal" href="#topusagedaysbaseline" id="id9"><code class="docutils literal notranslate"><span class="pre">TopUsageDaysBaseline</span></code></a></p></li>
+<li><p><a class="reference internal" href="#fixedlevelbaseline" id="id10"><code class="docutils literal notranslate"><span class="pre">FixedLevelBaseline</span></code></a></p></li>
+<li><p><a class="reference internal" href="#unilateralinterruptionbaseline" id="id11"><code class="docutils literal notranslate"><span class="pre">UnilateralInterruptionBaseline</span></code></a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#payment-structures" id="id12">Payment structures</a></p>
+<ul>
+<li><p><a class="reference internal" href="#paymentstructure" id="id13"><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></a></p></li>
+<li><p><a class="reference internal" href="#capacityenergypayment" id="id14"><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment</span></code></a></p></li>
+<li><p><a class="reference internal" href="#marketindexedpayment" id="id15"><code class="docutils literal notranslate"><span class="pre">MarketIndexedPayment</span></code></a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#optimization-formulations" id="id16">Optimization formulations</a></p>
+<ul>
+<li><p><a class="reference internal" href="#pyomo-component-names" id="id17">Pyomo component names</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#entry-points" id="id18">Entry points</a></p></li>
+<li><p><a class="reference internal" href="#combining-baselines-and-payment-structures" id="id19">Combining baselines and payment structures</a></p></li>
+<li><p><a class="reference internal" href="#extending-baselinemethod-and-paymentstructure" id="id20">Extending BaselineMethod and PaymentStructure</a></p></li>
+</ul>
+</li>
+</ul>
+</nav>
+<section id="demandresponse">
+<span id="id1"></span><h1><a class="toc-backref" href="#id2" role="doc-backlink">demandresponse</a><a class="headerlink" href="#demandresponse" title="Permalink to this heading"></a></h1>
+<p>This module computes incentive-based demand response (DR) revenue from
+electricity consumption data, modeled along two composable axes –
+<code class="xref py py-class docutils literal notranslate"><span class="pre">BaselineMethod</span></code> for how the counterfactual is measured and
+<code class="xref py py-class docutils literal notranslate"><span class="pre">PaymentStructure</span></code> for how it is paid – with three entry points:
+<code class="docutils literal notranslate"><span class="pre">calculate_dr_revenue</span></code>, <code class="docutils literal notranslate"><span class="pre">build_pyomo_dr_revenue</span></code> (pyomo only, is netted
+into the model’s active objective), and <code class="docutils literal notranslate"><span class="pre">calculate_itemized_dr_revenue</span></code> (post-optimization,
+per-event breakdown).</p>
+<p>Baselines are computed per settlement interval (see <code class="docutils literal notranslate"><span class="pre">resolution</span></code> on
+<code class="xref py py-class docutils literal notranslate"><span class="pre">BaselineMethod</span></code>), so the shape of the counterfactual is preserved
+for reporting and comparison against metered data. <code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code> adds
+<code class="docutils literal notranslate"><span class="pre">settlement</span></code> mode (<code class="docutils literal notranslate"><span class="pre">&quot;average&quot;</span></code> settles the window-mean reduction once;
+<code class="docutils literal notranslate"><span class="pre">&quot;interval&quot;</span></code> settles each interval against the payment schedule), and a
+payout axis (<code class="docutils literal notranslate"><span class="pre">payment_basis</span></code>/<code class="docutils literal notranslate"><span class="pre">payout_basis</span></code> choose <code class="docutils literal notranslate"><span class="pre">&quot;per_event&quot;</span></code> vs.
+<code class="docutils literal notranslate"><span class="pre">&quot;per_hour&quot;</span></code> pricing, and <code class="docutils literal notranslate"><span class="pre">payout</span></code> adds a flat, performance-independent
+participation payment in $/kW of bid).</p>
+<section id="input-formats">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink">Input formats</a><a class="headerlink" href="#input-formats" title="Permalink to this heading"></a></h2>
+<section id="events">
+<h3><a class="toc-backref" href="#id4" role="doc-backlink">Events</a><a class="headerlink" href="#events" title="Permalink to this heading"></a></h3>
+<p>An event is a <code class="docutils literal notranslate"><span class="pre">dict</span></code> built by <code class="docutils literal notranslate"><span class="pre">add_event</span></code>. A collection of events is a
+<code class="docutils literal notranslate"><span class="pre">list</span></code> of these dicts, or a <code class="docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code> with one row per event
+(<code class="docutils literal notranslate"><span class="pre">events_to_dataframe</span></code>). The keys are available as Python string variables
+denoted in all caps since they are global constants.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Key (constant)</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;event_date&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">EVENT_DATE</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pandas.Timestamp</span></code></p></td>
+<td><p>Calendar date of the event</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;start_hour&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">EVENT_START_HOUR</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">float</span></code></p></td>
+<td><p>Hour of day (0-24) the event begins</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;duration_hours&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">EVENT_DURATION</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">float</span></code></p></td>
+<td><p>Length of the event in hours</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;notification_hours&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">NOTIFICATION_HOURS</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">float</span></code></p></td>
+<td><p>Advance notice before the event in hours</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;baseline_days&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">BASELINE_DAYS</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">list</span></code></p></td>
+<td><p>Candidate baseline days (anything <code class="docutils literal notranslate"><span class="pre">pandas.Timestamp</span></code> can parse)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;bid_capacity_kW&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">BID_CAPACITY_KW</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">float</span></code></p></td>
+<td><p>Bid capacity in kW</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;capacity_price&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">CAPACITY_PRICE</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">float</span></code></p></td>
+<td><p>Capacity price in $/kW (or $/kW-hour with <code class="docutils literal notranslate"><span class="pre">payment_basis=&quot;per_hour&quot;</span></code>,
+or $/kW-month with <code class="docutils literal notranslate"><span class="pre">payment_basis=&quot;monthly_share&quot;</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;adjustment_factor&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">ADJUSTMENT_FACTOR</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">float</span></code> or <code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
+<td><p>Day-of adjustment factor to apply as-is; <code class="docutils literal notranslate"><span class="pre">None</span></code> calculates it</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;monthly_called_capacity_kWh&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">MONTHLY_CALLED_CAPACITY_KWH</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">float</span></code> or <code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
+<td><p>Called capacity summed over every event hour in the event’s month, used
+by <code class="docutils literal notranslate"><span class="pre">payment_basis=&quot;monthly_share&quot;</span></code>; <code class="docutils literal notranslate"><span class="pre">None</span></code> sums it over the events
+passed in</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">baseline_days</span></code> should already exclude any date that is itself another
+event’s date; <code class="docutils literal notranslate"><span class="pre">add_event</span></code> does not check this.</p>
+</section>
+<section id="time-zones">
+<h3><a class="toc-backref" href="#id5" role="doc-backlink">Time zones</a><a class="headerlink" href="#time-zones" title="Permalink to this heading"></a></h3>
+<p>Power data may be indexed by a tz-naive or a tz-aware <code class="docutils literal notranslate"><span class="pre">DatetimeIndex</span></code>.
+Event dates, start hours, and baseline days are always read as <strong>local
+wall-clock</strong> times, as utility programs define them: an event at
+<code class="docutils literal notranslate"><span class="pre">start_hour=16</span></code> covers 4 pm local time on every day, on either side of a
+daylight-saving change. A tz-aware <code class="docutils literal notranslate"><span class="pre">event_date</span></code>, baseline day, or
+<code class="docutils literal notranslate"><span class="pre">region_x1s</span></code> key keeps its local wall-clock date and drops the time zone.
+<code class="docutils literal notranslate"><span class="pre">&quot;interval_datetime&quot;</span></code> in the per-event results is returned in the data’s
+time zone.</p>
+<p>On a daylight-saving day, a window that covers the skipped spring-forward
+hour has no data in that hour and raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>. In a window that
+covers the repeated fall-back hour, both occurrences fall in the same
+wall-clock interval and are averaged. Windows away from the change (such as
+afternoon or evening events) are unaffected.</p>
+</section>
+<section id="payment-function">
+<h3><a class="toc-backref" href="#id6" role="doc-backlink">Payment function</a><a class="headerlink" href="#payment-function" title="Permalink to this heading"></a></h3>
+<p>A payment function is a <code class="docutils literal notranslate"><span class="pre">list</span></code> of region dicts, each with <code class="docutils literal notranslate"><span class="pre">float</span></code> values
+under the keys <code class="docutils literal notranslate"><span class="pre">&quot;x1&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;x2&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;y1&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;y2&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">REGION_X1</span></code>,
+<code class="docutils literal notranslate"><span class="pre">REGION_X2</span></code>, <code class="docutils literal notranslate"><span class="pre">REGION_Y1</span></code>, <code class="docutils literal notranslate"><span class="pre">REGION_Y2</span></code>). Region <code class="docutils literal notranslate"><span class="pre">[x1,</span> <span class="pre">x2)</span></code> covers a
+span of delivered ratio (reduction divided by bid capacity) and maps it
+linearly onto payment ratios <code class="docutils literal notranslate"><span class="pre">y1</span></code> to <code class="docutils literal notranslate"><span class="pre">y2</span></code>. A region whose <code class="docutils literal notranslate"><span class="pre">x2</span></code> is
+infinite pays a flat <code class="docutils literal notranslate"><span class="pre">y1</span></code>. Bounds may be given as the strings
+<code class="docutils literal notranslate"><span class="pre">&quot;Infinity&quot;</span></code>/<code class="docutils literal notranslate"><span class="pre">&quot;-Infinity&quot;</span></code> (as produced by <code class="docutils literal notranslate"><span class="pre">json.load</span></code> on a quoted JSON
+value); these are coerced to <code class="docutils literal notranslate"><span class="pre">inf</span></code>/<code class="docutils literal notranslate"><span class="pre">-inf</span></code>. Entry points that take
+<code class="docutils literal notranslate"><span class="pre">payment_function</span></code> expect a <code class="xref py py-class docutils literal notranslate"><span class="pre">PaymentStructure</span></code> (or subclass)
+instance, built from the regions list, e.g.
+<code class="docutils literal notranslate"><span class="pre">PaymentStructure(regions)</span></code>, not the raw list.</p>
+</section>
+</section>
+<section id="baseline-methods">
+<h2><a class="toc-backref" href="#id7" role="doc-backlink">Baseline methods</a><a class="headerlink" href="#baseline-methods" title="Permalink to this heading"></a></h2>
+<p>A <code class="xref py py-class docutils literal notranslate"><span class="pre">BaselineMethod</span></code> computes the counterfactual power the site
+<em>would have</em> drawn absent the event, which is subtracted from actual power
+to get the reduction a program pays for. <code class="docutils literal notranslate"><span class="pre">BaselineMethod</span></code> is an abstract
+base class: it holds the shared <code class="docutils literal notranslate"><span class="pre">resolution</span></code> setting and <code class="docutils literal notranslate"><span class="pre">replace</span></code>, and
+each subclass implements <code class="docutils literal notranslate"><span class="pre">calculate_event_baseline</span></code>. The module has
+built-in subclasses for four baseline methods.</p>
+<section id="similardaysbaseline">
+<h3><a class="toc-backref" href="#id8" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code></a><a class="headerlink" href="#similardaysbaseline" title="Permalink to this heading"></a></h3>
+<p>The default baseline: the average power across a configurable number of the
+most recent eligible “similar days” (candidate days are supplied per-event
+via <code class="docutils literal notranslate"><span class="pre">BASELINE_DAYS</span></code>), with Saturdays/Sundays and configured holidays
+excluded by default. Its defaults (10 similar weekdays, 3-hour day-of
+adjustment) match PG&amp;E’s Capacity Bidding Program (CBP).</p>
+<p><strong>Day selection.</strong> <code class="docutils literal notranslate"><span class="pre">_rank_days</span></code> drops ineligible candidate days and ranks
+the rest, most preferred first; <code class="docutils literal notranslate"><span class="pre">select_days</span></code> keeps the first
+<code class="docutils literal notranslate"><span class="pre">n_baseline_days</span></code> of that ranking. The default ranking prefers the most
+recent days. <code class="docutils literal notranslate"><span class="pre">select_days</span></code> raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> when no eligible day
+remains and warns when fewer remain than <code class="docutils literal notranslate"><span class="pre">n_baseline_days</span></code>.</p>
+<p><strong>Holidays.</strong> When <code class="docutils literal notranslate"><span class="pre">exclude_holidays=True</span></code>, a day is excluded if it is a
+holiday in the <a class="reference external" href="https://pypi.org/project/holidays/">holidays</a> package’s
+calendar for <code class="docutils literal notranslate"><span class="pre">holiday_country</span></code> (an ISO 3166-1 code such as <code class="docutils literal notranslate"><span class="pre">&quot;US&quot;</span></code>) and
+optional <code class="docutils literal notranslate"><span class="pre">holiday_subdiv</span></code> (such as <code class="docutils literal notranslate"><span class="pre">&quot;CA&quot;</span></code>), or if it appears in
+<code class="docutils literal notranslate"><span class="pre">holiday_dates</span></code>. <code class="docutils literal notranslate"><span class="pre">holiday_country</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">&quot;US&quot;</span></code>, as in CBP; set it
+to <code class="docutils literal notranslate"><span class="pre">None</span></code> to use <code class="docutils literal notranslate"><span class="pre">holiday_dates</span></code> alone.</p>
+<p><strong>Per-interval averaging.</strong> The event window is split into equal-width
+settlement intervals of width <code class="docutils literal notranslate"><span class="pre">resolution</span></code> (a string of the form
+<code class="docutils literal notranslate"><span class="pre">&quot;[int][unit]&quot;</span></code>, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;15m&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;1h&quot;</span></code>, parsed by
+<code class="docutils literal notranslate"><span class="pre">utils.get_freq_binsize_minutes</span></code>). For each baseline day, the mean power in
+each interval is computed; the baseline for interval <code class="docutils literal notranslate"><span class="pre">k</span></code> is then the mean of
+interval <code class="docutils literal notranslate"><span class="pre">k</span></code> across all selected days. The result is one value per
+interval, not one value per day. When <code class="docutils literal notranslate"><span class="pre">resolution</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>, the width is
+inferred from the spacing of <code class="docutils literal notranslate"><span class="pre">model_datetime_index</span></code> (when a model is given)
+or <code class="docutils literal notranslate"><span class="pre">historical_power_kW.index</span></code>, as the smallest gap between timestamps.
+Gaps in the data are allowed, but an index whose gaps are not all whole
+multiples of the smallest one raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>. Pass it explicitly when that spacing differs
+from the settlement interval you want (e.g. hourly meter data settled at
+15-minute resolution). The event duration must be an integer multiple of the
+interval width. Index <code class="docutils literal notranslate"><span class="pre">t</span></code> of the returned array (or <code class="docutils literal notranslate"><span class="pre">Var</span></code>) is a position
+within the event window, with <code class="docutils literal notranslate"><span class="pre">0</span></code> at the event start.</p>
+<p><strong>Day-of adjustment.</strong> The averaged baseline can be scaled by a day-of
+adjustment factor: the event day’s mean power over the adjustment window,
+divided by the mean power over the same window pooled across all selected
+baseline days. The adjustment window is
+<code class="docutils literal notranslate"><span class="pre">[event_start</span> <span class="pre">-</span> <span class="pre">adjustment_offset_hours,</span>
+<span class="pre">event_start</span> <span class="pre">-</span> <span class="pre">adjustment_offset_hours</span> <span class="pre">+</span> <span class="pre">adjustment_duration_hours)</span></code>; for
+example, <code class="docutils literal notranslate"><span class="pre">adjustment_offset_hours=4,</span> <span class="pre">adjustment_duration_hours=2</span></code> uses the
+window from 4 hours to 2 hours before the event. The window must end at or
+before the event start. The factor is clipped to <code class="docutils literal notranslate"><span class="pre">adjustment_clip</span></code> so one
+anomalous morning can’t swing the baseline too far, and is skipped (factor
+<code class="docutils literal notranslate"><span class="pre">1.0</span></code>, with a warning) when the denominator is near zero. It is always
+computed from <code class="docutils literal notranslate"><span class="pre">historical_power_kW</span></code>, never from the model.
+<code class="docutils literal notranslate"><span class="pre">adjustment_offset_hours=None</span></code> disables the adjustment. To use a factor
+calculated elsewhere (e.g. one published by the utility), pass
+<code class="docutils literal notranslate"><span class="pre">adjustment_factor</span></code> to <code class="docutils literal notranslate"><span class="pre">add_event</span></code> or directly to <code class="docutils literal notranslate"><span class="pre">calculate_event_baseline</span></code>. It is
+applied as-is, without clipping, in place of the calculated factor. If
+both are given they must match, or <code class="docutils literal notranslate"><span class="pre">calculate_event_baseline</span></code> raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p>
+<p><strong>Adjustment factor in the model.</strong> With <code class="docutils literal notranslate"><span class="pre">adjustment_in_model=True</span></code> and a
+<code class="docutils literal notranslate"><span class="pre">model</span></code>, the factor is added as a <strong>fixed</strong> <code class="docutils literal notranslate"><span class="pre">pyomo.environ.Var</span></code> named
+<code class="docutils literal notranslate"><span class="pre">varstr</span> <span class="pre">+</span> <span class="pre">&quot;_adjustment_factor&quot;</span></code> and multiplied into the baseline
+symbolically. Retune it with <code class="docutils literal notranslate"><span class="pre">model.&lt;varstr&gt;_adjustment_factor.fix(1.15)</span></code>
+and re-solve without rebuilding the model. Do not <code class="docutils literal notranslate"><span class="pre">.unfix()</span></code> it: the solver
+would then pick the revenue-maximizing factor, and <code class="docutils literal notranslate"><span class="pre">baseline</span> <span class="pre">*</span> <span class="pre">factor</span></code>
+would become bilinear. With the default <code class="docutils literal notranslate"><span class="pre">False</span></code>, the factor is folded in as
+a constant, and the baseline <code class="docutils literal notranslate"><span class="pre">calculate_event_baseline</span></code> returns is a plain <code class="docutils literal notranslate"><span class="pre">numpy.ndarray</span></code>
+whenever every baseline day is historical.</p>
+<p><strong>Baseline days inside the optimization horizon.</strong> When <code class="docutils literal notranslate"><span class="pre">calculate_event_baseline</span></code> is
+given a <code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">model_power_kW</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">model_datetime_index</span></code>, any baseline day whose event window lies fully
+inside the model horizon is computed from the decision variable rather than
+from history. A window that only partially overlaps the horizon falls back to
+history. If at least one day is computed from the model (or the adjustment
+factor is in the model), the baseline is returned as an indexed <code class="docutils literal notranslate"><span class="pre">Var</span></code> named
+<code class="docutils literal notranslate"><span class="pre">varstr</span></code> with a defining constraint <code class="docutils literal notranslate"><span class="pre">varstr</span> <span class="pre">+</span> <span class="pre">&quot;_constraint&quot;</span></code>.</p>
+<p><strong>No baselining.</strong> Passing <code class="docutils literal notranslate"><span class="pre">n_baseline_days=0</span></code> turns off baselining
+entirely – day selection and the day-of adjustment are both skipped and the
+baseline is a flat zero – for programs (such as some interruption-based
+ones) whose settlement has no historical counterfactual at all. Because a
+zero baseline makes every kW of actual consumption look like a negative
+reduction, pair it with either a payout-only payment structure or a payment
+schedule whose lowest region extends to <code class="docutils literal notranslate"><span class="pre">-Infinity</span></code> (as the bundled
+CBP-style schedule does). A schedule whose lowest <code class="docutils literal notranslate"><span class="pre">x1</span></code> is finite does not
+cover a negative delivered ratio: <code class="docutils literal notranslate"><span class="pre">find_region</span></code> raises a ValueError, and the
+Pyomo/cvxpy formulations enforce <code class="docutils literal notranslate"><span class="pre">reduction</span> <span class="pre">&gt;=</span> <span class="pre">x1</span> <span class="pre">*</span> <span class="pre">bid_capacity_kW</span></code>, so the
+optimizer can never consume above baseline during an event.</p>
+</section>
+<section id="topusagedaysbaseline">
+<h3><a class="toc-backref" href="#id9" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">TopUsageDaysBaseline</span></code></a><a class="headerlink" href="#topusagedaysbaseline" title="Permalink to this heading"></a></h3>
+<p>A subclass of <code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code> that keeps the same averaging mechanism but
+ranks candidate days by highest mean power draw over the event window
+instead of by recency, so the baseline reflects the days the site used the
+most power rather than the most recent ones. This is the “high-X-of-Y”
+style baseline used by some utility programs, and is otherwise configured
+identically to <code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code> (same day-of adjustment, weekend/holiday
+exclusion, etc.). A day with no data in the event window is ranked last; if
+it is still selected, the baseline calculation raises on it.</p>
+</section>
+<section id="fixedlevelbaseline">
+<h3><a class="toc-backref" href="#id10" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">FixedLevelBaseline</span></code></a><a class="headerlink" href="#fixedlevelbaseline" title="Permalink to this heading"></a></h3>
+<p>The baseline is a constant, contracted “firm service level” agreed with the
+utility ahead of time, rather than anything derived from historical
+consumption. Every event uses the same <code class="docutils literal notranslate"><span class="pre">firm_level_kW</span></code> value, and there is
+no day selection, ranking, or day-of adjustment to configure (it subclasses
+<code class="docutils literal notranslate"><span class="pre">BaselineMethod</span></code> directly, not <code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code>).
+<code class="docutils literal notranslate"><span class="pre">historical_power_kW</span></code> and
+<code class="docutils literal notranslate"><span class="pre">model_datetime_index</span></code> are consulted only to infer the interval width when
+<code class="docutils literal notranslate"><span class="pre">resolution</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>, and no components are added to a <code class="docutils literal notranslate"><span class="pre">model</span></code>.</p>
+</section>
+<section id="unilateralinterruptionbaseline">
+<h3><a class="toc-backref" href="#id11" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">UnilateralInterruptionBaseline</span></code></a><a class="headerlink" href="#unilateralinterruptionbaseline" title="Permalink to this heading"></a></h3>
+<p>Models programs where the utility – not the site – decides when and how
+much load is interrupted, holding consumption at or below a fixed level
+(<code class="docutils literal notranslate"><span class="pre">0</span></code> by default, i.e. a full interruption) for the event’s duration. This
+is enforced as a hard constraint, <code class="docutils literal notranslate"><span class="pre">varstr</span> <span class="pre">+</span> <span class="pre">&quot;_interruption_constraint&quot;</span></code>,
+on the entries of <code class="docutils literal notranslate"><span class="pre">model_power_kW</span></code> inside the event window, rather than
+treated as a revenue opportunity the operator chooses to pursue. It
+therefore has no ex-post/numpy evaluation path: <code class="docutils literal notranslate"><span class="pre">calculate_event_baseline</span></code> raises
+<code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code> without a <code class="docutils literal notranslate"><span class="pre">model</span></code>. The interruption level is
+returned in the baseline’s position to keep a consistent interface, but the
+reduction it implies is not the basis for payment, so pair it with a
+payout-only payment structure. <code class="docutils literal notranslate"><span class="pre">interruption_level_kW</span></code> must be
+non-negative.</p>
+</section>
+</section>
+<section id="payment-structures">
+<h2><a class="toc-backref" href="#id12" role="doc-backlink">Payment structures</a><a class="headerlink" href="#payment-structures" title="Permalink to this heading"></a></h2>
+<p>A <code class="xref py py-class docutils literal notranslate"><span class="pre">PaymentStructure</span></code> turns a reduction (baseline minus actual power)
+into a dollar amount. The module has built-in classes for three Payment
+methods.</p>
+<section id="paymentstructure">
+<h3><a class="toc-backref" href="#id13" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></a><a class="headerlink" href="#paymentstructure" title="Permalink to this heading"></a></h3>
+<p>The default payment structure: a piecewise-linear capacity payment keyed on
+the delivered ratio (reduction as a fraction of the bid capacity), through
+the regions of the payment function. The capacity payment is
+<code class="docutils literal notranslate"><span class="pre">payment_ratio</span> <span class="pre">*</span> <span class="pre">capacity_price</span> <span class="pre">*</span> <span class="pre">bid_capacity_kW</span></code>. On top of that, an
+optional flat, performance-independent <code class="docutils literal notranslate"><span class="pre">payout</span></code> can be added – or used
+alone, by passing <code class="docutils literal notranslate"><span class="pre">regions=None</span></code>, for programs whose revenue is entirely a
+flat participation payment (for example, paired with
+<code class="docutils literal notranslate"><span class="pre">UnilateralInterruptionBaseline</span></code>). <code class="docutils literal notranslate"><span class="pre">payout</span></code> is in <strong>$/kW of
+``bid_capacity_kW``</strong>, not a flat dollar amount, since one structure is
+shared across events with different bid sizes.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The default <code class="docutils literal notranslate"><span class="pre">settlement=&quot;interval&quot;</span></code> matches PG&amp;E’s CBP, which settles
+each hour separately, but the default <code class="docutils literal notranslate"><span class="pre">payment_basis=&quot;per_event&quot;</span></code> does
+not: CBP pays a monthly capacity payment. To model CBP, also set
+<code class="docutils literal notranslate"><span class="pre">payment_basis=&quot;monthly_share&quot;</span></code> (see below).</p>
+</div>
+<p><strong>Settlement.</strong> When the reduction carries more than one settlement
+interval, <code class="docutils literal notranslate"><span class="pre">settlement</span></code> controls how the capacity payment is aggregated:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;interval&quot;</span></code> (default): evaluate the payment function at each interval’s
+own delivered ratio, then average the resulting payments. This matches
+PG&amp;E’s CBP, which settles each event hour separately, and is the more
+rigorous reading when the payment function is nonlinear over the realized
+range. In pyomo, it multiplies the number of region-selection binaries by
+the number of intervals.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;average&quot;</span></code>: average the per-interval reduction into one delivered
+ratio, then evaluate the payment function once. This keeps the pyomo
+formulation to one region-selection block per event. The two modes agree
+exactly when the function is linear over the realized range, and always
+agree for a single scalar reduction.</p></li>
+</ul>
+<p><strong>Payment basis.</strong> <code class="docutils literal notranslate"><span class="pre">payment_basis</span></code> and <code class="docutils literal notranslate"><span class="pre">payout_basis</span></code> choose whether the
+capacity price and payout are settled once per event (<code class="docutils literal notranslate"><span class="pre">&quot;per_event&quot;</span></code>,
+default), scale with the event’s duration (<code class="docutils literal notranslate"><span class="pre">&quot;per_hour&quot;</span></code>, i.e. $/kW-hour),
+or split a monthly payment across the month’s called hours
+(<code class="docutils literal notranslate"><span class="pre">&quot;monthly_share&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">&quot;per_hour&quot;</span></code> requires <code class="docutils literal notranslate"><span class="pre">&quot;duration_hours&quot;</span></code> on the
+event.</p>
+<p><code class="docutils literal notranslate"><span class="pre">&quot;monthly_share&quot;</span></code> models programs, such as PG&amp;E’s CBP, that pay a monthly
+Base Capacity Payment (<code class="docutils literal notranslate"><span class="pre">capacity_price</span></code> in $/kW-month times
+<code class="docutils literal notranslate"><span class="pre">bid_capacity_kW</span></code>) and allocate it to each called hour in proportion to
+that hour’s called capacity. Each event’s capacity payment is</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>payment_ratio * capacity_price * bid_capacity_kW
+    * bid_capacity_kW * duration_hours / monthly_called_capacity_kWh
+</pre></div>
+</div>
+<p>so the same-month events together earn exactly one Base Capacity Payment
+at full delivery. <code class="docutils literal notranslate"><span class="pre">bid_capacity_kW</span></code> is taken as the called capacity in
+every hour of the event; split an event whose hours have different called
+capacities into separate events. <code class="docutils literal notranslate"><span class="pre">events_to_dataframe</span></code> (and so every
+entry point that takes an events list) fills in a missing
+<code class="docutils literal notranslate"><span class="pre">&quot;monthly_called_capacity_kWh&quot;</span></code> by summing <code class="docutils literal notranslate"><span class="pre">bid_capacity_kW</span> <span class="pre">*</span>
+<span class="pre">duration_hours</span></code> over the events in the same calendar month. A value given
+on any event (via <code class="docutils literal notranslate"><span class="pre">add_event</span></code>) applies to its whole month, and events in
+the same month that give different values raise <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>. Give it
+explicitly when the events passed in don’t cover the whole month – for
+example, an optimization horizon that ends mid-month, or a total taken from
+a utility settlement statement. Pair it with <code class="docutils literal notranslate"><span class="pre">settlement=&quot;interval&quot;</span></code> and an
+hourly <code class="docutils literal notranslate"><span class="pre">resolution</span></code> to apply the performance adjustment hour by hour, as
+CBP does.</p>
+<p><strong>Region lookup.</strong> <code class="docutils literal notranslate"><span class="pre">find_region</span></code> takes either a <code class="docutils literal notranslate"><span class="pre">delivered_ratio</span></code>
+(returns the region containing it) or a <code class="docutils literal notranslate"><span class="pre">region_x1</span></code> (returns the region
+whose <code class="docutils literal notranslate"><span class="pre">x1</span></code> matches). Passing neither raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>; passing both
+raises unless the delivered ratio falls in the region identified by
+<code class="docutils literal notranslate"><span class="pre">region_x1</span></code>.</p>
+</section>
+<section id="capacityenergypayment">
+<h3><a class="toc-backref" href="#id14" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment</span></code></a><a class="headerlink" href="#capacityenergypayment" title="Permalink to this heading"></a></h3>
+<p>A two-part payment: the same piecewise capacity payment as
+<code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code>, plus a flat <code class="docutils literal notranslate"><span class="pre">$/kWh</span></code> payment on the energy actually
+curtailed. This models programs that pay separately for having capacity
+available (the capacity term) and for the energy actually reduced during
+the event (the energy term). The energy term is
+<code class="docutils literal notranslate"><span class="pre">energy_price</span> <span class="pre">*</span> <span class="pre">mean(reduction_kW)</span> <span class="pre">*</span> <span class="pre">duration_hours</span></code>, which equals the sum
+of each interval’s own energy since intervals are equal-width. It is
+independent of <code class="docutils literal notranslate"><span class="pre">settlement</span></code>.</p>
+</section>
+<section id="marketindexedpayment">
+<h3><a class="toc-backref" href="#id15" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">MarketIndexedPayment</span></code></a><a class="headerlink" href="#marketindexedpayment" title="Permalink to this heading"></a></h3>
+<p>The same piecewise capacity payment as <code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code>, except the
+capacity price is resolved at evaluation/build time from a caller-supplied
+<code class="docutils literal notranslate"><span class="pre">price_lookup(event)</span></code> callable rather than a fixed value on the event.
+This models programs whose price tracks a wholesale or day-ahead market
+index rather than a flat contracted rate. The price is resolved once, when
+the expression is built, so a model built this way is tied to the prices in
+force at build time.</p>
+</section>
+</section>
+<section id="optimization-formulations">
+<h2><a class="toc-backref" href="#id16" role="doc-backlink">Optimization formulations</a><a class="headerlink" href="#optimization-formulations" title="Permalink to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">PaymentStructure.build_expression</span></code> dispatches on the type of
+<code class="docutils literal notranslate"><span class="pre">reduction_kW</span></code>.</p>
+<p><strong>Realized values</strong> (<code class="docutils literal notranslate"><span class="pre">numpy.ndarray</span></code> or a Python number): the region is
+already determined, so this calls <code class="docutils literal notranslate"><span class="pre">evaluate</span></code>.</p>
+<p><strong>cvxpy</strong> (<code class="docutils literal notranslate"><span class="pre">cvxpy.Expression</span></code>/<code class="docutils literal notranslate"><span class="pre">cvxpy.Variable</span></code>): requires a known
+<code class="docutils literal notranslate"><span class="pre">region_x1</span></code> and builds only that region, returning
+<code class="docutils literal notranslate"><span class="pre">(revenue_expr,</span> <span class="pre">constraints)</span></code> for the caller to add to their own
+<code class="docutils literal notranslate"><span class="pre">cvxpy.Problem</span></code>. A vector reduction is averaged for <code class="docutils literal notranslate"><span class="pre">&quot;average&quot;</span></code>
+settlement; for <code class="docutils literal notranslate"><span class="pre">&quot;interval&quot;</span></code> settlement the region bound constraints apply
+to every interval. The revenue expression is identical in both modes, since
+the payment ratio is affine within one fixed region. To search across
+regions with cvxpy, re-build the expression for a new <code class="docutils literal notranslate"><span class="pre">region_x1</span></code> when the
+solution falls outside the assumed one. <code class="docutils literal notranslate"><span class="pre">calculate_dr_revenue</span></code> does not
+support cvxpy.</p>
+<p><strong>pyomo</strong> (<code class="docutils literal notranslate"><span class="pre">pyomo.environ.Var</span></code>/expression, or a list/tuple of per-interval
+expressions): builds <em>every</em> region onto <code class="docutils literal notranslate"><span class="pre">model</span></code> at once using a
+disaggregated binary-selection formulation (Balas’ extended form), so the
+solver chooses the region when <code class="docutils literal notranslate"><span class="pre">region_x1=None</span></code>. Passing <code class="docutils literal notranslate"><span class="pre">region_x1</span></code>
+fixes the region binaries instead. Infinite region bounds are replaced by
+<code class="docutils literal notranslate"><span class="pre">±1000</span></code> times the bid capacity.</p>
+<p>Every region component is indexed by settlement interval <code class="docutils literal notranslate"><span class="pre">t</span></code> and region.
+<code class="docutils literal notranslate"><span class="pre">&quot;average&quot;</span></code> settlement builds a single interval (<code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">=</span> <span class="pre">0</span></code>) holding the
+window-mean reduction; <code class="docutils literal notranslate"><span class="pre">&quot;interval&quot;</span></code> settlement builds one region-selection
+block per interval. A per-interval revenue <code class="docutils literal notranslate"><span class="pre">Expression</span></code> lets a solved model
+be audited per interval. A scalar <code class="docutils literal notranslate"><span class="pre">region_x1</span></code> fixes the same region for
+every interval; a list of length <code class="docutils literal notranslate"><span class="pre">n_intervals</span></code> fixes them individually.
+Fixing one region for every interval is a tighter feasible set than
+<code class="docutils literal notranslate"><span class="pre">&quot;average&quot;</span></code> settlement (which only constrains the mean) and can make a
+previously feasible plan infeasible, so prefer <code class="docutils literal notranslate"><span class="pre">region_x1=None</span></code> with
+<code class="docutils literal notranslate"><span class="pre">&quot;interval&quot;</span></code> settlement.</p>
+<p>If the structure has no regions (payout-only), no region components are
+created and the revenue is the constant payout.</p>
+<section id="pyomo-component-names">
+<h3><a class="toc-backref" href="#id17" role="doc-backlink">Pyomo component names</a><a class="headerlink" href="#pyomo-component-names" title="Permalink to this heading"></a></h3>
+<p>Every pyomo component is named <code class="docutils literal notranslate"><span class="pre">varstr</span> <span class="pre">+</span> <span class="pre">&quot;_&quot;</span> <span class="pre">+</span> <span class="pre">suffix</span></code>, with the suffixes
+available as module constants. <code class="docutils literal notranslate"><span class="pre">BASELINE_COMPONENT_SUFFIXES</span></code> and
+<code class="docutils literal notranslate"><span class="pre">PAYMENT_COMPONENT_SUFFIXES</span></code> collect them. <code class="docutils literal notranslate"><span class="pre">varstr</span></code> must be unique per
+call on a given model, since reusing it raises a pyomo “component already
+exists” error. <code class="docutils literal notranslate"><span class="pre">calculate_dr_revenue</span></code> and <code class="docutils literal notranslate"><span class="pre">build_pyomo_dr_revenue</span></code> check
+for such clashes before adding anything and raise <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>, so calling
+them twice on one model needs a different <code class="docutils literal notranslate"><span class="pre">varstr_prefix</span></code>. They name each
+event <code class="docutils literal notranslate"><span class="pre">f&quot;{varstr_prefix}_{i}&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">i</span></code> is the event’s position in date
+order) and its baseline <code class="docutils literal notranslate"><span class="pre">f&quot;{varstr_prefix}_{i}_baseline_kW&quot;</span></code>.</p>
+<p>A model is meant to price all its events under one payment structure. The
+first structure built into a model is recorded on it, and building revenue
+into the same model with a structure of a different class or different
+settings raises a <code class="docutils literal notranslate"><span class="pre">UserWarning</span></code>.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Constant name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Value</p></th>
+<th class="head"><p>Created by</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CONSTRAINT_SUFFIX</span></code></p></td>
+<td><p>Baseline defining constraint</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;constraint&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline.calculate_event_baseline</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ADJUSTMENT_FACTOR_SUFFIX</span></code></p></td>
+<td><p>Fixed day-of adjustment factor <code class="docutils literal notranslate"><span class="pre">Var</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;adjustment_factor&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline.calculate_event_baseline</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">INTERRUPTION_CONSTRAINT_SUFFIX</span></code></p></td>
+<td><p>Interruption upper bound</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;interruption_constraint&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">UnilateralInterruptionBaseline</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">REGION_ACTIVE_SUFFIX</span></code></p></td>
+<td><p>Binary, 1 iff the region is active</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;region_active&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">REGION_SELECT_CONSTRAINT_SUFFIX</span></code></p></td>
+<td><p>Exactly one region is active</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;region_select_constraint&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">REGION_REDUCTION_SUFFIX</span></code></p></td>
+<td><p>Region’s share of the reduction</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;region_reduction&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">REGION_REDUCTION_LOWER_CONSTRAINT_SUFFIX</span></code></p></td>
+<td><p>Share <code class="docutils literal notranslate"><span class="pre">&gt;=</span> <span class="pre">x1</span> <span class="pre">*</span> <span class="pre">bid_capacity_kW</span> <span class="pre">*</span> <span class="pre">active</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;region_reduction_lower_constraint&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">REGION_REDUCTION_UPPER_CONSTRAINT_SUFFIX</span></code></p></td>
+<td><p>Share <code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">x2</span> <span class="pre">*</span> <span class="pre">bid_capacity_kW</span> <span class="pre">*</span> <span class="pre">active</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;region_reduction_upper_constraint&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">REGION_REDUCTION_SUM_CONSTRAINT_SUFFIX</span></code></p></td>
+<td><p>Reduction equals the sum of shares</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;region_reduction_sum_constraint&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">INTERVAL_REVENUE_SUFFIX</span></code></p></td>
+<td><p>Per-interval revenue <code class="docutils literal notranslate"><span class="pre">Expression</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;interval_revenue&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">REVENUE_SUFFIX</span></code></p></td>
+<td><p>Revenue <code class="docutils literal notranslate"><span class="pre">Var</span></code>, including payout</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;adjustment_factor&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">REVENUE_CONSTRAINT_SUFFIX</span></code></p></td>
+<td><p>Defines revenue</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;revenue&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ENERGY_REVENUE_SUFFIX</span></code></p></td>
+<td><p>Energy revenue <code class="docutils literal notranslate"><span class="pre">Var</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;energy_revenue&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ENERGY_REVENUE_CONSTRAINT_SUFFIX</span></code></p></td>
+<td><p>Defines energy revenue</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;energy_revenue_constraint&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TOTAL_REVENUE_SUFFIX</span></code></p></td>
+<td><p>Capacity plus energy revenue <code class="docutils literal notranslate"><span class="pre">Var</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;total_revenue&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TOTAL_REVENUE_CONSTRAINT_SUFFIX</span></code></p></td>
+<td><p>Defines total revenue</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;total_revenue_constraint&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="entry-points">
+<h2><a class="toc-backref" href="#id18" role="doc-backlink">Entry points</a><a class="headerlink" href="#entry-points" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">calculate_dr_revenue</span></code> dispatches on <code class="docutils literal notranslate"><span class="pre">power_kW</span></code>: realized
+<code class="docutils literal notranslate"><span class="pre">pandas</span></code>/<code class="docutils literal notranslate"><span class="pre">numpy</span></code> data is settled ex-post via
+<code class="docutils literal notranslate"><span class="pre">calculate_itemized_dr_revenue</span></code>, while a <code class="docutils literal notranslate"><span class="pre">pyomo.environ.Var</span></code> has each
+event’s baseline and revenue components built onto <code class="docutils literal notranslate"><span class="pre">model</span></code>, returning the
+total revenue expression. <code class="docutils literal notranslate"><span class="pre">region_x1s</span></code> optionally fixes each event’s
+region, keyed by event date (e.g. <code class="docutils literal notranslate"><span class="pre">{&quot;2024-01-08&quot;:</span> <span class="pre">0.6}</span></code>); events missing
+from it leave the region choice to the solver.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">build_pyomo_dr_revenue</span></code> calls <code class="docutils literal notranslate"><span class="pre">calculate_dr_revenue</span></code> and nets the total
+revenue into the model’s single active objective, whatever its name:
+subtracted from a minimization objective, added to a maximization one. If
+the model has no active objective, it adds a minimization objective named
+<code class="docutils literal notranslate"><span class="pre">objective</span></code> (or a unique variant if that name is taken). More than one
+active objective raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> before anything is added.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">calculate_itemized_dr_revenue</span></code> returns a <code class="docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code> with one
+row per event (see <code class="docutils literal notranslate"><span class="pre">calculate_event_revenue</span></code> for the columns). Each event
+is sliced and re-baselined independently, so results never mix time windows
+across events.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">build_event_revenue</span></code> handles a single event and expects <code class="docutils literal notranslate"><span class="pre">power_kW</span></code>
+already sliced to that event’s window, matching the convention in
+<code class="docutils literal notranslate"><span class="pre">costs.py</span></code> of passing in already-relevant consumption slices.</p></li>
+</ul>
+</section>
+<section id="combining-baselines-and-payment-structures">
+<h2><a class="toc-backref" href="#id19" role="doc-backlink">Combining baselines and payment structures</a><a class="headerlink" href="#combining-baselines-and-payment-structures" title="Permalink to this heading"></a></h2>
+<p>Because baseline method and payment structure are independent axes, real
+programs are represented by pairing whichever combination matches their
+rules. A few examples:</p>
+<ul class="simple">
+<li><p><strong>A day-ahead capacity bidding program</strong> (e.g. PG&amp;E’s CBP) pairs the
+default <code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code> (10 similar weekdays, 3-hour day-of
+adjustment, US holidays excluded, <code class="docutils literal notranslate"><span class="pre">resolution=&quot;1h&quot;</span></code>) with
+<code class="docutils literal notranslate"><span class="pre">PaymentStructure(regions,</span> <span class="pre">payment_basis=&quot;monthly_share&quot;)</span></code>, whose regions ramp payment up with
+delivered ratio. The monthly Base Capacity Payment is split across the
+month’s called hours and each hour is adjusted for its own performance.</p></li>
+<li><p><strong>A firm service level program</strong>, where the customer commits to staying at
+or below a contracted demand level, pairs <code class="docutils literal notranslate"><span class="pre">FixedLevelBaseline</span></code> with a
+<code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code> using <code class="docutils literal notranslate"><span class="pre">payment_basis=&quot;per_hour&quot;</span></code> so the payment (or
+penalty) scales with how long the level was exceeded.</p></li>
+<li><p><strong>An emergency curtailment or interruptible program</strong>, where the utility
+itself cuts load, pairs <code class="docutils literal notranslate"><span class="pre">UnilateralInterruptionBaseline</span></code> with a
+payout-only <code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code> (<code class="docutils literal notranslate"><span class="pre">regions=None</span></code>) that pays a flat
+$/kW participation payment regardless of the (utility-controlled)
+reduction.</p></li>
+<li><p><strong>A wholesale-indexed capacity program</strong> pairs <code class="docutils literal notranslate"><span class="pre">TopUsageDaysBaseline</span></code>
+(so the baseline reflects the site’s highest-usage days) with
+<code class="docutils literal notranslate"><span class="pre">MarketIndexedPayment</span></code>, so the price paid tracks a day-ahead market
+index instead of a flat rate.</p></li>
+<li><p><strong>A combined capacity-and-energy incentive program</strong> pairs the default
+<code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code> with <code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment</span></code>, paying both a
+capacity-based incentive and a <code class="docutils literal notranslate"><span class="pre">$/kWh</span></code> rate for the energy actually
+curtailed.</p></li>
+</ul>
+</section>
+<section id="extending-baselinemethod-and-paymentstructure">
+<h2><a class="toc-backref" href="#id20" role="doc-backlink">Extending BaselineMethod and PaymentStructure</a><a class="headerlink" href="#extending-baselinemethod-and-paymentstructure" title="Permalink to this heading"></a></h2>
+<p>Both axes are designed to be subclassed, and every public entry point
+(<code class="docutils literal notranslate"><span class="pre">calculate_dr_revenue</span></code>, <code class="docutils literal notranslate"><span class="pre">build_pyomo_dr_revenue</span></code>,
+<code class="docutils literal notranslate"><span class="pre">calculate_itemized_dr_revenue</span></code>, and friends) takes a <code class="docutils literal notranslate"><span class="pre">BaselineMethod</span></code>
+instance and accepts a <code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code> instance in place of a list of
+regions, so a custom subclass drops in without further plumbing.</p>
+<p>To add a new similar-days variant, subclass <code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code> and
+override one of:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">_rank_days(candidate_days,</span> <span class="pre">historical_power_kW,</span> <span class="pre">event)</span></code> to change which
+candidate days are eligible and how they’re ranked, while keeping the
+averaging mechanism (see <code class="docutils literal notranslate"><span class="pre">TopUsageDaysBaseline</span></code>, which calls
+<code class="docutils literal notranslate"><span class="pre">super()._rank_days(...)</span></code> to reuse the eligibility rule and only
+replaces the ranking). Prefer this over overriding <code class="docutils literal notranslate"><span class="pre">select_days</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_adjustment_factor(valid_days,</span> <span class="pre">historical_power_kW,</span> <span class="pre">event)</span></code> to change
+how the day-of scaling factor is computed.</p></li>
+</ul>
+<p>For a baseline that isn’t a historical day-average at all, subclass
+<code class="docutils literal notranslate"><span class="pre">BaselineMethod</span></code> directly, call <code class="docutils literal notranslate"><span class="pre">super().__init__(resolution)</span></code>, and
+implement <code class="docutils literal notranslate"><span class="pre">calculate_event_baseline(historical_power_kW,</span> <span class="pre">event,</span> <span class="pre">*,</span>
+<span class="pre">model=None,</span> <span class="pre">model_power_kW=None,</span> <span class="pre">model_datetime_index=None,</span> <span class="pre">varstr=None,</span>
+<span class="pre">adjustment_factor=None)</span></code> (see <code class="docutils literal notranslate"><span class="pre">FixedLevelBaseline</span></code> and
+<code class="docutils literal notranslate"><span class="pre">UnilateralInterruptionBaseline</span></code>). The implementation must honor
+<code class="docutils literal notranslate"><span class="pre">calculate_event_baseline</span></code>’s calling contract: return a <code class="docutils literal notranslate"><span class="pre">(value,</span> <span class="pre">model)</span></code>
+pair, with <code class="docutils literal notranslate"><span class="pre">model</span></code> left <code class="docutils literal notranslate"><span class="pre">None</span></code> ex-post (or raise), adding any pyomo
+components under <code class="docutils literal notranslate"><span class="pre">varstr</span></code> when a model is given.</p>
+<p>To add a new payment structure, subclass <code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code> and override
+<code class="docutils literal notranslate"><span class="pre">evaluate</span></code> and <code class="docutils literal notranslate"><span class="pre">build_expression</span></code> as a pair – <code class="docutils literal notranslate"><span class="pre">evaluate</span></code> is used for
+ex-post settlement and <code class="docutils literal notranslate"><span class="pre">build_expression</span></code> is used to build the same
+payment into an optimization model, and if the two diverge, an optimized
+plan will not reconcile with its ex-post settlement. <code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment</span></code>
+and <code class="docutils literal notranslate"><span class="pre">MarketIndexedPayment</span></code> show two ways to keep them in sync: the former
+adds an extra term to both methods after delegating the capacity portion to
+<code class="docutils literal notranslate"><span class="pre">super()</span></code>; the latter resolves a field on <code class="docutils literal notranslate"><span class="pre">event</span></code> (the market price)
+before delegating both methods to <code class="docutils literal notranslate"><span class="pre">super()</span></code> unchanged.</p>
+<span class="target" id="module-eeco.demandresponse"></span><p>Calculate incentive-based demand response revenue.</p>
+<p>See <a class="reference internal" href="#"><span class="doc">demandresponse</span></a> for a description of the module.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.BaselineMethod">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">BaselineMethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#BaselineMethod"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.BaselineMethod" title="Permalink to this definition"></a></dt>
+<dd><p>Abstract base for demand response baseline methods.</p>
+<p>Subclasses implement <cite>calculate_event_baseline</cite>. Use <cite>replace</cite> to derive
+a variant with some settings changed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>resolution</strong> (<em>str or None</em>) – Settlement interval width (e.g., <cite>“15m”</cite>, <cite>“1h”</cite>). <cite>None</cite> infers it
+from the data or model index.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.BaselineMethod.calculate_event_baseline">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">calculate_event_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_power_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#BaselineMethod.calculate_event_baseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.BaselineMethod.calculate_event_baseline" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the per-interval baseline power for a single event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Historical power consumption in kW, indexed by timestamp.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add baseline components to. <cite>None</cite> for ex-post use.</p></li>
+<li><p><strong>model_power_kW</strong> (<em>pyomo.environ.Var or None</em>) – Power decision variable over the optimization horizon.</p></li>
+<li><p><strong>model_datetime_index</strong> (<em>pandas.DatetimeIndex or None</em>) – Timestamp of each entry of <cite>model_power_kW</cite>.</p></li>
+<li><p><strong>varstr</strong> (<em>str or None</em>) – Name prefix for components created on <cite>model</cite>.</p></li>
+<li><p><strong>adjustment_factor</strong> (<em>float or None</em>) – Day-of adjustment factor to apply as-is, for methods that use one.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><cite>(baseline_kW, model)</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.BaselineMethod.replace">
+<span class="sig-name descname"><span class="pre">replace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">changes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#BaselineMethod.replace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.BaselineMethod.replace" title="Permalink to this definition"></a></dt>
+<dd><p>Return a new instance with some settings changed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>**changes</strong> – Constructor arguments to override. Unspecified settings keep this
+instance’s values.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>New instance of the same class; <cite>self</cite> is unchanged.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="eeco.html#eeco.demandresponse.BaselineMethod" title="eeco.demandresponse.BaselineMethod">BaselineMethod</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If a key is not a constructor argument.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the resulting settings fail constructor validation.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.CapacityEnergyPayment">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">CapacityEnergyPayment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">regions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">energy_price</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">payment_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#CapacityEnergyPayment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.CapacityEnergyPayment" title="Permalink to this definition"></a></dt>
+<dd><p>Piecewise-linear capacity payment plus a flat payment per kWh curtailed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>regions</strong> (<em>list of dict or None</em>) – Capacity payment schedule, as for <cite>PaymentStructure</cite>.</p></li>
+<li><p><strong>energy_price</strong> (<em>float</em>) – Energy payment rate in $/kWh.</p></li>
+<li><p><strong>**payment_kwargs</strong> – Keyword arguments passed to <cite>PaymentStructure</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.CapacityEnergyPayment.build_expression">
+<span class="sig-name descname"><span class="pre">build_expression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#CapacityEnergyPayment.build_expression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.CapacityEnergyPayment.build_expression" title="Permalink to this definition"></a></dt>
+<dd><p>Build the capacity and energy revenue expression for an event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float, numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</em>) – Load reduction in kW, as a realized value or a decision-variable
+expression, per interval or as a window mean. A list or tuple of
+pyomo expressions is also accepted.</p></li>
+<li><p><strong>region_x1</strong> (<em>float, list of float, or None</em>) – <cite>x1</cite> bound of the region to fix. Required for cvxpy.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add components to. Required for pyomo.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – In the cases listed for <cite>PaymentStructure.build_expression</cite>, or if
+    <cite>event</cite> has no <cite>“duration_hours”</cite>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If <cite>reduction_kW</cite> is not a supported type.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(revenue, model)</cite> for numpy or scalar <cite>reduction_kW</cite>,
+<cite>(total_revenue_var, model)</cite> for pyomo, or
+<cite>(revenue_expr, constraints)</cite> for cvxpy.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.CapacityEnergyPayment.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#CapacityEnergyPayment.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.CapacityEnergyPayment.evaluate" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate realized capacity and energy revenue for a known reduction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float or numpy.ndarray</em>) – Load reduction in kW, as a window mean or per interval.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – In the cases listed for <cite>PaymentStructure.evaluate</cite>, or if
+    <cite>event</cite> has no <cite>“duration_hours”</cite>.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Revenue (positive) or penalty (negative) in USD.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.FixedLevelBaseline">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">FixedLevelBaseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">firm_level_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#FixedLevelBaseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.FixedLevelBaseline" title="Permalink to this definition"></a></dt>
+<dd><p>Baseline fixed at a contracted firm service level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>firm_level_kW</strong> (<em>float</em>) – Contracted firm demand level in kW.</p></li>
+<li><p><strong>resolution</strong> (<em>str or None</em>) – Settlement interval width (e.g., <cite>“15m”</cite>, <cite>“1h”</cite>). <cite>None</cite> infers it
+from the data or model index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>firm_level_kW</cite> is negative.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.FixedLevelBaseline.calculate_event_baseline">
+<span class="sig-name descname"><span class="pre">calculate_event_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_power_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#FixedLevelBaseline.calculate_event_baseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.FixedLevelBaseline.calculate_event_baseline" title="Permalink to this definition"></a></dt>
+<dd><p>Return the firm service level as a flat per-interval baseline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Historical power consumption in kW. Only its index is used, to
+infer the interval width.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Returned unchanged. No components are added.</p></li>
+<li><p><strong>model_power_kW</strong> (<em>pyomo.environ.Var or None</em>) – Unused.</p></li>
+<li><p><strong>model_datetime_index</strong> (<em>pandas.DatetimeIndex or None</em>) – Used only to infer the interval width.</p></li>
+<li><p><strong>varstr</strong> (<em>str or None</em>) – Unused.</p></li>
+<li><p><strong>adjustment_factor</strong> (<em>float or None</em>) – Unused.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><cite>(baseline_kW, model)</cite>, where <cite>baseline_kW</cite> is <cite>firm_level_kW</cite>
+repeated once per interval.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.MarketIndexedPayment">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">MarketIndexedPayment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">regions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">price_lookup</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">payment_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#MarketIndexedPayment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.MarketIndexedPayment" title="Permalink to this definition"></a></dt>
+<dd><p>Piecewise-linear capacity payment priced from a market index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>regions</strong> (<em>list of dict or None</em>) – Payment schedule, as for <cite>PaymentStructure</cite>.</p></li>
+<li><p><strong>price_lookup</strong> (<em>callable</em>) – Function <cite>price_lookup(event) -&gt; float</cite> returning the capacity price
+in $/kW for an event.</p></li>
+<li><p><strong>**payment_kwargs</strong> – Keyword arguments passed to <cite>PaymentStructure</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.MarketIndexedPayment.build_expression">
+<span class="sig-name descname"><span class="pre">build_expression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#MarketIndexedPayment.build_expression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.MarketIndexedPayment.build_expression" title="Permalink to this definition"></a></dt>
+<dd><p>Build the revenue expression for an event at the market price.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float, numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</em>) – Load reduction in kW, as a realized value or a decision-variable
+expression, per interval or as a window mean. A list or tuple of
+pyomo expressions is also accepted.</p></li>
+<li><p><strong>region_x1</strong> (<em>float, list of float, or None</em>) – <cite>x1</cite> bound of the region to fix. Required for cvxpy.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add components to. Required for pyomo.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – In the cases listed for <cite>PaymentStructure.build_expression</cite>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If <cite>reduction_kW</cite> is not a supported type.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>As for <cite>PaymentStructure.build_expression</cite>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.MarketIndexedPayment.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#MarketIndexedPayment.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.MarketIndexedPayment.evaluate" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate realized revenue at the market price for a known reduction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float or numpy.ndarray</em>) – Load reduction in kW, as a window mean or per interval.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – In the cases listed for <cite>PaymentStructure.evaluate</cite>.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Revenue (positive) or penalty (negative) in USD.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.PaymentStructure">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">PaymentStructure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">regions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">settlement</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'interval'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'per_event'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payout_basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'per_event'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#PaymentStructure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.PaymentStructure" title="Permalink to this definition"></a></dt>
+<dd><p>Piecewise-linear capacity payment with an optional flat payout.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>regions</strong> (<em>list of dict or None</em>) – Payment schedule. Each dict has float values under the keys <cite>“x1”</cite>,
+<cite>“x2”</cite> (delivered ratio bounds) and <cite>“y1”</cite>, <cite>“y2”</cite> (payment ratios at
+those bounds). Bounds may be <cite>“Infinity”</cite>/<cite>”-Infinity”</cite> strings; a
+region with an infinite bound pays a flat ratio from its finite end.
+Regions whose lowest <cite>x1</cite> is finite cannot cover a negative delivered
+ratio, and in optimization they force <cite>reduction &gt;= x1 * bid</cite>.
+<cite>None</cite> or <cite>[]</cite> means no capacity payment.</p></li>
+<li><p><strong>settlement</strong> (<em>str</em>) – <cite>“interval”</cite> (default) or <cite>“average”</cite>.</p></li>
+<li><p><strong>payment_basis</strong> (<em>str</em>) – <cite>“per_event”</cite> (default), <cite>“per_hour”</cite>, or <cite>“monthly_share”</cite>. With
+<cite>“monthly_share”</cite>, the capacity price is $/kW-month and each event
+is paid its share <cite>bid_capacity_kW * duration_hours /
+monthly_called_capacity_kWh</cite> of the monthly payment.</p></li>
+<li><p><strong>payout</strong> (<em>float</em>) – Flat participation payment in $/kW of bid capacity.</p></li>
+<li><p><strong>payout_basis</strong> (<em>str</em>) – <cite>“per_event”</cite> (default), <cite>“per_hour”</cite>, or <cite>“monthly_share”</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>settlement</cite>, <cite>payment_basis</cite>, or <cite>payout_basis</cite> is not a
+    supported value.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.PaymentStructure.build_expression">
+<span class="sig-name descname"><span class="pre">build_expression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#PaymentStructure.build_expression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.PaymentStructure.build_expression" title="Permalink to this definition"></a></dt>
+<dd><p>Build the revenue expression for an event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float, numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</em>) – Load reduction in kW, as a realized value or a decision-variable
+expression, per interval or as a window mean. A list or tuple of
+pyomo expressions is also accepted.</p></li>
+<li><p><strong>region_x1</strong> (<em>float, list of float, or None</em>) – <cite>x1</cite> bound of the region to fix. Required for cvxpy. Optional for
+pyomo, where <cite>None</cite> lets the solver choose.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add components to. Required for pyomo.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>reduction_kW</cite> is cvxpy and <cite>region_x1</cite> matches no region, if
+    <cite>reduction_kW</cite> is pyomo and <cite>model</cite> is <cite>None</cite> or a given
+    <cite>region_x1</cite> matches no region.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If <cite>reduction_kW</cite> is not a supported type.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Warns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>UserWarning</strong> – If <cite>model</cite> already holds revenue built from a different payment
+structure.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><cite>(revenue, model)</cite> for numpy or scalar <cite>reduction_kW</cite>,
+<cite>(revenue_var, model)</cite> for pyomo, or
+<cite>(revenue_expr, constraints)</cite> for cvxpy.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.PaymentStructure.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#PaymentStructure.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.PaymentStructure.evaluate" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate realized revenue for a known reduction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float or numpy.ndarray</em>) – Load reduction in kW, as a window mean or per interval.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>event[“bid_capacity_kW”]</cite> is not positive, if no region
+    contains a resulting delivered ratio, or if a <cite>“per_hour”</cite> basis
+    is used and <cite>event</cite> has no <cite>“duration_hours”</cite>.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Revenue (positive) or penalty (negative) in USD.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.PaymentStructure.find_region">
+<span class="sig-name descname"><span class="pre">find_region</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">delivered_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#PaymentStructure.find_region"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.PaymentStructure.find_region" title="Permalink to this definition"></a></dt>
+<dd><p>Look up a payment region by delivered ratio or by its <cite>x1</cite> bound.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>delivered_ratio</strong> (<em>float or None</em>) – Delivered ratio contained in the region.</p></li>
+<li><p><strong>region_x1</strong> (<em>float or None</em>) – <cite>x1</cite> bound of the region.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If neither argument is given, if both are given and
+    <cite>delivered_ratio</cite> is outside the region identified by
+    <cite>region_x1</cite>, if no region matches, or if there are no regions.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The matching region.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.SimilarDaysBaseline">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">SimilarDaysBaseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_baseline_days</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_offset_hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_duration_hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_clip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.8,</span> <span class="pre">1.2)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_weekends</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_holidays</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_country</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'US'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_subdiv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_dates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_in_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#SimilarDaysBaseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.SimilarDaysBaseline" title="Permalink to this definition"></a></dt>
+<dd><p>Average-of-similar-days baseline with an optional day-of adjustment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_baseline_days</strong> (<em>int</em>) – Number of eligible baseline days to average. <cite>0</cite> disables baselining
+and yields an all-zero baseline.</p></li>
+<li><p><strong>adjustment_offset_hours</strong> (<em>int or None</em>) – Hours before the event start at which the day-of adjustment window
+begins. <cite>None</cite> disables the day-of adjustment.</p></li>
+<li><p><strong>adjustment_duration_hours</strong> (<em>int</em>) – Length of the day-of adjustment window in hours. Ignored when
+<cite>adjustment_offset_hours</cite> is <cite>None</cite>.</p></li>
+<li><p><strong>adjustment_clip</strong> (<em>tuple of float</em>) – <cite>(low, high)</cite> bounds on the day-of adjustment factor.</p></li>
+<li><p><strong>exclude_weekends</strong> (<em>bool</em>) – If <cite>True</cite>, drop Saturdays and Sundays from the candidate baseline days.</p></li>
+<li><p><strong>exclude_holidays</strong> (<em>bool</em>) – If <cite>True</cite>, drop holidays from the candidate baseline days.</p></li>
+<li><p><strong>holiday_country</strong> (<em>str or None</em>) – ISO 3166-1 country code passed to <cite>holidays.country_holidays</cite>.
+Defaults to <cite>“US”</cite>, as in PG&amp;E’s CBP. <cite>None</cite> uses only
+<cite>holiday_dates</cite>.</p></li>
+<li><p><strong>holiday_subdiv</strong> (<em>str or None</em>) – Subdivision code (e.g., <cite>“CA”</cite>) passed to <cite>holidays.country_holidays</cite>.</p></li>
+<li><p><strong>holiday_dates</strong> (<em>list or None</em>) – Additional dates to treat as holidays.</p></li>
+<li><p><strong>adjustment_in_model</strong> (<em>bool</em>) – If <cite>True</cite> and a <cite>model</cite> is given to <cite>calculate_event_baseline</cite>, add the day-of
+adjustment factor to the model as a fixed <cite>pyomo.environ.Var</cite>.</p></li>
+<li><p><strong>resolution</strong> (<em>str or None</em>) – Settlement interval width (e.g., <cite>“15m”</cite>, <cite>“1h”</cite>). <cite>None</cite> infers it
+from the data or model index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>n_baseline_days</cite> is negative, or if <cite>adjustment_offset_hours</cite> is
+    not <cite>None</cite> and <cite>adjustment_duration_hours</cite> is not positive or exceeds
+    <cite>adjustment_offset_hours</cite>.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.SimilarDaysBaseline.calculate_event_baseline">
+<span class="sig-name descname"><span class="pre">calculate_event_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_power_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#SimilarDaysBaseline.calculate_event_baseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.SimilarDaysBaseline.calculate_event_baseline" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the per-interval baseline power for a single event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Historical power consumption in kW, indexed by timestamp.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add baseline components to. <cite>None</cite> for ex-post use.</p></li>
+<li><p><strong>model_power_kW</strong> (<em>pyomo.environ.Var or None</em>) – Power decision variable over the optimization horizon. Required
+when <cite>model</cite> is given.</p></li>
+<li><p><strong>model_datetime_index</strong> (<em>pandas.DatetimeIndex or None</em>) – Timestamp of each entry of <cite>model_power_kW</cite>. Required when <cite>model</cite>
+is given.</p></li>
+<li><p><strong>varstr</strong> (<em>str or None</em>) – Name of the baseline <cite>Var</cite> created on <cite>model</cite>. Required when
+<cite>model</cite> is given.</p></li>
+<li><p><strong>adjustment_factor</strong> (<em>float or None</em>) – Day-of adjustment factor to apply as-is. <cite>None</cite> uses
+<cite>event[“adjustment_factor”]</cite> if set, otherwise calculates it with
+<cite>_adjustment_factor</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>model</cite> is given without <cite>model_power_kW</cite>,
+    <cite>model_datetime_index</cite>, and <cite>varstr</cite>, if a selected baseline day
+    has missing data, or if <cite>adjustment_factor</cite> is not positive or
+    differs from <cite>event[“adjustment_factor”]</cite>.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(baseline_kW, model)</cite>, where <cite>baseline_kW</cite> is the per-interval
+baseline in kW as a <cite>numpy.ndarray</cite> or an indexed
+<cite>pyomo.environ.Var</cite>, and <cite>model</cite> is <cite>None</cite> ex-post.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.SimilarDaysBaseline.select_days">
+<span class="sig-name descname"><span class="pre">select_days</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">candidate_days</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#SimilarDaysBaseline.select_days"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.SimilarDaysBaseline.select_days" title="Permalink to this definition"></a></dt>
+<dd><p>Select the baseline days to average for an event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>candidate_days</strong> (<em>list of pandas.Timestamp</em>) – Days proposed for this event’s baseline.</p></li>
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Historical power consumption in kW, indexed by timestamp.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If no eligible days remain after filtering.</p>
+</dd>
+<dt class="field-odd">Warns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>UserWarning</strong> – If fewer eligible days remain than <cite>n_baseline_days</cite>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>At most <cite>n_baseline_days</cite> days, most preferred first.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)">list</a> of <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Timestamp.html#pandas.Timestamp" title="(in pandas v3.0.6)">pandas.Timestamp</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.TopUsageDaysBaseline">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">TopUsageDaysBaseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_baseline_days</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_offset_hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_duration_hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_clip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.8,</span> <span class="pre">1.2)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_weekends</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_holidays</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_country</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'US'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_subdiv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_dates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_in_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#TopUsageDaysBaseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.TopUsageDaysBaseline" title="Permalink to this definition"></a></dt>
+<dd><p>Baseline that averages the highest-usage eligible days.</p>
+<p>Takes the same parameters as <cite>SimilarDaysBaseline</cite>.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.UnilateralInterruptionBaseline">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">UnilateralInterruptionBaseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">interruption_level_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#UnilateralInterruptionBaseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.UnilateralInterruptionBaseline" title="Permalink to this definition"></a></dt>
+<dd><p>Utility-controlled interruption enforced as an upper bound on power.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>interruption_level_kW</strong> (<em>float</em>) – Power level in kW the load is held at or below during an event.</p></li>
+<li><p><strong>resolution</strong> (<em>str or None</em>) – Settlement interval width (e.g., <cite>“15m”</cite>, <cite>“1h”</cite>). <cite>None</cite> infers it
+from the model index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>interruption_level_kW</cite> is negative.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.UnilateralInterruptionBaseline.calculate_event_baseline">
+<span class="sig-name descname"><span class="pre">calculate_event_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_power_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#UnilateralInterruptionBaseline.calculate_event_baseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.UnilateralInterruptionBaseline.calculate_event_baseline" title="Permalink to this definition"></a></dt>
+<dd><p>Constrain modeled power to the interruption level during an event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Unused.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block</em>) – Model to add the interruption constraint to.</p></li>
+<li><p><strong>model_power_kW</strong> (<em>pyomo.environ.Var</em>) – Power decision variable over the optimization horizon.</p></li>
+<li><p><strong>model_datetime_index</strong> (<em>pandas.DatetimeIndex</em>) – Timestamp of each entry of <cite>model_power_kW</cite>.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for the constraint created on <cite>model</cite>.</p></li>
+<li><p><strong>adjustment_factor</strong> (<em>float or None</em>) – Unused.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#NotImplementedError" title="(in Python v3.15)"><strong>NotImplementedError</strong></a> – If <cite>model</cite> is <cite>None</cite>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>model_power_kW</cite>, <cite>model_datetime_index</cite>, or <cite>varstr</cite> is
+    missing, or if the event window matches no entries of
+    <cite>model_datetime_index</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(baseline_kW, model)</cite>, where <cite>baseline_kW</cite> is
+<cite>interruption_level_kW</cite> repeated once per interval.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.add_event">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">add_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">events</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event_date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_hour</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration_hours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">notification_hours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_days</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bid_capacity_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">capacity_price</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">monthly_called_capacity_kWh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#add_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.add_event" title="Permalink to this definition"></a></dt>
+<dd><p>Append a demand response event to an events list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>events</strong> (<em>list of dict or None</em>) – Events list to append to. <cite>None</cite> starts a new list.</p></li>
+<li><p><strong>event_date</strong> (<em>datetime.date, datetime.datetime, or str</em>) – Calendar date of the event, in local time. A tz-aware value keeps its
+local wall-clock date and drops the time zone.</p></li>
+<li><p><strong>start_hour</strong> (<em>float</em>) – Hour of day (0-24) the event begins, in local wall-clock time.</p></li>
+<li><p><strong>duration_hours</strong> (<em>float</em>) – Length of the event in hours.</p></li>
+<li><p><strong>notification_hours</strong> (<em>float</em>) – Advance notice before the event in hours.</p></li>
+<li><p><strong>baseline_days</strong> (<em>list</em>) – Candidate baseline days for the event, in local time.</p></li>
+<li><p><strong>bid_capacity_kW</strong> (<em>float</em>) – Bid capacity in kW.</p></li>
+<li><p><strong>capacity_price</strong> (<em>float</em>) – Capacity price in $/kW.</p></li>
+<li><p><strong>adjustment_factor</strong> (<em>float or None</em>) – Day-of adjustment factor to apply as-is. <cite>None</cite> calculates it from
+historical data.</p></li>
+<li><p><strong>monthly_called_capacity_kWh</strong> (<em>float or None</em>) – Sum of called capacity in kWh over every event hour in the event’s
+month, used by the <cite>“monthly_share”</cite> basis. <cite>None</cite> sums it over the
+events passed to <cite>events_to_dataframe</cite> and the entry points.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>duration_hours</cite>, <cite>bid_capacity_kW</cite>, or a given
+    <cite>adjustment_factor</cite> or <cite>monthly_called_capacity_kWh</cite> is not positive,
+    <cite>notification_hours</cite> is negative, or <cite>baseline_days</cite> is empty.</p>
+</dd>
+<dt class="field-odd">Warns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>UserWarning</strong> – If <cite>capacity_price</cite> is zero.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>New list with the event appended. Each event dict has the keys</p>
+<ul class="simple">
+<li><p><cite>”event_date”</cite> : pandas.Timestamp, tz-naive</p></li>
+<li><p><cite>”start_hour”</cite> : float</p></li>
+<li><p><cite>”duration_hours”</cite> : float</p></li>
+<li><p><cite>”notification_hours”</cite> : float</p></li>
+<li><p><cite>”baseline_days”</cite> : list</p></li>
+<li><p><cite>”bid_capacity_kW”</cite> : float</p></li>
+<li><p><cite>”capacity_price”</cite> : float</p></li>
+<li><p><cite>”adjustment_factor”</cite> : float or None</p></li>
+<li><p><cite>”monthly_called_capacity_kWh”</cite> : float or None</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)">list</a> of <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.build_event_revenue">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">build_event_revenue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#build_event_revenue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.build_event_revenue" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate or build the demand response revenue for a single event.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul>
+<li><p><strong>power_kW</strong> (<em>numpy.ndarray, cvxpy.Expression, cvxpy.Variable, or pyomo.environ.Var</em>) – Power consumption in kW during the event window only.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict with the keys</p>
+<ul class="simple">
+<li><p><cite>“event_date”</cite> : pandas.Timestamp</p></li>
+<li><p><cite>“start_hour”</cite> : float</p></li>
+<li><p><cite>“duration_hours”</cite> : float</p></li>
+<li><p><cite>“notification_hours”</cite> : float</p></li>
+<li><p><cite>“baseline_days”</cite> : list</p></li>
+<li><p><cite>“bid_capacity_kW”</cite> : float</p></li>
+<li><p><cite>“capacity_price”</cite> : float</p></li>
+<li><p><cite>“adjustment_factor”</cite> : float or None</p></li>
+<li><p><cite>“monthly_called_capacity_kWh”</cite> : float or None</p></li>
+</ul>
+<p>as returned by <cite>add_event</cite>.</p>
+</li>
+<li><p><strong>baseline_kW</strong> (<em>float, numpy.ndarray, or pyomo.environ.Var</em>) – Baseline power in kW, as a single value or one value per interval.</p></li>
+<li><p><strong>payment_function</strong> (<em>PaymentStructure</em>) – Payment structure used to price the delivered reduction.</p></li>
+<li><p><strong>region_x1</strong> (<em>float, list of float, or None</em>) – <cite>x1</cite> bound of the region to fix. Required for cvxpy. Optional for
+pyomo, where <cite>None</cite> lets the solver choose.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add components to. Required for pyomo.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>power_kW</cite> is cvxpy and <cite>region_x1</cite> is <cite>None</cite>, or if the length of
+    <cite>baseline_kW</cite> does not match <cite>power_kW</cite>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If <cite>power_kW</cite> is not a supported type.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(revenue, model)</cite> for numpy <cite>power_kW</cite>, <cite>(revenue_var, model)</cite> for
+pyomo, or <cite>(revenue_expr, constraints)</cite> for cvxpy.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.build_pyomo_dr_revenue">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">build_pyomo_dr_revenue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datetime_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dr_event'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#build_pyomo_dr_revenue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.build_pyomo_dr_revenue" title="Permalink to this definition"></a></dt>
+<dd><p>Build demand response revenue on a pyomo model and net it into the
+model’s active objective.</p>
+<p>Revenue is subtracted from a minimization objective and added to a
+maximization objective, whatever the objective is named. If the model has
+no active objective, a minimization objective of <cite>-total_revenue</cite> is added
+as <cite>model.objective</cite> (or a unique variant of that name if taken).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>power_kW</strong> (<em>pyomo.environ.Var</em>) – Power decision variable over the optimization horizon.</p></li>
+<li><p><strong>datetime_index</strong> (<em>pandas.DatetimeIndex</em>) – Timestamp of each entry of <cite>power_kW</cite>.</p></li>
+<li><p><strong>events</strong> (<em>list of dict or pandas.DataFrame</em>) – Events from <cite>add_event</cite>.</p></li>
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Historical power consumption in kW, indexed by timestamp.</p></li>
+<li><p><strong>baseline_method</strong> (<em>BaselineMethod</em>) – Baseline method, e.g. <cite>SimilarDaysBaseline()</cite>.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block</em>) – Model to add components to.</p></li>
+<li><p><strong>payment_function</strong> (<em>PaymentStructure</em>) – Payment structure used to price the delivered reduction.</p></li>
+<li><p><strong>region_x1s</strong> (<em>dict or None</em>) – <cite>x1</cite> bound of the region to fix for each event, keyed by event date
+(e.g., <cite>{“2024-01-08”: 0.6}</cite>). Events not in the dict let the solver
+choose.</p></li>
+<li><p><strong>varstr_prefix</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If an event window matches no entries of <cite>datetime_index</cite>, if <cite>model</cite>
+    already has a component this call would create (e.g., from an earlier
+    call with the same <cite>varstr_prefix</cite>), or if <cite>model</cite> has more than one
+    active objective.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(total_revenue, model)</cite>, where <cite>total_revenue</cite> is a pyomo expression.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.calculate_dr_revenue">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">calculate_dr_revenue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dr_event'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#calculate_dr_revenue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.calculate_dr_revenue" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate or build demand response revenue across all events.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>power_kW</strong> (<em>pandas.Series, numpy.ndarray, or pyomo.environ.Var</em>) – Power consumption in kW, as realized data or a decision variable.</p></li>
+<li><p><strong>events</strong> (<em>list of dict or pandas.DataFrame</em>) – Events from <cite>add_event</cite>.</p></li>
+<li><p><strong>baseline_method</strong> (<em>BaselineMethod</em>) – Baseline method, e.g. <cite>SimilarDaysBaseline()</cite>.</p></li>
+<li><p><strong>payment_function</strong> (<em>PaymentStructure</em>) – Payment structure used to price the delivered reduction.</p></li>
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series or None</em>) – Historical power consumption in kW, indexed by timestamp. Required
+for pyomo.</p></li>
+<li><p><strong>datetime_index</strong> (<em>pandas.DatetimeIndex or None</em>) – Timestamp of each entry of <cite>power_kW</cite>. Required for pyomo and for a
+<cite>numpy.ndarray</cite> <cite>power_kW</cite>.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add components to. Required for pyomo.</p></li>
+<li><p><strong>region_x1s</strong> (<em>dict or None</em>) – <cite>x1</cite> bound of the region to fix for each event, keyed by event date
+(e.g., <cite>{“2024-01-08”: 0.6}</cite>). Events not in the dict let the solver
+choose. Only used for pyomo.</p></li>
+<li><p><strong>varstr_prefix</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#NotImplementedError" title="(in Python v3.15)"><strong>NotImplementedError</strong></a> – If <cite>power_kW</cite> is a cvxpy type.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – For pyomo, if <cite>datetime_index</cite>, <cite>historical_power_kW</cite>, or <cite>model</cite> is
+    missing, or if an event window matches no entries of
+    <cite>datetime_index</cite>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If <cite>power_kW</cite> is not a supported type.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(total_revenue, model)</cite>, where <cite>total_revenue</cite> is a float in USD for
+realized data or a pyomo expression for a decision variable.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.calculate_event_revenue">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">calculate_event_revenue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_function</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#calculate_event_revenue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.calculate_event_revenue" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate realized demand response revenue for a single event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Power consumption in kW, indexed by timestamp, covering the event and
+its baseline days.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict with the keys <cite>“event_date”</cite> (pandas.Timestamp),
+<cite>“start_hour”</cite> (float), <cite>“duration_hours”</cite> (float),
+<cite>“notification_hours”</cite> (float), <cite>“baseline_days”</cite> (list),
+<cite>“bid_capacity_kW”</cite> (float), <cite>“capacity_price”</cite> (float),
+<cite>“adjustment_factor”</cite> (float or None), and
+<cite>“monthly_called_capacity_kWh”</cite> (float or None), as returned by
+<cite>add_event</cite>.</p></li>
+<li><p><strong>baseline_method</strong> (<em>BaselineMethod</em>) – Baseline method, e.g. <cite>SimilarDaysBaseline()</cite>.</p></li>
+<li><p><strong>payment_function</strong> (<em>PaymentStructure</em>) – Payment structure used to price the delivered reduction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If any settlement interval of the event window has no data in
+    <cite>historical_power_kW</cite>.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><p>Event results with the keys</p>
+<ul class="simple">
+<li><p><cite>”event_date”</cite> : pandas.Timestamp</p></li>
+<li><p><cite>”baseline_kW”</cite> : float, event-window mean</p></li>
+<li><p><cite>”actual_kW”</cite> : float, event-window mean</p></li>
+<li><p><cite>”reduction_kW”</cite> : float, event-window mean</p></li>
+<li><p><cite>”delivered_ratio”</cite> : float</p></li>
+<li><p><cite>”revenue”</cite> : float, in USD</p></li>
+<li><p><cite>”baseline_profile_kW”</cite> : numpy.ndarray, per interval</p></li>
+<li><p><cite>”actual_profile_kW”</cite> : numpy.ndarray, per interval</p></li>
+<li><p><cite>”reduction_profile_kW”</cite> : numpy.ndarray, per interval</p></li>
+<li><p><cite>”interval_datetime”</cite> : pandas.DatetimeIndex, in the time zone of
+<cite>historical_power_kW.index</cite></p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.calculate_itemized_dr_revenue">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">calculate_itemized_dr_revenue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#calculate_itemized_dr_revenue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.calculate_itemized_dr_revenue" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate realized demand response revenue for each event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>power_kW</strong> (<em>pandas.Series or numpy.ndarray</em>) – Power consumption in kW.</p></li>
+<li><p><strong>events</strong> (<em>list of dict or pandas.DataFrame</em>) – Events from <cite>add_event</cite>.</p></li>
+<li><p><strong>baseline_method</strong> (<em>BaselineMethod</em>) – Baseline method, e.g. <cite>SimilarDaysBaseline()</cite>.</p></li>
+<li><p><strong>payment_function</strong> (<em>PaymentStructure</em>) – Payment structure used to price the delivered reduction.</p></li>
+<li><p><strong>datetime_index</strong> (<em>pandas.DatetimeIndex or None</em>) – Timestamp of each entry of <cite>power_kW</cite>. Required when <cite>power_kW</cite> is a
+<cite>numpy.ndarray</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>datetime_index</cite> is missing or mismatched for a <cite>numpy.ndarray</cite>
+    <cite>power_kW</cite>, or if an event window has no data.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(per_event_df, total_revenue)</cite>, where <cite>per_event_df</cite> has one row per
+event with the columns returned by <cite>calculate_event_revenue</cite> and
+<cite>total_revenue</cite> is in USD.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.events_to_dataframe">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">events_to_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">events</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#events_to_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.events_to_dataframe" title="Permalink to this definition"></a></dt>
+<dd><p>Convert an events list into a <cite>DataFrame</cite> sorted by event date.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>events</strong> (<em>list of dict or pandas.DataFrame</em>) – Events from <cite>add_event</cite>.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If two events in the same month give different
+    <cite>“monthly_called_capacity_kWh”</cite> values.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>One row per event, sorted by tz-naive local <cite>“event_date”</cite>, with missing
+<cite>“monthly_called_capacity_kWh”</cite> values filled in by
+<cite>_fill_monthly_called_capacity</cite>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.6)">pandas.DataFrame</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="costs.html" class="btn btn-neutral float-left" title="costs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="emissions.html" class="btn btn-neutral float-right" title="emissions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WE3Lab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -73,6 +73,7 @@
 <p class="caption" role="heading"><span class="caption-text">Code</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demandresponse.html">demandresponse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
@@ -140,6 +141,51 @@
 <li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.costs.parse_charge_key"><code class="docutils literal notranslate"><span class="pre">parse_charge_key()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="eeco.html#module-eeco.demandresponse">eeco.demandresponse module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.BaselineMethod"><code class="docutils literal notranslate"><span class="pre">BaselineMethod</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.BaselineMethod.calculate_event_baseline"><code class="docutils literal notranslate"><span class="pre">BaselineMethod.calculate_event_baseline()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.BaselineMethod.replace"><code class="docutils literal notranslate"><span class="pre">BaselineMethod.replace()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.CapacityEnergyPayment"><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.CapacityEnergyPayment.build_expression"><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment.build_expression()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.CapacityEnergyPayment.evaluate"><code class="docutils literal notranslate"><span class="pre">CapacityEnergyPayment.evaluate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.FixedLevelBaseline"><code class="docutils literal notranslate"><span class="pre">FixedLevelBaseline</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.FixedLevelBaseline.calculate_event_baseline"><code class="docutils literal notranslate"><span class="pre">FixedLevelBaseline.calculate_event_baseline()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.MarketIndexedPayment"><code class="docutils literal notranslate"><span class="pre">MarketIndexedPayment</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.MarketIndexedPayment.build_expression"><code class="docutils literal notranslate"><span class="pre">MarketIndexedPayment.build_expression()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.MarketIndexedPayment.evaluate"><code class="docutils literal notranslate"><span class="pre">MarketIndexedPayment.evaluate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.PaymentStructure"><code class="docutils literal notranslate"><span class="pre">PaymentStructure</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.PaymentStructure.build_expression"><code class="docutils literal notranslate"><span class="pre">PaymentStructure.build_expression()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.PaymentStructure.evaluate"><code class="docutils literal notranslate"><span class="pre">PaymentStructure.evaluate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.PaymentStructure.find_region"><code class="docutils literal notranslate"><span class="pre">PaymentStructure.find_region()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.SimilarDaysBaseline"><code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.SimilarDaysBaseline.calculate_event_baseline"><code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline.calculate_event_baseline()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.SimilarDaysBaseline.select_days"><code class="docutils literal notranslate"><span class="pre">SimilarDaysBaseline.select_days()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.TopUsageDaysBaseline"><code class="docutils literal notranslate"><span class="pre">TopUsageDaysBaseline</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.UnilateralInterruptionBaseline"><code class="docutils literal notranslate"><span class="pre">UnilateralInterruptionBaseline</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="eeco.html#eeco.demandresponse.UnilateralInterruptionBaseline.calculate_event_baseline"><code class="docutils literal notranslate"><span class="pre">UnilateralInterruptionBaseline.calculate_event_baseline()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.add_event"><code class="docutils literal notranslate"><span class="pre">add_event()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.build_event_revenue"><code class="docutils literal notranslate"><span class="pre">build_event_revenue()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.build_pyomo_dr_revenue"><code class="docutils literal notranslate"><span class="pre">build_pyomo_dr_revenue()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.calculate_dr_revenue"><code class="docutils literal notranslate"><span class="pre">calculate_dr_revenue()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.calculate_event_revenue"><code class="docutils literal notranslate"><span class="pre">calculate_event_revenue()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.calculate_itemized_dr_revenue"><code class="docutils literal notranslate"><span class="pre">calculate_itemized_dr_revenue()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.demandresponse.events_to_dataframe"><code class="docutils literal notranslate"><span class="pre">events_to_dataframe()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="eeco.html#module-eeco.emissions">eeco.emissions module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.emissions.calculate_grid_emissions"><code class="docutils literal notranslate"><span class="pre">calculate_grid_emissions()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.emissions.get_carbon_intensity"><code class="docutils literal notranslate"><span class="pre">get_carbon_intensity()</span></code></a></li>
@@ -162,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.utils.check_indexed_pyomo_type"><code class="docutils literal notranslate"><span class="pre">check_indexed_pyomo_type()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.utils.check_nonindexed_pyomo_type"><code class="docutils literal notranslate"><span class="pre">check_nonindexed_pyomo_type()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.utils.check_nonindexed_python_type"><code class="docutils literal notranslate"><span class="pre">check_nonindexed_python_type()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.utils.check_pandas_type"><code class="docutils literal notranslate"><span class="pre">check_pandas_type()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.utils.check_simultaneous_import_export"><code class="docutils literal notranslate"><span class="pre">check_simultaneous_import_export()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.utils.convert_utc_to_timezone"><code class="docutils literal notranslate"><span class="pre">convert_utc_to_timezone()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eeco.html#eeco.utils.create_pyomo_model_index_from_dict"><code class="docutils literal notranslate"><span class="pre">create_pyomo_model_index_from_dict()</span></code></a></li>

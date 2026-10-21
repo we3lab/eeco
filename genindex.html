@@ -72,6 +72,7 @@
 <p class="caption" role="heading"><span class="caption-text">Code</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demandresponse.html">demandresponse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
@@ -110,6 +111,7 @@
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#I"><strong>I</strong></a>
  | <a href="#M"><strong>M</strong></a>
@@ -117,10 +119,16 @@
  | <a href="#P"><strong>P</strong></a>
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
  
 </div>
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="demandresponse.html#eeco.demandresponse.add_event">add_event() (in module eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.add_event">[1]</a>
+</li>
+  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="costs.html#eeco.costs.add_to_charge_array">add_to_charge_array() (in module eeco.costs)</a>, <a href="eeco.html#eeco.costs.add_to_charge_array">[1]</a>
 </li>
@@ -130,7 +138,23 @@
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="demandresponse.html#eeco.demandresponse.BaselineMethod">BaselineMethod (class in eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.BaselineMethod">[1]</a>
+</li>
+      <li><a href="demandresponse.html#eeco.demandresponse.build_event_revenue">build_event_revenue() (in module eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.build_event_revenue">[1]</a>
+</li>
+      <li><a href="demandresponse.html#eeco.demandresponse.CapacityEnergyPayment.build_expression">build_expression() (eeco.demandresponse.CapacityEnergyPayment method)</a>, <a href="eeco.html#eeco.demandresponse.CapacityEnergyPayment.build_expression">[1]</a>
+
+      <ul>
+        <li><a href="demandresponse.html#eeco.demandresponse.MarketIndexedPayment.build_expression">(eeco.demandresponse.MarketIndexedPayment method)</a>, <a href="eeco.html#eeco.demandresponse.MarketIndexedPayment.build_expression">[1]</a>
+</li>
+        <li><a href="demandresponse.html#eeco.demandresponse.PaymentStructure.build_expression">(eeco.demandresponse.PaymentStructure method)</a>, <a href="eeco.html#eeco.demandresponse.PaymentStructure.build_expression">[1]</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="costs.html#eeco.costs.build_pyomo_costing">build_pyomo_costing() (in module eeco.costs)</a>, <a href="eeco.html#eeco.costs.build_pyomo_costing">[1]</a>
+</li>
+      <li><a href="demandresponse.html#eeco.demandresponse.build_pyomo_dr_revenue">build_pyomo_dr_revenue() (in module eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.build_pyomo_dr_revenue">[1]</a>
 </li>
   </ul></td>
 </tr></table>
@@ -142,7 +166,21 @@
 </li>
       <li><a href="costs.html#eeco.costs.calculate_demand_cost">calculate_demand_cost() (in module eeco.costs)</a>, <a href="eeco.html#eeco.costs.calculate_demand_cost">[1]</a>
 </li>
+      <li><a href="demandresponse.html#eeco.demandresponse.calculate_dr_revenue">calculate_dr_revenue() (in module eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.calculate_dr_revenue">[1]</a>
+</li>
       <li><a href="costs.html#eeco.costs.calculate_energy_cost">calculate_energy_cost() (in module eeco.costs)</a>, <a href="eeco.html#eeco.costs.calculate_energy_cost">[1]</a>
+</li>
+      <li><a href="demandresponse.html#eeco.demandresponse.BaselineMethod.calculate_event_baseline">calculate_event_baseline() (eeco.demandresponse.BaselineMethod method)</a>, <a href="eeco.html#eeco.demandresponse.BaselineMethod.calculate_event_baseline">[1]</a>
+
+      <ul>
+        <li><a href="demandresponse.html#eeco.demandresponse.FixedLevelBaseline.calculate_event_baseline">(eeco.demandresponse.FixedLevelBaseline method)</a>, <a href="eeco.html#eeco.demandresponse.FixedLevelBaseline.calculate_event_baseline">[1]</a>
+</li>
+        <li><a href="demandresponse.html#eeco.demandresponse.SimilarDaysBaseline.calculate_event_baseline">(eeco.demandresponse.SimilarDaysBaseline method)</a>, <a href="eeco.html#eeco.demandresponse.SimilarDaysBaseline.calculate_event_baseline">[1]</a>
+</li>
+        <li><a href="demandresponse.html#eeco.demandresponse.UnilateralInterruptionBaseline.calculate_event_baseline">(eeco.demandresponse.UnilateralInterruptionBaseline method)</a>, <a href="eeco.html#eeco.demandresponse.UnilateralInterruptionBaseline.calculate_event_baseline">[1]</a>
+</li>
+      </ul></li>
+      <li><a href="demandresponse.html#eeco.demandresponse.calculate_event_revenue">calculate_event_revenue() (in module eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.calculate_event_revenue">[1]</a>
 </li>
       <li><a href="costs.html#eeco.costs.calculate_export_revenue">calculate_export_revenue() (in module eeco.costs)</a>, <a href="eeco.html#eeco.costs.calculate_export_revenue">[1]</a>
 </li>
@@ -150,14 +188,18 @@
 </li>
       <li><a href="costs.html#eeco.costs.calculate_itemized_cost">calculate_itemized_cost() (in module eeco.costs)</a>, <a href="eeco.html#eeco.costs.calculate_itemized_cost">[1]</a>
 </li>
+      <li><a href="demandresponse.html#eeco.demandresponse.calculate_itemized_dr_revenue">calculate_itemized_dr_revenue() (in module eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.calculate_itemized_dr_revenue">[1]</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="demandresponse.html#eeco.demandresponse.CapacityEnergyPayment">CapacityEnergyPayment (class in eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.CapacityEnergyPayment">[1]</a>
+</li>
       <li><a href="eeco.html#eeco.utils.check_cvx_type">check_cvx_type() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.check_cvx_type">[1]</a>
 </li>
       <li><a href="costs.html#eeco.costs.check_import_export_dict">check_import_export_dict() (in module eeco.costs)</a>, <a href="eeco.html#eeco.costs.check_import_export_dict">[1]</a>
 </li>
       <li><a href="eeco.html#eeco.utils.check_indexed_np_array">check_indexed_np_array() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.check_indexed_np_array">[1]</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="eeco.html#eeco.utils.check_indexed_pyomo_type">check_indexed_pyomo_type() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.check_indexed_pyomo_type">[1]</a>
 </li>
       <li><a href="costs.html#eeco.costs.check_linear_decomposition_dict">check_linear_decomposition_dict() (in module eeco.costs)</a>, <a href="eeco.html#eeco.costs.check_linear_decomposition_dict">[1]</a>
@@ -165,6 +207,8 @@
       <li><a href="eeco.html#eeco.utils.check_nonindexed_pyomo_type">check_nonindexed_pyomo_type() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.check_nonindexed_pyomo_type">[1]</a>
 </li>
       <li><a href="eeco.html#eeco.utils.check_nonindexed_python_type">check_nonindexed_python_type() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.check_nonindexed_python_type">[1]</a>
+</li>
+      <li><a href="eeco.html#eeco.utils.check_pandas_type">check_pandas_type() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.check_pandas_type">[1]</a>
 </li>
       <li><a href="eeco.html#eeco.utils.check_simultaneous_import_export">check_simultaneous_import_export() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.check_simultaneous_import_export">[1]</a>
 </li>
@@ -211,14 +255,19 @@
 </li>
       </ul></li>
       <li>
+    eeco.demandresponse
+
+      <ul>
+        <li><a href="demandresponse.html#module-eeco.demandresponse">module</a>, <a href="eeco.html#module-eeco.demandresponse">[1]</a>
+</li>
+      </ul></li>
+      <li>
     eeco.emissions
 
       <ul>
         <li><a href="eeco.html#module-eeco.emissions">module</a>, <a href="emissions.html#module-eeco.emissions">[1]</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     eeco.metrics
 
@@ -226,6 +275,8 @@
         <li><a href="eeco.html#module-eeco.metrics">module</a>, <a href="metrics.html#module-eeco.metrics">[1]</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     eeco.units
 
@@ -241,6 +292,28 @@
 </li>
       </ul></li>
       <li><a href="eeco.html#eeco.metrics.energy_capacity">energy_capacity() (in module eeco.metrics)</a>, <a href="metrics.html#eeco.metrics.energy_capacity">[1]</a>
+</li>
+      <li><a href="demandresponse.html#eeco.demandresponse.CapacityEnergyPayment.evaluate">evaluate() (eeco.demandresponse.CapacityEnergyPayment method)</a>, <a href="eeco.html#eeco.demandresponse.CapacityEnergyPayment.evaluate">[1]</a>
+
+      <ul>
+        <li><a href="demandresponse.html#eeco.demandresponse.MarketIndexedPayment.evaluate">(eeco.demandresponse.MarketIndexedPayment method)</a>, <a href="eeco.html#eeco.demandresponse.MarketIndexedPayment.evaluate">[1]</a>
+</li>
+        <li><a href="demandresponse.html#eeco.demandresponse.PaymentStructure.evaluate">(eeco.demandresponse.PaymentStructure method)</a>, <a href="eeco.html#eeco.demandresponse.PaymentStructure.evaluate">[1]</a>
+</li>
+      </ul></li>
+      <li><a href="demandresponse.html#eeco.demandresponse.events_to_dataframe">events_to_dataframe() (in module eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.events_to_dataframe">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="demandresponse.html#eeco.demandresponse.PaymentStructure.find_region">find_region() (eeco.demandresponse.PaymentStructure method)</a>, <a href="eeco.html#eeco.demandresponse.PaymentStructure.find_region">[1]</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="demandresponse.html#eeco.demandresponse.FixedLevelBaseline">FixedLevelBaseline (class in eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.FixedLevelBaseline">[1]</a>
 </li>
   </ul></td>
 </tr></table>
@@ -298,6 +371,8 @@
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="demandresponse.html#eeco.demandresponse.MarketIndexedPayment">MarketIndexedPayment (class in eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.MarketIndexedPayment">[1]</a>
+</li>
       <li><a href="eeco.html#eeco.utils.max">max() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.max">[1]</a>
 </li>
       <li><a href="eeco.html#eeco.utils.max_pos">max_pos() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.max_pos">[1]</a>
@@ -309,6 +384,8 @@
         <li><a href="eeco.html#module-eeco">eeco</a>
 </li>
         <li><a href="costs.html#module-eeco.costs">eeco.costs</a>, <a href="eeco.html#module-eeco.costs">[1]</a>
+</li>
+        <li><a href="demandresponse.html#module-eeco.demandresponse">eeco.demandresponse</a>, <a href="eeco.html#module-eeco.demandresponse">[1]</a>
 </li>
         <li><a href="eeco.html#module-eeco.emissions">eeco.emissions</a>, <a href="emissions.html#module-eeco.emissions">[1]</a>
 </li>
@@ -341,11 +418,13 @@
 </li>
       <li><a href="costs.html#eeco.costs.parametrize_rate_data">parametrize_rate_data() (in module eeco.costs)</a>, <a href="eeco.html#eeco.costs.parametrize_rate_data">[1]</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="costs.html#eeco.costs.parse_charge_key">parse_charge_key() (in module eeco.costs)</a>, <a href="eeco.html#eeco.costs.parse_charge_key">[1]</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="eeco.html#eeco.utils.parse_freq">parse_freq() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.parse_freq">[1]</a>
+</li>
+      <li><a href="demandresponse.html#eeco.demandresponse.PaymentStructure">PaymentStructure (class in eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.PaymentStructure">[1]</a>
 </li>
       <li><a href="eeco.html#eeco.metrics.power_capacity">power_capacity() (in module eeco.metrics)</a>, <a href="metrics.html#eeco.metrics.power_capacity">[1]</a>
 </li>
@@ -354,6 +433,10 @@
 
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="demandresponse.html#eeco.demandresponse.BaselineMethod.replace">replace() (eeco.demandresponse.BaselineMethod method)</a>, <a href="eeco.html#eeco.demandresponse.BaselineMethod.replace">[1]</a>
+</li>
+  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="eeco.html#eeco.metrics.roundtrip_efficiency">roundtrip_efficiency() (in module eeco.metrics)</a>, <a href="metrics.html#eeco.metrics.roundtrip_efficiency">[1]</a>
 </li>
@@ -365,11 +448,31 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="eeco.html#eeco.utils.sanitize_varstr">sanitize_varstr() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.sanitize_varstr">[1]</a>
 </li>
+      <li><a href="demandresponse.html#eeco.demandresponse.SimilarDaysBaseline.select_days">select_days() (eeco.demandresponse.SimilarDaysBaseline method)</a>, <a href="eeco.html#eeco.demandresponse.SimilarDaysBaseline.select_days">[1]</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="eeco.html#eeco.units.set_sig_figs">set_sig_figs() (in module eeco.units)</a>, <a href="units.html#eeco.units.set_sig_figs">[1]</a>
 </li>
+      <li><a href="demandresponse.html#eeco.demandresponse.SimilarDaysBaseline">SimilarDaysBaseline (class in eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.SimilarDaysBaseline">[1]</a>
+</li>
       <li><a href="eeco.html#eeco.utils.sum">sum() (in module eeco.utils)</a>, <a href="utils.html#eeco.utils.sum">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="demandresponse.html#eeco.demandresponse.TopUsageDaysBaseline">TopUsageDaysBaseline (class in eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.TopUsageDaysBaseline">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="demandresponse.html#eeco.demandresponse.UnilateralInterruptionBaseline">UnilateralInterruptionBaseline (class in eeco.demandresponse)</a>, <a href="eeco.html#eeco.demandresponse.UnilateralInterruptionBaseline">[1]</a>
 </li>
   </ul></td>
 </tr></table>

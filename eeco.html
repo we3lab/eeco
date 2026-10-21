@@ -73,6 +73,7 @@
 <p class="caption" role="heading"><span class="caption-text">Code</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demandresponse.html">demandresponse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="emissions.html">emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="metrics.html">metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="units.html">units</a></li>
@@ -1163,6 +1164,829 @@ parametrized charges and windows</p>
 </dd></dl>
 
 </section>
+<section id="module-eeco.demandresponse">
+<span id="eeco-demandresponse-module"></span><h2>eeco.demandresponse module<a class="headerlink" href="#module-eeco.demandresponse" title="Permalink to this heading"></a></h2>
+<p>Calculate incentive-based demand response revenue.</p>
+<p>See <a class="reference internal" href="demandresponse.html"><span class="doc">demandresponse</span></a> for a description of the module.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.BaselineMethod">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">BaselineMethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#BaselineMethod"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.BaselineMethod" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></a></p>
+<p>Abstract base for demand response baseline methods.</p>
+<p>Subclasses implement <cite>calculate_event_baseline</cite>. Use <cite>replace</cite> to derive
+a variant with some settings changed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>resolution</strong> (<em>str or None</em>) – Settlement interval width (e.g., <cite>“15m”</cite>, <cite>“1h”</cite>). <cite>None</cite> infers it
+from the data or model index.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.BaselineMethod.calculate_event_baseline">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">calculate_event_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_power_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#BaselineMethod.calculate_event_baseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.BaselineMethod.calculate_event_baseline" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the per-interval baseline power for a single event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Historical power consumption in kW, indexed by timestamp.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add baseline components to. <cite>None</cite> for ex-post use.</p></li>
+<li><p><strong>model_power_kW</strong> (<em>pyomo.environ.Var or None</em>) – Power decision variable over the optimization horizon.</p></li>
+<li><p><strong>model_datetime_index</strong> (<em>pandas.DatetimeIndex or None</em>) – Timestamp of each entry of <cite>model_power_kW</cite>.</p></li>
+<li><p><strong>varstr</strong> (<em>str or None</em>) – Name prefix for components created on <cite>model</cite>.</p></li>
+<li><p><strong>adjustment_factor</strong> (<em>float or None</em>) – Day-of adjustment factor to apply as-is, for methods that use one.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><cite>(baseline_kW, model)</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.BaselineMethod.replace">
+<span class="sig-name descname"><span class="pre">replace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">changes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#BaselineMethod.replace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.BaselineMethod.replace" title="Permalink to this definition"></a></dt>
+<dd><p>Return a new instance with some settings changed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>**changes</strong> – Constructor arguments to override. Unspecified settings keep this
+instance’s values.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>New instance of the same class; <cite>self</cite> is unchanged.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#eeco.demandresponse.BaselineMethod" title="eeco.demandresponse.BaselineMethod">BaselineMethod</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If a key is not a constructor argument.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the resulting settings fail constructor validation.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.CapacityEnergyPayment">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">CapacityEnergyPayment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">regions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">energy_price</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">payment_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#CapacityEnergyPayment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.CapacityEnergyPayment" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#eeco.demandresponse.PaymentStructure" title="eeco.demandresponse.PaymentStructure"><code class="xref py py-class docutils literal notranslate"><span class="pre">PaymentStructure</span></code></a></p>
+<p>Piecewise-linear capacity payment plus a flat payment per kWh curtailed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>regions</strong> (<em>list of dict or None</em>) – Capacity payment schedule, as for <cite>PaymentStructure</cite>.</p></li>
+<li><p><strong>energy_price</strong> (<em>float</em>) – Energy payment rate in $/kWh.</p></li>
+<li><p><strong>**payment_kwargs</strong> – Keyword arguments passed to <cite>PaymentStructure</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.CapacityEnergyPayment.build_expression">
+<span class="sig-name descname"><span class="pre">build_expression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#CapacityEnergyPayment.build_expression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.CapacityEnergyPayment.build_expression" title="Permalink to this definition"></a></dt>
+<dd><p>Build the capacity and energy revenue expression for an event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float, numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</em>) – Load reduction in kW, as a realized value or a decision-variable
+expression, per interval or as a window mean. A list or tuple of
+pyomo expressions is also accepted.</p></li>
+<li><p><strong>region_x1</strong> (<em>float, list of float, or None</em>) – <cite>x1</cite> bound of the region to fix. Required for cvxpy.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add components to. Required for pyomo.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – In the cases listed for <cite>PaymentStructure.build_expression</cite>, or if
+    <cite>event</cite> has no <cite>“duration_hours”</cite>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If <cite>reduction_kW</cite> is not a supported type.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(revenue, model)</cite> for numpy or scalar <cite>reduction_kW</cite>,
+<cite>(total_revenue_var, model)</cite> for pyomo, or
+<cite>(revenue_expr, constraints)</cite> for cvxpy.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.CapacityEnergyPayment.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#CapacityEnergyPayment.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.CapacityEnergyPayment.evaluate" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate realized capacity and energy revenue for a known reduction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float or numpy.ndarray</em>) – Load reduction in kW, as a window mean or per interval.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – In the cases listed for <cite>PaymentStructure.evaluate</cite>, or if
+    <cite>event</cite> has no <cite>“duration_hours”</cite>.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Revenue (positive) or penalty (negative) in USD.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.FixedLevelBaseline">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">FixedLevelBaseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">firm_level_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#FixedLevelBaseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.FixedLevelBaseline" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#eeco.demandresponse.BaselineMethod" title="eeco.demandresponse.BaselineMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaselineMethod</span></code></a></p>
+<p>Baseline fixed at a contracted firm service level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>firm_level_kW</strong> (<em>float</em>) – Contracted firm demand level in kW.</p></li>
+<li><p><strong>resolution</strong> (<em>str or None</em>) – Settlement interval width (e.g., <cite>“15m”</cite>, <cite>“1h”</cite>). <cite>None</cite> infers it
+from the data or model index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>firm_level_kW</cite> is negative.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.FixedLevelBaseline.calculate_event_baseline">
+<span class="sig-name descname"><span class="pre">calculate_event_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_power_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#FixedLevelBaseline.calculate_event_baseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.FixedLevelBaseline.calculate_event_baseline" title="Permalink to this definition"></a></dt>
+<dd><p>Return the firm service level as a flat per-interval baseline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Historical power consumption in kW. Only its index is used, to
+infer the interval width.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Returned unchanged. No components are added.</p></li>
+<li><p><strong>model_power_kW</strong> (<em>pyomo.environ.Var or None</em>) – Unused.</p></li>
+<li><p><strong>model_datetime_index</strong> (<em>pandas.DatetimeIndex or None</em>) – Used only to infer the interval width.</p></li>
+<li><p><strong>varstr</strong> (<em>str or None</em>) – Unused.</p></li>
+<li><p><strong>adjustment_factor</strong> (<em>float or None</em>) – Unused.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><cite>(baseline_kW, model)</cite>, where <cite>baseline_kW</cite> is <cite>firm_level_kW</cite>
+repeated once per interval.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.MarketIndexedPayment">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">MarketIndexedPayment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">regions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">price_lookup</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">payment_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#MarketIndexedPayment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.MarketIndexedPayment" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#eeco.demandresponse.PaymentStructure" title="eeco.demandresponse.PaymentStructure"><code class="xref py py-class docutils literal notranslate"><span class="pre">PaymentStructure</span></code></a></p>
+<p>Piecewise-linear capacity payment priced from a market index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>regions</strong> (<em>list of dict or None</em>) – Payment schedule, as for <cite>PaymentStructure</cite>.</p></li>
+<li><p><strong>price_lookup</strong> (<em>callable</em>) – Function <cite>price_lookup(event) -&gt; float</cite> returning the capacity price
+in $/kW for an event.</p></li>
+<li><p><strong>**payment_kwargs</strong> – Keyword arguments passed to <cite>PaymentStructure</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.MarketIndexedPayment.build_expression">
+<span class="sig-name descname"><span class="pre">build_expression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#MarketIndexedPayment.build_expression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.MarketIndexedPayment.build_expression" title="Permalink to this definition"></a></dt>
+<dd><p>Build the revenue expression for an event at the market price.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float, numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</em>) – Load reduction in kW, as a realized value or a decision-variable
+expression, per interval or as a window mean. A list or tuple of
+pyomo expressions is also accepted.</p></li>
+<li><p><strong>region_x1</strong> (<em>float, list of float, or None</em>) – <cite>x1</cite> bound of the region to fix. Required for cvxpy.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add components to. Required for pyomo.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – In the cases listed for <cite>PaymentStructure.build_expression</cite>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If <cite>reduction_kW</cite> is not a supported type.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>As for <cite>PaymentStructure.build_expression</cite>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.MarketIndexedPayment.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#MarketIndexedPayment.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.MarketIndexedPayment.evaluate" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate realized revenue at the market price for a known reduction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float or numpy.ndarray</em>) – Load reduction in kW, as a window mean or per interval.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – In the cases listed for <cite>PaymentStructure.evaluate</cite>.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Revenue (positive) or penalty (negative) in USD.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.PaymentStructure">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">PaymentStructure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">regions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">settlement</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'interval'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'per_event'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payout_basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'per_event'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#PaymentStructure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.PaymentStructure" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Piecewise-linear capacity payment with an optional flat payout.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>regions</strong> (<em>list of dict or None</em>) – Payment schedule. Each dict has float values under the keys <cite>“x1”</cite>,
+<cite>“x2”</cite> (delivered ratio bounds) and <cite>“y1”</cite>, <cite>“y2”</cite> (payment ratios at
+those bounds). Bounds may be <cite>“Infinity”</cite>/<cite>”-Infinity”</cite> strings; a
+region with an infinite bound pays a flat ratio from its finite end.
+Regions whose lowest <cite>x1</cite> is finite cannot cover a negative delivered
+ratio, and in optimization they force <cite>reduction &gt;= x1 * bid</cite>.
+<cite>None</cite> or <cite>[]</cite> means no capacity payment.</p></li>
+<li><p><strong>settlement</strong> (<em>str</em>) – <cite>“interval”</cite> (default) or <cite>“average”</cite>.</p></li>
+<li><p><strong>payment_basis</strong> (<em>str</em>) – <cite>“per_event”</cite> (default), <cite>“per_hour”</cite>, or <cite>“monthly_share”</cite>. With
+<cite>“monthly_share”</cite>, the capacity price is $/kW-month and each event
+is paid its share <cite>bid_capacity_kW * duration_hours /
+monthly_called_capacity_kWh</cite> of the monthly payment.</p></li>
+<li><p><strong>payout</strong> (<em>float</em>) – Flat participation payment in $/kW of bid capacity.</p></li>
+<li><p><strong>payout_basis</strong> (<em>str</em>) – <cite>“per_event”</cite> (default), <cite>“per_hour”</cite>, or <cite>“monthly_share”</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>settlement</cite>, <cite>payment_basis</cite>, or <cite>payout_basis</cite> is not a
+    supported value.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.PaymentStructure.build_expression">
+<span class="sig-name descname"><span class="pre">build_expression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#PaymentStructure.build_expression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.PaymentStructure.build_expression" title="Permalink to this definition"></a></dt>
+<dd><p>Build the revenue expression for an event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float, numpy.ndarray, cvxpy.Expression, or pyomo.environ.Var</em>) – Load reduction in kW, as a realized value or a decision-variable
+expression, per interval or as a window mean. A list or tuple of
+pyomo expressions is also accepted.</p></li>
+<li><p><strong>region_x1</strong> (<em>float, list of float, or None</em>) – <cite>x1</cite> bound of the region to fix. Required for cvxpy. Optional for
+pyomo, where <cite>None</cite> lets the solver choose.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add components to. Required for pyomo.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>reduction_kW</cite> is cvxpy and <cite>region_x1</cite> matches no region, if
+    <cite>reduction_kW</cite> is pyomo and <cite>model</cite> is <cite>None</cite> or a given
+    <cite>region_x1</cite> matches no region.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If <cite>reduction_kW</cite> is not a supported type.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Warns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>UserWarning</strong> – If <cite>model</cite> already holds revenue built from a different payment
+structure.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><cite>(revenue, model)</cite> for numpy or scalar <cite>reduction_kW</cite>,
+<cite>(revenue_var, model)</cite> for pyomo, or
+<cite>(revenue_expr, constraints)</cite> for cvxpy.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.PaymentStructure.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_kW</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#PaymentStructure.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.PaymentStructure.evaluate" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate realized revenue for a known reduction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>reduction_kW</strong> (<em>float or numpy.ndarray</em>) – Load reduction in kW, as a window mean or per interval.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>event[“bid_capacity_kW”]</cite> is not positive, if no region
+    contains a resulting delivered ratio, or if a <cite>“per_hour”</cite> basis
+    is used and <cite>event</cite> has no <cite>“duration_hours”</cite>.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Revenue (positive) or penalty (negative) in USD.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.PaymentStructure.find_region">
+<span class="sig-name descname"><span class="pre">find_region</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">delivered_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#PaymentStructure.find_region"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.PaymentStructure.find_region" title="Permalink to this definition"></a></dt>
+<dd><p>Look up a payment region by delivered ratio or by its <cite>x1</cite> bound.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>delivered_ratio</strong> (<em>float or None</em>) – Delivered ratio contained in the region.</p></li>
+<li><p><strong>region_x1</strong> (<em>float or None</em>) – <cite>x1</cite> bound of the region.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If neither argument is given, if both are given and
+    <cite>delivered_ratio</cite> is outside the region identified by
+    <cite>region_x1</cite>, if no region matches, or if there are no regions.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The matching region.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.SimilarDaysBaseline">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">SimilarDaysBaseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_baseline_days</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_offset_hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_duration_hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_clip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.8,</span> <span class="pre">1.2)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_weekends</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_holidays</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_country</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'US'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_subdiv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_dates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_in_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#SimilarDaysBaseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.SimilarDaysBaseline" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#eeco.demandresponse.BaselineMethod" title="eeco.demandresponse.BaselineMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaselineMethod</span></code></a></p>
+<p>Average-of-similar-days baseline with an optional day-of adjustment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_baseline_days</strong> (<em>int</em>) – Number of eligible baseline days to average. <cite>0</cite> disables baselining
+and yields an all-zero baseline.</p></li>
+<li><p><strong>adjustment_offset_hours</strong> (<em>int or None</em>) – Hours before the event start at which the day-of adjustment window
+begins. <cite>None</cite> disables the day-of adjustment.</p></li>
+<li><p><strong>adjustment_duration_hours</strong> (<em>int</em>) – Length of the day-of adjustment window in hours. Ignored when
+<cite>adjustment_offset_hours</cite> is <cite>None</cite>.</p></li>
+<li><p><strong>adjustment_clip</strong> (<em>tuple of float</em>) – <cite>(low, high)</cite> bounds on the day-of adjustment factor.</p></li>
+<li><p><strong>exclude_weekends</strong> (<em>bool</em>) – If <cite>True</cite>, drop Saturdays and Sundays from the candidate baseline days.</p></li>
+<li><p><strong>exclude_holidays</strong> (<em>bool</em>) – If <cite>True</cite>, drop holidays from the candidate baseline days.</p></li>
+<li><p><strong>holiday_country</strong> (<em>str or None</em>) – ISO 3166-1 country code passed to <cite>holidays.country_holidays</cite>.
+Defaults to <cite>“US”</cite>, as in PG&amp;E’s CBP. <cite>None</cite> uses only
+<cite>holiday_dates</cite>.</p></li>
+<li><p><strong>holiday_subdiv</strong> (<em>str or None</em>) – Subdivision code (e.g., <cite>“CA”</cite>) passed to <cite>holidays.country_holidays</cite>.</p></li>
+<li><p><strong>holiday_dates</strong> (<em>list or None</em>) – Additional dates to treat as holidays.</p></li>
+<li><p><strong>adjustment_in_model</strong> (<em>bool</em>) – If <cite>True</cite> and a <cite>model</cite> is given to <cite>calculate_event_baseline</cite>, add the day-of
+adjustment factor to the model as a fixed <cite>pyomo.environ.Var</cite>.</p></li>
+<li><p><strong>resolution</strong> (<em>str or None</em>) – Settlement interval width (e.g., <cite>“15m”</cite>, <cite>“1h”</cite>). <cite>None</cite> infers it
+from the data or model index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>n_baseline_days</cite> is negative, or if <cite>adjustment_offset_hours</cite> is
+    not <cite>None</cite> and <cite>adjustment_duration_hours</cite> is not positive or exceeds
+    <cite>adjustment_offset_hours</cite>.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.SimilarDaysBaseline.calculate_event_baseline">
+<span class="sig-name descname"><span class="pre">calculate_event_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_power_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#SimilarDaysBaseline.calculate_event_baseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.SimilarDaysBaseline.calculate_event_baseline" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the per-interval baseline power for a single event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Historical power consumption in kW, indexed by timestamp.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add baseline components to. <cite>None</cite> for ex-post use.</p></li>
+<li><p><strong>model_power_kW</strong> (<em>pyomo.environ.Var or None</em>) – Power decision variable over the optimization horizon. Required
+when <cite>model</cite> is given.</p></li>
+<li><p><strong>model_datetime_index</strong> (<em>pandas.DatetimeIndex or None</em>) – Timestamp of each entry of <cite>model_power_kW</cite>. Required when <cite>model</cite>
+is given.</p></li>
+<li><p><strong>varstr</strong> (<em>str or None</em>) – Name of the baseline <cite>Var</cite> created on <cite>model</cite>. Required when
+<cite>model</cite> is given.</p></li>
+<li><p><strong>adjustment_factor</strong> (<em>float or None</em>) – Day-of adjustment factor to apply as-is. <cite>None</cite> uses
+<cite>event[“adjustment_factor”]</cite> if set, otherwise calculates it with
+<cite>_adjustment_factor</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>model</cite> is given without <cite>model_power_kW</cite>,
+    <cite>model_datetime_index</cite>, and <cite>varstr</cite>, if a selected baseline day
+    has missing data, or if <cite>adjustment_factor</cite> is not positive or
+    differs from <cite>event[“adjustment_factor”]</cite>.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(baseline_kW, model)</cite>, where <cite>baseline_kW</cite> is the per-interval
+baseline in kW as a <cite>numpy.ndarray</cite> or an indexed
+<cite>pyomo.environ.Var</cite>, and <cite>model</cite> is <cite>None</cite> ex-post.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.SimilarDaysBaseline.select_days">
+<span class="sig-name descname"><span class="pre">select_days</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">candidate_days</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#SimilarDaysBaseline.select_days"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.SimilarDaysBaseline.select_days" title="Permalink to this definition"></a></dt>
+<dd><p>Select the baseline days to average for an event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>candidate_days</strong> (<em>list of pandas.Timestamp</em>) – Days proposed for this event’s baseline.</p></li>
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Historical power consumption in kW, indexed by timestamp.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If no eligible days remain after filtering.</p>
+</dd>
+<dt class="field-odd">Warns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>UserWarning</strong> – If fewer eligible days remain than <cite>n_baseline_days</cite>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>At most <cite>n_baseline_days</cite> days, most preferred first.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)">list</a> of <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Timestamp.html#pandas.Timestamp" title="(in pandas v3.0.6)">pandas.Timestamp</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.TopUsageDaysBaseline">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">TopUsageDaysBaseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_baseline_days</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_offset_hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_duration_hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_clip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.8,</span> <span class="pre">1.2)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_weekends</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_holidays</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_country</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'US'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_subdiv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">holiday_dates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_in_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#TopUsageDaysBaseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.TopUsageDaysBaseline" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#eeco.demandresponse.SimilarDaysBaseline" title="eeco.demandresponse.SimilarDaysBaseline"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimilarDaysBaseline</span></code></a></p>
+<p>Baseline that averages the highest-usage eligible days.</p>
+<p>Takes the same parameters as <cite>SimilarDaysBaseline</cite>.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="eeco.demandresponse.UnilateralInterruptionBaseline">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">UnilateralInterruptionBaseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">interruption_level_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#UnilateralInterruptionBaseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.UnilateralInterruptionBaseline" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#eeco.demandresponse.BaselineMethod" title="eeco.demandresponse.BaselineMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaselineMethod</span></code></a></p>
+<p>Utility-controlled interruption enforced as an upper bound on power.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>interruption_level_kW</strong> (<em>float</em>) – Power level in kW the load is held at or below during an event.</p></li>
+<li><p><strong>resolution</strong> (<em>str or None</em>) – Settlement interval width (e.g., <cite>“15m”</cite>, <cite>“1h”</cite>). <cite>None</cite> infers it
+from the model index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>interruption_level_kW</cite> is negative.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="eeco.demandresponse.UnilateralInterruptionBaseline.calculate_event_baseline">
+<span class="sig-name descname"><span class="pre">calculate_event_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_power_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#UnilateralInterruptionBaseline.calculate_event_baseline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.UnilateralInterruptionBaseline.calculate_event_baseline" title="Permalink to this definition"></a></dt>
+<dd><p>Constrain modeled power to the interruption level during an event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Unused.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict. See <cite>add_event</cite> for the keys.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block</em>) – Model to add the interruption constraint to.</p></li>
+<li><p><strong>model_power_kW</strong> (<em>pyomo.environ.Var</em>) – Power decision variable over the optimization horizon.</p></li>
+<li><p><strong>model_datetime_index</strong> (<em>pandas.DatetimeIndex</em>) – Timestamp of each entry of <cite>model_power_kW</cite>.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for the constraint created on <cite>model</cite>.</p></li>
+<li><p><strong>adjustment_factor</strong> (<em>float or None</em>) – Unused.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#NotImplementedError" title="(in Python v3.15)"><strong>NotImplementedError</strong></a> – If <cite>model</cite> is <cite>None</cite>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>model_power_kW</cite>, <cite>model_datetime_index</cite>, or <cite>varstr</cite> is
+    missing, or if the event window matches no entries of
+    <cite>model_datetime_index</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(baseline_kW, model)</cite>, where <cite>baseline_kW</cite> is
+<cite>interruption_level_kW</cite> repeated once per interval.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.add_event">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">add_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">events</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event_date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_hour</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration_hours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">notification_hours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_days</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bid_capacity_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">capacity_price</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjustment_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">monthly_called_capacity_kWh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#add_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.add_event" title="Permalink to this definition"></a></dt>
+<dd><p>Append a demand response event to an events list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>events</strong> (<em>list of dict or None</em>) – Events list to append to. <cite>None</cite> starts a new list.</p></li>
+<li><p><strong>event_date</strong> (<em>datetime.date, datetime.datetime, or str</em>) – Calendar date of the event, in local time. A tz-aware value keeps its
+local wall-clock date and drops the time zone.</p></li>
+<li><p><strong>start_hour</strong> (<em>float</em>) – Hour of day (0-24) the event begins, in local wall-clock time.</p></li>
+<li><p><strong>duration_hours</strong> (<em>float</em>) – Length of the event in hours.</p></li>
+<li><p><strong>notification_hours</strong> (<em>float</em>) – Advance notice before the event in hours.</p></li>
+<li><p><strong>baseline_days</strong> (<em>list</em>) – Candidate baseline days for the event, in local time.</p></li>
+<li><p><strong>bid_capacity_kW</strong> (<em>float</em>) – Bid capacity in kW.</p></li>
+<li><p><strong>capacity_price</strong> (<em>float</em>) – Capacity price in $/kW.</p></li>
+<li><p><strong>adjustment_factor</strong> (<em>float or None</em>) – Day-of adjustment factor to apply as-is. <cite>None</cite> calculates it from
+historical data.</p></li>
+<li><p><strong>monthly_called_capacity_kWh</strong> (<em>float or None</em>) – Sum of called capacity in kWh over every event hour in the event’s
+month, used by the <cite>“monthly_share”</cite> basis. <cite>None</cite> sums it over the
+events passed to <cite>events_to_dataframe</cite> and the entry points.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>duration_hours</cite>, <cite>bid_capacity_kW</cite>, or a given
+    <cite>adjustment_factor</cite> or <cite>monthly_called_capacity_kWh</cite> is not positive,
+    <cite>notification_hours</cite> is negative, or <cite>baseline_days</cite> is empty.</p>
+</dd>
+<dt class="field-odd">Warns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>UserWarning</strong> – If <cite>capacity_price</cite> is zero.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>New list with the event appended. Each event dict has the keys</p>
+<ul class="simple">
+<li><p><cite>”event_date”</cite> : pandas.Timestamp, tz-naive</p></li>
+<li><p><cite>”start_hour”</cite> : float</p></li>
+<li><p><cite>”duration_hours”</cite> : float</p></li>
+<li><p><cite>”notification_hours”</cite> : float</p></li>
+<li><p><cite>”baseline_days”</cite> : list</p></li>
+<li><p><cite>”bid_capacity_kW”</cite> : float</p></li>
+<li><p><cite>”capacity_price”</cite> : float</p></li>
+<li><p><cite>”adjustment_factor”</cite> : float or None</p></li>
+<li><p><cite>”monthly_called_capacity_kWh”</cite> : float or None</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)">list</a> of <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.build_event_revenue">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">build_event_revenue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#build_event_revenue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.build_event_revenue" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate or build the demand response revenue for a single event.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul>
+<li><p><strong>power_kW</strong> (<em>numpy.ndarray, cvxpy.Expression, cvxpy.Variable, or pyomo.environ.Var</em>) – Power consumption in kW during the event window only.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict with the keys</p>
+<ul class="simple">
+<li><p><cite>“event_date”</cite> : pandas.Timestamp</p></li>
+<li><p><cite>“start_hour”</cite> : float</p></li>
+<li><p><cite>“duration_hours”</cite> : float</p></li>
+<li><p><cite>“notification_hours”</cite> : float</p></li>
+<li><p><cite>“baseline_days”</cite> : list</p></li>
+<li><p><cite>“bid_capacity_kW”</cite> : float</p></li>
+<li><p><cite>“capacity_price”</cite> : float</p></li>
+<li><p><cite>“adjustment_factor”</cite> : float or None</p></li>
+<li><p><cite>“monthly_called_capacity_kWh”</cite> : float or None</p></li>
+</ul>
+<p>as returned by <cite>add_event</cite>.</p>
+</li>
+<li><p><strong>baseline_kW</strong> (<em>float, numpy.ndarray, or pyomo.environ.Var</em>) – Baseline power in kW, as a single value or one value per interval.</p></li>
+<li><p><strong>payment_function</strong> (<em>PaymentStructure</em>) – Payment structure used to price the delivered reduction.</p></li>
+<li><p><strong>region_x1</strong> (<em>float, list of float, or None</em>) – <cite>x1</cite> bound of the region to fix. Required for cvxpy. Optional for
+pyomo, where <cite>None</cite> lets the solver choose.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add components to. Required for pyomo.</p></li>
+<li><p><strong>varstr</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>power_kW</cite> is cvxpy and <cite>region_x1</cite> is <cite>None</cite>, or if the length of
+    <cite>baseline_kW</cite> does not match <cite>power_kW</cite>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If <cite>power_kW</cite> is not a supported type.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(revenue, model)</cite> for numpy <cite>power_kW</cite>, <cite>(revenue_var, model)</cite> for
+pyomo, or <cite>(revenue_expr, constraints)</cite> for cvxpy.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.build_pyomo_dr_revenue">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">build_pyomo_dr_revenue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datetime_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dr_event'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#build_pyomo_dr_revenue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.build_pyomo_dr_revenue" title="Permalink to this definition"></a></dt>
+<dd><p>Build demand response revenue on a pyomo model and net it into the
+model’s active objective.</p>
+<p>Revenue is subtracted from a minimization objective and added to a
+maximization objective, whatever the objective is named. If the model has
+no active objective, a minimization objective of <cite>-total_revenue</cite> is added
+as <cite>model.objective</cite> (or a unique variant of that name if taken).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>power_kW</strong> (<em>pyomo.environ.Var</em>) – Power decision variable over the optimization horizon.</p></li>
+<li><p><strong>datetime_index</strong> (<em>pandas.DatetimeIndex</em>) – Timestamp of each entry of <cite>power_kW</cite>.</p></li>
+<li><p><strong>events</strong> (<em>list of dict or pandas.DataFrame</em>) – Events from <cite>add_event</cite>.</p></li>
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Historical power consumption in kW, indexed by timestamp.</p></li>
+<li><p><strong>baseline_method</strong> (<em>BaselineMethod</em>) – Baseline method, e.g. <cite>SimilarDaysBaseline()</cite>.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block</em>) – Model to add components to.</p></li>
+<li><p><strong>payment_function</strong> (<em>PaymentStructure</em>) – Payment structure used to price the delivered reduction.</p></li>
+<li><p><strong>region_x1s</strong> (<em>dict or None</em>) – <cite>x1</cite> bound of the region to fix for each event, keyed by event date
+(e.g., <cite>{“2024-01-08”: 0.6}</cite>). Events not in the dict let the solver
+choose.</p></li>
+<li><p><strong>varstr_prefix</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If an event window matches no entries of <cite>datetime_index</cite>, if <cite>model</cite>
+    already has a component this call would create (e.g., from an earlier
+    call with the same <cite>varstr_prefix</cite>), or if <cite>model</cite> has more than one
+    active objective.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(total_revenue, model)</cite>, where <cite>total_revenue</cite> is a pyomo expression.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.calculate_dr_revenue">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">calculate_dr_revenue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_x1s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varstr_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dr_event'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#calculate_dr_revenue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.calculate_dr_revenue" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate or build demand response revenue across all events.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>power_kW</strong> (<em>pandas.Series, numpy.ndarray, or pyomo.environ.Var</em>) – Power consumption in kW, as realized data or a decision variable.</p></li>
+<li><p><strong>events</strong> (<em>list of dict or pandas.DataFrame</em>) – Events from <cite>add_event</cite>.</p></li>
+<li><p><strong>baseline_method</strong> (<em>BaselineMethod</em>) – Baseline method, e.g. <cite>SimilarDaysBaseline()</cite>.</p></li>
+<li><p><strong>payment_function</strong> (<em>PaymentStructure</em>) – Payment structure used to price the delivered reduction.</p></li>
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series or None</em>) – Historical power consumption in kW, indexed by timestamp. Required
+for pyomo.</p></li>
+<li><p><strong>datetime_index</strong> (<em>pandas.DatetimeIndex or None</em>) – Timestamp of each entry of <cite>power_kW</cite>. Required for pyomo and for a
+<cite>numpy.ndarray</cite> <cite>power_kW</cite>.</p></li>
+<li><p><strong>model</strong> (<em>pyomo.environ.Model or pyomo.environ.Block or None</em>) – Model to add components to. Required for pyomo.</p></li>
+<li><p><strong>region_x1s</strong> (<em>dict or None</em>) – <cite>x1</cite> bound of the region to fix for each event, keyed by event date
+(e.g., <cite>{“2024-01-08”: 0.6}</cite>). Events not in the dict let the solver
+choose. Only used for pyomo.</p></li>
+<li><p><strong>varstr_prefix</strong> (<em>str</em>) – Name prefix for pyomo components created on <cite>model</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#NotImplementedError" title="(in Python v3.15)"><strong>NotImplementedError</strong></a> – If <cite>power_kW</cite> is a cvxpy type.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – For pyomo, if <cite>datetime_index</cite>, <cite>historical_power_kW</cite>, or <cite>model</cite> is
+    missing, or if an event window matches no entries of
+    <cite>datetime_index</cite>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If <cite>power_kW</cite> is not a supported type.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(total_revenue, model)</cite>, where <cite>total_revenue</cite> is a float in USD for
+realized data or a pyomo expression for a decision variable.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.calculate_event_revenue">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">calculate_event_revenue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">historical_power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_function</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#calculate_event_revenue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.calculate_event_revenue" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate realized demand response revenue for a single event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>historical_power_kW</strong> (<em>pandas.Series</em>) – Power consumption in kW, indexed by timestamp, covering the event and
+its baseline days.</p></li>
+<li><p><strong>event</strong> (<em>dict</em>) – Single event dict with the keys <cite>“event_date”</cite> (pandas.Timestamp),
+<cite>“start_hour”</cite> (float), <cite>“duration_hours”</cite> (float),
+<cite>“notification_hours”</cite> (float), <cite>“baseline_days”</cite> (list),
+<cite>“bid_capacity_kW”</cite> (float), <cite>“capacity_price”</cite> (float),
+<cite>“adjustment_factor”</cite> (float or None), and
+<cite>“monthly_called_capacity_kWh”</cite> (float or None), as returned by
+<cite>add_event</cite>.</p></li>
+<li><p><strong>baseline_method</strong> (<em>BaselineMethod</em>) – Baseline method, e.g. <cite>SimilarDaysBaseline()</cite>.</p></li>
+<li><p><strong>payment_function</strong> (<em>PaymentStructure</em>) – Payment structure used to price the delivered reduction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If any settlement interval of the event window has no data in
+    <cite>historical_power_kW</cite>.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><p>Event results with the keys</p>
+<ul class="simple">
+<li><p><cite>”event_date”</cite> : pandas.Timestamp</p></li>
+<li><p><cite>”baseline_kW”</cite> : float, event-window mean</p></li>
+<li><p><cite>”actual_kW”</cite> : float, event-window mean</p></li>
+<li><p><cite>”reduction_kW”</cite> : float, event-window mean</p></li>
+<li><p><cite>”delivered_ratio”</cite> : float</p></li>
+<li><p><cite>”revenue”</cite> : float, in USD</p></li>
+<li><p><cite>”baseline_profile_kW”</cite> : numpy.ndarray, per interval</p></li>
+<li><p><cite>”actual_profile_kW”</cite> : numpy.ndarray, per interval</p></li>
+<li><p><cite>”reduction_profile_kW”</cite> : numpy.ndarray, per interval</p></li>
+<li><p><cite>”interval_datetime”</cite> : pandas.DatetimeIndex, in the time zone of
+<cite>historical_power_kW.index</cite></p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.calculate_itemized_dr_revenue">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">calculate_itemized_dr_revenue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">power_kW</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datetime_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#calculate_itemized_dr_revenue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.calculate_itemized_dr_revenue" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate realized demand response revenue for each event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>power_kW</strong> (<em>pandas.Series or numpy.ndarray</em>) – Power consumption in kW.</p></li>
+<li><p><strong>events</strong> (<em>list of dict or pandas.DataFrame</em>) – Events from <cite>add_event</cite>.</p></li>
+<li><p><strong>baseline_method</strong> (<em>BaselineMethod</em>) – Baseline method, e.g. <cite>SimilarDaysBaseline()</cite>.</p></li>
+<li><p><strong>payment_function</strong> (<em>PaymentStructure</em>) – Payment structure used to price the delivered reduction.</p></li>
+<li><p><strong>datetime_index</strong> (<em>pandas.DatetimeIndex or None</em>) – Timestamp of each entry of <cite>power_kW</cite>. Required when <cite>power_kW</cite> is a
+<cite>numpy.ndarray</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <cite>datetime_index</cite> is missing or mismatched for a <cite>numpy.ndarray</cite>
+    <cite>power_kW</cite>, or if an event window has no data.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><cite>(per_event_df, total_revenue)</cite>, where <cite>per_event_df</cite> has one row per
+event with the columns returned by <cite>calculate_event_revenue</cite> and
+<cite>total_revenue</cite> is in USD.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.demandresponse.events_to_dataframe">
+<span class="sig-prename descclassname"><span class="pre">eeco.demandresponse.</span></span><span class="sig-name descname"><span class="pre">events_to_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">events</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/demandresponse.html#events_to_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.demandresponse.events_to_dataframe" title="Permalink to this definition"></a></dt>
+<dd><p>Convert an events list into a <cite>DataFrame</cite> sorted by event date.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>events</strong> (<em>list of dict or pandas.DataFrame</em>) – Events from <cite>add_event</cite>.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If two events in the same month give different
+    <cite>“monthly_called_capacity_kWh”</cite> values.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>One row per event, sorted by tz-naive local <cite>“event_date”</cite>, with missing
+<cite>“monthly_called_capacity_kWh”</cite> values filled in by
+<cite>_fill_monthly_called_capacity</cite>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.6)">pandas.DataFrame</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 <section id="module-eeco.emissions">
 <span id="eeco-emissions-module"></span><h2>eeco.emissions module<a class="headerlink" href="#module-eeco.emissions" title="Permalink to this heading"></a></h2>
 <p>Functions to calculate emissions from electricity consumption data.</p>
@@ -1469,6 +2293,20 @@ or expression (or non-Pyomo type).</p>
 <span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">check_nonindexed_python_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_var</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#check_nonindexed_python_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.check_nonindexed_python_type" title="Permalink to this definition"></a></dt>
 <dd><p>Checks if input is a general int/float variable, expression, or parameter
 (e.g., <cite>np.int32</cite> or <cite>np.float64</cite>)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>input_var</strong> (<em>object</em>) – Input parameter to check</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eeco.utils.check_pandas_type">
+<span class="sig-prename descclassname"><span class="pre">eeco.utils.</span></span><span class="sig-name descname"><span class="pre">check_pandas_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_var</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eeco/utils.html#check_pandas_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eeco.utils.check_pandas_type" title="Permalink to this definition"></a></dt>
+<dd><p>Checks if input is a pandas Series or DataFrame.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>input_var</strong> (<em>object</em>) – Input parameter to check</p>

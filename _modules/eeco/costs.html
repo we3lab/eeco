@@ -72,6 +72,7 @@
 <p class="caption" role="heading"><span class="caption-text">Code</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../costs.html">costs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../demandresponse.html">demandresponse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../emissions.html">emissions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../metrics.html">metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../units.html">units</a></li>
@@ -1357,7 +1358,7 @@
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">charge_array</span> <span class="ow">in</span> <span class="n">charge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">ut</span><span class="o">.</span><span class="n">check_indexed_np_array</span><span class="p">(</span><span class="n">charge_array</span><span class="p">):</span>
             <span class="k">continue</span>
-        <span class="n">utility</span><span class="p">,</span> <span class="n">full_charge_type</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">limit_str</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
+        <span class="n">utility</span><span class="p">,</span> <span class="n">full_charge_type</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">limit_str</span> <span class="o">=</span> <span class="n">parse_charge_key</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
         <span class="n">charge_type</span> <span class="o">=</span> <span class="n">full_charge_type</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">DAILY</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">MONTHLY</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
         <span class="n">charge_type</span> <span class="o">=</span> <span class="n">charge_type</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
 
