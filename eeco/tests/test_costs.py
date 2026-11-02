@@ -902,7 +902,7 @@ def test_get_billing_period_scale_factor(start_dt, end_dt, expected):
 
 
 # TODO: remove demand_scale_factor and scale_fixed_charges from these tests
-# @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
     "start_dt, end_dt, billing_path, resolution, scale_fixed_charges, "
     "demand_scale_factor, expected",
@@ -1513,8 +1513,8 @@ def test_get_charge_dict(
             None,
             1,
             pytest.approx(
-                3.0
-            ),  # (48*10 + 48*5) * 0.05 / 4 = 3.0 (negative values treated as magnitude)
+                6.0
+            ),  # (48*10 + 48*5) * 0.05 / 4 = 3.0 (negative values ignored w/ warning)
             True,
             False,
         ),

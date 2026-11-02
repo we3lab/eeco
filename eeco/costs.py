@@ -1407,10 +1407,27 @@ def get_converted_consumption_data(
                     "exports": exports,
                 }
             elif decomposition_type is None:
-                consumption_data_dict[utility] = {
-                    "imports": converted_consumption,
-                    "exports": converted_consumption,
-                }
+                # force conversion of numpy data to avoid incorrect cost computation
+                is_np = isinstance(converted_consumption, np.ndarray)
+                if is_np:
+                    if np.any(converted_consumption < 0):
+                        warnings.warn(
+                            "Consumption profile includes negative values and will be "
+                            "automatically clipped to positive to ensure valid bill "
+                            "calculation. This likely means the optimization problem "
+                            "was malformed. Please re-run `calculate_cost` "
+                            "with a decomposition_type",
+                            UserWarning,
+                        )
+                    consumption_data_dict[utility] = {
+                        "imports": (np.maximum(converted_consumption, 0)),
+                        "exports": (np.maximum(-converted_consumption, 0)),
+                    }
+                else:
+                    consumption_data_dict[utility] = {
+                        "imports": converted_consumption,
+                        "exports": converted_consumption,
+                    }
             else:
                 raise NotImplementedError(
                     f"Decomposition type '{decomposition_type}' not supported"
@@ -1966,7 +1983,7 @@ def calculate_itemized_cost(
     demand_scale_factor=1,
     fixed_scale_factor=1,
     model=None,
-    decomposition_type=None,
+    decomposition_type="linear",
     big_m=1e6,
     by_charge_key=False,
     varstr_alias_func=default_varstr_alias_func,
