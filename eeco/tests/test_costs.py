@@ -3035,7 +3035,6 @@ def test_calculate_demand_costs(
     model.consumption = pyo.Var(model.dummy_t, bounds=(None, None))
     for t in range(len(usage)):
         model.consumption[t].fix(float(usage[t]))
-    ut.create_pyomo_model_index_ref(model, model.consumption)
     pyo_cost, model = costs.calculate_cost(
         charge_dict, {utility: model.consumption}, model=model, **kwargs
     )

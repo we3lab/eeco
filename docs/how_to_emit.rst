@@ -34,7 +34,7 @@ To make this how-to guide clear, below are the import statements used throughout
     import numpy as np
     import pandas as pd
     import pyomo.environ as pyo
-    from eeco.units as u
+    from eeco.units import u
     from eeco import emissions
 
 ====================
@@ -120,17 +120,11 @@ This optimization problem could be solved in `Pyomo` instead of `CVXPY`:
         initialize=np.zeros(num_timesteps), 
         bounds=(0, None)
     )
-    total_monthly_emissions, model = costs.calculate_grid_emissions(
+    total_monthly_emissions, model = emissions.calculate_grid_emissions(
         carbon_intensity, consumption_var, model=model
     )
 
-We must pass in and retrieve the `Pyomo` model object for the eletricity bill to be calculated correctly.
-
-.. WARNING::
-
-  For the `Pyomo` code to work properly, we require the `model` object has an attribute `t` that is the range of the time period.
-  
-  We usually set `model.t = range(model.T)` where `model.T = len(consumption_data_dict["electric"])`.
+We must pass in and retrieve the `Pyomo` model object for the emissions to be calculated correctly.
 
 
 =====
