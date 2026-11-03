@@ -876,7 +876,7 @@ def calculate_demand_cost(
         else:  # ignore if current and previous maxima outside of charge limit
             demand_charged = np.array([0])
     elif ut.check_indexed_pyomo_type(consumption_data):
-        ut.create_pyomo_model_index_from_dict(model, consumption_data)
+        ut.create_pyomo_model_index_from_dict(model, consumption_data, warns=False)
         if consumption_max >= limit:
             if consumption_max <= next_limit:
                 model.add_component(
@@ -1543,7 +1543,7 @@ def calculate_cost(
         consumption_estimate = 0
 
     if model is not None:
-        ut.create_pyomo_model_index_from_dict(model, consumption_data_dict)
+        ut.create_pyomo_model_index_from_dict(model, consumption_data_dict, warns=False)
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )
@@ -1971,7 +1971,7 @@ def calculate_itemized_cost(
     """
     if model is not None:
         # Assumes vars for diff utilities share same index set
-        ut.create_pyomo_model_index_from_dict(model, consumption_data_dict)
+        ut.create_pyomo_model_index_from_dict(model, consumption_data_dict, warns=False)
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )

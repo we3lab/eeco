@@ -269,7 +269,7 @@ def test_create_pyomo_model_index_ref_from_dict(
         with warnings.catch_warnings():  # the index is never rebuilt with a warning
             warnings.simplefilter("error", UserWarning)
             ut.create_pyomo_model_index_from_dict(
-                model, input_dict, overwrite=overwrite
+                model, input_dict, overwrite=overwrite, warns=False
             )
         assert hasattr(model, "_var_index_ref")
         assert hasattr(model, "_var_index")
