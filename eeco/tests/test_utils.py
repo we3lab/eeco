@@ -12,6 +12,15 @@ os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False
 
 
+@pytest.fixture
+def index_model():
+    """Helper to set up a Pyomo model with two indexed variables."""
+    model = pyo.ConcreteModel()
+    model.e = pyo.Var(range(10), initialize=1)
+    model.preexisting = pyo.Var([100, 200], initialize=1)
+    return model
+
+
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize("freq, expected", [("15m", (15, "m")), ("1h", (1, "h"))])
 def test_parse_freq(freq, expected):
@@ -104,18 +113,18 @@ def test_sum_pyo(consumption_data, varstr, expected):
             [2.0, 4.0, 5.0, 8.0],
             np.array([10.0, 40.0, 90.0, 160.0]),
         ),
-        # Pyo variable * scalar
+        # Pyo variable * scalar Pyo variable
         (
-            {"electric": np.array([100.0, 200.0, 300.0, 400.0])},
+            {"electric": np.array([100.0, 200.0, 300.0, 400.0]), "gas": 2.0},
             "electric",
-            2.0,
+            "gas",
             None,
             np.array([200.0, 400.0, 600.0, 800.0]),
         ),
-        # scalar * Pyo variable
+        # scalar Pyo variable * Pyo variable
         (
-            {"electric": np.array([100.0, 200.0, 300.0, 400.0])},
-            2.0,
+            {"electric": np.array([100.0, 200.0, 300.0, 400.0]), "gas": 2.0},
+            "gas",
             "electric",
             None,
             np.array([200.0, 400.0, 600.0, 800.0]),
@@ -124,16 +133,21 @@ def test_sum_pyo(consumption_data, varstr, expected):
 )
 def test_multiply_pyo(consumption_data, varstr1, varstr2, time_set, expected):
     model = pyo.ConcreteModel()
-    model.T = len(next(iter(consumption_data.values())))
+    model.T = len(consumption_data["electric"])
     model.t = range(model.T) if time_set is None else time_set
     pos = {t: i for i, t in enumerate(model.t)}
     for key, val in consumption_data.items():
-        var = pyo.Var(model.t, bounds=(None, None))
-        model.add_component(key, var)
-        for t in model.t:
-            var[t].fix(float(val[pos[t]]))
+        if np.ndim(val) == 0:  # a scalar becomes a fixed non-indexed variable
+            var = pyo.Var(initialize=val)
+            model.add_component(key, var)
+            var.fix(val)
+        else:
+            var = pyo.Var(model.t, bounds=(None, None))
+            model.add_component(key, var)
+            for t in model.t:
+                var[t].fix(float(val[pos[t]]))
 
-    var1 = getattr(model, varstr1) if isinstance(varstr1, str) else varstr1
+    var1 = getattr(model, varstr1)
     var2 = getattr(model, varstr2) if isinstance(varstr2, str) else varstr2
     result, model = ut.multiply(var1, var2, model=model, varstr="test")
     assert model._var_index == list(model.t)  # built by multiply itself
@@ -226,22 +240,48 @@ def test_max_pyo(consumption_data, varstr, index_set, expected):
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "dict_type, existing_index, overwrite, expected, expect_error",
+    "existing_index, overwrite, warns, expected, expect_warning",
     [
-        ("pyovar", None, False, list(range(10)), False),
-        ("normal", None, False, list(range(10)), False),
-        ("nested", None, False, list(range(10)), False),
-        ("multi_input", None, False, list(range(10)), False),
-        ("empty", None, False, None, True),
-        ("normal", range(2), False, [0, 1], False),  # keeps existing index
-        ("normal", range(2), True, list(range(10)), False),  # overwrite
+        (False, False, True, list(range(10)), False),  # builds on a fresh model
+        (True, False, True, [100, 200], True),  # keeps the existing index, warns
+        (True, False, False, [100, 200], False),  # keeps it silently
+        (True, True, True, list(range(10)), False),  # overwrite
     ],
 )
-def test_create_pyomo_model_index_ref_from_dict(
-    dict_type, existing_index, overwrite, expected, expect_error
+def test_create_pyomo_model_index_ref(
+    index_model, existing_index, overwrite, warns, expected, expect_warning
 ):
-    model = pyo.ConcreteModel()
-    model.e = pyo.Var(range(10), initialize=1)
+    model = index_model
+    if existing_index:
+        ut.create_pyomo_model_index_ref(model, model.preexisting)
+    if expect_warning:
+        with pytest.warns(UserWarning, match="already exists"):
+            ut.create_pyomo_model_index_ref(
+                model, model.e, overwrite=overwrite, warns=warns
+            )
+    else:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            ut.create_pyomo_model_index_ref(
+                model, model.e, overwrite=overwrite, warns=warns
+            )
+    assert model._var_index == expected
+    assert model._var_index_ref == {idx: i for i, idx in enumerate(expected)}
+
+
+@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
+@pytest.mark.parametrize(
+    "dict_type, expect_error",
+    [
+        ("pyovar", False),
+        ("normal", False),
+        ("nested", False),
+        ("multi_input", False),
+        ("empty", True),
+    ],
+)
+def test_create_pyomo_model_index_from_dict(index_model, dict_type, expect_error):
+    model = index_model
     if dict_type == "normal":
         input_dict = {"electric": model.e}
     elif dict_type == "pyovar":
@@ -256,25 +296,13 @@ def test_create_pyomo_model_index_ref_from_dict(
     elif dict_type == "empty":
         input_dict = {"nest_test": {"electric": np.arange(10)}}
 
-    if existing_index is not None:  # an index is already in place before the call
-        model.preexisting = pyo.Var(existing_index, initialize=1)
-        ut.create_pyomo_model_index_ref(model, model.preexisting)
-
     if expect_error:
         with pytest.raises(TypeError):
             ut.create_pyomo_model_index_from_dict(model, input_dict)
-        assert not hasattr(model, "_var_index_ref")
         assert not hasattr(model, "_var_index")
     else:
-        with warnings.catch_warnings():  # the index is never rebuilt with a warning
-            warnings.simplefilter("error", UserWarning)
-            ut.create_pyomo_model_index_from_dict(
-                model, input_dict, overwrite=overwrite, warns=False
-            )
-        assert hasattr(model, "_var_index_ref")
-        assert hasattr(model, "_var_index")
-        assert model._var_index_ref == {idx: i for i, idx in enumerate(expected)}
-        assert model._var_index == expected
+        ut.create_pyomo_model_index_from_dict(model, input_dict)
+        assert model._var_index == list(range(10))
 
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
