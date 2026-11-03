@@ -1240,6 +1240,91 @@ def get_conversion_factors(electric_consumption_units, gas_consumption_units):
     return conversion_factors
 
 
+def check_linear_decomposition_dict(charge_dict):
+    """Warn if charges break the conditions under which a linear split is exact.
+
+    With `decomposition_type="linear"`, importing and exporting in the same
+    timestep is only suboptimal when export charge <= energy charge and energy and
+    demand charges are non-negative. Only numpy charge arrays are checked.
+
+    Parameters
+    ----------
+    charge_dict : dict
+        Charge dictionary as passed to `calculate_cost`
+    """
+    energy_sums = {}
+    export_sums = {}
+    for key, charge_array in charge_dict.items():
+        if not ut.check_indexed_np_array(charge_array):
+            continue
+        utility, full_charge_type, _, _, _, limit_str = parse_charge_key(key)
+        charge_type = full_charge_type.replace(DAILY, "").replace(MONTHLY, "")
+        charge_type = charge_type.replace("-", "")
+
+        if charge_type in (ENERGY, DEMAND) and np.any(charge_array < 0):
+            warnings.warn(
+                f"Negative {utility} {charge_type} charge in '{key}' with "
+                "decomposition_type='linear'. The LP split may import and "
+                "export simultaneously.",
+                UserWarning,
+            )
+        if charge_type == ENERGY and int(limit_str) == 0:
+            energy_sums[utility] = energy_sums.get(utility, 0) + charge_array
+        elif charge_type == EXPORT:
+            export_sums[utility] = export_sums.get(utility, 0) + charge_array
+
+    # only utilities with both an energy and an export charge can have arbitrage
+    for utility, export_charge in export_sums.items():
+        energy_charge = energy_sums.get(utility)
+        if (
+            energy_charge is not None
+            and np.shape(energy_charge) == np.shape(export_charge)
+            and np.any(export_charge > energy_charge)
+        ):
+            warnings.warn(
+                f"{utility} export charge exceeds energy charge in at least one "
+                "timestep with decomposition_type='linear'. The LP split may "
+                "import and export simultaneously (arbitrage).",
+                UserWarning,
+            )
+
+
+def check_import_export_dict(consumption_data_dict):
+    """Raise if user-provided imports and exports are both nonzero in a timestep.
+
+    Only utilities already given as ``{"imports": ..., "exports": ...}`` with
+    numeric array values are checked; symbolic (cvxpy/pyomo) values are skipped.
+
+    Parameters
+    ----------
+    consumption_data_dict : dict
+        Consumption data as passed to `calculate_cost`
+
+    Raises
+    ------
+    ValueError
+        If any timestep has both imports and exports greater than zero
+    """
+    for utility, data in consumption_data_dict.items():
+        if not (isinstance(data, dict) and "imports" in data and "exports" in data):
+            continue
+        imports, exports = data["imports"], data["exports"]
+        # with no decomposition, imports and exports alias the same net series
+        if imports is exports:
+            continue
+        if not (
+            isinstance(imports, (np.ndarray, list, tuple))
+            and isinstance(exports, (np.ndarray, list, tuple))
+        ):
+            continue
+        imports, exports = np.asarray(imports), np.asarray(exports)
+        if imports.shape != exports.shape:
+            continue
+        ut.check_simultaneous_import_export(
+            imports, exports, varstr=utility, raise_error=True
+        )
+
+
 def get_converted_consumption_data(
     consumption_data_dict, conversion_factors, decomposition_type, model=None, big_m=1e6
 ):
@@ -1252,8 +1337,8 @@ def get_converted_consumption_data(
         Dictionary with utility keys and consumption data values
     conversion_factors : dict
         Dictionary with conversion factors for each utility type
-    decomposition_type : str or None
-        Type of decomposition to apply (e.g., "absolute_value")
+    decomposition_type : {"absolute_value", "binary_big_M", "linear", None}
+        Type of decomposition to apply
     model : pyomo.Model, optional
         Pyomo model object for optimization variables
 
@@ -1302,7 +1387,7 @@ def get_converted_consumption_data(
                     varstr=converted_varstr,
                 )
 
-            if decomposition_type in ("absolute_value", "binary_big_M"):
+            if decomposition_type in ut.DECOMPOSITION_TYPES:
                 # Decompose consumption data into positive and negative components
                 # with constraint that total = positive - negative
                 # (where negative is stored as positive magnitude)
@@ -1328,12 +1413,31 @@ def get_converted_consumption_data(
                     "exports": exports,
                 }
             elif decomposition_type is None:
-                consumption_data_dict[utility] = {
-                    "imports": converted_consumption,
-                    "exports": converted_consumption,
-                }
+                # force conversion of numpy data to avoid incorrect cost computation
+                is_np = isinstance(converted_consumption, np.ndarray)
+                if is_np:
+                    if np.any(converted_consumption < 0):
+                        warnings.warn(
+                            "Consumption profile includes negative values and will be "
+                            "automatically clipped to positive to ensure valid bill "
+                            "calculation. This likely means the optimization problem "
+                            "was malformed. Please re-run `calculate_cost` "
+                            "with a decomposition_type",
+                            UserWarning,
+                        )
+                    consumption_data_dict[utility] = {
+                        "imports": (np.maximum(converted_consumption, 0)),
+                        "exports": (np.maximum(-converted_consumption, 0)),
+                    }
+                else:
+                    consumption_data_dict[utility] = {
+                        "imports": converted_consumption,
+                        "exports": converted_consumption,
+                    }
             else:
-                raise NotImplementedError
+                raise NotImplementedError(
+                    f"Decomposition type '{decomposition_type}' not supported"
+                )
 
     if model is not None:
         return consumption_data_dict, model
@@ -1500,12 +1604,15 @@ def calculate_cost(
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
 
-    decomposition_type : str or None
+    decomposition_type : {"absolute_value", "binary_big_M", "linear", None}
         Type of decomposition to use for consumption data.
         - "absolute_value": Uses max(x, 0) constraints. Creates nonlinear problem
           for Pyomo due to abs() constraint.
         - "binary_big_M": Uses binary indicator with Big-M constraints.
           Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.
+        - "linear": Plain LP split into non-negative imports and exports for
+          Pyomo or CVXPY. Exact only when export charge <= energy charge and
+          energy/demand charges are non-negative (warns otherwise).
         - None (default): No decomposition, treats all consumption as imports
 
     varstr_alias_func : function
@@ -1540,6 +1647,19 @@ def calculate_cost(
           charge costs in USD for the given `charge_array` and `consumption_data`
         - Second entry: pyomo ConcreteModel (pyomo path), list of cvxpy constraints
           from decomposition (cvxpy + decomposition_type path), or None otherwise
+
+    Raises
+    ------
+    ValueError
+        If numeric `imports` and `exports` in `consumption_data_dict` are both
+        positive in the same timestep
+
+    Warns
+    -----
+    UserWarning
+        When `decomposition_type="linear"` and an export charge exceeds the
+        energy charge, since the LP split may then import and export
+        simultaneously
     """
     cost = 0
     n_per_hour = int(60 / ut.get_freq_binsize_minutes(resolution))
@@ -1550,6 +1670,11 @@ def calculate_cost(
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )
+
+    check_import_export_dict(consumption_data_dict)
+
+    if decomposition_type == "linear":
+        check_linear_decomposition_dict(charge_dict)
 
     consumption_data_dict, model_objects = get_converted_consumption_data(
         consumption_data_dict,
@@ -1777,12 +1902,15 @@ def build_pyomo_costing(
         Can be a single pyomo Expression or a list of pyomo Expressions.
         Only used in the case of Pyomo, so `None` by default.
 
-    decomposition_type : str or None
+    decomposition_type : {"absolute_value", "binary_big_M", "linear", None}
         Type of decomposition to use for consumption data.
         - "absolute_value": Uses max(x, 0) constraints. Creates nonlinear problem
           for Pyomo due to abs() constraint.
         - "binary_big_M": Uses binary indicator with Big-M constraints.
           Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.
+        - "linear": Plain LP split into non-negative imports and exports for
+          Pyomo or CVXPY. Exact only when export charge <= energy charge and
+          energy/demand charges are non-negative (warns otherwise).
         - None (default): No decomposition, treats all consumption as imports
 
     varstr_alias_func: function
@@ -1814,6 +1942,13 @@ def build_pyomo_costing(
     -------
     pyomo.Model
         The model object associated with the problem with costing components added.
+
+    Warns
+    -----
+    UserWarning
+        When `decomposition_type="linear"` and an export charge exceeds the
+        energy charge, since the LP split may then import and export
+        simultaneously
     """
     model.electricity_cost, model = calculate_cost(
         charge_dict=charge_dict,
@@ -1852,7 +1987,7 @@ def calculate_itemized_cost(
     demand_scale_factor=1,
     fixed_scale_factor=1,
     model=None,
-    decomposition_type=None,
+    decomposition_type="linear",
     big_m=1e6,
     by_charge_key=False,
     varstr_alias_func=default_varstr_alias_func,
@@ -1921,11 +2056,14 @@ def calculate_itemized_cost(
         The model object associated with the problem.
         Only used in the case of Pyomo, so `None` by default.
 
-    decomposition_type : str or None
+    decomposition_type : {"absolute_value", "binary_big_M", "linear", None}
         Type of decomposition to use for consumption data.
         - "absolute_value": Linear problem using absolute value
         - "binary_big_M": Uses binary indicator with Big-M constraints.
           Creates a MILP (mixed-integer linear program) for Pyomo or CVXPY.
+        - "linear": Plain LP split into non-negative imports and exports for
+          Pyomo or CVXPY. Exact only when export charge <= energy charge and
+          energy/demand charges are non-negative (warns otherwise).
         - None (default): No decomposition, treats all consumption as imports
 
     by_charge_key : bool
@@ -1971,10 +2109,19 @@ def calculate_itemized_cost(
     model_objects : pyomo ConcreteModel, list of cvxpy constraints, or None
         Same as the second return value of `calculate_cost`.
 
+    Warns
+    -----
+    UserWarning
+        When `decomposition_type="linear"` and an export charge exceeds the
+        energy charge, since the LP split may then import and export
+        simultaneously
     """
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )
+
+    if decomposition_type == "linear":
+        check_linear_decomposition_dict(charge_dict)
 
     consumption_data_dict, model_objects = get_converted_consumption_data(
         consumption_data_dict,

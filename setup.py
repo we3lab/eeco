@@ -32,6 +32,7 @@ requirements = [
     "pyomo>=6.8",
     "pint>=0.19.2",
     "pytz>=2025.1",
+    "holidays>=0.40",
 ]
 
 extra_requirements = {
@@ -74,6 +75,6 @@ setup(
     extras_require=extra_requirements,
     test_suite="tests",
     url="https://github.com/we3lab/eeco",
-    version="0.4.1",
+    version="0.4.2",
     zip_safe=False,
 )
