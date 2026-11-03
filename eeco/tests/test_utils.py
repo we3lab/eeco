@@ -12,15 +12,6 @@ os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 skip_all_tests = False
 
 
-@pytest.fixture
-def index_model():
-    """Helper to set up a Pyomo model with two indexed variables."""
-    model = pyo.ConcreteModel()
-    model.e = pyo.Var(range(10), initialize=1)
-    model.preexisting = pyo.Var([100, 200], initialize=1)
-    return model
-
-
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize("freq, expected", [("15m", (15, "m")), ("1h", (1, "h"))])
 def test_parse_freq(freq, expected):
@@ -249,9 +240,11 @@ def test_max_pyo(consumption_data, varstr, index_set, expected):
     ],
 )
 def test_create_pyomo_model_index_ref(
-    index_model, existing_index, overwrite, warns, expected, expect_warning
+    existing_index, overwrite, warns, expected, expect_warning
 ):
-    model = index_model
+    model = pyo.ConcreteModel()
+    model.e = pyo.Var(range(10), initialize=1)
+    model.preexisting = pyo.Var([100, 200], initialize=1)
     if existing_index:
         ut.create_pyomo_model_index_ref(model, model.preexisting)
     if expect_warning:
