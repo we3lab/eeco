@@ -67,7 +67,6 @@ def test_sum_pyo(consumption_data, varstr, expected):
         return consumption_data["gas"][t] == m.gas[t]
 
     var = getattr(model, varstr)
-    ut.create_pyomo_model_index_ref(model, var)
     result, model = ut.sum(var, model=model, varstr="test")
     model.objective = pyo.Objective(expr=0)
     solver = pyo.SolverFactory("scip")
@@ -141,7 +140,7 @@ def test_multiply_pyo(consumption_data, varstr1, varstr2, time_set, expected):
     var1 = getattr(model, varstr1)
     var2 = getattr(model, varstr2) if isinstance(varstr2, str) else varstr2
     result, model = ut.multiply(var1, var2, model=model, varstr="test")
-    assert model._var_index == list(model.t)  # built by multiply itself
+    assert model._var_index == list(model.t)  # built by multiply util
     model.objective = pyo.Objective(expr=0)
     solver = pyo.SolverFactory("ipopt")
     solver.solve(model)
@@ -179,7 +178,6 @@ def test_max_pyo(consumption_data, varstr, index_set, expected):
             return consumption_data["gas"] == m.gas
 
         var = getattr(model, varstr)
-        ut.create_pyomo_model_index_ref(model, var)
 
         result, model = ut.max(
             var - 0,  # like max_var - prev_demand_cost
@@ -218,7 +216,7 @@ def test_max_pyo(consumption_data, varstr, index_set, expected):
         index_set=index_set,
     )
     if index_set is None:
-        assert model._var_index == list(model.t)  # built by max itself
+        assert model._var_index == list(model.t)  # built by max util
     else:  # no model-wide index
         assert not hasattr(model, "_var_index")
 
@@ -233,10 +231,10 @@ def test_max_pyo(consumption_data, varstr, index_set, expected):
 @pytest.mark.parametrize(
     "existing_index, overwrite, warns, expected, expect_warning",
     [
-        (False, False, True, list(range(10)), False),  # builds on a fresh model
+        (False, False, True, list(range(10)), False),  # new index on fresh model
         (True, False, True, [100, 200], True),  # keeps the existing index, warns
-        (True, False, False, [100, 200], False),  # keeps it silently
-        (True, True, True, list(range(10)), False),  # overwrite
+        (True, False, False, [100, 200], False),  # keeps existing index silently
+        (True, True, True, list(range(10)), False),  # overwrite index
     ],
 )
 def test_create_pyomo_model_index_ref(
@@ -308,7 +306,6 @@ def test_max_pos_pyo(consumption_data, varstr, expected, expect_error):
             return consumption_data["gas"] == m.gas
 
         var = getattr(model, varstr)
-        ut.create_pyomo_model_index_ref(model, var)
 
         expr = var - 0  # like max_var - prev_demand_cost
         result, model = ut.max_pos(expr, model=model, varstr="test")
@@ -337,7 +334,6 @@ def test_max_pos_pyo(consumption_data, varstr, expected, expect_error):
 
         var = getattr(model, varstr)
 
-        ut.create_pyomo_model_index_ref(model, var)
         result, model = ut.max_pos(var, model=model, varstr="test")
         model.objective = pyo.Objective(expr=0)
         solver = pyo.SolverFactory("scip")
@@ -565,7 +561,7 @@ def test_decompose_consumption_pyo(
             decomposition_type=decomposition_type,
         )
         # Check that variables exist and have the correct length
-        assert model._var_index == list(model.dummy_t)  # built by decompose itself
+        assert model._var_index == list(model.dummy_t)  # built by decompose util
         assert hasattr(model, "electric_positive")
         assert hasattr(model, "electric_negative")
         assert hasattr(model, "electric_decomposition_constraint")

@@ -949,8 +949,6 @@ def calculate_demand_cost(
         return max_pos_val * scale_factor, max_pos_model
     else:
         # Clamp at zero so demand below the tier limit isn't calculated as a credit.
-        # get_charge_window maps positions to index values with the `_var_index`
-        # that ut.multiply built above (an unreached tier is numpy, so no window)
         max_raw, model = ut.max(
             demand_charged,
             model=model,
