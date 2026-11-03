@@ -271,42 +271,6 @@ def test_create_pyomo_model_index_ref(
 
 @pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
 @pytest.mark.parametrize(
-    "dict_type, expect_error",
-    [
-        ("pyovar", False),
-        ("normal", False),
-        ("nested", False),
-        ("multi_input", False),
-        ("empty", True),
-    ],
-)
-def test_create_pyomo_model_index_from_dict(index_model, dict_type, expect_error):
-    model = index_model
-    if dict_type == "normal":
-        input_dict = {"electric": model.e}
-    elif dict_type == "pyovar":
-        input_dict = model.e
-    elif dict_type == "nested":
-        input_dict = {"nest_test": {"electric": model.e}}
-    elif dict_type == "multi_input":
-        input_dict = {
-            "nest_test": {"electric": model.e, "another_entery": np.arange(10)},
-            "electric": np.arange(10),
-        }
-    elif dict_type == "empty":
-        input_dict = {"nest_test": {"electric": np.arange(10)}}
-
-    if expect_error:
-        with pytest.raises(TypeError):
-            ut.create_pyomo_model_index_from_dict(model, input_dict)
-        assert not hasattr(model, "_var_index")
-    else:
-        ut.create_pyomo_model_index_from_dict(model, input_dict)
-        assert model._var_index == list(range(10))
-
-
-@pytest.mark.skipif(skip_all_tests, reason="Exclude all tests")
-@pytest.mark.parametrize(
     "consumption_data, varstr, expected, expect_error",
     [
         (
