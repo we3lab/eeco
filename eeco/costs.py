@@ -876,19 +876,22 @@ def calculate_demand_cost(
         else:  # ignore if current and previous maxima outside of charge limit
             demand_charged = np.array([0])
     elif ut.check_indexed_pyomo_type(consumption_data):
-        ut.create_pyomo_model_index_from_dict(model, consumption_data, warns=False)
         if consumption_max >= limit:
             if consumption_max <= next_limit:
                 model.add_component(
                     varstr + "_limit",
-                    pyo.Var(model._var_index, initialize=0, bounds=(None, None)),
+                    pyo.Var(
+                        consumption_data.index_set(), initialize=0, bounds=(None, None)
+                    ),
                 )
                 var = model.find_component(varstr + "_limit")
 
                 def const_rule(model, t):
                     return var[t] == consumption_data[t] - limit
 
-                constraint = pyo.Constraint(model._var_index, rule=const_rule)
+                constraint = pyo.Constraint(
+                    consumption_data.index_set(), rule=const_rule
+                )
                 model.add_component(varstr + "_limit_constraint", constraint)
 
                 demand_charged, model = ut.multiply(
@@ -945,7 +948,9 @@ def calculate_demand_cost(
         max_pos_val, max_pos_model = ut.max_pos(max_var - prev_demand_cost)
         return max_pos_val * scale_factor, max_pos_model
     else:
-        # Clamp at zero so demand below the tier limit isn't calculated as a credit
+        # Clamp at zero so demand below the tier limit isn't calculated as a credit.
+        # get_charge_window maps positions to index values with the `_var_index`
+        # that ut.multiply built above (an unreached tier is numpy, so no window)
         max_raw, model = ut.max(
             demand_charged,
             model=model,
@@ -1542,8 +1547,6 @@ def calculate_cost(
     if consumption_estimate is None:
         consumption_estimate = 0
 
-    if model is not None:
-        ut.create_pyomo_model_index_from_dict(model, consumption_data_dict, warns=False)
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )
@@ -1969,9 +1972,6 @@ def calculate_itemized_cost(
         Same as the second return value of `calculate_cost`.
 
     """
-    if model is not None:
-        # Assumes vars for diff utilities share same index set
-        ut.create_pyomo_model_index_from_dict(model, consumption_data_dict, warns=False)
     conversion_factors = get_conversion_factors(
         electric_consumption_units, gas_consumption_units
     )

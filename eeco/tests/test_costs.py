@@ -3029,15 +3029,6 @@ def test_calculate_demand_costs(
         cvx_cost = cvx_cost.value
     assert cvx_cost == pytest.approx(expected)
 
-    # Test that calculate_demand_cost attaches `_var_index`
-    direct_model = pyo.ConcreteModel()
-    direct_model.dummy_t = pyo.RangeSet(0, len(usage) - 1)
-    direct_model.consumption = pyo.Var(direct_model.dummy_t, bounds=(None, None))
-    costs.calculate_demand_cost(
-        charge_array, direct_model.consumption, model=direct_model, varstr="direct"
-    )
-    assert direct_model._var_index == list(range(len(usage)))
-
     model = pyo.ConcreteModel()
     model.dummy_t = pyo.RangeSet(0, len(usage) - 1)
     model.consumption = pyo.Var(model.dummy_t, bounds=(None, None))
