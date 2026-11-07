@@ -974,8 +974,9 @@ def calculate_energy_cost(
 
     Parameters
     ----------
-    charge_array : numpy.ndarray
+    charge_array : numpy.ndarray or cvxpy.Parameter
         Array of the charges in $/kWh for electric and $/cubic meter for gas
+        cvxpy.Parameter only supported for untiered charges
 
     consumption_data : numpy.ndarray cvxpy.Expression, or pyomo.environ.Var
         Baseline electrical or gas usage data as an optimization variable object
