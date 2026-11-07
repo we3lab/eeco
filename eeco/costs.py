@@ -976,7 +976,6 @@ def calculate_energy_cost(
     ----------
     charge_array : numpy.ndarray or cvxpy.Parameter
         Array of the charges in $/kWh for electric and $/cubic meter for gas
-        cvxpy.Parameter only supported for untiered charges
 
     consumption_data : numpy.ndarray cvxpy.Expression, or pyomo.environ.Var
         Baseline electrical or gas usage data as an optimization variable object
@@ -1074,10 +1073,9 @@ def calculate_energy_cost(
         tier_active = not np.isinf(next_limit) or (not np.isinf(limit) and limit > 0)
 
         if tier_active:
-            # private copy of charge array to avoid carrying over zeroed tiered charges
-            charge_array = np.array(charge_array, copy=True)
             if (
                 np.isinf(next_limit)
+                and ut.check_indexed_np_array(charge_array)  # skip cp.Parameter
                 and charge_array.size > 0
                 and np.all(charge_array == charge_array[0])
             ):
@@ -1094,7 +1092,7 @@ def calculate_energy_cost(
                 return rate * over_limit, model
 
             # Convex approximation: `consumption_estimate` fixes this tier's
-            # timestep window up front, zeroing `charge_array` outside it.
+            # timestep window up front, masking `charge_array` to 0 outside it.
             # Scalar estimates are assumed to be split evenly.
             if ut.check_nonindexed_python_type(consumption_estimate):
                 consumption_per_timestep = consumption_estimate / n_steps
@@ -1111,17 +1109,20 @@ def calculate_energy_cost(
             cumulative_consumption = np.cumsum(consumption_estimate) + prev_consumption
             total_consumption = cumulative_consumption[-1]
 
+            # 0/1 mask leaves the input unchanged and keeps cp.Parameter DPP
+            mask = np.ones(n_steps)
             start_idx = np.argmax(cumulative_consumption > float(limit))
             # if not found argmax returns 0, but whole charge array should be zeroed
             if (start_idx == 0) and (total_consumption <= float(limit)):
-                charge_array[:] = 0
+                mask[:] = 0
             else:
-                charge_array[:start_idx] = 0  # 0 for charge array before start index
+                mask[:start_idx] = 0  # 0 for charge array before start index
             end_idx = np.argmax(cumulative_consumption > float(next_limit))
             # before applying end_idx ensure (1) that next limit exists
             # and (2) that it is higher than total consumption
             if not (np.isinf(next_limit) or (total_consumption <= float(next_limit))):
-                charge_array[end_idx:] = 0  # 0 for charge array after end index
+                mask[end_idx:] = 0  # 0 for charge array after end index
+            charge_array, _ = ut.multiply(mask, charge_array)
 
         charge_expr, model = ut.multiply(
             consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
