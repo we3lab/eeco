@@ -461,8 +461,8 @@ def get_decomposed_var_names(utility):
     return f"{utility}_positive", f"{utility}_negative"
 
 
-def _decompose_binary_cvx(expression, big_m=1e6):
-    """Decompose CVXPY expression using binary variable method with Big-M.
+def _add_binary_big_M_cvx(positive_var, negative_var, big_m=1e6):
+    """Add a binary import/export indicator and Big-M constraints.
 
     Creates a mixed-integer program (MIP) where a binary variable indicates
     whether we are importing (1) or exporting (0) at each timestep.
@@ -470,37 +470,30 @@ def _decompose_binary_cvx(expression, big_m=1e6):
 
     Parameters
     ----------
-    expression : cvxpy.Expression
-        CVXPY expression representing net consumption
+    positive_var : cvxpy.Variable
+        Non-negative import variable
+    negative_var : cvxpy.Variable
+        Non-negative export variable (magnitude)
     big_m : float, optional
         Big-M value for constraints. Default is 1e6.
 
     Returns
     -------
-    tuple
-        (positive_var, negative_var, constraints) where constraints is a list
-        of CVXPY constraints that must be added to the problem
+    list
+        A list of CVXPY constraints that must be added to the problem
     """
-    n = expression.shape[0] if hasattr(expression, "shape") else 1
-
     # Binary variable: 1 = importing, 0 = exporting
-    is_importing = cp.Variable(n, boolean=True)
-
-    # Import/export variables (non-negative)
-    positive_var = cp.Variable(n, nonneg=True)
-    negative_var = cp.Variable(n, nonneg=True)
+    is_importing = cp.Variable(positive_var.shape, boolean=True)
 
     # Constraints for binary decomposition
     constraints = [
-        # Decomposition balance: expression = imports - exports
-        expression == positive_var - negative_var,
         # Big-M: imports <= big_m * is_importing
         positive_var <= big_m * is_importing,
         # Big-M: exports <= big_m * (1 - is_importing)
         negative_var <= big_m * (1 - is_importing),
     ]
 
-    return positive_var, negative_var, constraints
+    return constraints
 
 
 def _add_absolute_value_pyo(model, varstr, expression, positive_var, negative_var):
@@ -733,20 +726,18 @@ def decompose_consumption(
         return positive_values, negative_values, model
 
     elif check_cvx_type(expression):
-        if decomposition_type == "binary_big_M":
-            positive_var, negative_var, constraints = _decompose_binary_cvx(
-                expression, big_m
-            )
-            return positive_var, negative_var, constraints
-        elif decomposition_type == "linear":
-            positive_var, negative_var, constraints = _decompose_linear_cvx(expression)
-            return positive_var, negative_var, constraints
-        else:
+        if decomposition_type not in ("binary_big_M", "linear"):
             raise NotImplementedError(
                 f"Decomposition type '{decomposition_type}' not supported for CVXPY. "
                 "Available types: 'binary_big_M' (requires a MIP solver) and "
                 "'linear'. Use Pyomo for 'absolute_value' decomposition."
             )
+
+        # binary_big_M adds constraints on top of the LP split
+        positive_var, negative_var, constraints = _decompose_linear_cvx(expression)
+        if decomposition_type == "binary_big_M":
+            constraints += _add_binary_big_M_cvx(positive_var, negative_var, big_m)
+        return positive_var, negative_var, constraints
 
     elif check_indexed_pyomo_type(expression):
         if decomposition_type not in DECOMPOSITION_TYPES:

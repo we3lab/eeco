@@ -974,7 +974,7 @@ def calculate_energy_cost(
 
     Parameters
     ----------
-    charge_array : numpy.ndarray
+    charge_array : numpy.ndarray or cvxpy.Parameter
         Array of the charges in $/kWh for electric and $/cubic meter for gas
 
     consumption_data : numpy.ndarray cvxpy.Expression, or pyomo.environ.Var
@@ -1070,13 +1070,12 @@ def calculate_energy_cost(
     elif ut.check_indexed_pyomo_type(consumption_data) or ut.check_cvx_type(
         consumption_data
     ):
-        # private copy of charge array to avoid carrying over zeroed tiered charges
-        charge_array = np.array(charge_array, copy=True)
         tier_active = not np.isinf(next_limit) or (not np.isinf(limit) and limit > 0)
 
         if tier_active:
             if (
                 np.isinf(next_limit)
+                and ut.check_indexed_np_array(charge_array)  # skip cp.Parameter
                 and charge_array.size > 0
                 and np.all(charge_array == charge_array[0])
             ):
@@ -1093,7 +1092,7 @@ def calculate_energy_cost(
                 return rate * over_limit, model
 
             # Convex approximation: `consumption_estimate` fixes this tier's
-            # timestep window up front, zeroing `charge_array` outside it.
+            # timestep window up front, masking `charge_array` to 0 outside it.
             # Scalar estimates are assumed to be split evenly.
             if ut.check_nonindexed_python_type(consumption_estimate):
                 consumption_per_timestep = consumption_estimate / n_steps
@@ -1110,17 +1109,20 @@ def calculate_energy_cost(
             cumulative_consumption = np.cumsum(consumption_estimate) + prev_consumption
             total_consumption = cumulative_consumption[-1]
 
+            # 0/1 mask leaves the input unchanged and keeps cp.Parameter DPP
+            mask = np.ones(n_steps)
             start_idx = np.argmax(cumulative_consumption > float(limit))
             # if not found argmax returns 0, but whole charge array should be zeroed
             if (start_idx == 0) and (total_consumption <= float(limit)):
-                charge_array[:] = 0
+                mask[:] = 0
             else:
-                charge_array[:start_idx] = 0  # 0 for charge array before start index
+                mask[:start_idx] = 0  # 0 for charge array before start index
             end_idx = np.argmax(cumulative_consumption > float(next_limit))
             # before applying end_idx ensure (1) that next limit exists
             # and (2) that it is higher than total consumption
             if not (np.isinf(next_limit) or (total_consumption <= float(next_limit))):
-                charge_array[end_idx:] = 0  # 0 for charge array after end index
+                mask[end_idx:] = 0  # 0 for charge array after end index
+            charge_array, _ = ut.multiply(mask, charge_array)
 
         charge_expr, model = ut.multiply(
             consumption_data, charge_array, model=model, varstr=varstr + "_multiply"
@@ -1424,9 +1426,25 @@ def get_converted_consumption_data(
                         "exports": (np.maximum(-converted_consumption, 0)),
                     }
                 else:
+                    # clip negative consumption unless declared non-negative
+                    data = consumption_data_dict[utility]
+                    if ut.check_cvx_type(data):
+                        nonneg = data.is_nonneg()
+                    elif isinstance(data, pyo.Var):
+                        nonneg = all(v.has_lb() and v.lb >= 0 for v in data.values())
+                    else:  # other Pyomo types have no declared sign
+                        nonneg = False
+
+                    imports = converted_consumption
+                    if not nonneg:
+                        imports, model = ut.max_pos(
+                            converted_consumption,
+                            model=model,
+                            varstr=utility + "_imports",
+                        )
                     consumption_data_dict[utility] = {
-                        "imports": converted_consumption,
-                        "exports": converted_consumption,
+                        "imports": imports,
+                        "exports": np.zeros(get_charge_array_length(imports)),
                     }
             else:
                 raise NotImplementedError(
@@ -1631,8 +1649,9 @@ def calculate_cost(
     Raises
     ------
     ValueError
-        When invalid `utility`, `charge_type`, or `assessed`
-        is provided in `charge_arrays`
+        When invalid `utility`, `charge_type`, or `assessed` is provided
+        in `charge_arrays`, or if numeric `imports` and `exports` in
+        `consumption_data_dict` are both positive in the same timestep
 
     Returns
     -------
@@ -1641,12 +1660,6 @@ def calculate_cost(
           charge costs in USD for the given `charge_array` and `consumption_data`
         - Second entry: pyomo ConcreteModel (pyomo path), list of cvxpy constraints
           from decomposition (cvxpy + decomposition_type path), or None otherwise
-
-    Raises
-    ------
-    ValueError
-        If numeric `imports` and `exports` in `consumption_data_dict` are both
-        positive in the same timestep
 
     Warns
     -----
