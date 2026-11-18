@@ -172,7 +172,7 @@ Further guidance on how to load the data can be found at <a class="reference int
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">eeco.units</span> <span class="k">as</span> <span class="n">u</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">eeco.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">eeco</span><span class="w"> </span><span class="kn">import</span> <span class="n">costs</span>
 </pre></div>
 </div>
@@ -251,13 +251,8 @@ See the <a class="reference internal" href="optimize_cost.html#cvx-cost"><span c
 in order to determine the appropriate charge tier of the customer.
 For <cite>NumPy</cite>, the charge tiers can be calculated directly from the data so the <cite>consumption_estimate</cite> is ignored.</p>
 </div>
-<p>We must pass in and retrieve the <cite>Pyomo</cite> model object for the eletricity bill to be calculated correctly.
+<p>We must pass in and retrieve the <cite>Pyomo</cite> model object for the electricity bill to be calculated correctly.
 The tutorial on <a class="reference internal" href="optimize_cost.html#pyo-cost"><span class="std std-ref">Pyomo</span></a> cost optimization has more examples of how to use the model object with the functions</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>For the <cite>Pyomo</cite> code to work properly, we require the <cite>model</cite> object has an attribute <cite>t</cite> that is the range of the time period.</p>
-<p>We usually set <cite>model.t = range(model.T)</cite> where <cite>model.T = len(consumption_data_dict[“electric”])</cite>.</p>
-</div>
 </section>
 </section>
 <section id="specify-resolution">

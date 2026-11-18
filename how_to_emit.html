@@ -157,7 +157,7 @@ you would simply dot product the two arrays to find the total emissions (i.e., m
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pyomo.environ</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pyo</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">eeco.units</span> <span class="k">as</span> <span class="n">u</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">eeco.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">u</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">eeco</span><span class="w"> </span><span class="kn">import</span> <span class="n">emissions</span>
 </pre></div>
 </div>
@@ -224,17 +224,12 @@ This entry in the tuple is reserved for the <cite>Pyomo</cite> model object.</p>
     <span class="n">initialize</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_timesteps</span><span class="p">),</span>
     <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 <span class="p">)</span>
-<span class="n">total_monthly_emissions</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">costs</span><span class="o">.</span><span class="n">calculate_grid_emissions</span><span class="p">(</span>
+<span class="n">total_monthly_emissions</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">emissions</span><span class="o">.</span><span class="n">calculate_grid_emissions</span><span class="p">(</span>
     <span class="n">carbon_intensity</span><span class="p">,</span> <span class="n">consumption_var</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p>We must pass in and retrieve the <cite>Pyomo</cite> model object for the eletricity bill to be calculated correctly.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>For the <cite>Pyomo</cite> code to work properly, we require the <cite>model</cite> object has an attribute <cite>t</cite> that is the range of the time period.</p>
-<p>We usually set <cite>model.t = range(model.T)</cite> where <cite>model.T = len(consumption_data_dict[“electric”])</cite>.</p>
-</div>
+<p>We must pass in and retrieve the <cite>Pyomo</cite> model object for the emissions to be calculated correctly.</p>
 </section>
 </section>
 <section id="units">

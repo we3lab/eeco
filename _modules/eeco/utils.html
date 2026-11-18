@@ -299,6 +299,7 @@
             <span class="k">return</span> <span class="n">var</span> <span class="o">&gt;=</span> <span class="n">expression</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
 
         <span class="k">if</span> <span class="n">index_set</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">create_pyomo_model_index_ref</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">expression</span><span class="p">,</span> <span class="n">warns</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="n">index_set</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">_var_index</span>
         <span class="n">constraint</span> <span class="o">=</span> <span class="n">pyo</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">index_set</span><span class="p">,</span> <span class="n">rule</span><span class="o">=</span><span class="n">const_rule</span><span class="p">)</span>
         <span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">varstr</span> <span class="o">+</span> <span class="s2">"_constraint"</span><span class="p">,</span> <span class="n">constraint</span><span class="p">)</span>
@@ -505,6 +506,9 @@
         <span class="ow">or</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">expression1</span><span class="p">)</span>
         <span class="ow">or</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">expression2</span><span class="p">)</span>
     <span class="p">):</span>
+        <span class="n">indexed</span> <span class="o">=</span> <span class="n">expression1</span> <span class="k">if</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">expression1</span><span class="p">)</span> <span class="k">else</span> <span class="n">expression2</span>
+        <span class="k">if</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">indexed</span><span class="p">):</span>
+            <span class="n">create_pyomo_model_index_ref</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">indexed</span><span class="p">,</span> <span class="n">warns</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">expression1</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">expression1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
             <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">check_nonindexed_python_type</span><span class="p">(</span><span class="n">expression2</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span>
                 <span class="nb">len</span><span class="p">(</span><span class="n">expression2</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span>
@@ -856,6 +860,7 @@
             <span class="p">)</span>
 
     <span class="k">elif</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
+        <span class="n">create_pyomo_model_index_ref</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">expression</span><span class="p">,</span> <span class="n">warns</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">decomposition_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DECOMPOSITION_TYPES</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"Decomposition type '</span><span class="si">{</span><span class="n">decomposition_type</span><span class="si">}</span><span class="s2">' not supported for Pyomo. "</span>
@@ -1064,7 +1069,7 @@
     <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^a-zA-Z0-9_]"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="n">varstr</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">" "</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="create_pyomo_model_index_from_dict"><a class="viewcode-back" href="../../utils.html#eeco.utils.create_pyomo_model_index_from_dict">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">create_pyomo_model_index_from_dict</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">input_dict</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="create_pyomo_model_index_ref"><a class="viewcode-back" href="../../utils.html#eeco.utils.create_pyomo_model_index_ref">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">create_pyomo_model_index_ref</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">warns</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Attach time index to the model for Pyomo variables and expressions.</span>
 
 <span class="sd">    Builds a mapping between the entries in `var`'s index set and their</span>
@@ -1078,76 +1083,23 @@
 <span class="sd">    model : pyomo.environ.Model</span>
 <span class="sd">        The Pyomo model (or Block) to attach the index bookkeeping to.</span>
 
-<span class="sd">    dict : dict that contains {key: pyomo.environ.Param or pyomo.environ.Var} or</span>
-<span class="sd">        dict of dicts like {key: {key: pyomo.environ.Param or pyomo.environ.Var}},</span>
-<span class="sd">        Can also be an indexed pyomo var, experssion or param</span>
-
-<span class="sd">    overwrite : bool</span>
-<span class="sd">        Ignored if index does not exist yet.</span>
-<span class="sd">        If index exists, must be set to True for updates to take effect.</span>
-<span class="sd">        If False, no changes are made to the index and a warning is raised.</span>
-
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    TypeError</span>
-<span class="sd">        When pyomo var is not found in supplied dict, will raise an error</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    None</span>
-<span class="sd">        Sets the following attributes on `model`:</span>
-<span class="sd">        - `_var_index_ref` (dict): maps each index value in</span>
-<span class="sd">            `var.index_set()` to its integer position.</span>
-<span class="sd">        - `_var_index` (list): the index values of `var.index_set()`</span>
-<span class="sd">            in enumeration order.</span>
-<span class="sd">    """</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">find_pyo_var</span><span class="p">(</span><span class="n">posible_dict</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">posible_dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">sub_dict</span> <span class="ow">in</span> <span class="n">posible_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">find_pyo_var</span><span class="p">(</span><span class="n">sub_dict</span><span class="p">):</span>
-                    <span class="k">return</span> <span class="kc">True</span>
-        <span class="k">elif</span> <span class="n">check_indexed_pyomo_type</span><span class="p">(</span><span class="n">posible_dict</span><span class="p">):</span>
-            <span class="n">create_pyomo_model_index_ref</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">posible_dict</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">)</span>
-            <span class="k">return</span> <span class="kc">True</span>
-        <span class="k">return</span> <span class="kc">False</span>
-
-    <span class="n">find_pyo_var</span><span class="p">(</span><span class="n">input_dict</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"_var_index"</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="p">(</span>
-            <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not find a pyomo variable in supplied dict: </span><span class="si">{</span><span class="n">input_dict</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="create_pyomo_model_index_ref"><a class="viewcode-back" href="../../utils.html#eeco.utils.create_pyomo_model_index_ref">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">create_pyomo_model_index_ref</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Attach time index to the model for Pyomo variables and expressions.</span>
-
-<span class="sd">    Builds a mapping between the entries in `var`'s index set and their</span>
-<span class="sd">    positional order, and stores both on the model as private attributes.</span>
-<span class="sd">    This makes it easy to translate between a Pyomo indexed variable's index</span>
-<span class="sd">    values and plain integer positions (e.g. when aligning with a NumPy</span>
-<span class="sd">    array or another positional data structure).</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    model : pyomo.environ.Model</span>
-<span class="sd">        The Pyomo model (or Block) to attach the index bookkeeping to.</span>
-
-<span class="sd">    var : : pyomo.environ.Param or pyomo.environ.Var</span>
+<span class="sd">    var : pyomo.environ.Param or pyomo.environ.Var</span>
 <span class="sd">        A Pyomo indexed component (e.g. an indexed Var) whose</span>
 <span class="sd">        `index_set()` will be enumerated.</span>
 
 <span class="sd">    overwrite : bool</span>
 <span class="sd">        Ignored if index does not exist yet.</span>
 <span class="sd">        If index exists, must be set to True for updates to take effect.</span>
-<span class="sd">        If False, no changes are made to the index and a warning is raised.</span>
+<span class="sd">        If False, no changes are made to the index.</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
+<span class="sd">    warns : bool</span>
+<span class="sd">        If True, warn when the index exists and `overwrite` is False.</span>
+
+<span class="sd">    Warns</span>
+<span class="sd">    -----</span>
 <span class="sd">    UserWarning</span>
-<span class="sd">        When the index already exists and `overwrite` is False,</span>
-<span class="sd">        then the function with a warning to the user to set `overwrite` to True</span>
-<span class="sd">        if they'd like to enforce index updates.</span>
+<span class="sd">        When the index already exists, `overwrite` is False, and `warns` is True,</span>
+<span class="sd">        suggesting `overwrite=True` to enforce index updates.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -1161,9 +1113,9 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"_var_index"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">overwrite</span><span class="p">:</span>
         <span class="n">model</span><span class="o">.</span><span class="n">_var_index_ref</span> <span class="o">=</span> <span class="p">{</span><span class="n">idx</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">index_set</span><span class="p">())}</span>
         <span class="n">model</span><span class="o">.</span><span class="n">_var_index</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">index_set</span><span class="p">())</span>
-    <span class="k">else</span><span class="p">:</span>
+    <span class="k">elif</span> <span class="n">warns</span><span class="p">:</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">"`_var_index` already exists, so `create_pyomo_model_index_ref`"</span>
+            <span class="s2">"`_var_index` already exists, so `create_pyomo_model_index_ref` "</span>
             <span class="s2">"was ignored. Please set `overwrite=True` to enforce updating the index."</span><span class="p">,</span>
             <span class="ne">UserWarning</span><span class="p">,</span>
         <span class="p">)</span></div>
@@ -1187,7 +1139,7 @@
 
 
 <div class="viewcode-block" id="check_nonindexed_pyomo_type"><a class="viewcode-back" href="../../utils.html#eeco.utils.check_nonindexed_pyomo_type">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_nonindexed_pyomo_type</span><span class="p">(</span><span class="n">input_var</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Checks if input is a non-idnexed Pyomo variable, expression, or parameter.</span>
+<span class="w">    </span><span class="sd">"""Checks if input is a non-indexed Pyomo variable, expression, or parameter.</span>
 <span class="sd">    Returns `False` if an indexed variable, parameter,</span>
 <span class="sd">    or expression (or non-Pyomo type).</span>
 
