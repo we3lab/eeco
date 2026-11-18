@@ -27,7 +27,7 @@ To make this how-to guide clear, below are the import statements used throughout
     import numpy as np
     import pandas as pd
     import pyomo.environ as pyo
-    from eeco.units as u
+    from eeco.units import u
     from eeco import costs
 
 ========================
@@ -122,14 +122,8 @@ Pyomo
   in order to determine the appropriate charge tier of the customer. 
   For `NumPy`, the charge tiers can be calculated directly from the data so the `consumption_estimate` is ignored.
 
-We must pass in and retrieve the `Pyomo` model object for the eletricity bill to be calculated correctly.
+We must pass in and retrieve the `Pyomo` model object for the electricity bill to be calculated correctly.
 The tutorial on :ref:`pyo-cost` cost optimization has more examples of how to use the model object with the functions
-
-.. WARNING::
-
-  For the `Pyomo` code to work properly, we require the `model` object has an attribute `t` that is the range of the time period.
-  
-  We usually set `model.t = range(model.T)` where `model.T = len(consumption_data_dict["electric"])`.
 
 Specify Resolution
 ******************
